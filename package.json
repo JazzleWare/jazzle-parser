@@ -1,0 +1,48 @@
+{
+  "name": "jsrube",
+  "main": "lube.js",
+  "version": "0.5.0",
+  "description": "A very fast ECMAScript parser, fully written in plain ECMAScript 3",
+  "homepage": "https://github.com/icefapper/jsrube",
+  "engines": {
+    "node": ">=6.20.0"
+  },
+  "author": {
+    "name": "Neni Onoda",
+    "email": "neni.onoda@gmail.com"
+  },
+  "maintainers": [
+    {
+      "name": "Neni Onoda",
+      "email": "neni.onoda@gmail.com",
+      "web": "https://github.com/nenionoda"
+    },
+    {
+      "name": "Ulolo Koluhoniola",
+      "email": "icefapper@gmail.com",
+      "web": "https://github.com/icefapper"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/icefapper/jsRube.git"
+  },
+  "bugs": {
+    "url": "https://github.com/icefapper/jsRube/issues"
+  },
+  "license": "MIT",
+  "dependencies": [],
+  "keywords": [
+    "ast",
+    "ecmascript",
+    "fast",
+    "javascript",
+    "jsrube",
+    "parser",
+    "syntax"
+  ],
+  "scripts": {
+    "test": "node test/run-tests.js",
+    "benchmark": "node speed.js"
+  }
+}
