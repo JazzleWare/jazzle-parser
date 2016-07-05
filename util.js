@@ -197,9 +197,18 @@
     if ( _exports.has( expected, 'raw' ) ) delete expected.raw;
     if ( _exports.has( expected, 'directive' ) ) delete expected.directive;
     if ( _exports.has( expected, 'errors' ) ) delete expected.errors;
+    if ( _exports.has( expected, 'comments' ) ) delete expected.comments ;
 
-    if ( name != "loc" && _exports.has( actual, 'start' ) ) {
-      actual.range = [actual.start, actual.end];
+    if ( actual.regex ) {
+       delete actual.value;
+       _exports.assert( expected.regex ); delete expected.value;
+    }
+
+    if ( !expected.loc ) delete actual.loc;
+    if ( !expected.range ) delete actual.range;
+         
+    if ( name !== "loc" && _exports.has( actual, 'start' ) ) {
+      if ( expected.range )  actual.range = [actual.start, actual.end];
       delete actual.start;
       delete actual.end;
     }
@@ -234,6 +243,11 @@
          list[i].loc.end.column += i === list.length - 1 ? 1 : 2;
          i++ ; 
       }
+    }
+
+    if ( expected .type === 'AssignmentPattern' && !actual.o ) {
+         if ( expected.operator && !actual.operator ) actual.operator = '=';
+
     }
     
     var comp = null, item;

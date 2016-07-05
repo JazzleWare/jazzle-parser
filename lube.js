@@ -817,9 +817,13 @@ lp.readNumberLiteral = function (peek) {
             c ++;
           } while ( c < len &&
                   ( b = src.charCodeAt(c), b >= CHAR_0 && b <= CHAR_9) );
-
-          this.ltval = parseInt (this.ltraw = src.slice(this.c, c), base);
+          
+          b = this.c;
           this.c = c; 
+  
+          if ( this.frac(b) ) return;
+
+          this.ltval = parseInt (this.ltraw = src.slice(b, c), base);
           return ;
        }
        else {
@@ -1078,7 +1082,7 @@ lp.readEsc = function ()  {
 
 lp.errorReservedID = function() { this.err ( this. ltraw + ' is not an identifier '   )  ; }
 lp.expectType = function (n)  {
-  _assert(this.lttype === n)  ;
+  _assert(this.lttype === n, 'expected ' + n + '; got ' + this.lttype  )  ;
   this.next();
 };
 
@@ -1996,7 +2000,7 @@ lp. asArrowFuncArg = function(arg, p) {
 
         case 'AssignmentPattern':
            _assert(arg.p<=0);
-           this.asArrowFuncArg(arg.left) ;
+           this.asArrowFuncArg(arg.left, 0) ;
            return;
 
         case 'ArrayPattern' :
@@ -2366,7 +2370,7 @@ lp . parseTemplateLiteral = function() {
   var templStr = [], templExpressions = [];
   var startElemFragment = c, // an element's content might get fragmented by an esc appearing in it, e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
       startElem = c,
-      currentFragment = "",
+      currentElemContents = "",
       startColIndex = c ,
       ch = 0;
  
@@ -2376,14 +2380,14 @@ lp . parseTemplateLiteral = function() {
     switch ( ch ) {
        case CHAR_$ :
           if ( src.charCodeAt(c+1) === CHAR_LCURLY ) {
-              currentFragment += src.slice(startElemFragment, c) ;
+              currentElemContents += src.slice(startElemFragment, c) ;
               this.col += ( c - startColIndex );
               templStr.push(
                 { type: 'TemplateElement', 
                  start: startElem, end: c, tail: false,
                  loc: { start: { line: li, column: col }, end: { line: this.li, column: this.col } },        
                  value: { raw : src.slice(startElem, c ).replace(/\r\n|\r/g,'\n'), 
-                        cooked: currentFragment   } } );
+                        cooked: currentElemContents   } } );
 
               this.c = c + 2; // ${
               this.col += 2; // ${
@@ -2392,7 +2396,7 @@ lp . parseTemplateLiteral = function() {
               templExpressions.push( this.parseExpr(CONTEXT_NONE) );
               _assert ( this. lttype === '}');
 
-              currentFragment = "";
+              currentElemContents = "";
               startElemFragment = startElem = c = this.c; // right after the '}'
               startColIndex = c;
               li = this.li;
@@ -2405,7 +2409,7 @@ lp . parseTemplateLiteral = function() {
           continue;
 
        case CHAR_CARRIAGE_RETURN: 
-           currentFragment += src.slice(startElemFragment,c) + '\n' ;
+           currentElemContents += src.slice(startElemFragment,c) + '\n' ;
            c++;
            if ( src.charCodeAt(c) === CHAR_LINE_FEED ) c++;
            startElemFragment = startColIndex = c;
@@ -2414,7 +2418,7 @@ lp . parseTemplateLiteral = function() {
            continue ;
  
        case CHAR_LINE_FEED:
-           currentFragment += src.slice(startElemFragment,c) + '\n';
+           currentElemContents += src.slice(startElemFragment,c) + '\n';
            c++;
            startElemFragment = startColIndex = c;
            this.li++;
@@ -2422,7 +2426,7 @@ lp . parseTemplateLiteral = function() {
            continue; 
  
        case 0x2028: case 0x2029:
-           currentFragment += src.slice(startElemFragment,c) + src.charAt(c);
+           currentElemContents += src.slice(startElemFragment,c) + src.charAt(c);
            startColIndex = c;
            c++; 
            startElemFragment = c;
@@ -2432,7 +2436,7 @@ lp . parseTemplateLiteral = function() {
  
        case CHAR_BACK_SLASH :
            this.c = c; 
-           currentFragment += src.slice( startElemFragment, c ) + this.readEsc();
+           currentElemContents += src.slice( startElemFragment, c ) + this.readEsc();
            c  = this.c;
            c++;
            if ( this.col == 0 ) // if we had an escaped newline 
@@ -2450,9 +2454,9 @@ lp . parseTemplateLiteral = function() {
   if ( startElem < c ) {
      this.col += ( c - startColIndex );
      if ( startElemFragment < c )
-       currentFragment += src.slice( startElemFragment, c );
+       currentElemContents += src.slice( startElemFragment, c );
   }
-  else currentFragment = "";
+  else currentElemContents = "";
 
   templStr.push({
      type: 'TemplateElement',
@@ -2461,7 +2465,7 @@ lp . parseTemplateLiteral = function() {
      end: startElem < c ? c : startElem ,
      tail: !false,
      value: { raw: src.slice(startElem,c).replace(/\r\n|\r/g,'\n'), 
-              cooked: currentFragment }
+              cooked: currentElemContents }
   }); 
 
   c++; // backtick  
@@ -2939,29 +2943,30 @@ lp.parseArrayExpression = function () {
       list = [];
 
   this.next () ;
-  if ( this.lttype !== ']' ) {
-     var unsatisfiedAssignment = this.unsatisfiedAssignment;
 
-     do {
-        this.unsatisfiedAssignment = null ;
-        elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, CONTEXT_NULLABLE|CONTEXT_ELEM);
-        if ( elem ) {
-           if ( !unsatisfiedAssignment && this.unsatisfiedAssignment )
-                 unsatisfiedAssignment =  this.unsatisfiedAssignment;
-        }
-        else if ( this.lttype === '...' )
-            elem = this.parseSpreadElement();
+  var unsatisfiedAssignment = this.unsatisfiedAssignment;
+  do {
+     this.unsatisfiedAssignment = null ;
+     elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, CONTEXT_NULLABLE|CONTEXT_ELEM);
+     if ( elem ) {
+        if ( !unsatisfiedAssignment && this.unsatisfiedAssignment )
+              unsatisfiedAssignment =  this.unsatisfiedAssignment;
+     }
+     else if ( this.lttype === '...' )
+         elem = this.parseSpreadElement();
 
-        list.push(elem);
-        if ( this.lttype === ',' )
-           this.next();
-        else
-           break ;
+     if ( this.lttype === ',' ) { 
+        list.push(elem) ;
+        this.next();
+     }
+     else  {
+        if ( elem ) list.push(elem);
+        break ;
+     }
  
-     } while ( !false );
+  } while ( !false );
 
-     this.unsatisfiedAssignment = unsatisfiedAssignment;
-  }
+  this.unsatisfiedAssignment = unsatisfiedAssignment;
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list, p:  0 };
 
@@ -3308,7 +3313,7 @@ lp . parseFor = function() {
 
   if ( head !== null && // if we have a head
        ( headIsExpr || // that is an expression
-       (head.declarations.length === 1 && !head.declarations[0].init) ) && // or one and only one lone declarator
+       (head.declarations.length === 1 /* && !head.declarations[0].init */ ) ) && // or one and only one lone declarator
        this.lttype === 'Identifier' ) { // then if the token ahead is an id
     switch ( this.ltval ) {
        case 'in':
@@ -3338,11 +3343,12 @@ lp . parseFor = function() {
   }
 
   _assert(!this.unsatisfiedAssignment);
+/*
   if ( head && !headIsExpr ) {
     head.end = this.c;
     head.loc.end = { line: head.loc.end.line, column: this.col };
   }
-
+*/
   this.expectType(';');
   afterHead = this.parseExpr(CONTEXT_NULLABLE );
   this.expectType(';');
@@ -3589,26 +3595,27 @@ lp. parseArrayPattern = function() {
   }
 
   this.next();
-  if ( this.lttype !== ']' ) {
-    while ( !false ) {
-        elem = this.parsePattern();
-        if ( elem ) {
-           if ( this.lttype === '=' ) elem = this.parseAssig(elem);
-        }
-        else {
-           if ( this.lttype === '...' )
-             list.push(this.parseRestElement());
-           
+  while ( !false ) {
+      elem = this.parsePattern();
+      if ( elem ) {
+         if ( this.lttype === 'op' && this.ltraw === '=' ) elem = this.parseAssig(elem);
+      }
+      else {
+         if ( this.lttype === '...' ) {
+           list.push(this.parseRestElement());
            break ;
-        }
-        list.push(elem);
-      
-        if ( this.lttype === ',' )
-           this.next();
-        else
-           break ;
-     } 
-  }
+         }  
+      }
+    
+      if ( this.lttype === ',' ) {
+         list.push(elem);
+         this.next();
+      }       
+      else  {
+         if ( elem ) list.push(elem);
+         break ;
+      }
+  } 
 
   if ( this.isInArgList )
     this.tight = tight;
@@ -3648,6 +3655,7 @@ lp.parseObjectPattern  = function() {
 
     LOOP:
     do {
+      sh = false;
       this.next ()   ;
       switch ( this.lttype ) {
          case 'Identifier':
@@ -3701,7 +3709,7 @@ lp.parseObjectPattern  = function() {
 lp .parseAssig = function (head) {
     this.next() ;
     var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
-    return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
+    return { type: 'AssignmentPattern', start: head.start, left: head, p: 0, end: e.end,
            right: core(e), loc: { start: head.loc.start, end: e.loc.end } };
 };
 
@@ -3961,6 +3969,14 @@ var IDC_ = fromRunLenCodes([0,183,1,719,1,4065,9,1640,1],fromRunLenCodes ( ( [ 0
 4,1,27,1,2,1,1,2,1,1,10,1,4,1,1,1,1,6,1,4,1,1,1,1,1,1,3,1,2,1,1,2,1,1,1,1,1,1,1,1,
 1,1,2,1,1,2,4,1,7,1,4,1,4,1,1,1,10,1,17,5,3,1,5,1,17,4420,42711,41,4149,11,222,2,5762,
 10590,542,722658,240 ]) ) )  ;
+
+function set(bits, i) {
+  bits[i>>D_INTBITLEN] |= ( 1 << ( i & M_INTBITLEN ) );
+
+}
+
+set(IDC_,0x200C);
+set(IDC_,0x200D);
 
 _exports.Parser = Parser  ;
 
