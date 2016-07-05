@@ -23,12 +23,30 @@ try {
 
 var fs = require( 'fs' );
 function readFile(filePath) {
-  return fs.readFileSync(filePath).toString();
+   try {
+     return fs.readFileSync(filePath,'utf-8').toString();
+   } catch ( e ) {
+     console.log( "COULD NOT LOAD", filePath );
+     return "";
+   }
 }
 
+var SOURCES_ROOT = './sources';
 var sources = {};
 
-sources['jquery'] = readFile( './sources/12' );  
+var files = fs .readdirSync ( SOURCES_ROOT );
+
+var e = 0;
+
+while ( e < files.length ) {
+   if ( !fs.statSync (SOURCES_ROOT + '/' + files[e]).isDirectory() )  { 
+     sources[files[e]] = readFile(SOURCES_ROOT+ '/' + files[e]);
+     console.log( 'LOAD', files[e] );
+   }
+
+   e++ ;
+}
+  
 sources['lube'] = readFile( './lube.js' );
 
 var Benchmark = require( 'benchmark' ).Benchmark ;
