@@ -16,8 +16,9 @@ My take is that, awesome as the parser is, it can still be more robust, and more
 
 ```javascript
 var jsRube = require( './lube.js' );
-console.log( new jsRube.Parser('var v = "hi !";').parseProgram() );
+console.log( jsRube.parse('var v = "hi !";') );
 ```
+
 
 #Testing
 ```sh

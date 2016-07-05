@@ -3979,6 +3979,10 @@ set(IDC_,0x200C);
 set(IDC_,0x200D);
 
 _exports.Parser = Parser  ;
+_exports.parse = function(src) {
+   var parser = new Parser(src), prog = parser.parseProgram(src);
+   return prog;
+};
 
 var createTok = function( j )  {
    var l = 5000;
