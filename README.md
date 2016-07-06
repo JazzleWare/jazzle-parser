@@ -13,23 +13,25 @@ It is almost completely esprima-compatible (except when things get annoying, in 
 My take is that, awesome as the parser is, it can still be more robust, and more low-power; even if it hits limits in the previous criteria, I'm still aiming to make it catch all of the spec's early errors, and i am intending to make it so in a matter of weeks, i.e, not even months.
 
 #Usage
+First,
+``sh
+npm install jsrube
+``
+
+Then:
 
 ```javascript
-var jsRube = require( './lube.js' );
+var jsRube = require( 'jsrube' );
 console.log( jsRube.parse('var v = "hi !";') );
 ```
 
 
 #Testing
+
 ```sh
-$ cd jsRube/test
-$ node run-tests.js
+npm test jsrube
 ```
 
-#Why is the main file called 'lube.js'?
-Good question. I named it because, like its real world homonym, I originally thought no one would ever use it even though it makes things 'fast' and 'smooth' ;-)
-
-Thinking the name might impede the parser's adoption, I renamed it to jsRube.
 #anything else
 Thanks a lot reading this far.
 

@@ -1670,7 +1670,7 @@ lp.parseExpr = function (context) {
     } while (this.lttype === ',' ) ;
 
     return  { type: 'SequenceExpression', expressions: e, start: head.start, end: lastExpr.end,
-              loc: { start : head.loc.start, end : lastExpr.loc.end, p:  0 } };
+              loc: { start : head.loc.start, end : lastExpr.loc.end} };
   }
 
   return head ;
@@ -1758,7 +1758,7 @@ lp .toAssig = function(head) {
         return;
 
      case 'ObjectExpression':
-        _assert(head.p === 0)  ;
+        _assert(head !== this.firstUnassignable )  ;
         list = head.properties;
         while ( i < list.length ) {
            this.toAssig(list[i].value);
@@ -1769,7 +1769,7 @@ lp .toAssig = function(head) {
         return;
 
      case 'ArrayExpression':
-        _assert(head.p === 0)  ;
+        _assert(head !== this.firstUnassignable )  ;
         list = head.elements;
         while ( i < list.length ) {
           if ( list[i] ) {
@@ -1786,7 +1786,7 @@ lp .toAssig = function(head) {
         return;
 
      case 'AssignmentExpression':
-       _assert(head.p === 0 ) ;
+       _assert(head !== this.firstUnassignable ) ;
        _assert(head.operator === '='  ) ;
        head.type = 'AssignmentPattern';
        delete head.operator;
@@ -1822,7 +1822,7 @@ lp .parseAssignment = function(head, context ) {
 
     var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
     return { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
-             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }, p:  0 };
+             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }};
 };
 
 lp .parseO = function(context ) {
@@ -1891,9 +1891,7 @@ lp.parseNonSeqExpr = function (prec, context  ) {
          }
     }
     else if ( prec === PREC_WITH_NO_OP ) {
-      if ( head.type !== PAREN )
-        firstParen = this.firstParen;      
-
+      firstParen = head. type === PAREN ? head.expr : this.firstParen ;      
       firstUnassignable = this.firstUnassignable;
     }   
 
@@ -1901,6 +1899,7 @@ lp.parseNonSeqExpr = function (prec, context  ) {
        if ( !this. parseO( context ) ) break ;
        if ( isAssignment(this.prec) ) {
          _assert( prec === PREC_WITH_NO_OP );
+         this.firstUnassignable = firstUnassignable;
          head = this. parseAssignment(head, context & CONTEXT_FOR );
          break ;
        }
@@ -1923,9 +1922,6 @@ lp.parseNonSeqExpr = function (prec, context  ) {
           }
           break ;
        }
-       if ( prec === PREC_WITH_NO_OP && head.type === PAREN ) {
-         firstParen = head.expr;
-       }
 
        if ( this. prec < prec ) break ;
        if ( this. prec  === prec && !isRassoc(prec) ) break ;
@@ -1946,9 +1942,9 @@ lp.parseNonSeqExpr = function (prec, context  ) {
                 right: core(right)
               };
     }
-
+  
     if ( prec === PREC_WITH_NO_OP ) {
-      this.firstParen = firstParen;
+      this.firstParen = firstParen ;
       this.firstUnassignable = firstUnassignable;
     }
 
@@ -1960,31 +1956,31 @@ lp .asArrowFuncArgList = function(head) {
      return;
 
    if ( head.type === 'SequenceExpression' ) {
-         _assert(head.p === 1);
+         _assert(head !== this.firstParen );
          var i = 0, list = head.expressions;
          while ( i < list.length ) {
-           this.asArrowFuncArg(list[i], 0);
+           this.asArrowFuncArg(list[i]);
            i++;
          }
    }
    else
-      this.asArrowFuncArg(head,1);
+      this.asArrowFuncArg(head);
 };
 
-lp. asArrowFuncArg = function(arg, p) {
+lp. asArrowFuncArg = function(arg  ) {
     var i = 0, list = null;
 
     switch  ( arg.type ) {
         case 'Identifier':
-           _assert(arg.p <= p )  ;
+           _assert(arg !== this.firstParen )  ;
            return this.addArg(arg);
 
         case 'ArrayExpression':
-           _assert(arg.p <= p )  ;
+           _assert(arg !== this.firstParen )  ;
            list = arg.elements;
            while ( i < list.length ) {
               if ( list[i] ) {
-                 this.asArrowFuncArg(list[i], 0);
+                 this.asArrowFuncArg(list[i]);
                  if ( list[i].type === 'SpreadElement' ) {
                     i++;
                     break;
@@ -1997,35 +1993,35 @@ lp. asArrowFuncArg = function(arg, p) {
            return;
 
         case 'AssignmentExpression':
-           _assert(arg.p <= p);
+           _assert(arg !== this.firstParen );
            _assert(arg.operator === '=' ) ;
-           this.asArrowFuncArg(arg.left, 0);
+           this.asArrowFuncArg(arg.left);
            arg.type = 'AssignmentPattern';
            delete arg.operator ;
            return;
 
         case 'ObjectExpression':
-           _assert(arg.p<=p);
+           _assert(arg !== this.firstParen    );
            list = arg.properties;
            while ( i < list.length )
-              this.asArrowFuncArg(list[i++].value, 0 );
+              this.asArrowFuncArg(list[i++].value );
            arg.type = 'ObjectPattern';
            return;
 
         case 'AssignmentPattern':
-           _assert(arg.p<=0);
-           this.asArrowFuncArg(arg.left, 0) ;
+           _assert(arg !== this.firstParen );
+           this.asArrowFuncArg(arg.left) ;
            return;
 
         case 'ArrayPattern' :
            list = arg.elements;
            while ( i < list.length )
-             this.asArrowFuncArg(list[i++], 0 ) ;
+             this.asArrowFuncArg(list[i++] ) ;
 
            return;
 
         case 'SpreadElement':
-            this.asArrowFuncArg(arg.argument, 0);
+            this.asArrowFuncArg(arg.argument);
             arg.type = 'RestElement';
             return;
 
@@ -2036,7 +2032,7 @@ lp. asArrowFuncArg = function(arg, p) {
         case 'ObjectPattern':
             list = arg.properties;
             while ( i < list.length )
-               this.asArrowFuncArgList ( list[i++].value , 0 );
+               this.asArrowFuncArgList ( list[i++].value  );
 
             return;
 
@@ -2529,16 +2525,6 @@ lp.parseExprHead = function (context) {
             head = this. parseParen() ;
             if ( this.unsatisfiedArg )
                return head ;
-            
-            switch ( head.expr.type ) {
-                case 'Identifier': case 'MemberExpression':
-                  firstUnassignable = null ;
-
-                default:
-                  firstUnassignable = head.expr;
-            }
-
-            firstParen = head;
 
             break ;
 
@@ -2623,8 +2609,10 @@ lp.parseExprHead = function (context) {
 
   }
 
-  this.firstUnassignable = firstUnassignable;
-  this.firstParen = firstParen;
+  if ( head.type !== PAREN ) { 
+     this.firstUnassignable = firstUnassignable;
+     this.firstParen = firstParen;
+  }
 
   return head ;
 } ;
@@ -2853,7 +2841,7 @@ lp .validateID  = function (e) {
 
 lp.id = function() {
    var id = { type: 'Identifier', name: this.ltval, start: this.c0, end: this.c,
-              loc: { start: this.locBegin(), end: this.loc() }, p:  0, raw: this.ltraw };
+              loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
    this.next() ;
    return id;
 };
@@ -2902,7 +2890,7 @@ lp. parseClass = function() {
         
         if ( this.lttype === '(' ) {
           elem = this.parseMeth( { type: 'Identifier', name: 'static', start: startcStatic, end: cStatic, raw: rawStatic,
-                                  loc: { start: startLocStatic, end: { line: liStatic, column: colStatic } },   p: 0 }   , !OBJ_MEM);
+                                  loc: { start: startLocStatic, end: { line: liStatic, column: colStatic } }}   , !OBJ_MEM);
           list.push(elem);
           continue;
         }
@@ -3019,9 +3007,12 @@ lp.parseArrayExpression = function () {
  
   } while ( !false );
 
+  if ( firstParen ) this.firstParen = firstParen ;
+  if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
+
   this.unsatisfiedAssignment = unsatisfiedAssignment;
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list, p:  0 };
+           start: startc, end: this.c, elements : list};
 
   this. expectType ( ']' ) ;
 
@@ -3200,7 +3191,7 @@ lp.parseObjectExpression = function () {
   } while ( this.lttype === ',' );
 
   elem = { properties: list, type: 'ObjectExpression', start: startc,
-     end: this.c , loc: { start: startLoc, end: this.loc() }, p:  0 };
+     end: this.c , loc: { start: startLoc, end: this.loc() }};
 
   this.expectType('}');
 
@@ -3221,6 +3212,8 @@ lp.parseParen = function () {
 
   var unsatisfiedArg = null;
   var list = null, elem = null;
+
+  var firstElem = null;
 
   while ( !false ) {
      this.firstParen = null;
@@ -3245,8 +3238,11 @@ lp.parseParen = function () {
 
      if ( this.lttype !== ',' ) break ;
 
-     if ( list ) list.push(elem);
-     else { list = [ elem ] ;  }
+     if ( list ) list.push(core(elem));
+     else {
+       firstElem = elem;
+       list = [ core(elem) ] ;
+     }
 
   }
 
@@ -3255,16 +3251,19 @@ lp.parseParen = function () {
 
   // if we have a list, the expression in parens is a seq
   if ( list )
-       elem = { type: 'SequenceExpression', expressions: list, start: list[0].start , end: elem.end , p: 1,
-               loc: { start: list[0].loc.start , end: elem.loc.end } };
+       elem = { type: 'SequenceExpression', expressions: list, start: firstElem .start , end: elem.end,
+               loc: { start:  firstElem .loc.start , end: elem.loc.end } };
   // otherwise update the expression's paren depth if it's needed
-  else if ( elem ) switch ( elem.type ) {
+  if ( elem ) {
+    elem = core(elem); 
+    switch (  elem.type ) {
        case 'Identifier': case 'MemberExpression':
           this.firstUnassignable = null;
           break ;
 
        default:
           this.firstUnassignable = elem; 
+    }
   }
 
   var n = { type: PAREN, expr: elem, start: startc, end: this.c,
@@ -3606,7 +3605,7 @@ lp . parseSetGet= function(isObj) {
          name = this.numstr();
          break ;
       default:  
-           name = { type: 'Identifier', name: this.ltval, start: startc, p: 0,  end: c,
+           name = { type: 'Identifier', name: this.ltval, start: startc,  end: c,
                    loc: { start: startLoc, end: { line: li, column: col } } };
 
            return isObj ? this.parseProperty(name) : this.parseMeth(name, isObj) ;
@@ -3697,7 +3696,7 @@ lp. parseArrayPattern = function() {
     this.tight = tight;
 
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list, p:  0 };
+           start: startc, end: this.c, elements : list};
 
   this. expectType ( ']' ) ;
 
@@ -3785,7 +3784,7 @@ lp.parseObjectPattern  = function() {
 lp .parseAssig = function (head) {
     this.next() ;
     var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
-    return { type: 'AssignmentPattern', start: head.start, left: head, p: 0, end: e.end,
+    return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
            right: core(e), loc: { start: head.loc.start, end: e.loc.end } };
 };
 

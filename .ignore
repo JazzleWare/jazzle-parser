@@ -1,0 +1,6 @@
+test/tests/test/ES6/template-literals/literal-escape-sequences
+test/tests/test/statement/iteration/for-let-let
+test/tests/test/statement/iteration/migrated_0012
+test/tests/test/fixtures/statement/iteration/for-let-let
+test/tests/test/ES6/binding-pattern/object-pattern/for-let-let
+test/tests/test/ES6/binding-pattern/array-pattern/for-let-let

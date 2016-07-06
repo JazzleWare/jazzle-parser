@@ -31,14 +31,27 @@ function TestSession() {
 
 TestSession.prototype = {
   mustFail: function(testName) {
-    return; 
     var referenceError = util.readJSON(testName + '.failure.json' );
+    
+    console.log( "SKIPPING FAIL ON", testName);
+    return;
+
+    var fail = false;
     try { 
-      var source = getTestSource(jsFile);
+   
+      var source = getTestSource(testName);
+      fail = !false; 
       this.failTarget++;
-      this.parse(source[0]);
+      var syn = this.parse(source[0]);
+      fail = false;
+      throw { type: 'mustFail', expected: referenceError, src: source }; 
     } catch ( err ) {
+      if ( !fail ) throw err;
+      console.log( "TESTING FAIL ON", testName ) ;
+     
+      return;
       var comp = compareErrors(referenceError, err);
+
       if ( !comp )
          this.sessionFail++;
       else
