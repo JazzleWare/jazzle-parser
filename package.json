@@ -1,7 +1,7 @@
 {
   "name": "jsrube",
   "main": "lube.js",
-  "version": "0.5.2",
+  "version": "0.5.8",
   "description": "A very fast ECMAScript parser, fully written in plain ECMAScript 3",
   "homepage": "https://github.com/icefapper/jsrube",
   "engines": {
@@ -31,7 +31,7 @@
     "url": "https://github.com/icefapper/jsRube/issues"
   },
   "license": "MIT",
-  "dependencies": [],
+  "dependencies": [ "benchmark" ],
   "keywords": [
     "ast",
     "ecmascript",
