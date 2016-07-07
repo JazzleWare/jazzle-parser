@@ -31,7 +31,6 @@
     "url": "https://github.com/icefapper/jsRube/issues"
   },
   "license": "MIT",
-  "dependencies": [ "benchmark" ],
   "keywords": [
     "ast",
     "ecmascript",
