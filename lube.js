@@ -90,6 +90,8 @@ var CHAR_1 = char2int('1'),
     CHAR_MULTI_QUOTE = char2int('"'),
     CHAR_BACK_SLASH = char2int(('\\')),
 
+    CHAR_BACKSPACE = char2int('\b'),
+
     CHAR_DIV = char2int('/'),
     CHAR_MUL = char2int('*'),
     CHAR_MIN = char2int('-'),
@@ -144,6 +146,45 @@ try {
    new RegExp ( "lube", "i" ) ; regexFlagsSupported |= iRegexFlag ;
 }
 catch(r) {
+}
+
+var hexD = [ '1', '2', '3', '4', '5',
+             '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' ];
+hexD = ['0'].concat(hexD);
+
+function hex(number) {
+  var str = "";
+  str = hexD[number&0xf] + str
+  str = hexD[(number>>=4)&0xf] + str ;
+  str = hexD[(number>>=4)&0xf] + str ;
+  str = hexD[(number>>=4)&0xf] + str ;
+  
+  return str;
+}
+
+function curlyReplace(matchedString, b, matchIndex, wholeString ) {
+  var c = parseInt( '0x' + b );
+  if ( c <= 0xFFFF ) return '\\u' + hex(c);
+  return '\\uFFFF';
+}
+
+function regexReplace(matchedString, b, noB, matchIndex, wholeString) {
+  var c = parseInt('0x' + ( b || noB ) ) ;
+  _assert(c <= 0x010FFFF );
+  
+  if ( c <= 0xFFFF ) return String.fromCharCode(c) ;
+
+  c -= 0x010000;
+  return '\uFFFF';
+} 
+
+function verifyRegex(regex, flags) {
+  var regexVal = null;
+
+  try {
+    return new RegExp(regex, flags);
+  } catch ( e ) { throw e; }
+
 }
 
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
@@ -2296,7 +2337,7 @@ lp. parseIdStatementOrIdExpressionOrId = function ( context ) {
 
   return pendingExprHead;
 };
-
+           
 lp.parseRegExpLiteral = function() {
      var startc = this.c - 1, startLoc = this.locOn(1),
          c = this.c, src = this.src, len = src.length;
@@ -2353,15 +2394,27 @@ lp.parseRegExpLiteral = function() {
      var patternString = src.slice(this.c, c-flagCount-1 ), flagsString = src .slice(c-flagCount,c);
      var val = null;
 
+     var normalizedRegex = patternString;
+
+     // those that contain a 'u' flag need special treatment when RegExp constructor they get sent to
+     // doesn't support the 'u' flag: since they can have surrogate pair sequences (which are not allowed without the 'u' flag),
+     // they must be checked for having such surrogate pairs, and should replace them with a character that is valid even
+     // without being in the context of a 'u' 
+     if ( (flags & uRegexFlag) && !(regexFlagsSupported & uRegexFlag) )
+          normalizedRegex = normalizedRegex.replace( /\\u\{([A-F0-9a-f]+)\}/g, curlyReplace) // normalize curlies
+             .replace( /\\u([A-F0-9a-f][A-F0-9a-f][A-F0-9a-f][A-F0-9a-f])/g, regexReplace ) // convert u
+             .replace( /[\ud800-\udbff][\udc00-\udfff]/g, '\uFFFF' );
+       
+
      // all of the 1 bits in flags must also be 1 in the same bit index in regexsupportedFlags;
      // flags ^ rsf returns a bit set in which the 1 bits mean "this flag is either not used in flags, or yt is not supported";
      // for knowing whether the 1 bit has also been 1 in flags, we '&' the above bit set with flags; the 1 bits in the
      // given bit set must both be 1 in flags and in flags ^ rsf; that is, they are both "used" and "unsupoorted or unused",
      // which would be equal to this: [used && (unsupported || !used)] == unsopprted
      if ( flags & (regexFlagsSupported^flags) )
-       new RegExp(patternString);
+        verifyRegex(normalizedRegex, "");
      else
-       val = new RegExp( patternString, flagsString ) ;
+        val = verifyRegex( patternString, flagsString ) ;
 
      this.col += (c-this.c);
      var regex = { type: 'Literal', regex: { pattern: patternString, flags: flagsString },
