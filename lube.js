@@ -90,8 +90,6 @@ var CHAR_1 = char2int('1'),
     CHAR_MULTI_QUOTE = char2int('"'),
     CHAR_BACK_SLASH = char2int(('\\')),
 
-    CHAR_BACKSPACE = char2int('\b'),
-
     CHAR_DIV = char2int('/'),
     CHAR_MUL = char2int('*'),
     CHAR_MIN = char2int('-'),
@@ -591,9 +589,9 @@ lp.skipS = function() {
      while ( c < e ) {
        switch ( l.charCodeAt ( c ) ) {
          case CHAR_WHITESPACE :
-             while ( ++c < e &&  l.charCodeAt (  c ) == CHAR_WHITESPACE );
+             while ( ++c < e &&  l.charCodeAt(c) === CHAR_WHITESPACE );
              continue ;
-         case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED == l.charCodeAt ( c + 1 ) ) c ++ ;
+         case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED == l.charCodeAt( c + 1 ) ) c ++;
          case CHAR_LINE_FEED :
             if ( noNewLine ) noNewLine = false ;
             start = ++ c ;
@@ -648,7 +646,31 @@ lp.skipS = function() {
             this.li ++ ;
             continue;
 
+         case CHAR_LESS_THAN:
+            if ( this.isScript &&
+                 this.charCodeAt(c+1) === CHAR_EXCLAMATION &&
+                 this.charCodeAt(c+2) === CHAR_MIN &&
+                 this.charCodeAt(c+ 1 + 2) === CHAR_MIN ) {
+               this.c = c + 4;
+               this.readLineComment();
+               continue;
+            }
+            this.col += (c-start ) ;
+            this.c=c;
+            this.newLineBeforeLookAhead = !noNewLine ;
+            return ;
+ 
+         case CHAR_MIN:
+            if ( !noNewLine &&
+                 this.isScript &&
+                 this.charCodeAt(c+1) === CHAR_MIN && this.charCodeAt(c+2) === CHAR_GREATER_THAN ) {
+               this.c = c + 1 + 2;
+               this.readLineComment()
+               continue;
+            }
+  
          default :
+   
             this.col += (c-start ) ;
             this.c=c;
             this.newLineBeforeLookAhead = !noNewLine ;
@@ -658,7 +680,7 @@ lp.skipS = function() {
 
   this.col += (c-start ) ;
   this.c = c ;
-  this.newLineBeforeLookAhead = ! noNewLine ;
+  this.newLineBeforeLookAhead = !noNewLine ;
 };
 
 function fromcode(codePoint )  {
@@ -965,7 +987,7 @@ lp.readStrLiteral = function (start) {
 lp.readDot = function() {
    ++this.c;
    if( this.src.charCodeAt(this.c)==CHAR_SINGLEDOT) {
-     if (this.src.charCodeAt(++ this.c) == CHAR_SINGLEDOT) { this.ltraw = this.lttype = '...' ;   ++this.c; return ; }
+     if (this.src.charCodeAt(++ this.c) == CHAR_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
      this.err('Unexpectd ' + this.src[this.c]) ;
    }
    else if ( Num(this.src.charCodeAt(this.c))) {
@@ -995,12 +1017,6 @@ lp.readMultiComment = function () {
                 c++;
                 this.col += (c-start);
                 this.c=c;
-                if ( !n && this.isScript && l.charCodeAt(c)      === CHAR_MIN &&
-                                            l.charCodeAt(c+1)    === CHAR_MIN &&
-                                            l.charCodeAt(c+2)    ===              CHAR_GREATER_THAN          ) {
-                   this.c += 3;
-                   this. readLineComment   () ;
-                }
                 return n;
              }
              continue ;
