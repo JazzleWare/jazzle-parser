@@ -2172,14 +2172,13 @@ lp. parseIdStatementOrIdExpressionOrId = function ( context ) {
         case 'for': return this.parseFor();
         case 'try': return this.parseTryStatement();
         case 'let':
-             if ( this.tight ) 
-               return this.parseVariableDeclaration(context & CONTEXT_FOR ) ;
+             if ( this.canBeStatement && this.v >= 5 )
+               return this.parseLet(CONTEXT_NONE);
 
-             pendingExprHead = this.parseNonStrictLet(context&CONTEXT_FOR);
-             if ( this.foundStatement )
-               return pendingExprHead;
-
+             _assert(!this.tight);
+             pendingExprHead = this.id();
              break SWITCH;
+
         case 'var': return this.parseVariableDeclaration( context & CONTEXT_FOR );
         case 'int':
             if ( this.v <= 5 )
@@ -2224,7 +2223,10 @@ lp. parseIdStatementOrIdExpressionOrId = function ( context ) {
         case 'break': return this.parseBreakStatement();
         case 'catch': this.notId ()  ;
         case 'class': return this.parseClass() ;
-        case 'const': return this.parseVariableDeclaration(context);
+        case 'const':
+            _assert(this.v>=5);
+            return this.parseVariableDeclaration(CONTEXT_NONE);
+
         case 'throw': return this.parseThrowStatement();
         case 'while': return this.parseWhileStatement();
         case 'yield': 
@@ -3072,72 +3074,32 @@ lp.parseArrayExpression = function () {
   return elem;
 };
 
-lp . parseNonStrictLet = function(context) {
+lp.parseLet = function(context) {
 
 // this function is only calld when we have a 'let' at the start of an statement,
 // or else when we have a 'let' at the start of a for's init; so, CONTEXT_FOR means "at the start of a for's init ",
 // not 'in for'
  
-  if ( this.v <= 5 || !(this.canBeStatement || (context & CONTEXT_FOR) ) )
-    return this.id();
-
   var startc = this.c0, startLoc = this.locBegin();
   var c = this.c, li = this.li, col = this.col;
 
-  this.next();
+  var letDecl = this.parseVariableDeclaration(context);
 
-  var elem = null;
-  if ( !(  (context&CONTEXT_FOR) &&
-           this.lttype === 'Identifier' &&
-           this.ltval === 'in'
-         ) ) {
-        
-       this.canBeStatement = false;
-       elem =  this.parseVariableDeclarator(context);
-  }
+  if ( letDecl )
+    return letDecl;
 
-  if ( elem === null ) {
-     if ( ! ( context & CONTEXT_FOR ) )
-       this.canBeStatement = !false; // for #parseIdStatementOrIdExpressionOrId's sake
- 
-     return { type: 'Identifier',
-             name: 'let',
-             start: startc,
-             end: c,
-             p: 0,
-             loc: { start: startLoc, end: { line: li, column: col } }
-           };
-  }
+  _assert(!this.tight);
 
   this.canBeStatement = false;
-  var list = [elem];
-  while ( this.lttype === ',' ) {
-     this.next();
-     list.push(this.parseVariableDeclarator(context) ) ;
-  }
-
-  var lastItem = list[list.length-1];
-  var endI, endLoc;
-  if ( context & CONTEXT_FOR ) {
-    endI = lastItem.end;
-    endLoc = lastItem.loc.end;
-  }
-  else { 
-    endI = this.semiI() || lastItem.end ;
-    endLoc = this.semiLoc() || lastItem.loc.end; 
-  }
-  var n = { declarations: list,
-          type: 'VariableDeclaration',
-          start: startc,
-           end: endI ,
-          loc: { start: startLoc, end: endLoc },
-          kind: 'let'
+  this.pendingExprHead = {
+     type: 'Identifier',
+     name: 'let',
+     start: startc,
+     end: c,
+     loc: { start: startLoc, end: { line: li, column: col } }
   };
 
-  if ( !(context & CONTEXT_FOR ) )
-       this.foundStatement = !false;
-
-  return n;
+  return null ;
 };
 
 lp.parseSuper  = function   () {
@@ -3338,32 +3300,32 @@ lp.parseParen = function () {
 };
 
 lp . parseVariableDeclaration = function(context) {
-     if ( this.canBeStatement )
-        this.canBeStatement = false;
-
-     else
-        _assert( context & CONTEXT_FOR ) ;
+     _assert ( this.canBeStatement );
+     this.canBeStatement = false;
 
      var startc = this.c0, startLoc = this.locBegin(), kind = this.ltval;
      var elem = null;
 
-     var list = [];
-     do {
-       this.next () ;
-       elem = this.parseVariableDeclarator(context);
-       _assert(elem);
-       list.push(elem);
-       if ( this.unsatisfiedAssignment ) {
-         _assert(list.length === 1 )  ;
-         break ;
-       }
-     } while ( this.lttype === ',' );
+     this.next () ;
+     elem = this.parseVariableDeclarator(context);
+     if ( elem === null ) {
+       _assert(kind === 'let');
+       return null; 
+     }
+
+     var list = [elem];
+     if ( !this.unsatisfiedAssignment ) // parseVariableDeclarator sets it when it finds an uninitialized BindingPattern
+          while ( this.lttype === ',' ) {
+            this.next();     
+            elem = this.parseVariableDeclarator(context);
+            _assert(elem);
+            list.push(elem);
+          }
 
      var lastItem = list[list.length-1];
      var endI = 0, endLoc = null;
 
      if ( !(context & CONTEXT_FOR) ) {
-       this.foundStatement  = !false ;
        endI = this.semiI() || lastItem.end;
        endLoc = this.semiLoc() || lastItem.loc.end; 
      }
@@ -3372,11 +3334,18 @@ lp . parseVariableDeclaration = function(context) {
        endLoc = lastItem.loc.end;
      }
 
+     this.foundStatement  = !false ;
+
      return { declarations: list, type: 'VariableDeclaration', start: startc, end: endI,
               loc: { start: startLoc, end: endLoc }, kind: kind };
 };
 
 lp . parseVariableDeclarator = function(context) {
+  if ( (context & CONTEXT_FOR) &&
+       this.lttype === 'Identifier' &&
+       this.ltval === 'in' )
+      return null;
+
   var head = this.parsePattern(), init = null;
   if ( !head ) return null;
 
@@ -3412,18 +3381,24 @@ lp . parseFor = function() {
 
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
      case 'var':
+        this.canBeStatement = !false;
         head = this.parseVariableDeclaration(CONTEXT_FOR);
         break;
+
      case 'let':
-        if ( this.tight ) head = this. parseVariableDeclaration(CONTEXT_FOR);
-        else head = this.parseNonStrictLet(CONTEXT_FOR);
+        if ( this.v >= 5 ) {
+          this.canBeStatement = !false;
+          head = this.parseLet(CONTEXT_FOR);
+        }
+
         break;
 
      case 'const' :
-        if ( this. v > 5 ) {
-           head = this. parseVariableDeclaration(CONTEXT_FOR);
+
+        _assert( this.v >= 5 );
+        this.canBeStatement = !false;
+        head = this. parseVariableDeclaration(CONTEXT_FOR);
            break ;
-        }
   }
 
   if ( head === null ) {
@@ -3431,7 +3406,7 @@ lp . parseFor = function() {
        head = this.parseExpr( CONTEXT_NULLABLE|CONTEXT_ELEM|CONTEXT_FOR ) ;
   }
   else 
-     headIsExpr = head.type !== 'VariableDeclaration';
+     this.foundStatement = false;
 
   var kind = 'ForOfStatement';
   var nbody = null;
