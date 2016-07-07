@@ -45,6 +45,7 @@
     "benchmark": "node speed.js"
   },
   "devDependencies": {
-    "benchmark": "^2.1.0"
+    "benchmark": "^2.1.0",
+    "microtime": "^2.1.1"
   }
 }
