@@ -648,11 +648,12 @@ lp.skipS = function() {
 
          case CHAR_LESS_THAN:
             if ( this.isScript &&
-                 this.charCodeAt(c+1) === CHAR_EXCLAMATION &&
-                 this.charCodeAt(c+2) === CHAR_MIN &&
-                 this.charCodeAt(c+ 1 + 2) === CHAR_MIN ) {
+                 l.charCodeAt(c+1) === CHAR_EXCLAMATION &&
+                 l.charCodeAt(c+2) === CHAR_MIN &&
+                 l.charCodeAt(c+ 1 + 2) === CHAR_MIN ) {
                this.c = c + 4;
                this.readLineComment();
+               c = this.c;
                continue;
             }
             this.col += (c-start ) ;
@@ -663,9 +664,10 @@ lp.skipS = function() {
          case CHAR_MIN:
             if ( !noNewLine &&
                  this.isScript &&
-                 this.charCodeAt(c+1) === CHAR_MIN && this.charCodeAt(c+2) === CHAR_GREATER_THAN ) {
+                 l.charCodeAt(c+1) === CHAR_MIN && l.charCodeAt(c+2) === CHAR_GREATER_THAN ) {
                this.c = c + 1 + 2;
-               this.readLineComment()
+               this.readLineComment();
+               c = this.c;
                continue;
             }
   
