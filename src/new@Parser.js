@@ -9,7 +9,7 @@ _class.parseNewHead = function () {
   var head, elem, inner;
   switch (this  .lttype) {
     case 'Identifier':
-       head = this.parseIdStatementOrIdExpressionOrId (CONTEXT_NONE);
+       head = this.parseIdStatementOrId (CONTEXT_NONE);
        this.assert(head);
        break;
 

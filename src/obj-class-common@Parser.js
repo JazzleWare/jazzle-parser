@@ -1,6 +1,4 @@
 
-var OBJ_MEM = !false;
-
 _class .parseMeth = function(name, isObj) {
    var val = null; 
 

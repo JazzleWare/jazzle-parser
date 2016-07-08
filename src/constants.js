@@ -95,3 +95,16 @@ var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
 
 var PAREN = 'paren';
+
+
+var ANY_ARG_LEN = -1;
+
+var WHOLE_FUNCTION = 8;
+var ARGLIST_AND_BODY_GEN = 1 ;
+var ARGLIST_AND_BODY = 2;
+var METH_FUNCTION = 4;
+var CONSTRUCTOR_FUNCTION = 128;
+
+var OBJ_MEM = !false;
+
+

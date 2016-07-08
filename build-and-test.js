@@ -41,7 +41,7 @@ Builder.prototype.write = function(output) {
    while ( e < this.moduleList.length )
       this.writeModule(  this.moduleList[e++ ] );
 
-   this. write_string(  ';\n(function(){\n' + this.strExports + '\n})();\n})(this);' );
+   this. write_string(  ';\n' + this.strExports + ';})(this)' );
    
    fs .writeSync(output, this.str, 0, this.str.length);
    fs .closeSync(output);
@@ -62,21 +62,16 @@ Builder.prototype.writeModule = function(  module ) {
 
    console.log( "----SUBMODULES" );
    this. write_string(  ';\n' );
-   this. write_string(  '(function(_class){\n' );
 
+   this. write_string( 'var _class = ' + module.name + '.prototype;\n' );
    var e = 0;
 
    while ( e < module.submodules.length ) {
      console.log( "----WRITING SUBMODULE", module.submodules[e] );
-     this. write_string(  '(function(_class){\n' );
      this. write_string(  fs .readFileSync(module.submodules[e] ) );
-     this. write_string(  '})(_class);\n' );
      console.log( "----FINISHED", module.submodules[e] );
      e++;
    }
-
-   this. write_string(  '})(' );
-   this. write_string(  module.name + '.prototype);\n' );
 
    console.log( "----(FINISHED SUBMODULES)\n" );
 };          

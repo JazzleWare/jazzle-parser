@@ -1,5 +1,5 @@
 _class . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
-_class. parseIdStatementOrOrId = function ( context ) {
+_class. parseIdStatementOrId = function ( context ) {
   var id = this.ltval ;
   var pendingExprHead = null;
 

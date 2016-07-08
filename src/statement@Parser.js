@@ -6,7 +6,7 @@ _class.parseStatement = function ( allowNull ) {
     case ';': return this.parseEmptyStatement() ;
     case 'Identifier':
        this.canBeStatement = !false;
-       head = this.parseIdStatementOrIdExpressionOrId(CONTEXT_NONE);
+       head = this.parseIdStatementOrId(CONTEXT_NONE);
        if ( this.foundStatement ) {
           this.foundStatement = false ;
           return head;

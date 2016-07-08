@@ -7,7 +7,6 @@ function compareAST(expected, actual) {
 }
 
 var _assert = util.assert;
-var lube = require( '../lube.js' );	 
 
 function getTestSource (name) {
     try {

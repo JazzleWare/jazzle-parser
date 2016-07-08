@@ -3,7 +3,7 @@ var path = require('path')
 
 var Benchmark = require('benchmark');
 
-var lube = require('..');
+var lube = require('../dist/lube.js');
 var SOURCES_ROOT = path.join(__dirname, 'sources');
 var parsers = {};
 var sources = {};

@@ -46,8 +46,7 @@ var Parser = function (src) {
 
 
 ;
-(function(_class){
-(function(_class){
+var _class = Parser.prototype;
 _class.parseArrayExpression = function () {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
@@ -113,8 +112,6 @@ _class . parseSpreadElement = function() {
 };
 
 
-})(_class);
-(function(_class){
 _class .asArrowFuncArgList = function(head) {
    if ( head === null )
      return;
@@ -263,11 +260,7 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
 };
 
 
-})(_class);
-(function(_class){
 _class . assert = function(cond, message) { if ( !cond ) throw new Error ( message )  ; }
-})(_class);
-(function(_class){
 
 _class .ensureSimpAssig = function(head) {
   switch(head.type) {
@@ -360,8 +353,6 @@ _class .parseAssignment = function(head, context ) {
 };
 
 
-})(_class);
-(function(_class){
 _class. parseClass = function() {
   var startc = this.c0,
       startLoc = this.locBegin();
@@ -489,8 +480,6 @@ _class.parseSuper  = function   () {
 };
 
 
-})(_class);
-(function(_class){
 
 _class.readMultiComment = function () {
    var c = this.c,
@@ -550,8 +539,6 @@ _class.readLineComment = function() {
 };
 
 
-})(_class);
-(function(_class){
 _class.readEsc = function ()  {
   var src = this.src, b0 = 0, b = 0;
   switch ( src.charCodeAt ( ++this.c ) ) {
@@ -633,8 +620,6 @@ _class.readEsc = function ()  {
 };
 
 
-})(_class);
-(function(_class){
 
 _class.peekTheSecondByte = function () {
   var e = this.src.charCodeAt(this.c);
@@ -647,12 +632,6 @@ _class.peekTheSecondByte = function () {
       this.err('Byte (' + _h(e)+ ') must be in range 0x0DC00 to 0x0DFFF, but it is not ');
 
   return e;
-};
-
-function toNum (n) {
-  return (n >= CHAR_0 && n <= CHAR_9) ? n - CHAR_0 :
-         (n <= CHAR_f && n >= CHAR_a) ? 10 + n - CHAR_a :
-         (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
 };
 
 _class.peekUSeq = function () {
@@ -687,8 +666,6 @@ _class.peekUSeq = function () {
 };
 
 
-})(_class);
-(function(_class){
 
 _class . parseFor = function() {
   this.ensureStmt();
@@ -794,17 +771,6 @@ _class . parseFor = function() {
          body: nbody };
 };
 
-
-})(_class);
-(function(_class){
-
-var ANY_ARG_LEN = -1;
-
-var WHOLE_FUNCTION = 8;
-var ARGLIST_AND_BODY_GEN = 1 ;
-var ARGLIST_AND_BODY = 2;
-var METH_FUNCTION = 4;
-var CONSTRUCTOR_FUNCTION = 128;
 
 _class .parseArgs  = function (argLen) {
   var list = [], elem = null;
@@ -970,10 +936,8 @@ _class . makeStrict  = function() {
 };
 
 
-})(_class);
-(function(_class){
 _class . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
-_class. parseIdStatementOrOrId = function ( context ) {
+_class. parseIdStatementOrId = function ( context ) {
   var id = this.ltval ;
   var pendingExprHead = null;
 
@@ -1173,8 +1137,6 @@ _class. parseIdStatementOrOrId = function ( context ) {
   return pendingExprHead;
 };
  
-})(_class);
-(function(_class){
 _class.readAnIdentifierToken = function (v) {
    // if head has been a u, the location has already been saved in #next()
    if ( !v ) {
@@ -1249,8 +1211,6 @@ _class.readAnIdentifierToken = function (v) {
 };
 
 
-})(_class);
-(function(_class){
 
 _class.parseLet = function(context) {
 
@@ -1281,15 +1241,11 @@ _class.parseLet = function(context) {
 };
 
 
-})(_class);
-(function(_class){
 _class.loc = function() { return { line: this.li, column: this.col }; };
 _class.locBegin = function() { return  { line: this.li0, column: this.col0 }; };
 _class.locOn = function(l) { return { line: this.li, column: this.col - l }; };
 
 
-})(_class);
-(function(_class){
 _class .memberID = function() { return this.v > 5 ? this.id() : this.validateID(null) ; };
 _class .memberExpr = function() {
   var startc = this.c - 1,
@@ -1303,8 +1259,6 @@ _class .memberExpr = function() {
 };
 
 
-})(_class);
-(function(_class){
 _class.parseNewHead = function () {
   var startc = this.c0, end = this.c, startLoc = this.locBegin(), li = this.li, col = this.col, raw = this.ltraw ;
   this.next () ;
@@ -1316,7 +1270,7 @@ _class.parseNewHead = function () {
   var head, elem, inner;
   switch (this  .lttype) {
     case 'Identifier':
-       head = this.parseIdStatementOrIdExpressionOrId (CONTEXT_NONE);
+       head = this.parseIdStatementOrId (CONTEXT_NONE);
        this.assert(head);
        break;
 
@@ -1397,8 +1351,6 @@ _class.parseNewHead = function () {
   }
 };
 
-})(_class);
-(function(_class){
 _class.next = function () {
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
@@ -1872,8 +1824,6 @@ _class.expectID = function (n) {
 };
 
 
-})(_class);
-(function(_class){
 _class.parseExpr = function (context) {
   var head = this.parseNonSeqExpr(PREC_WITH_NO_OP,context );
   if ( this.unsatisfiedAssignment ) {
@@ -2082,8 +2032,6 @@ _class.parseNonSeqExpr = function (prec, context  ) {
 };
 
 
-})(_class);
-(function(_class){
 _class.readNumberLiteral = function (peek) {
   var c = this.c, src = this.src, len = src.length;
   var b = 10 , val = 0;
@@ -2212,10 +2160,6 @@ _class . frac = function(n) {
 }
 
 
-})(_class);
-(function(_class){
-
-var OBJ_MEM = !false;
 
 _class .parseMeth = function(name, isObj) {
    var val = null; 
@@ -2340,8 +2284,6 @@ _class . parseSetGet= function(isObj) {
 };
 
 
-})(_class);
-(function(_class){
 _class.parseObjectExpression = function () {
   var startc = this.c - 1 ,
       startLoc = this.locOn(1),
@@ -2446,8 +2388,6 @@ _class.parseProperty = function (name) {
 };
 
 
-})(_class);
-(function(_class){
 
 _class.parsePattern = function() {
   switch ( this.lttype ) {
@@ -2601,8 +2541,6 @@ _class.parseRestElement = function() {
 };
 
 
-})(_class);
-(function(_class){
 _class.parseExprHead = function (context) {
   var firstUnassignable = null;
   var firstParen = null;
@@ -2617,7 +2555,7 @@ _class.parseExprHead = function (context) {
   }
   else switch (this.lttype)  {
         case 'Identifier':
-            if ( head = this. parseIdStatementOrIdExpressionOrId(context) )
+            if ( head = this. parseIdStatementOrId(context) )
                break ;
 
              return null;
@@ -2873,8 +2811,6 @@ _class.parseArgList = function () {
 };
 
 
-})(_class);
-(function(_class){
 _class.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
@@ -2903,8 +2839,6 @@ _class.parseProgram = function () {
 };
 
 
-})(_class);
-(function(_class){
 
 var gRegexFlag =               1 ,
     uRegexFlag = gRegexFlag << 1 ,
@@ -3038,8 +2972,6 @@ _class.parseRegExpLiteral = function() {
 };
 
 
-})(_class);
-(function(_class){
 _class.semiLoc = function () {
   switch (this.lttype) {
     case ';':
@@ -3063,8 +2995,6 @@ _class.semiI = function() {
    return this.lttype === ';' ? this.c : this.newLineBeforeLookAhead ? 0 : this.lttype === '}' ? this.c - 1 : this.lttype === 'eof' ? this.c : 0; };
 
 
-})(_class);
-(function(_class){
 _class.parseStatement = function ( allowNull ) {
   var head = null, l, e ;
 
@@ -3073,7 +3003,7 @@ _class.parseStatement = function ( allowNull ) {
     case ';': return this.parseEmptyStatement() ;
     case 'Identifier':
        this.canBeStatement = !false;
-       head = this.parseIdStatementOrIdExpressionOrId(CONTEXT_NONE);
+       head = this.parseIdStatementOrId(CONTEXT_NONE);
        if ( this.foundStatement ) {
           this.foundStatement = false ;
           return head;
@@ -3525,8 +3455,6 @@ _class.blck = function () { // blck ([]stmt)
 };
 
 
-})(_class);
-(function(_class){
 _class.readStrLiteral = function (start) {
   this.li0 = this.li;
   this.col0 = this.col;
@@ -3570,8 +3498,6 @@ _class.readStrLiteral = function (start) {
 };
 
 
-})(_class);
-(function(_class){
 _class . parseTemplateLiteral = function() {
   var li = this.li, col = this.col;
   var startc = this.c - 1, startLoc = this.locOn(1);
@@ -3689,8 +3615,6 @@ _class . parseTemplateLiteral = function() {
   return n
 };
 
-})(_class);
-(function(_class){
 _class .validateID  = function (e) {
   var n = e || this.ltval;
 
@@ -3813,8 +3737,6 @@ _class .validateID  = function (e) {
 _class.errorReservedID = function() { this.err ( this. ltraw + ' is not an identifier '   )  ; }
 
 
-})(_class);
-(function(_class){
 _class . parseVariableDeclaration = function(context) {
      this.assert ( this.canBeStatement );
      this.canBeStatement = false;
@@ -3880,8 +3802,6 @@ _class . parseVariableDeclarator = function(context) {
            loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init) };
 };
 
-})(_class);
-(function(_class){
 
 _class.parseYield = function(context) {
   var arg = null,
@@ -3912,8 +3832,6 @@ _class.parseYield = function(context) {
 };
 
 
-})(_class);
-})(Parser.prototype);
 ;
 var CHAR_1 = char2int('1'),
     CHAR_2 = char2int('2'),
@@ -4012,6 +3930,19 @@ var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
 
 var PAREN = 'paren';
+
+
+var ANY_ARG_LEN = -1;
+
+var WHOLE_FUNCTION = 8;
+var ARGLIST_AND_BODY_GEN = 1 ;
+var ARGLIST_AND_BODY = 2;
+var METH_FUNCTION = 4;
+var CONSTRUCTOR_FUNCTION = 128;
+
+var OBJ_MEM = !false;
+
+
 ;
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
 function isIDHead(c) {
@@ -4214,9 +4145,14 @@ function fromcode(codePoint )  {
 
 function core(n) { return n.type === PAREN ? n.expr : n; };
 
+function toNum (n) {
+  return (n >= CHAR_0 && n <= CHAR_9) ? n - CHAR_0 :
+         (n <= CHAR_f && n >= CHAR_a) ? 10 + n - CHAR_a :
+         (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
+};
+
 
 ;
-(function(){
 _exports.parse = function(src) {
   var newp = new Parser(src);
   return newp.parseProgram();
@@ -4224,6 +4160,4 @@ _exports.parse = function(src) {
 
 _exports.Parser = 
 Parser;  
-
-})();
-})(this);
+;})(this)

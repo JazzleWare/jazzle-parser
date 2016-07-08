@@ -12,12 +12,6 @@ _class.peekTheSecondByte = function () {
   return e;
 };
 
-function toNum (n) {
-  return (n >= CHAR_0 && n <= CHAR_9) ? n - CHAR_0 :
-         (n <= CHAR_f && n >= CHAR_a) ? 10 + n - CHAR_a :
-         (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
-};
-
 _class.peekUSeq = function () {
   var c = ++this.c, l = this.src, e = l.length;
   var byteVal = 0;

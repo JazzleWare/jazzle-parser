@@ -12,7 +12,7 @@ _class.parseExprHead = function (context) {
   }
   else switch (this.lttype)  {
         case 'Identifier':
-            if ( head = this. parseIdStatementOrIdExpressionOrId(context) )
+            if ( head = this. parseIdStatementOrId(context) )
                break ;
 
              return null;

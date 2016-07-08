@@ -1,12 +1,3 @@
-
-var ANY_ARG_LEN = -1;
-
-var WHOLE_FUNCTION = 8;
-var ARGLIST_AND_BODY_GEN = 1 ;
-var ARGLIST_AND_BODY = 2;
-var METH_FUNCTION = 4;
-var CONSTRUCTOR_FUNCTION = 128;
-
 _class .parseArgs  = function (argLen) {
   var list = [], elem = null;
 
