@@ -1,6 +1,6 @@
 ( function(_exports) {
 
-var util = require( '../util.js' ), lube = require('../lube.js'  ) , fs = require( 'fs' ) ;
+var util = require( '../util.js' ), lube = require('../dist/lube.js'  ) , fs = require( 'fs' ) ;
 
 function compareAST(expected, actual) {
   return util.compare(expected, actual);
