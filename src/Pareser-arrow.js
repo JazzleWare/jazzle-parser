@@ -1,0 +1,148 @@
+_class .asArrowFuncArgList = function(head) {
+   if ( head === null )
+     return;
+
+   if ( head.type === 'SequenceExpression' ) {
+         _assert(head !== this.firstParen );
+         var i = 0, list = head.expressions;
+         while ( i < list.length ) {
+           this.asArrowFuncArg(list[i]);
+           i++;
+         }
+   }
+   else
+      this.asArrowFuncArg(head);
+};
+
+_class. asArrowFuncArg = function(arg  ) {
+    var i = 0, list = null;
+
+    switch  ( arg.type ) {
+        case 'Identifier':
+           _assert(arg !== this.firstParen )  ;
+           return this.addArg(arg);
+
+        case 'ArrayExpression':
+           _assert(arg !== this.firstParen )  ;
+           list = arg.elements;
+           while ( i < list.length ) {
+              if ( list[i] ) {
+                 this.asArrowFuncArg(list[i]);
+                 if ( list[i].type === 'SpreadElement' ) {
+                    i++;
+                    break;
+                 }
+              }
+              i++;
+           }
+           _assert( i === list.length );
+           arg.type = 'ArrayPattern';
+           return;
+
+        case 'AssignmentExpression':
+           _assert(arg !== this.firstParen );
+           _assert(arg.operator === '=' ) ;
+           this.asArrowFuncArg(arg.left);
+           arg.type = 'AssignmentPattern';
+           delete arg.operator ;
+           return;
+
+        case 'ObjectExpression':
+           _assert(arg !== this.firstParen    );
+           list = arg.properties;
+           while ( i < list.length )
+              this.asArrowFuncArg(list[i++].value );
+           arg.type = 'ObjectPattern';
+           return;
+
+        case 'AssignmentPattern':
+           _assert(arg !== this.firstParen );
+           this.asArrowFuncArg(arg.left) ;
+           return;
+
+        case 'ArrayPattern' :
+           list = arg.elements;
+           while ( i < list.length )
+             this.asArrowFuncArg(list[i++] ) ;
+
+           return;
+
+        case 'SpreadElement':
+            this.asArrowFuncArg(arg.argument);
+            arg.type = 'RestElement';
+            return;
+
+        case 'RestElement':
+            this.asArrowFuncArg(arg.argument);
+            return;
+
+        case 'ObjectPattern':
+            list = arg.properties;
+            while ( i < list.length )
+               this.asArrowFuncArgList ( list[i++].value  );
+
+            return;
+
+        default:
+           _assert(false ) ;
+    }
+};
+
+_class . parseArrowFunctionExpression = function(arg,context)   {
+
+  if ( this.unsatisfiedArg )
+       this.unsatisfiedArg = null;
+
+  var prevArgNames = this.argNames;
+  this.argNames = {};
+
+  switch ( arg.type ) {
+    case 'Identifier':
+       this.asArrowFuncArg(arg, 0)  ;
+       break ;
+
+    case PAREN:
+       this.asArrowFuncArgList(core(arg));
+       break ;
+
+    default:
+       _assert(false);
+  }
+
+  this.next();
+
+  var scopeFlags = this.scopeFlags;
+  this.scopeFlags &= ( SCOPE_FUNCTION|SCOPE_METH|SCOPE_CONSTRUCTOR) ;
+
+  var isExpr = !false, nbody = null;
+
+  if ( this.lttype === '{' ) {
+       var prevLabels = this.labels;
+       this.labels = {};
+       var tight = this.tight;
+       this.tight = !false;
+       isExpr = false;
+       nbody = this.parseFuncBody(CONTEXT_NONE);
+       this.labels = prevLabels;
+  }
+  else
+    nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context) ;
+
+  this.argNames = prevArgNames;
+  this.scopeFlags = scopeFlags;
+
+  var params = core(arg);
+
+  return { type: 'ArrowFunctionExpression',
+           params: params ?  params.type === 'SequenceExpression' ? params.expressions : [params] : [] ,
+           start: arg.start,
+           end: nbody.end,
+           loc: { start: arg.loc.start, end: nbody.loc.end },
+           generator: false,
+           expression: isExpr,
+           body: core(nbody),
+           id : null
+  }; 
+};
+
+

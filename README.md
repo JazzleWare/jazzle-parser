@@ -14,22 +14,15 @@ My take is that, awesome as the parser is, it can still be more robust, and more
 
 #Usage
 First,
-``sh
+```sh
 npm install jsrube
-``
+```
 
 Then:
 
 ```javascript
 var jsRube = require( 'jsrube' );
 console.log( jsRube.parse('var v = "hi !";') );
-```
-
-
-#Testing
-
-```sh
-npm test jsrube
 ```
 
 #anything else
