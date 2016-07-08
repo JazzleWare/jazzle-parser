@@ -7,7 +7,6 @@
   "engines": {
     "node": ">=6.20.0"
   },
-  "files": [ "dist/lube.js", "bench", "test-only.js" ],
   "author": {
     "name": "Neni Onoda",
     "email": "neni.onoda@gmail.com"
