@@ -29,7 +29,7 @@ _class . parseTemplateLiteral = function() {
              
               this.next(); // this must be done manually because we must have a lookahead before starting to parse an actual expression
               templExpressions.push( this.parseExpr(CONTEXT_NONE) );
-              _assert ( this. lttype === '}');
+              this.assert ( this. lttype === '}');
 
               currentElemContents = "";
               startElemFragment = startElem = c = this.c; // right after the '}'
@@ -84,7 +84,7 @@ _class . parseTemplateLiteral = function() {
     c++ ;
   }
 
-  _assert( ch === CHAR_BACKTICK );
+  this.assert( ch === CHAR_BACKTICK );
   
   if ( startElem < c ) {
      this.col += ( c - startColIndex );

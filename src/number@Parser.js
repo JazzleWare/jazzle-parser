@@ -11,9 +11,9 @@ _class.readNumberLiteral = function (peek) {
     switch (b) { // check out what the next is
       case CHAR_X: case CHAR_x:
          c++;
-         _assert(c < len);
+         this.assert(c < len);
          b = src.charCodeAt(c);
-         _assert( isHex(b) );
+         this.assert( isHex(b) );
          c++;
          while ( c < len && isHex( b = src.charCodeAt(c) ) )
              c++ ;
@@ -23,9 +23,9 @@ _class.readNumberLiteral = function (peek) {
 
       case CHAR_B: case CHAR_b:
         ++c;
-        _assert(c < len);
+        this.assert(c < len);
         b = src.charCodeAt(c);
-        _assert( b === CHAR_0 || b === CHAR_1 );
+        this.assert( b === CHAR_0 || b === CHAR_1 );
         val = b - CHAR_0; 
         ++c;
         while ( c < len &&
@@ -41,9 +41,9 @@ _class.readNumberLiteral = function (peek) {
 
       case CHAR_O: case CHAR_o:
         ++c;
-        _assert(c < len) ; 
+        this.assert(c < len) ; 
         b = src.charCodeAt(c);
-        _assert( b >= CHAR_0 && b < CHAR_8 );
+        this.assert( b >= CHAR_0 && b < CHAR_8 );
         val = b - CHAR_0 ;
         ++c; 
         while ( c < len &&
@@ -59,7 +59,7 @@ _class.readNumberLiteral = function (peek) {
 
       default:
         if ( b >= CHAR_0 && b <= CHAR_9 ) {
-          _assert( !this.tight );
+          this.assert( !this.tight );
           var base = 8;
           do {
             if ( b >= CHAR_8 && base === 8 ) base = 10 ;
@@ -101,7 +101,7 @@ _class.readNumberLiteral = function (peek) {
     this.c = c;
   }
   
-  _assert ( !( c < len && isIDHead(src.charCodeAt(c))) ); // needless
+  this.assert ( !( c < len && isIDHead(src.charCodeAt(c))) ); // needless
 };
 
 _class . frac = function(n) {

@@ -53,4 +53,6 @@ function fromcode(codePoint )  {
 
 }
 
+function core(n) { return n.type === PAREN ? n.expr : n; };
+
 

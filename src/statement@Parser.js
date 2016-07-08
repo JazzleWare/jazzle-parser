@@ -15,14 +15,14 @@ _class.parseStatement = function ( allowNull ) {
        break ;
 
     case 'eof':
-      _assert(allowNull);
+      this.assert(allowNull);
       return null;
   }
 
-  _assert(head === null) ;
+  this.assert(head === null) ;
   head = this.parseExpr(CONTEXT_NULLABLE) ;
   if ( !head ) {
-    _assert( allowNull, "statement must not be null" )
+    this.assert( allowNull, "statement must not be null" )
     return null;
   }
 
@@ -49,7 +49,7 @@ _class .parseLabeledStatement = function(label, allowNull) {
    this.next();
    var l = label.name;
    l += '%';
-   _assert( !this.findLabel(l) );
+   this.assert( !this.findLabel(l) );
    this.labels[l] =
         this.unsatisfiedLabel ?
         this.unsatisfiedLabel :
@@ -64,7 +64,7 @@ _class .parseLabeledStatement = function(label, allowNull) {
 
 _class .ensureStmt = function() {
    if ( this.canBeStatement ) this.canBeStatement = false;
-   else _assert(false);
+   else this.assert(false);
 };
 
 _class . fixupLabels = function(loop) {
@@ -171,7 +171,7 @@ _class.parseDoWhileStatement = function () {
 _class.parseContinueStatement = function () {
    this.ensureStmt   () ;
    this.fixupLabels(false);
-   _assert(this.scopeFlags & SCOPE_CONTINUE );
+   this.assert(this.scopeFlags & SCOPE_CONTINUE );
 
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;
@@ -183,7 +183,7 @@ _class.parseContinueStatement = function () {
    if ( !this.newLineBeforeLookAhead && this.lttype === 'Identifier' ) {
        label = this.validateID(null);
        name = this.findLabel(label.name + '%');
-       _assert(name && name.loop) ;
+       this.assert(name && name.loop) ;
        semi = this.semiI();
        this.foundStatement = !false;
        return { type: 'ContinueStatement', label: label, start: startc, end: semi || label.end,
@@ -198,7 +198,7 @@ _class.parseContinueStatement = function () {
 _class.parseBreakStatement = function () {
    this.ensureStmt   () ;
    this.fixupLabels(false);
-   _assert(this.scopeFlags & SCOPE_BREAK);
+   this.assert(this.scopeFlags & SCOPE_BREAK);
 
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;
@@ -210,7 +210,7 @@ _class.parseBreakStatement = function () {
    if ( !this.newLineBeforeLookAhead && this.lttype === 'Identifier' ) {
        label = this.validateID(null);
        name = this.findLabel(label.name + '%');
-       _assert(name) ;
+       this.assert(name) ;
        semi = this.semiI();
        this.foundStatement = !false;
        return { type: 'BreakStatement', label: label, start: startc, end: semi || label.end,
@@ -241,7 +241,7 @@ _class.parseSwitchStatement = function () {
   this.scopeFlags |=  SCOPE_BREAK;
   while ( elem = this.parseSwitchCase()) {
     if (elem.test === null) {
-       _assert(!hasDefault);
+       this.assert(!hasDefault);
        hasDefault = !false ;
     }
     cases.push(elem);
@@ -294,7 +294,7 @@ _class.parseReturnStatement = function () {
   this.ensureStmt();
   this.fixupLabels(false ) ;
 
-  _assert( this.scopeFlags & SCOPE_FUNCTION );
+  this.assert( this.scopeFlags & SCOPE_FUNCTION );
 
   var startc = this.c0,
       startLoc = this.locBegin(),
@@ -378,7 +378,7 @@ _class.parseTryStatement = function () {
   }
 
   var finOrCat = finBlock || catBlock;
-  _assert(finOrCat);
+  this.assert(finOrCat);
 
   this.foundStatement = !false;
   return  { type: 'TryStatement', block: tryBlock, start: startc, end: finOrCat.end,

@@ -41,7 +41,7 @@ _class .parseGen = function(isObj ) {
 
   switch ( this.lttype ) {
      case 'Identifier':
-        _assert(this.ltval !== 'constructor' ) ;
+        this.assert(this.ltval !== 'constructor' ) ;
         name = this.memberID();
         break ;
 
@@ -50,12 +50,12 @@ _class .parseGen = function(isObj ) {
         break ;
 
      case 'Literal' :
-        _assert(this.ltval !== 'constructor' ) ;
+        this.assert(this.ltval !== 'constructor' ) ;
         name = this.numstr();
         break ;
 
      default:
-        _assert(false);
+        this.assert(false);
   }
 
   var val = null;
@@ -116,7 +116,7 @@ _class . parseSetGet= function(isObj) {
   }
   
   val = this.parseFunc ( CONTEXT_NONE , ARGLIST_AND_BODY|METH_FUNCTION, kind === 'set' ? 1 : 0 )
-  _assert ( strName !== 'constructor' );
+  this.assert ( strName !== 'constructor' );
 
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: kind, computed: name.type === PAREN,

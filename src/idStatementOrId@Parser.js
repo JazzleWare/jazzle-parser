@@ -34,7 +34,7 @@ _class. parseIdStatementOrOrId = function ( context ) {
              if ( this.canBeStatement && this.v >= 5 )
                return this.parseLet(CONTEXT_NONE);
 
-             _assert(!this.tight);
+             this.assert(!this.tight);
              pendingExprHead = this.id();
              break SWITCH;
 
@@ -83,7 +83,7 @@ _class. parseIdStatementOrOrId = function ( context ) {
         case 'catch': this.notId ()  ;
         case 'class': return this.parseClass() ;
         case 'const':
-            _assert(this.v>=5);
+            this.assert(this.v>=5);
             return this.parseVariableDeclaration(CONTEXT_NONE);
 
         case 'throw': return this.parseThrowStatement();

@@ -20,9 +20,9 @@ _class.readEsc = function ()  {
 
    case CHAR_x :
       b0 = toNum(this.src.charCodeAt(++this.c));
-      _assert( b0 !== -1 );
+      this.assert( b0 !== -1 );
       b = toNum(this.src.charCodeAt(++this.c));
-      _assert( b !== -1 );
+      this.assert( b !== -1 );
       return String.fromCharCode((b0<<4)|b);
 
    case CHAR_0: case CHAR_1: case CHAR_2:
@@ -34,7 +34,7 @@ _class.readEsc = function ()  {
                if ( b0 < CHAR_0 || b0 >= CHAR_8 )
                  return '\0';
           }
-          _assert(false);
+          this.assert(false);
        }
 
        b = b0 - CHAR_0;
@@ -53,7 +53,7 @@ _class.readEsc = function ()  {
        return String.fromCharCode(b)  ;
 
     case CHAR_4: case CHAR_5: case CHAR_6: case CHAR_7:
-       _assert(!this.tight);
+       this.assert(!this.tight);
        b0 = src.charCodeAt(this.c);
        b  = b0 - CHAR_0;
        b0 = src.charCodeAt(this.c + 1 );

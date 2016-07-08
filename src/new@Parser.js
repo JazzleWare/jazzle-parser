@@ -10,22 +10,22 @@ _class.parseNewHead = function () {
   switch (this  .lttype) {
     case 'Identifier':
        head = this.parseIdStatementOrIdExpressionOrId (CONTEXT_NONE);
-       _assert(head);
+       this.assert(head);
        break;
 
     case '[':
        head = this. parseArrayExpression();
-       _assert(!this.unsatisfiedAssignment);
+       this.assert(!this.unsatisfiedAssignment);
        break ;
 
     case '(':
        head = this. parseParen() ;
-       _assert(!this.unsatisfiedArg ) ;
+       this.assert(!this.unsatisfiedArg ) ;
        break ;
 
     case '{':
        head = this. parseObjectExpression() ;
-       _assert(!this.unsatisfiedAssignment);
+       this.assert(!this.unsatisfiedAssignment);
        break ;
 
     case '/':
@@ -40,7 +40,7 @@ _class.parseNewHead = function () {
        head = this.numstr ();
        break ;
 
-    default: _assert(false) ;
+    default: this.assert(false) ;
   }
 
   var inner = core( head ) ;

@@ -75,7 +75,7 @@ _class.parseExprHead = function (context) {
          case '.':
             this.next();
             elem  = this.memberID();
-            _assert(elem);
+            this.assert(elem);
             head = {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
                       loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };
             inner =  head ;
@@ -126,7 +126,7 @@ _class.parseExprHead = function (context) {
 } ;
 
 _class .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
-    _assert( this.ltval === 'target' );
+    this.assert( this.ltval === 'target' );
     var prop = this.id();
     return { type: 'MetaProperty',
              meta: { type: 'Identifier', name : 'new', start: startc, end: end, loc: { start : startLoc, end: endLoc }, raw: new_raw  },
@@ -236,9 +236,6 @@ _class.parseParen = function () {
 
   return n;
 };
-
-var PAREN = 'paren';
-function core(n) { return n.type === PAREN ? n.expr : n; };
 
 
 _class .parseThis = function() {

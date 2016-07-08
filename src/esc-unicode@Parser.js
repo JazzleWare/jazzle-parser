@@ -27,22 +27,22 @@ _class.peekUSeq = function () {
     n = l.charCodeAt(c);
     do {
       n = toNum(n);
-      _assert (n !== - 1);
+      this.assert (n !== - 1);
       byteVal <<= 4;
       byteVal += n;
-      _assert (byteVal <= 0x010FFFF );
+      this.assert (byteVal <= 0x010FFFF );
       n = l.charCodeAt( ++ c);
     } while (c < e && n !== CHAR_RCURLY);
 
-    _assert ( n === CHAR_RCURLY ) ;
+    this.assert ( n === CHAR_RCURLY ) ;
     this.c = c;
     return byteVal;
   }
 
-  n = toNum(l.charCodeAt(c)); _assert( n !== -1 ); byteVal = n; c++ ;
-  n = toNum(l.charCodeAt(c)); _assert( n !== -1 ); byteVal <<= 4; byteVal += n; c++ ;
-  n = toNum(l.charCodeAt(c)); _assert( n !== -1 ); byteVal <<= 4; byteVal += n; c++ ;
-  n = toNum(l.charCodeAt(c)); _assert( n !== -1 ); byteVal <<= 4; byteVal += n;
+  n = toNum(l.charCodeAt(c)); this.assert( n !== -1 ); byteVal = n; c++ ;
+  n = toNum(l.charCodeAt(c)); this.assert( n !== -1 ); byteVal <<= 4; byteVal += n; c++ ;
+  n = toNum(l.charCodeAt(c)); this.assert( n !== -1 ); byteVal <<= 4; byteVal += n; c++ ;
+  n = toNum(l.charCodeAt(c)); this.assert( n !== -1 ); byteVal <<= 4; byteVal += n;
 
   this.c = c;
 

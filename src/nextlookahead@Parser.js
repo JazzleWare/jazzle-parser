@@ -160,7 +160,7 @@ _class.next = function () {
         if (CHAR_BACK_SLASH === peek) {
             mustBeAnID = 1;
             peek = l.charCodeAt(++ this.c);
-            _assert (peek === CHAR_u);
+            this.assert (peek === CHAR_u);
             peek = this.peekUSeq();
         }
         if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
@@ -169,7 +169,7 @@ _class.next = function () {
             r = this.peekTheSecondByte();
         }
         if (mustBeAnID) {
-            _assert(isIDHead(mustBeAnID === 1 ? peek :
+            this.assert(isIDHead(mustBeAnID === 1 ? peek :
                   ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ));
             this.readAnIdentifierToken( mustBeAnID === 2 ?
                 String.fromCharCode( peek, r ) :
@@ -461,12 +461,12 @@ _class.readDot = function() {
 _class.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
 
 _class.expectType = function (n)  {
-  _assert(this.lttype === n, 'expected ' + n + '; got ' + this.lttype  )  ;
+  this.assert(this.lttype === n, 'expected ' + n + '; got ' + this.lttype  )  ;
   this.next();
 };
 
 _class.expectID = function (n) {
-  _assert(this.lttype === 'Identifier' && this.ltval === n)  ;
+  this.assert(this.lttype === 'Identifier' && this.ltval === n)  ;
   this.next();
 };
 

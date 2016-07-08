@@ -25,7 +25,7 @@ function curlyReplace(matchedString, b, matchIndex, wholeString ) {
 
 function regexReplace(matchedString, b, noB, matchIndex, wholeString) {
   var c = parseInt('0x' + ( b || noB ) ) ;
-  _assert(c <= 0x010FFFF );
+  this.assert(c <= 0x010FFFF );
   
   if ( c <= 0xFFFF ) return String.fromCharCode(c) ;
 
@@ -78,17 +78,17 @@ _class.parseRegExpLiteral = function() {
        c++ ;
      }
 
-     _assert( src.charCodeAt(c) === CHAR_DIV );
+     this.assert( src.charCodeAt(c) === CHAR_DIV );
      var flags = 0;
      var flagCount = 0;
      WHILE:
      while ( flagCount <= 5 ) {
         switch ( src.charCodeAt ( ++c ) ) {
-            case CHAR_g: _assert(!(flags & gRegexFlag)); flags |= gRegexFlag; break;
-            case CHAR_u: _assert(!(flags & uRegexFlag)); flags |= uRegexFlag; break;
-            case CHAR_y: _assert(!(flags & yRegexFlag)); flags |= yRegexFlag; break;
-            case CHAR_m: _assert(!(flags & mRegexFlag)); flags |= mRegexFlag; break;
-            case CHAR_i: _assert(!(flags & iRegexFlag)); flags |= iRegexFlag; break;
+            case CHAR_g: this.assert(!(flags & gRegexFlag)); flags |= gRegexFlag; break;
+            case CHAR_u: this.assert(!(flags & uRegexFlag)); flags |= uRegexFlag; break;
+            case CHAR_y: this.assert(!(flags & yRegexFlag)); flags |= yRegexFlag; break;
+            case CHAR_m: this.assert(!(flags & mRegexFlag)); flags |= mRegexFlag; break;
+            case CHAR_i: this.assert(!(flags & iRegexFlag)); flags |= iRegexFlag; break;
 
             default : break WHILE;
         }

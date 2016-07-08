@@ -1,7 +1,7 @@
 _class.parseExpr = function (context) {
   var head = this.parseNonSeqExpr(PREC_WITH_NO_OP,context );
   if ( this.unsatisfiedAssignment ) {
-    _assert( context & CONTEXT_ELEM ) ;
+    this.assert( context & CONTEXT_ELEM ) ;
     return head;
   }
 
@@ -63,7 +63,7 @@ _class .parseUpdateExpression = function(arg, context) {
        loc = this.locOn(2);
        this.next() ;
        arg = this. parseExprHead(context&CONTEXT_FOR);
-       _assert(arg);
+       this.assert(arg);
 
        this.ensureSimpAssig(core(arg));
        return { type: 'UpdateExpression', argument: core(arg), start: c, operator: u,
@@ -136,11 +136,11 @@ _class.parseNonSeqExpr = function (prec, context  ) {
               break ;
 
            case 'yield':
-              _assert(prec === PREC_WITH_NO_OP ) ; // make sure there is no other expression before it
+              this.assert(prec === PREC_WITH_NO_OP ) ; // make sure there is no other expression before it
               return this.parseYield(); // everything that comes belongs to it
    
            default:
-              _assert(context & CONTEXT_NULLABLE )  ; 
+              this.assert(context & CONTEXT_NULLABLE )  ; 
               return null;
          }
     }
@@ -152,18 +152,18 @@ _class.parseNonSeqExpr = function (prec, context  ) {
     while ( !false ) {
        if ( !this. parseO( context ) ) break ;
        if ( isAssignment(this.prec) ) {
-         _assert( prec === PREC_WITH_NO_OP );
+         this.assert( prec === PREC_WITH_NO_OP );
          this.firstUnassignable = firstUnassignable;
          head = this. parseAssignment(head, context & CONTEXT_FOR );
          break ;
        }
 
        if ( this.unsatisfiedAssignment ) {
-         _assert(prec===PREC_WITH_NO_OP && context === CONTEXT_ELEM );
+         this.assert(prec===PREC_WITH_NO_OP && context === CONTEXT_ELEM );
          break ;
        }
 
-       _assert( !this.unsatisfiedArg );
+       this.assert( !this.unsatisfiedArg );
        if ( isMMorAA(this.prec) ) {
          if ( this. newLineBeforeLookAhead )
            break ;

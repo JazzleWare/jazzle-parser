@@ -145,7 +145,7 @@ _class.parseRestElement = function() {
 
    this.next ();
    var e = this.parsePattern();
-   _assert(e);
+   this.assert(e);
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
 };

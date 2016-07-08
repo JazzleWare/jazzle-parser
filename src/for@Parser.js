@@ -30,7 +30,7 @@ _class . parseFor = function() {
 
      case 'const' :
 
-        _assert( this.v >= 5 );
+        this.assert( this.v >= 5 );
         this.canBeStatement = !false;
         head = this. parseVariableDeclaration(CONTEXT_FOR);
            break ;
@@ -74,11 +74,11 @@ _class . parseFor = function() {
             start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
 
        default:
-          _assert(false) ;
+          this.assert(false) ;
     }
   }
 
-  _assert(!this.unsatisfiedAssignment);
+  this.assert(!this.unsatisfiedAssignment);
 /*
   if ( head && !headIsExpr ) {
     head.end = this.c;

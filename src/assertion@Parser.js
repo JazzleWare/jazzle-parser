@@ -1,1 +1,1 @@
-_class . assert = _assert(cond, message) { if ( !cond ) throw new Error ( message )  ; }
+_class . assert = function(cond, message) { if ( !cond ) throw new Error ( message )  ; }

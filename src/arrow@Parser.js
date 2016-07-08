@@ -3,7 +3,7 @@ _class .asArrowFuncArgList = function(head) {
      return;
 
    if ( head.type === 'SequenceExpression' ) {
-         _assert(head !== this.firstParen );
+         this.assert(head !== this.firstParen );
          var i = 0, list = head.expressions;
          while ( i < list.length ) {
            this.asArrowFuncArg(list[i]);
@@ -19,11 +19,11 @@ _class. asArrowFuncArg = function(arg  ) {
 
     switch  ( arg.type ) {
         case 'Identifier':
-           _assert(arg !== this.firstParen )  ;
+           this.assert(arg !== this.firstParen )  ;
            return this.addArg(arg);
 
         case 'ArrayExpression':
-           _assert(arg !== this.firstParen )  ;
+           this.assert(arg !== this.firstParen )  ;
            list = arg.elements;
            while ( i < list.length ) {
               if ( list[i] ) {
@@ -35,20 +35,20 @@ _class. asArrowFuncArg = function(arg  ) {
               }
               i++;
            }
-           _assert( i === list.length );
+           this.assert( i === list.length );
            arg.type = 'ArrayPattern';
            return;
 
         case 'AssignmentExpression':
-           _assert(arg !== this.firstParen );
-           _assert(arg.operator === '=' ) ;
+           this.assert(arg !== this.firstParen );
+           this.assert(arg.operator === '=' ) ;
            this.asArrowFuncArg(arg.left);
            arg.type = 'AssignmentPattern';
            delete arg.operator ;
            return;
 
         case 'ObjectExpression':
-           _assert(arg !== this.firstParen    );
+           this.assert(arg !== this.firstParen    );
            list = arg.properties;
            while ( i < list.length )
               this.asArrowFuncArg(list[i++].value );
@@ -56,7 +56,7 @@ _class. asArrowFuncArg = function(arg  ) {
            return;
 
         case 'AssignmentPattern':
-           _assert(arg !== this.firstParen );
+           this.assert(arg !== this.firstParen );
            this.asArrowFuncArg(arg.left) ;
            return;
 
@@ -84,7 +84,7 @@ _class. asArrowFuncArg = function(arg  ) {
             return;
 
         default:
-           _assert(false ) ;
+           this.assert(false ) ;
     }
 };
 
@@ -106,7 +106,7 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
        break ;
 
     default:
-       _assert(false);
+       this.assert(false);
   }
 
   this.next();

@@ -7,7 +7,7 @@ _class. parseClass = function() {
 
   if ( canBeStatement ) {
      this.canBeStatement = false;
-     _assert ( this.lttype === 'Identifier' );
+     this.assert ( this.lttype === 'Identifier' );
      name = this. validateID(null);
   }
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
@@ -56,7 +56,7 @@ _class. parseClass = function() {
                break SWITCH;
 
              case 'constructor':
-                _assert( !foundConstructor );
+                this.assert( !foundConstructor );
                  
                  if ( !isStatic ) foundConstructor = !false;
                 
@@ -112,15 +112,15 @@ _class.parseSuper  = function   () {
    this.next() ;
    switch ( this.lttype ) {
         case '(':
-          _assert(this.scopeFlags & SCOPE_CONSTRUCTOR);
+          this.assert(this.scopeFlags & SCOPE_CONSTRUCTOR);
           return n;
         case '.':
         case '[':
-           _assert( this.scopeFlags & SCOPE_METH );
+           this.assert( this.scopeFlags & SCOPE_METH );
            return n;
         
        default:
-          _assert(false); 
+          this.assert(false); 
    }
 };
 

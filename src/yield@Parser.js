@@ -12,7 +12,7 @@ _class.parseYield = function(context) {
         deleg = !false;
         this.next();
         arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, CONTEXT_NONE);
-        _assert(arg);
+        this.assert(arg);
      }
      else
         arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, CONTEXT_NULLABLE );

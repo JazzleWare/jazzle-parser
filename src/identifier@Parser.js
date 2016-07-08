@@ -26,17 +26,17 @@ _class.readAnIdentifierToken = function (v) {
             v += src.slice(startSlice,c) ; // v = v + those characters
 
          this.c = ++c;
-         _assert (CHAR_u === src.charCodeAt(c) );
+         this.assert (CHAR_u === src.charCodeAt(c) );
 
          peek = this. peekUSeq() ;
          if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
            this.c++;
            byte2 = this.peekTheSecondByte();
-           _assert(isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000));
+           this.assert(isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000));
            v += String.fromCharCode(peek, byte2);
          }
          else {
-            _assert(isIDBody(peek));
+            this.assert(isIDBody(peek));
             v += fromcode(peek);
          }
          c = this.c;
@@ -49,7 +49,7 @@ _class.readAnIdentifierToken = function (v) {
          c++;
          this.c = c; 
          byte2 = this.peekTheSecondByte() ;
-         _assert(isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000));
+         this.assert(isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000));
          v += String.fromCharCode(peek, byte2);
          c = this.c ;
          c++;

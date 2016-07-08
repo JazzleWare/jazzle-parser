@@ -94,4 +94,4 @@ var INTBITLEN = (function() { var i = 0;
 var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
 
-
+var PAREN = 'paren';

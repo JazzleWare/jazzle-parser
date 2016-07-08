@@ -13,7 +13,7 @@ _class.parseLet = function(context) {
   if ( letDecl )
     return letDecl;
 
-  _assert(!this.tight);
+  this.assert(!this.tight);
 
   this.canBeStatement = false;
   this.pendingExprHead = {

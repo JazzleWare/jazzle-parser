@@ -6,7 +6,7 @@ _class .ensureSimpAssig = function(head) {
        return;
 
     default:
-       _assert(false);
+       this.assert(false);
   }
 };
 
@@ -22,7 +22,7 @@ _class .toAssig = function(head) {
         return;
 
      case 'ObjectExpression':
-        _assert(head !== this.firstUnassignable )  ;
+        this.assert(head !== this.firstUnassignable )  ;
         list = head.properties;
         while ( i < list.length ) {
            this.toAssig(list[i].value);
@@ -33,7 +33,7 @@ _class .toAssig = function(head) {
         return;
 
      case 'ArrayExpression':
-        _assert(head !== this.firstUnassignable )  ;
+        this.assert(head !== this.firstUnassignable )  ;
         list = head.elements;
         while ( i < list.length ) {
           if ( list[i] ) {
@@ -45,13 +45,13 @@ _class .toAssig = function(head) {
           }
           i++;
         }
-        _assert( i === list.length );
+        this.assert( i === list.length );
         head.type = 'ArrayPattern';
         return;
 
      case 'AssignmentExpression':
-       _assert(head !== this.firstUnassignable ) ;
-       _assert(head.operator === '='  ) ;
+       this.assert(head !== this.firstUnassignable ) ;
+       this.assert(head.operator === '='  ) ;
        head.type = 'AssignmentPattern';
        delete head.operator;
        return;
@@ -65,7 +65,7 @@ _class .toAssig = function(head) {
        return;
 
      default:
-        _assert(false ) ;
+        this.assert(false ) ;
   }
 };
 
@@ -77,7 +77,7 @@ _class .parseAssignment = function(head, context ) {
     else this.ensureSimpAssig(core(head));
 
     if ( this.unsatisfiedAssignment ) {
-      _assert( this.prec === PREC_SIMP_ASSIG ) ;
+      this.assert( this.prec === PREC_SIMP_ASSIG ) ;
       this.unsatisfiedAssignment = false ;
     }
 

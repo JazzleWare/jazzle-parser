@@ -33,7 +33,7 @@ _class .parseArgs  = function (argLen) {
       list.push( this.parseRestElement() );
   }
   else
-     _assert( list.length === argLen );
+     this.assert( list.length === argLen );
 
   this.expectType(')');
 
@@ -43,7 +43,7 @@ _class .parseArgs  = function (argLen) {
 _class .addArg = function(id) {
   var name = id.name + '%';
   if ( has.call(this.argNames, name) ) {
-    _assert( !this.tight );
+    this.assert( !this.tight );
     if ( this.argNames[name] === null )
       this.argNames[name] = id ;
   }
@@ -77,7 +77,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
      }
      if ( canBeStatement )  {
         this.canBeStatement = false;
-        _assert(this.lttype === 'Identifier' ) ;
+        this.assert(this.lttype === 'Identifier' ) ;
         this.currentFuncName = this.validateID();
      }
      else if ( this. lttype == 'Identifier' )
@@ -156,15 +156,15 @@ _class . makeStrict  = function() {
 
    this.tight = !false;
    if ( this.currentFuncName ) {
-     _assert(!arguments_or_eval(this.currentFuncName));
+     this.assert(!arguments_or_eval(this.currentFuncName));
      this.validateID(this.currentFuncName.name) ;
    }
 
    var argName = null;
    for ( argName in this.argNames ) {
-      _assert( this.argNames[argName] === null );
+      this.assert( this.argNames[argName] === null );
       argName = argName.substring(0,argName.length-1) ;
-      _assert(!arguments_or_eval(argName));
+      this.assert(!arguments_or_eval(argName));
       this.validateID(argName);
 
    }

@@ -84,9 +84,9 @@ _class.parseProperty = function (name) {
          return this.parseMeth(name, OBJ_MEM);
 
       default:
-          _assert(name.type === 'Identifier' ) ;
+          this.assert(name.type === 'Identifier' ) ;
           if ( this.lttype === 'op' ) {
-             _assert(this.ltraw === '=' );
+             this.assert(this.ltraw === '=' );
              val = this.parseAssig(name);
              this.unsatisfiedAssignment = val;
           }

@@ -1,5 +1,5 @@
 _class . parseVariableDeclaration = function(context) {
-     _assert ( this.canBeStatement );
+     this.assert ( this.canBeStatement );
      this.canBeStatement = false;
 
      var startc = this.c0, startLoc = this.locBegin(), kind = this.ltval;
@@ -8,7 +8,7 @@ _class . parseVariableDeclaration = function(context) {
      this.next () ;
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
-       _assert(kind === 'let');
+       this.assert(kind === 'let');
        return null; 
      }
 
@@ -17,7 +17,7 @@ _class . parseVariableDeclaration = function(context) {
           while ( this.lttype === ',' ) {
             this.next();     
             elem = this.parseVariableDeclarator(context);
-            _assert(elem);
+            this.assert(elem);
             list.push(elem);
           }
 
@@ -53,7 +53,7 @@ _class . parseVariableDeclarator = function(context) {
        init = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
   }
   else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
-       _assert ( context & CONTEXT_FOR );  // bail out in case it is not a 'for' loop's init
+       this.assert ( context & CONTEXT_FOR );  // bail out in case it is not a 'for' loop's init
        if( !this.unsatisfiedAssignment )
          this.unsatisfiedAssignment  =  head;     // an 'in' or 'of' will satisfy it
   }
