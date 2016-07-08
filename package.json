@@ -41,12 +41,12 @@
     "syntax"
   ],
   "scripts": {
-    "test": "node run-tests.js",
+    "test": "node quick-test.js",
     "benchmark": "node bench"
   },
   "devDependencies": {
     "acorn": "^3.2.0",
-    "esprima": "^2.7.2"
+    "esprima": "^2.7.2",
     "benchmark": "^2.1.0",
     "microtime": "^2.1.1"
   },
