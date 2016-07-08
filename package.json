@@ -1,12 +1,13 @@
 {
   "name": "jsrube",
-  "main": "lube.js",
-  "version": "0.5.8",
+  "main": "dist/lube.js",
+  "version": "0.5.12",
   "description": "A very fast ECMAScript parser, fully written in plain ECMAScript 3",
   "homepage": "https://github.com/icefapper/jsrube",
   "engines": {
     "node": ">=6.20.0"
   },
+  "files": [ "dist/lube.js", "bench", "test-only.js" ],
   "author": {
     "name": "Neni Onoda",
     "email": "neni.onoda@gmail.com"
@@ -45,11 +46,9 @@
     "benchmark": "node bench"
   },
   "devDependencies": {
+    "acorn": "^3.2.0",
+    "esprima": "^2.7.2"
     "benchmark": "^2.1.0",
     "microtime": "^2.1.1"
   },
-  "optionalDependencies": {
-    "acorn": "^3.2.0",
-    "esprima": "^2.7.2"
-  }
 }
