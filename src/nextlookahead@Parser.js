@@ -335,7 +335,8 @@ _class . opGrea = function()   {
 };
 
 _class.skipS = function() {
-     var noNewLine = !false   ,
+     var noNewLine = !false,
+         startOffset = this.c,
          c = this.c,
          l = this.src,
          e = l.length,
@@ -417,7 +418,7 @@ _class.skipS = function() {
             return ;
  
          case CHAR_MIN:
-            if ( !noNewLine &&
+            if ( (!noNewLine || startOffset === 0) &&
                  this.isScript &&
                  l.charCodeAt(c+1) === CHAR_MIN && l.charCodeAt(c+2) === CHAR_GREATER_THAN ) {
                this.c = c + 1 + 2;

@@ -6,7 +6,7 @@ var Parser = function (src, isModule) {
   this.unsatisfiedArg = null;
   this.unsatisfiedLabel = null;
 
-  this.newLineBeforeLookAhead = !false;
+  this.newLineBeforeLookAhead = false;
 
   this.ltval = null;
   this.lttype= "";

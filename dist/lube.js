@@ -9,7 +9,7 @@ var Parser = function (src, isModule) {
   this.unsatisfiedArg = null;
   this.unsatisfiedLabel = null;
 
-  this.newLineBeforeLookAhead = !false;
+  this.newLineBeforeLookAhead = false;
 
   this.ltval = null;
   this.lttype= "";
@@ -582,7 +582,7 @@ _class.parseExport = function() {
             local = this.id();
             if ( !firstReserved ) {
               this.throwReserved = false;
-              this.validateID(local);
+              this.validateID(local.name);
               if ( this.throwReserved )
                 firstReserved = local;
               else
@@ -1934,7 +1934,8 @@ _class . opGrea = function()   {
 };
 
 _class.skipS = function() {
-     var noNewLine = !false   ,
+     var noNewLine = !false,
+         startOffset = this.c,
          c = this.c,
          l = this.src,
          e = l.length,
@@ -2016,7 +2017,7 @@ _class.skipS = function() {
             return ;
  
          case CHAR_MIN:
-            if ( !noNewLine &&
+            if ( (!noNewLine || startOffset === 0) &&
                  this.isScript &&
                  l.charCodeAt(c+1) === CHAR_MIN && l.charCodeAt(c+2) === CHAR_GREATER_THAN ) {
                this.c = c + 1 + 2;
@@ -3982,7 +3983,7 @@ _class .validateID  = function (e) {
 
 _class.errorReservedID = function() {
     if ( !this.throwReserved ) {
-       this.throwIfReserved = !false;
+       this.throwReserved = !false;
        return null;
     }
     this.err ( this. ltraw + ' is not an identifier '   )  ;
@@ -4406,8 +4407,8 @@ function toNum (n) {
 
 
 ;
-_exports.parse = function(src) {
-  var newp = new Parser(src);
+_exports.parse = function(src, isModule ) {
+  var newp = new Parser(src, isModule);
   return newp.parseProgram();
 };
 

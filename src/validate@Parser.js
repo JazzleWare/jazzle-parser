@@ -119,7 +119,7 @@ _class .validateID  = function (e) {
 
 _class.errorReservedID = function() {
     if ( !this.throwReserved ) {
-       this.throwIfReserved = !false;
+       this.throwReserved = !false;
        return null;
     }
     this.err ( this. ltraw + ' is not an identifier '   )  ;

@@ -1,5 +1,5 @@
-_exports.parse = function(src) {
-  var newp = new Parser(src);
+_exports.parse = function(src, isModule ) {
+  var newp = new Parser(src, isModule);
   return newp.parseProgram();
 };
 

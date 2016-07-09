@@ -35,7 +35,7 @@ _class.parseExport = function() {
             local = this.id();
             if ( !firstReserved ) {
               this.throwReserved = false;
-              this.validateID(local);
+              this.validateID(local.name);
               if ( this.throwReserved )
                 firstReserved = local;
               else
