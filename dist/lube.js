@@ -539,6 +539,230 @@ _class.readLineComment = function() {
 };
 
 
+_class.parseExport = function() {
+   this.assert( this.canBeStatement );
+   this.canBeStatment = false;
+
+   var startc = this.c0, startLoc = this.locBegin();
+   this.next();
+
+   var list = null, local = null;
+   var spStartc = 0, spStartLoc = null;
+   var src = null ;
+   var endI = 0;
+   var ex = null;
+
+   switch ( this.lttype ) {
+      case 'op':
+         this.assert(this.ltraw === '*' );
+         spStartc  = this.c - 1;
+         spStartLoc = this.locOn(1);
+         this.next();
+         this.expectID('from');
+         this.assert(this.lttype === 'Literal' &&
+              typeof this.ltval === STRING_TYPE );
+         src = this.numstr();
+         
+         endI = this.semiI();
+         this.foundStatement = !false;
+         
+         return  { type: 'ExportAllDeclaration',
+                    start: spStartc,
+                    loc: { start: spStartLoc, end: this.semiLoc() || src.loc.end },
+                     end: endI || src.end,
+                    source: src };
+
+       case '{':
+         this.next();
+         list = [];
+         while ( this.lttype === 'Identifier' ) {
+            local = this.validateID(null);
+            ex = local;
+            if ( this.lttype === 'Identifier' ) {
+              this.assert( this.ltval === 'as' );
+              this.next();
+              this.assert( this.lttype === 'Identifier' );
+              ex = this.validateID(null);
+            }
+            list.push({ type: 'ExportSpecifier',
+                       start: local.start,
+                       loc: { start: local.loc.start, end: ex.loc.end }, 
+                        end: ex.end, exported: ex,
+                       local: local }) ;
+
+            if ( this.lttype === ',' )
+              this.next();
+            else
+              break;
+         }
+
+         endI = this.c;
+         var li = this.li, col = this.col;
+   
+         this.expectType( '}' );
+
+         if ( this.lttype === 'Identifier' ) {
+           this.assert( this.ltval === 'from' );
+           this.next();
+           this.assert( this.lttype === 'Literal' &&
+                  typeof this.ltval ===  STRING_TYPE );
+           src = this.numstr();
+           endI = src.end;
+         }
+
+         endI = this.semiI() || endI;
+
+         return { type: 'ExportNamedDeclaration',
+                 start: startc,
+                 loc: { start: startLoc, end: this.semiLoc() || ( src && src.loc.end ) ||
+                                              { line: li, column: col } },
+                  end: endI, declaration: null,
+                   specifiers: list,
+                  source: src };
+
+   }
+
+   var cotext = CONTEXT_NONE;
+
+   if ( this.lttype === 'Identifier' && 
+        this.ltval === 'default' ) { context = CONTEXT_DEFAULT; this.next(); }
+  
+   if ( this.lttype === 'Identifier' ) {
+       switch ( this.ltval ) {
+          case 'let':
+          case 'const':
+             this.assert(context !== CONTEXT_DEFAULT );
+             this.canBeStatement = !false;
+             ex = this.parseVariableDeclaration(CONTEXT_NONE);
+             break;
+               
+          case 'class':
+             this.canBeStatement = !false;
+             ex = this.parseClass(context);
+             break;
+  
+          case 'var':
+             this.canBeStatement = !false;
+             ex = this.parseVariableDeclaration(CONTEXT_NONE ) ;
+             break ;
+
+          case 'function':
+             this.canBeStatement = !false;
+             ex = this.parseFunc( context, WHOLE_FUNCTION, ANY_LEN );
+             break ;
+        }
+   }
+
+   if ( context !== CONTEXT_DEFAULT ) {
+
+     this.assert(ex);
+     endI = this.semiI();
+     
+     this.foundStatement = !false;
+     return { type: 'ExportNamedDeclaration',
+            start: startc,
+            loc: { start: startLoc, end: ex.loc.end },
+             end: ex.end , declaration: ex,
+              specifiers: null,
+             source: null };
+   }
+
+   var endLoc = null;
+   if ( ex === null ) {
+        ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE );
+        endI = this.semiI();
+        endLoc = this.semiLoc();
+   }
+
+   this.foundStatement = !false;
+   return { type: 'ExportDefaultDeclaration',    
+           start: startc,
+           loc: { start: startLoc, end: endLoc || ex.loc.end },
+            end: endI || ex.end, declaration: ex };
+}; 
+_class.parseImport = function() {
+  this.assert( this.canBeStatement );
+  this.canBeStatement = false;
+
+  var startc = this.c0, startLoc = this.locBegin();
+  this.next();
+
+  var list = [], local = null;
+  if ( this.lttype === 'Identifier' ) {
+    local = this.validateID(null);
+    list.push({ type: 'ImportDefaultSpecifier',
+               start: local.start,
+               loc: local.loc,
+                end: local.end,
+               local: local });
+  }
+
+  if ( this.lttype === ',' ) {
+    this.assert(local !== null);
+    this.next();
+  }
+
+  var spStartc = 0, spStartLoc = null;
+
+  switch ( this.lttype ) {   
+     case 'op':
+       this.assert( this.ltraw === '*' );
+       spStartc = this.c - 1;
+       spStartLoc = this.locOn(1);
+       this.next();
+       this.expectID('as');
+       this.assert(this.lttype === 'Identifier');
+       local = this.validateID(null);
+       list.push({ type: 'ImportNamespaceSpecifier',
+                  start: spStartc,
+                  loc: { start: spStartLoc, end: local.loc.end },
+                   end: local.end,
+                  local: local  }) ;
+       break;
+
+    case '{':
+       this.next();
+       while ( this.lttype === 'Identifier' ) {
+          local = this.validateID(null);
+          var im = local; 
+          if ( this.lttype === 'Identifier' ) {
+             this.assert( this.ltval === 'as' );
+             this.next();
+             this.assert( this.lttype === 'Identifier' );
+             local = this.validateID(null);
+          }
+          list.push({ type: 'ImportSpecifier',
+                     start: im.start,
+                     loc: { start: im.loc.start, start: local.loc.end },
+                      end: local.end, imported: im,
+                    local: local }) ;
+
+          if ( this.lttype === ',' )
+             this.next();
+          else
+             break ;                                  
+       }
+
+       this.expectType('}');
+       break ;
+   }
+    
+   if ( list.length )
+     this.expectID('from');
+
+   this.assert(this.lttype === 'Literal' &&
+        typeof this.ltval === STRING_TYPE );
+
+   var src = this.numstr();
+   var endI = this.semiI() || src.end, endLoc = this.semiLc() || src.loc.end;
+   
+   this.foundStatement = !false;
+   return { type: 'ImportDeclaration',
+           start: startc,
+           loc: { start: startLoc, end: endLoc  },
+            end:  endI , specifiers: list,
+           source: src };
+}; 
 _class.readEsc = function ()  {
   var src = this.src, b0 = 0, b = 0;
   switch ( src.charCodeAt ( ++this.c ) ) {
@@ -842,11 +1066,11 @@ _class .parseFunc = function(context, argListMode, argLen ) {
      }
      if ( canBeStatement )  {
         this.canBeStatement = false;
-        this.assert(this.lttype === 'Identifier' ) ;
-        this.currentFuncName = this.validateID();
+        this.assert( context === CONTEXT_DEFAULT || this.lttype === 'Identifier' ) ;
+        this.currentFuncName = this.validateID(null);
      }
      else if ( this. lttype == 'Identifier' )
-        this.currentFuncName = this.validateID();
+        this.currentFuncName = this.validateID(null);
      else
         this.currentFuncName = null;
   }
@@ -1062,8 +1286,14 @@ _class. parseIdStatementOrId = function ( context ) {
             this.isVDT = !false;
             return null;
 
-        case 'export': (parse) = _class.stmtPrse_export; break;
-        case 'import': parse = _class.stmtPrse_import; break;
+        case 'export': 
+            this.assert( !this.isScript );
+            return this.parseExport() ;
+
+        case 'import':
+            this.assert( !this.isScript );
+            return this.parseImport();
+
         case 'return': return this.parseReturnStatement();
         case 'switch': return this.parseSwitchStatement();
         case 'double': case 'native': case 'throws':
@@ -3916,7 +4146,7 @@ var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 
 var CONTEXT_FOR = 1, CONTEXT_ELEM = 2, CONTEXT_NONE = 0;
-var CONTEXT_NULLABLE = 4;
+var CONTEXT_NULLABLE = 4, CONTEXT_DEFAULT = 32;
 
 var INTBITLEN = (function() { var i = 0;
   while ( 0 < (1 << (i++)))
@@ -3941,6 +4171,8 @@ var METH_FUNCTION = 4;
 var CONSTRUCTOR_FUNCTION = 128;
 
 var OBJ_MEM = !false;
+
+var STRING_TYPE = typeof "string";
 
 
 ;

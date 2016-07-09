@@ -124,8 +124,14 @@ _class. parseIdStatementOrId = function ( context ) {
             this.isVDT = !false;
             return null;
 
-        case 'export': (parse) = _class.stmtPrse_export; break;
-        case 'import': parse = _class.stmtPrse_import; break;
+        case 'export': 
+            this.assert( !this.isScript );
+            return this.parseExport() ;
+
+        case 'import':
+            this.assert( !this.isScript );
+            return this.parseImport();
+
         case 'return': return this.parseReturnStatement();
         case 'switch': return this.parseSwitchStatement();
         case 'double': case 'native': case 'throws':

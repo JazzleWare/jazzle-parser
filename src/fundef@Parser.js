@@ -68,11 +68,11 @@ _class .parseFunc = function(context, argListMode, argLen ) {
      }
      if ( canBeStatement )  {
         this.canBeStatement = false;
-        this.assert(this.lttype === 'Identifier' ) ;
-        this.currentFuncName = this.validateID();
+        this.assert( context === CONTEXT_DEFAULT || this.lttype === 'Identifier' ) ;
+        this.currentFuncName = this.validateID(null);
      }
      else if ( this. lttype == 'Identifier' )
-        this.currentFuncName = this.validateID();
+        this.currentFuncName = this.validateID(null);
      else
         this.currentFuncName = null;
   }

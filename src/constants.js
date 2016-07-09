@@ -81,7 +81,7 @@ var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 
 var CONTEXT_FOR = 1, CONTEXT_ELEM = 2, CONTEXT_NONE = 0;
-var CONTEXT_NULLABLE = 4;
+var CONTEXT_NULLABLE = 4, CONTEXT_DEFAULT = 32;
 
 var INTBITLEN = (function() { var i = 0;
   while ( 0 < (1 << (i++)))
@@ -106,5 +106,7 @@ var METH_FUNCTION = 4;
 var CONSTRUCTOR_FUNCTION = 128;
 
 var OBJ_MEM = !false;
+
+var STRING_TYPE = typeof "string";
 
 
