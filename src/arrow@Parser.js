@@ -96,6 +96,8 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
   var prevArgNames = this.argNames;
   this.argNames = {};
 
+  var tight = this.tight;
+
   switch ( arg.type ) {
     case 'Identifier':
        this.asArrowFuncArg(arg, 0)  ;
@@ -119,8 +121,6 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
   if ( this.lttype === '{' ) {
        var prevLabels = this.labels;
        this.labels = {};
-       var tight = this.tight;
-       this.tight = !false;
        isExpr = false;
        nbody = this.parseFuncBody(CONTEXT_NONE);
        this.labels = prevLabels;
@@ -132,6 +132,8 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
   this.scopeFlags = scopeFlags;
 
   var params = core(arg);
+
+  this.tight = tight;
 
   return { type: 'ArrowFunctionExpression',
            params: params ?  params.type === 'SequenceExpression' ? params.expressions : [params] : [] ,

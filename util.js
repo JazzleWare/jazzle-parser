@@ -251,6 +251,13 @@
            expected.type === 'ExportAllDeclaration' ) && !_exports.has(expected, 'source' ) )
       delete actual.source;
 
+    if ( ( expected.type === 'FunctionExpression' || expected.type === 'FunctionDeclaration' ) ) delete expected.defaults;
+
+    if ( expected.type === 'TryStatement' ) {
+      delete expected.handlers; delete expected.guardedHandlers;
+  
+    }
+
     var comp = null, item;
     for ( item in expected ) {
         if ( !_exports.has(expected, item) ) continue;

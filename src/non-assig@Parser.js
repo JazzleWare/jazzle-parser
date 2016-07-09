@@ -29,7 +29,7 @@ _class .parseCond = function(cond,context ) {
     this.expectType(':');
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
     return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
-             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: con, alternate: core(alt) };
+             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(con), alternate: core(alt) };
 };
 
 _class .parseUnaryExpression = function(context ) {

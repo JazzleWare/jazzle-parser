@@ -82,7 +82,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   this.argNames = {};
   var argList = this.parseArgs(argLen) ;
   this.isInArgList = false;
-  this.tight = argListMode !== WHOLE_FUNCTION;
+  this.tight = this.tight || argListMode !== WHOLE_FUNCTION;
   this.scopeFlags = SCOPE_FUNCTION;
   if ( argListMode & METH_FUNCTION )
     this.scopeFlags |= SCOPE_METH;

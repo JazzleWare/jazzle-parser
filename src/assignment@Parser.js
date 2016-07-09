@@ -2,6 +2,8 @@
 _class .ensureSimpAssig = function(head) {
   switch(head.type) {
     case 'Identifier':
+       this.assert( !( this.tight && arguments_or_eval(head.name) )  );
+
     case 'MemberExpression':
        return;
 
@@ -18,6 +20,7 @@ _class .toAssig = function(head) {
 
   switch(head.type) {
      case 'Identifier':
+        this.assert( !(this.tight && arguments_or_eval(head.name)) );
      case 'MemberExpression':
         return;
 

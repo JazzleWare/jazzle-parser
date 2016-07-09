@@ -1,4 +1,4 @@
-var Parser = function (src) {
+var Parser = function (src, isModule) {
 
   this.src = src;
 
@@ -6,7 +6,7 @@ var Parser = function (src) {
   this.unsatisfiedArg = null;
   this.unsatisfiedLabel = null;
 
-  this.newLineBeforeLookAhead = false;
+  this.newLineBeforeLookAhead = !false;
 
   this.ltval = null;
   this.lttype= "";
@@ -31,9 +31,9 @@ var Parser = function (src) {
   this.isInArgList = false;
   this.argNames = null;
   this.currentFuncName = null;
-  this.tight = false;
+  this.tight = !!isModule ;
 
-  this.isScript = !false;
+  this.isScript = !isModule;
   this.v = 12 ;
 
   this.firstParen = null;

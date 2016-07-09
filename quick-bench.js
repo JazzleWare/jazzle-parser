@@ -21,7 +21,8 @@ try {
    }
 } catch ( e ) {}
 
-var fs = require( 'fs' );
+var fs = require( 'fs' ), util = require( './util.js' ) ;
+
 function readFile(filePath) {
    try {
      return fs.readFileSync(filePath,'utf-8').toString();
@@ -58,6 +59,15 @@ function parseLater( parserName, sourceName ) {
 }
  
 for ( sourceName in sources ) {
+     if ( parsers.esprima ) {
+          var comp = util.compare(parsers.esprima(sources[sourceName],!false),
+                                  parsers.lube(sources[sourceName],!false));
+          if ( comp ) {
+            console.log( util.obj2str(comp) );
+            throw new Error( 'Incompatible Parsing for ' + sourceName );
+          }
+     }     
+
      var benchmarkSet = new Benchmark.Suite();
      for ( parserName in parsers ) {
         benchmarkSet.add( parserName, parseLater(parserName, sourceName) );

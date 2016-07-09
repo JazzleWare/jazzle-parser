@@ -1,7 +1,7 @@
 (function(_exports){
 "use strict";
 ;
-var Parser = function (src) {
+var Parser = function (src, isModule) {
 
   this.src = src;
 
@@ -9,7 +9,7 @@ var Parser = function (src) {
   this.unsatisfiedArg = null;
   this.unsatisfiedLabel = null;
 
-  this.newLineBeforeLookAhead = false;
+  this.newLineBeforeLookAhead = !false;
 
   this.ltval = null;
   this.lttype= "";
@@ -34,9 +34,9 @@ var Parser = function (src) {
   this.isInArgList = false;
   this.argNames = null;
   this.currentFuncName = null;
-  this.tight = false;
+  this.tight = !!isModule ;
 
-  this.isScript = !false;
+  this.isScript = !isModule;
   this.v = 12 ;
 
   this.firstParen = null;
@@ -211,6 +211,8 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
   var prevArgNames = this.argNames;
   this.argNames = {};
 
+  var tight = this.tight;
+
   switch ( arg.type ) {
     case 'Identifier':
        this.asArrowFuncArg(arg, 0)  ;
@@ -234,8 +236,6 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
   if ( this.lttype === '{' ) {
        var prevLabels = this.labels;
        this.labels = {};
-       var tight = this.tight;
-       this.tight = !false;
        isExpr = false;
        nbody = this.parseFuncBody(CONTEXT_NONE);
        this.labels = prevLabels;
@@ -247,6 +247,8 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
   this.scopeFlags = scopeFlags;
 
   var params = core(arg);
+
+  this.tight = tight;
 
   return { type: 'ArrowFunctionExpression',
            params: params ?  params.type === 'SequenceExpression' ? params.expressions : [params] : [] ,
@@ -266,6 +268,8 @@ _class . assert = function(cond, message) { if ( !cond ) throw new Error ( messa
 _class .ensureSimpAssig = function(head) {
   switch(head.type) {
     case 'Identifier':
+       this.assert( !( this.tight && arguments_or_eval(head.name) )  );
+
     case 'MemberExpression':
        return;
 
@@ -282,6 +286,7 @@ _class .toAssig = function(head) {
 
   switch(head.type) {
      case 'Identifier':
+        this.assert( !(this.tight && arguments_or_eval(head.name)) );
      case 'MemberExpression':
         return;
 
@@ -1092,7 +1097,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   this.argNames = {};
   var argList = this.parseArgs(argLen) ;
   this.isInArgList = false;
-  this.tight = argListMode !== WHOLE_FUNCTION;
+  this.tight = this.tight || argListMode !== WHOLE_FUNCTION;
   this.scopeFlags = SCOPE_FUNCTION;
   if ( argListMode & METH_FUNCTION )
     this.scopeFlags |= SCOPE_METH;
@@ -2096,7 +2101,7 @@ _class .parseCond = function(cond,context ) {
     this.expectType(':');
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
     return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
-             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: con, alternate: core(alt) };
+             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(con), alternate: core(alt) };
 };
 
 _class .parseUnaryExpression = function(context ) {
@@ -3041,7 +3046,7 @@ _class.parseArgList = function () {
        this.next();
        elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CONTEXT_NULLABLE ); 
        if ( elem )
-         list.push (elem);
+         list.push (core(elem));
        else if ( this.lttype === '...' )
          list.push(this.parseSpreadElement());
        else

@@ -257,7 +257,7 @@ _class.parseArgList = function () {
        this.next();
        elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CONTEXT_NULLABLE ); 
        if ( elem )
-         list.push (elem);
+         list.push (core(elem));
        else if ( this.lttype === '...' )
          list.push(this.parseSpreadElement());
        else
