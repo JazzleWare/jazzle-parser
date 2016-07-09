@@ -69,26 +69,30 @@ TestSession.prototype = {
       return ;
     }
     
-    var referenceAST = util.readJSON(testName   +   '.tree.json' );
+    var referenceAST = null;
 
+    try { 
+      referenceAST = util.readJSON(testName   +   '.tree.json' );
+    }
+    catch ( e ) {
+         referenceAST = util.readJSON( testName + '.module.json' );
+    }
+   
     if ( referenceAST.errors ) {
       console.log( "SKIPPING TEST WITH SOFT ERROR" ) ;
       return ;
     }
 
-    if ( referenceAST.sourceType === 'module' ) {
-      console.log( "SKIPPING MODULE" );
-      return;
-    }
-
     try {
       var source = getTestSource(testName);
       this.passTarget++; 
-      var syn = this.parse(source[0]);
+      var syn = this.parse(source[0], referenceAST.sourceType === 'module' );
       var comp = compareAST( referenceAST, syn );
       if ( !comp )
          this.sessionPass++;
       else {
+         console.log(util.obj2str(comp));
+
          this.passError[testName] = comp;
          throw { type: 'comp', test: testName, val: comp, expected: referenceAST, actual: syn, src: source  }  ;
       }
@@ -111,6 +115,9 @@ TestSession.prototype = {
       }
     
       i = util.endsWith( testPath, '.tree.json' );
+      if ( i < 0 )
+        i = util.endsWith( testPath, '.module.json' ) ;
+
       _assert(i>0, [testPath, i] );
        
       console.log("TESTING", testPath )    ;
@@ -120,15 +127,15 @@ TestSession.prototype = {
   startAt: function(loc) {
     var testSession = this, testDir;
     var testFile = function(file) {
-       if ( util.endsWith(file, '.json' ) >= 0 &&
-            util.endsWith(file, '.module.json') < 0 )
+       if ( util.endsWith(file, '.json' ) >= 0 
+             )
          try {
            testSession.runTest(file);
          } catch ( err ) {
 
           if ( err.type === 'comp' ) {
-            console.log( util.obj2str(err ) );
-            throw new Error( 'Incompatible parsing' ) ;
+            console.log( "\nERROR", util.obj2str(err ) );
+            throw new Error('Incompatible parsing for test ' + file, err ) ;
           }
           else {
             console.log( "ERROR: ", err );
@@ -143,8 +150,10 @@ TestSession.prototype = {
     util.each(loc, testDir, testFile ) ;
   },
 
-  parse: function(src) {
-    return new this.Parser(src).parseProgram();
+  parse: function(src, isModule ) {
+    var l = new lube. Parser(src);
+    l.isScript = !isModule;
+    return ((l.parseProgram()));
   }
 };
 

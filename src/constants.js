@@ -109,4 +109,3 @@ var OBJ_MEM = !false;
 
 var STRING_TYPE = typeof "string";
 
-

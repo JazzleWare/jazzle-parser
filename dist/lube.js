@@ -42,6 +42,7 @@ var Parser = function (src) {
   this.firstParen = null;
   this.firstUnassignable = null;
   
+  this.throwReserved = !false;
 };
 
 
@@ -353,14 +354,14 @@ _class .parseAssignment = function(head, context ) {
 };
 
 
-_class. parseClass = function() {
+_class. parseClass = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin();
 
   var canBeStatement = this.canBeStatement, name = null;
   this.next () ;
 
-  if ( canBeStatement ) {
+  if ( canBeStatement && context !== CONTEXT_DEFAULT  ) {
      this.canBeStatement = false;
      this.assert ( this.lttype === 'Identifier' );
      name = this. validateID(null);
@@ -541,22 +542,18 @@ _class.readLineComment = function() {
 
 _class.parseExport = function() {
    this.assert( this.canBeStatement );
-   this.canBeStatment = false;
+   this.canBeStatement = false;
 
    var startc = this.c0, startLoc = this.locBegin();
    this.next();
 
-   var list = null, local = null;
-   var spStartc = 0, spStartLoc = null;
-   var src = null ;
+   var list = [], local = null, src = null ;
    var endI = 0;
    var ex = null;
 
    switch ( this.lttype ) {
       case 'op':
          this.assert(this.ltraw === '*' );
-         spStartc  = this.c - 1;
-         spStartLoc = this.locOn(1);
          this.next();
          this.expectID('from');
          this.assert(this.lttype === 'Literal' &&
@@ -567,22 +564,31 @@ _class.parseExport = function() {
          this.foundStatement = !false;
          
          return  { type: 'ExportAllDeclaration',
-                    start: spStartc,
-                    loc: { start: spStartLoc, end: this.semiLoc() || src.loc.end },
+                    start: startc,
+                    loc: { start: startLoc, end: this.semiLoc() || src.loc.end },
                      end: endI || src.end,
                     source: src };
 
        case '{':
          this.next();
-         list = [];
+         var firstReserved = null;
+
          while ( this.lttype === 'Identifier' ) {
-            local = this.validateID(null);
+            local = this.id();
+            if ( !firstReserved ) {
+              this.throwReserved = false;
+              this.validateID(local);
+              if ( this.throwReserved )
+                firstReserved = local;
+              else
+                this.throwReserved = !false;
+            }
             ex = local;
             if ( this.lttype === 'Identifier' ) {
               this.assert( this.ltval === 'as' );
               this.next();
               this.assert( this.lttype === 'Identifier' );
-              ex = this.validateID(null);
+              ex = this.id();
             }
             list.push({ type: 'ExportSpecifier',
                        start: local.start,
@@ -609,9 +615,12 @@ _class.parseExport = function() {
            src = this.numstr();
            endI = src.end;
          }
+         else
+            this.assert(!firstReserved);
 
          endI = this.semiI() || endI;
 
+         this.foundStatement = !false;
          return { type: 'ExportNamedDeclaration',
                  start: startc,
                  loc: { start: startLoc, end: this.semiLoc() || ( src && src.loc.end ) ||
@@ -622,7 +631,7 @@ _class.parseExport = function() {
 
    }
 
-   var cotext = CONTEXT_NONE;
+   var context = CONTEXT_NONE;
 
    if ( this.lttype === 'Identifier' && 
         this.ltval === 'default' ) { context = CONTEXT_DEFAULT; this.next(); }
@@ -648,7 +657,7 @@ _class.parseExport = function() {
 
           case 'function':
              this.canBeStatement = !false;
-             ex = this.parseFunc( context, WHOLE_FUNCTION, ANY_LEN );
+             ex = this.parseFunc( context, WHOLE_FUNCTION, ANY_ARG_LEN );
              break ;
         }
    }
@@ -663,7 +672,7 @@ _class.parseExport = function() {
             start: startc,
             loc: { start: startLoc, end: ex.loc.end },
              end: ex.end , declaration: ex,
-              specifiers: null,
+              specifiers: list ,
              source: null };
    }
 
@@ -678,15 +687,15 @@ _class.parseExport = function() {
    return { type: 'ExportDefaultDeclaration',    
            start: startc,
            loc: { start: startLoc, end: endLoc || ex.loc.end },
-            end: endI || ex.end, declaration: ex };
+            end: endI || ex.end, declaration: core( ex ) };
 }; 
 _class.parseImport = function() {
   this.assert( this.canBeStatement );
   this.canBeStatement = false;
 
   var startc = this.c0, startLoc = this.locBegin();
+  var hasList = false;
   this.next();
-
   var list = [], local = null;
   if ( this.lttype === 'Identifier' ) {
     local = this.validateID(null);
@@ -721,9 +730,10 @@ _class.parseImport = function() {
        break;
 
     case '{':
+       hasList = !false;
        this.next();
        while ( this.lttype === 'Identifier' ) {
-          local = this.validateID(null);
+          local = this.id();
           var im = local; 
           if ( this.lttype === 'Identifier' ) {
              this.assert( this.ltval === 'as' );
@@ -731,9 +741,11 @@ _class.parseImport = function() {
              this.assert( this.lttype === 'Identifier' );
              local = this.validateID(null);
           }
+          else this.validateID(local);
+
           list.push({ type: 'ImportSpecifier',
                      start: im.start,
-                     loc: { start: im.loc.start, start: local.loc.end },
+                     loc: { start: im.loc.start, end: local.loc.end },
                       end: local.end, imported: im,
                     local: local }) ;
 
@@ -747,14 +759,14 @@ _class.parseImport = function() {
        break ;
    }
     
-   if ( list.length )
+   if ( list.length || hasList )
      this.expectID('from');
 
    this.assert(this.lttype === 'Literal' &&
         typeof this.ltval === STRING_TYPE );
 
    var src = this.numstr();
-   var endI = this.semiI() || src.end, endLoc = this.semiLc() || src.loc.end;
+   var endI = this.semiI() || src.end, endLoc = this.semiLoc() || src.loc.end;
    
    this.foundStatement = !false;
    return { type: 'ImportDeclaration',
@@ -1064,9 +1076,8 @@ _class .parseFunc = function(context, argListMode, argLen ) {
           isGen = !false;
           this.next();
      }
-     if ( canBeStatement )  {
-        this.canBeStatement = false;
-        this.assert( context === CONTEXT_DEFAULT || this.lttype === 'Identifier' ) ;
+     if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
+        this.assert( this.lttype === 'Identifier' ) ;
         this.currentFuncName = this.validateID(null);
      }
      else if ( this. lttype == 'Identifier' )
@@ -1243,7 +1254,7 @@ _class. parseIdStatementOrId = function ( context ) {
         case 'super': pendingExprHead = this.parseSuper(); break SWITCH;
         case 'break': return this.parseBreakStatement();
         case 'catch': this.notId ()  ;
-        case 'class': return this.parseClass() ;
+        case 'class': return this.parseClass(CONTEXT_NONE ) ;
         case 'const':
             this.assert(this.v>=5);
             return this.parseVariableDeclaration(CONTEXT_NONE);
@@ -3856,20 +3867,20 @@ _class .validateID  = function (e) {
          case 'do':
          case 'if':
          case 'in':
-            this.errorReservedID();
+            return this.errorReservedID();
          default: break SWITCH;
      }
      case 3: switch (n) {
          case 'int' :
             if ( this.v > 5 )
                 break SWITCH;
-            this. errorReservedID();
+          return  this. errorReservedID();
 
          case 'let' :
             if ( this.v <= 5 || !this.tight )
               break SWITCH;
          case 'for' : case 'try' : case 'var' : case 'new' :
-             this.errorReservedID();
+             return this.errorReservedID();
 
          default: break SWITCH;
      }
@@ -3878,7 +3889,7 @@ _class .validateID  = function (e) {
             if ( this. v > 5 ) break SWITCH;
          case 'case': case 'else': case 'this': case 'void':
          case 'with': case 'enum':
-            this.errorReservedID();
+            return this.errorReservedID();
 
          default:
             break SWITCH;
@@ -3890,7 +3901,7 @@ _class .validateID  = function (e) {
          case 'float':
          case 'short':
             if ( this. v > 5 ) break SWITCH;
-            this.errorReservedID();
+            return this.errorReservedID();
     
          case 'yield': 
             if ( !( this.tight || ( this.scopeFlags & SCOPE_YIELD ) ) )
@@ -3898,7 +3909,7 @@ _class .validateID  = function (e) {
 
          case 'break': case 'catch': case 'class': case 'const':
          case 'super': case 'throw': case 'while': 
-           this.errorReservedID();
+            return this.errorReservedID();
 
          default: break SWITCH;
      }
@@ -3906,25 +3917,25 @@ _class .validateID  = function (e) {
          case 'double': case 'native': case 'throws':
              if ( this. v > 5 )
                 break SWITCH;
-             this.errorReserved();
+             return this.errorReservedID(); 
          case 'public':
          case 'static':
              if ( this.v > 5 && !this.tight )
                break SWITCH;
          case 'delete': case 'export': case 'import': case 'return':
          case 'switch': case 'typeof':
-             this.errorReserved() ;
+            return this.errorReservedID() ;
 
          default: break SWITCH;
      }
      case 7:  switch (n) {
          case 'package':
          case 'private':
-            if ( this.tight ) this.errorReserved();
+            if ( this.tight ) return this.errorReservedID();
          case 'boolean':
             if ( this.v > 5 ) break;
          case 'default': case 'extends': case 'finally':
-             this.errorReserved();
+             return this.errorReservedID();
 
          default: break SWITCH;
      }
@@ -3932,7 +3943,7 @@ _class .validateID  = function (e) {
          case 'abstract': case 'volatile':
             if ( this.v > 5 ) break;
          case 'continue': case 'debugger': case 'function':
-            this.errorReserved () ;
+            return this.errorReservedID () ;
 
          default: break SWITCH;
      }
@@ -3964,7 +3975,13 @@ _class .validateID  = function (e) {
   return e ? null : this.id();
 };
 
-_class.errorReservedID = function() { this.err ( this. ltraw + ' is not an identifier '   )  ; }
+_class.errorReservedID = function() {
+    if ( !this.throwReserved ) {
+       this.throwIfReserved = !false;
+       return null;
+    }
+    this.err ( this. ltraw + ' is not an identifier '   )  ;
+}
 
 
 _class . parseVariableDeclaration = function(context) {
@@ -4173,7 +4190,6 @@ var CONSTRUCTOR_FUNCTION = 128;
 var OBJ_MEM = !false;
 
 var STRING_TYPE = typeof "string";
-
 
 ;
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};

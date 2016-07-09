@@ -66,9 +66,8 @@ _class .parseFunc = function(context, argListMode, argLen ) {
           isGen = !false;
           this.next();
      }
-     if ( canBeStatement )  {
-        this.canBeStatement = false;
-        this.assert( context === CONTEXT_DEFAULT || this.lttype === 'Identifier' ) ;
+     if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
+        this.assert( this.lttype === 'Identifier' ) ;
         this.currentFuncName = this.validateID(null);
      }
      else if ( this. lttype == 'Identifier' )

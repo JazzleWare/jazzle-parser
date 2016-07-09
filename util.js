@@ -8,21 +8,17 @@
   };
 
   _exports.each = function (name, dir, file  ) {
-      fs.readdir(name, function(err, list) {
-         var i = 0;
-         while ( i < list.length ) {
-            var l = path.join(name, list[i++]);
-            fs.stat(l, function(l) {
-               return function(err, stat) {
-                  if ( stat.isDirectory() )
+      var list = fs.readdirSync(name);
+      var i = 0;
+      while ( i < list.length ) {
+         var l = path.join(name, list[i++]);
+          if ( fs.statSync(l).isDirectory() )
                     dir(l);
                   
-                  else
+          else
                     file(l);
-               }
-            }(l));
-         }         
-      });
+                      
+      }
   };
 
   _exports.contents = function(name) {
@@ -250,6 +246,11 @@
 
     }
     
+    if ( ( expected.type === 'ExportNamedDeclaration' || 
+           expected.type === 'ImportDeclaration' ||
+           expected.type === 'ExportAllDeclaration' ) && !_exports.has(expected, 'source' ) )
+      delete actual.source;
+
     var comp = null, item;
     for ( item in expected ) {
         if ( !_exports.has(expected, item) ) continue;

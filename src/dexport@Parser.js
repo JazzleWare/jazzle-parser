@@ -1,21 +1,17 @@
 _class.parseExport = function() {
    this.assert( this.canBeStatement );
-   this.canBeStatment = false;
+   this.canBeStatement = false;
 
    var startc = this.c0, startLoc = this.locBegin();
    this.next();
 
-   var list = null, local = null;
-   var spStartc = 0, spStartLoc = null;
-   var src = null ;
+   var list = [], local = null, src = null ;
    var endI = 0;
    var ex = null;
 
    switch ( this.lttype ) {
       case 'op':
          this.assert(this.ltraw === '*' );
-         spStartc  = this.c - 1;
-         spStartLoc = this.locOn(1);
          this.next();
          this.expectID('from');
          this.assert(this.lttype === 'Literal' &&
@@ -26,22 +22,31 @@ _class.parseExport = function() {
          this.foundStatement = !false;
          
          return  { type: 'ExportAllDeclaration',
-                    start: spStartc,
-                    loc: { start: spStartLoc, end: this.semiLoc() || src.loc.end },
+                    start: startc,
+                    loc: { start: startLoc, end: this.semiLoc() || src.loc.end },
                      end: endI || src.end,
                     source: src };
 
        case '{':
          this.next();
-         list = [];
+         var firstReserved = null;
+
          while ( this.lttype === 'Identifier' ) {
-            local = this.validateID(null);
+            local = this.id();
+            if ( !firstReserved ) {
+              this.throwReserved = false;
+              this.validateID(local);
+              if ( this.throwReserved )
+                firstReserved = local;
+              else
+                this.throwReserved = !false;
+            }
             ex = local;
             if ( this.lttype === 'Identifier' ) {
               this.assert( this.ltval === 'as' );
               this.next();
               this.assert( this.lttype === 'Identifier' );
-              ex = this.validateID(null);
+              ex = this.id();
             }
             list.push({ type: 'ExportSpecifier',
                        start: local.start,
@@ -68,9 +73,12 @@ _class.parseExport = function() {
            src = this.numstr();
            endI = src.end;
          }
+         else
+            this.assert(!firstReserved);
 
          endI = this.semiI() || endI;
 
+         this.foundStatement = !false;
          return { type: 'ExportNamedDeclaration',
                  start: startc,
                  loc: { start: startLoc, end: this.semiLoc() || ( src && src.loc.end ) ||
@@ -81,7 +89,7 @@ _class.parseExport = function() {
 
    }
 
-   var cotext = CONTEXT_NONE;
+   var context = CONTEXT_NONE;
 
    if ( this.lttype === 'Identifier' && 
         this.ltval === 'default' ) { context = CONTEXT_DEFAULT; this.next(); }
@@ -107,7 +115,7 @@ _class.parseExport = function() {
 
           case 'function':
              this.canBeStatement = !false;
-             ex = this.parseFunc( context, WHOLE_FUNCTION, ANY_LEN );
+             ex = this.parseFunc( context, WHOLE_FUNCTION, ANY_ARG_LEN );
              break ;
         }
    }
@@ -122,7 +130,7 @@ _class.parseExport = function() {
             start: startc,
             loc: { start: startLoc, end: ex.loc.end },
              end: ex.end , declaration: ex,
-              specifiers: null,
+              specifiers: list ,
              source: null };
    }
 
@@ -137,5 +145,5 @@ _class.parseExport = function() {
    return { type: 'ExportDefaultDeclaration',    
            start: startc,
            loc: { start: startLoc, end: endLoc || ex.loc.end },
-            end: endI || ex.end, declaration: ex };
+            end: endI || ex.end, declaration: core( ex ) };
 }; 

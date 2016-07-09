@@ -9,20 +9,20 @@ _class .validateID  = function (e) {
          case 'do':
          case 'if':
          case 'in':
-            this.errorReservedID();
+            return this.errorReservedID();
          default: break SWITCH;
      }
      case 3: switch (n) {
          case 'int' :
             if ( this.v > 5 )
                 break SWITCH;
-            this. errorReservedID();
+          return  this. errorReservedID();
 
          case 'let' :
             if ( this.v <= 5 || !this.tight )
               break SWITCH;
          case 'for' : case 'try' : case 'var' : case 'new' :
-             this.errorReservedID();
+             return this.errorReservedID();
 
          default: break SWITCH;
      }
@@ -31,7 +31,7 @@ _class .validateID  = function (e) {
             if ( this. v > 5 ) break SWITCH;
          case 'case': case 'else': case 'this': case 'void':
          case 'with': case 'enum':
-            this.errorReservedID();
+            return this.errorReservedID();
 
          default:
             break SWITCH;
@@ -43,7 +43,7 @@ _class .validateID  = function (e) {
          case 'float':
          case 'short':
             if ( this. v > 5 ) break SWITCH;
-            this.errorReservedID();
+            return this.errorReservedID();
     
          case 'yield': 
             if ( !( this.tight || ( this.scopeFlags & SCOPE_YIELD ) ) )
@@ -51,7 +51,7 @@ _class .validateID  = function (e) {
 
          case 'break': case 'catch': case 'class': case 'const':
          case 'super': case 'throw': case 'while': 
-           this.errorReservedID();
+            return this.errorReservedID();
 
          default: break SWITCH;
      }
@@ -59,25 +59,25 @@ _class .validateID  = function (e) {
          case 'double': case 'native': case 'throws':
              if ( this. v > 5 )
                 break SWITCH;
-             this.errorReserved();
+             return this.errorReservedID(); 
          case 'public':
          case 'static':
              if ( this.v > 5 && !this.tight )
                break SWITCH;
          case 'delete': case 'export': case 'import': case 'return':
          case 'switch': case 'typeof':
-             this.errorReserved() ;
+            return this.errorReservedID() ;
 
          default: break SWITCH;
      }
      case 7:  switch (n) {
          case 'package':
          case 'private':
-            if ( this.tight ) this.errorReserved();
+            if ( this.tight ) return this.errorReservedID();
          case 'boolean':
             if ( this.v > 5 ) break;
          case 'default': case 'extends': case 'finally':
-             this.errorReserved();
+             return this.errorReservedID();
 
          default: break SWITCH;
      }
@@ -85,7 +85,7 @@ _class .validateID  = function (e) {
          case 'abstract': case 'volatile':
             if ( this.v > 5 ) break;
          case 'continue': case 'debugger': case 'function':
-            this.errorReserved () ;
+            return this.errorReservedID () ;
 
          default: break SWITCH;
      }
@@ -117,6 +117,12 @@ _class .validateID  = function (e) {
   return e ? null : this.id();
 };
 
-_class.errorReservedID = function() { this.err ( this. ltraw + ' is not an identifier '   )  ; }
+_class.errorReservedID = function() {
+    if ( !this.throwReserved ) {
+       this.throwIfReserved = !false;
+       return null;
+    }
+    this.err ( this. ltraw + ' is not an identifier '   )  ;
+}
 
 

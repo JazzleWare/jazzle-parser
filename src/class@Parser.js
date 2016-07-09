@@ -1,11 +1,11 @@
-_class. parseClass = function() {
+_class. parseClass = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin();
 
   var canBeStatement = this.canBeStatement, name = null;
   this.next () ;
 
-  if ( canBeStatement ) {
+  if ( canBeStatement && context !== CONTEXT_DEFAULT  ) {
      this.canBeStatement = false;
      this.assert ( this.lttype === 'Identifier' );
      name = this. validateID(null);

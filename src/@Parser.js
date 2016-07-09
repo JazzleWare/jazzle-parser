@@ -39,6 +39,7 @@ var Parser = function (src) {
   this.firstParen = null;
   this.firstUnassignable = null;
   
+  this.throwReserved = !false;
 };
 
 

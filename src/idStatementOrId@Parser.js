@@ -81,7 +81,7 @@ _class. parseIdStatementOrId = function ( context ) {
         case 'super': pendingExprHead = this.parseSuper(); break SWITCH;
         case 'break': return this.parseBreakStatement();
         case 'catch': this.notId ()  ;
-        case 'class': return this.parseClass() ;
+        case 'class': return this.parseClass(CONTEXT_NONE ) ;
         case 'const':
             this.assert(this.v>=5);
             return this.parseVariableDeclaration(CONTEXT_NONE);

@@ -3,8 +3,8 @@ _class.parseImport = function() {
   this.canBeStatement = false;
 
   var startc = this.c0, startLoc = this.locBegin();
+  var hasList = false;
   this.next();
-
   var list = [], local = null;
   if ( this.lttype === 'Identifier' ) {
     local = this.validateID(null);
@@ -39,9 +39,10 @@ _class.parseImport = function() {
        break;
 
     case '{':
+       hasList = !false;
        this.next();
        while ( this.lttype === 'Identifier' ) {
-          local = this.validateID(null);
+          local = this.id();
           var im = local; 
           if ( this.lttype === 'Identifier' ) {
              this.assert( this.ltval === 'as' );
@@ -49,9 +50,11 @@ _class.parseImport = function() {
              this.assert( this.lttype === 'Identifier' );
              local = this.validateID(null);
           }
+          else this.validateID(local);
+
           list.push({ type: 'ImportSpecifier',
                      start: im.start,
-                     loc: { start: im.loc.start, start: local.loc.end },
+                     loc: { start: im.loc.start, end: local.loc.end },
                       end: local.end, imported: im,
                     local: local }) ;
 
@@ -65,14 +68,14 @@ _class.parseImport = function() {
        break ;
    }
     
-   if ( list.length )
+   if ( list.length || hasList )
      this.expectID('from');
 
    this.assert(this.lttype === 'Literal' &&
         typeof this.ltval === STRING_TYPE );
 
    var src = this.numstr();
-   var endI = this.semiI() || src.end, endLoc = this.semiLc() || src.loc.end;
+   var endI = this.semiI() || src.end, endLoc = this.semiLoc() || src.loc.end;
    
    this.foundStatement = !false;
    return { type: 'ImportDeclaration',
