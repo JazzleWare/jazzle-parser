@@ -1,5 +1,9 @@
-var Parser = function (src, isModule) {
-
+/**
+ * Parser's constructor
+ * @param  {string}  src       Source to be parsed. FIXME: string??
+ * @param  {boolean} isModule  FIXME: ??
+ */
+function constructor(src, isModule) {
   this.src = src;
 
   this.unsatisfiedAssignment = null;
@@ -9,9 +13,9 @@ var Parser = function (src, isModule) {
   this.newLineBeforeLookAhead = false;
 
   this.ltval = null;
-  this.lttype= "";
-  this.ltraw = "" ;
-  this.prec = 0 ;
+  this.lttype = '';
+  this.ltraw = '';
+  this.prec = 0;
   this.isVDT = false;
 
   this.labels = {};
@@ -23,7 +27,7 @@ var Parser = function (src, isModule) {
   this.li = 1;
   this.col = 0;
   this.c = 0;
-  
+
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
@@ -38,8 +42,8 @@ var Parser = function (src, isModule) {
 
   this.firstParen = null;
   this.firstUnassignable = null;
-  
+
   this.throwReserved = !false;
-};
+}
 
-
+module.exports.default = module.exports = constructor;
