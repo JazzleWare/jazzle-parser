@@ -1,4 +1,4 @@
-var CHAR = require('char.js');
+var CHAR = require('./char.js');
 
 function toNum (n) {
   return (n >= CHAR[0] && n <= CHAR[9]) ? n - CHAR[0] :
