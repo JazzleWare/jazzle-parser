@@ -1,11 +1,12 @@
 var CHAR = require('./char.js');
 var CONST = require('./constants.js');
+var UNICODE = require('./unicode');
 
 // TODO: import IDS_, IDC_;
 // FIXME: Num, num unused?
 
-var Num, num = Num = function (c) {
-    return (c >= CHAR[0] && c <= CHAR[9])
+function Num(c) {
+  return (c >= CHAR[0] && c <= CHAR[9])
 }
 
 function isIDHead(c) {
@@ -13,7 +14,7 @@ function isIDHead(c) {
           c === CHAR.$ ||
          (c <= CHAR.Z && c >= CHAR.A) ||
           c === CHAR.UNDERLINE ||
-         (IDS_[c >> CONST.D_INTBITLEN] & (1 << (c & CONST.M_INTBITLEN)));
+         (UNICODE.IDS[c >> CONST.D_INTBITLEN] & (1 << (c & CONST.M_INTBITLEN)));
 }
 
 function isIDBody (c) {
@@ -22,7 +23,7 @@ function isIDBody (c) {
          (c <= CHAR.Z && c >= CHAR.A) ||
           c === CHAR.UNDERLINE ||
          (c <= CHAR[9] && c >= CHAR[0]) ||
-         (IDC_[c >> CONST.D_INTBITLEN] & (1 << (c & CONST.M_INTBITLEN)));
+         (UNICODE.IDC[c >> CONST.D_INTBITLEN] & (1 << (c & CONST.M_INTBITLEN)));
 }
 
 function isHex(e) {
@@ -34,5 +35,7 @@ function isHex(e) {
 module.exports.default = module.exports = {
   isIDHead: isIDHead,
   isIDBody: isIDBody,
-  isHex: isHex
+  isHex: isHex,
+  Num: Num,
+  num: Num
 };
