@@ -30,84 +30,78 @@ function parseClass(context) {
   var startcStatic, liStatic, colStatic, rawStatic, cStatic, startLocStatic;
   var isStatic = false;
 
-  WHILE: while (!false) { // FIXME: use of constants is discouraged
-    if ( this.lttype === 'Identifier' && this.ltval === 'static' ) {
-      startcStatic = this.c0;
-      rawStatic = this.ltraw;
-      colStatic = this.col;
-      liStatic = this.li;
-      cStatic = this.c;
-      startLocStatic = this.locBegin();
-
-      this.next();
-
-      if ( this.lttype === '(' ) {
-        elem = this.parseMeth({
-          type: 'Identifier',
-          name: 'static',
-          start: startcStatic,
-          end: cStatic,
-          raw: rawStatic,
-          loc: {
-            start: startLocStatic,
-            end: {
-              line: liStatic,
-              column: colStatic
-            }
+  WHILE:
+  while (!false) { // FIXME: use of constants is discouraged
+     if ( this.lttype === 'Identifier' && this.ltval === 'static' ) {
+          startcStatic = this.c0;
+          rawStatic = this.ltraw;
+          colStatic = this.col;
+          liStatic = this.li;
+          cStatic = this.c;
+          startLocStatic = this.locBegin();
+    
+          this.next();
+    
+          if ( this.lttype === '(' ) {
+            elem = this.parseMeth({
+               type: 'Identifier', name: 'static', start: startcStatic,
+               end: cStatic, raw: rawStatic, loc: { start: startLocStatic, end: {
+                  line: liStatic, column: colStatic } } }, !OBJ_MEM);
+            list.push(elem);
+            continue;
           }
-        }, !OBJ_MEM);
-        list.push(elem);
-        continue;
-      }
-      isStatic = !false;
-    }
-
-    SWITCH:
-    switch ( this.lttype ) {
-    case 'Identifier':
-      switch ( this.ltval ) {
-      case 'get': case 'set':
-        elem = this.parseSetGet(!OBJ_MEM);
-        break SWITCH;
-      case 'constructor':
-        this.assert( !foundConstructor );
-        if ( !isStatic ) foundConstructor = !false;
-        break SWITCH;
-      default:
-        elem = this.parseMeth(this.id(), !OBJ_MEM);
-        break SWITCH;
-      }
-    case '[':
-      elem = this.parseMeth(this.memberExpr(), !OBJ_MEM);
-      break; // FIXME: break what?
-    case 'Literal':
-      elem = this.parseMeth(this.numstr(), !OBJ_MEM);
-      break; // FIXME: break what?
-    case ';':
-      this.next();
-      continue;
-    case 'op':
-      if ( this.ltraw === '*' ) {
-        elem = this.parseGen(!OBJ_MEM);
-        break; // FIXME: break what?
-      }
-      break SWITCH;
-    default:
-      break WHILE;
-    }
-
-    if ( isStatic ) {
-      if ( elem.kind === 'constructor') {
-        elem.kind = 'method';
-      }
-
-      elem.start = startcStatic;
-      elem.loc.start = startLocStatic;
-
-      elem['static'] = !false;
-      isStatic = false;
-    }
-    list.push(elem);
+          isStatic = !false;
+     }
+ 
+     SWITCH:
+     switch ( this.lttype ) {
+         case 'Identifier':
+            switch ( this.ltval ) {
+              case 'get': case 'set':
+                elem = this.parseSetGet(!OBJ_MEM);
+                break SWITCH;
+              case 'constructor':
+                this.assert( !foundConstructor );
+                if ( !isStatic ) foundConstructor = !false;
+                break SWITCH;
+              default:
+                elem = this.parseMeth(this.id(), !OBJ_MEM);
+                break SWITCH;
+            }
+  
+         case '[':
+            elem = this.parseMeth(this.memberExpr(), !OBJ_MEM);
+            break SWITCH;
+ 
+         case 'Literal':
+           elem = this.parseMeth(this.numstr(), !OBJ_MEM);
+           break SWITCH;
+ 
+         case ';':
+           this.next();
+           continue;
+ 
+         case 'op':
+           if ( this.ltraw === '*' ) {
+             elem = this.parseGen(!OBJ_MEM);
+             break SWITCH; // FIXME: break what?
+           }
+ 
+         default:
+           break WHILE;
+     }
+ 
+     if ( isStatic ) {
+       if ( elem.kind === 'constructor')
+         elem.kind = 'method';
+ 
+       elem.start = startcStatic;
+       elem.loc.start = startLocStatic;
+       elem['static'] = !false;
+       isStatic = false;
+     }
+ 
+     list.push(elem);
   }
 
   var endLoc = this.loc();
