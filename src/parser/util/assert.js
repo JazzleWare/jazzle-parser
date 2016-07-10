@@ -1,1 +1,6 @@
-_class . assert = function(cond, message) { if ( !cond ) throw new Error ( message )  ; }
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+module.exports.default = module.exports = assert;
