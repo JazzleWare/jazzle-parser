@@ -1,8 +1,0 @@
-if we are in versions less than 5, then they are mere id's.
-if they come at the start of a for, they are sent to parseLetConst with the context CONTEXT_FOR
-if they come at the start of a statement, they are sent to parseLetConst
-if they are anywhere else, they would be mere id's, unless we are in strict mode, in which case they are reserved words (and cause an error.)
-
-
-The parseLetConst function always parses a declaration; however if the returned declaration has no declarators, it returns an id ,     unless we are in strict mode, in which case they are reserved words (and cause an error.)
- 
