@@ -6,7 +6,7 @@ var UNICODE = require('./unicode');
 // FIXME: Num, num unused?
 
 function Num(c) {
-  return (c >= CHAR[0] && c <= CHAR[9])
+  return (c >= CHAR[0] && c <= CHAR[9]);
 }
 
 function isIDHead(c) {

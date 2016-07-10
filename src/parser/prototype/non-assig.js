@@ -120,7 +120,7 @@ module.exports .parseO = function(context ) {
     }
     break;
 
-    case '?': this .prec = PREC.COND  ; return !false;
+  case '?': this .prec = PREC.COND  ; return !false;
   }
 
   return false ;
@@ -156,7 +156,7 @@ module.exports.parseNonSeqExpr =  function(prec, context  ) {
     firstUnassignable = this.firstUnassignable;
   }
 
-  while ( !false ) { // FIXME: const
+  while ( !false ) { // eslint-disable-line no-constant-condition
     if ( !this. parseO( context ) ) break ;
     if ( PREC.isAssignment(this.prec) ) {
       this.assert( prec === PREC.WITH_NO_OP );

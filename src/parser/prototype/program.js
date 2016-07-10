@@ -1,5 +1,9 @@
 module.exports.parseProgram =  function() {
-  var startc = this.c, li = this.li, col = this.col; // FIXME: li unused
+  var startc = this.c;
+  /* unused
+  var li = this.li;
+  var col = this.col;
+  */
   var endI = this.c , startLoc = null;
   this.next();
   var list = this.blck();
@@ -17,7 +21,7 @@ module.exports.parseProgram =  function() {
     endLoc = startLoc = { line: 0, column: 0 };
   }
 
-  var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
+  var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? 'module' : 'script' ,
            loc: { start: startLoc, end: endLoc } };
 
   this.expectType('eof');

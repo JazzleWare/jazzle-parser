@@ -1,5 +1,4 @@
 var CHAR = require('../../util/char.js');
-var CONST = require('../../util/constants.js');
 var fromcode = require('../../util/fromcode.js');
 var toNum = require('../../util/toNum.js');
 
@@ -69,7 +68,7 @@ module.exports.readEsc = function() {
 
   case CHAR.CARRIAGE_RETURN:
     if ( src.charCodeAt(this.c + 1) === CHAR.LINE_FEED ) this.c++;
-    // FIXME: expected break
+    break;
   case CHAR.LINE_FEED:
   case 0x2028:
   case 0x2029:

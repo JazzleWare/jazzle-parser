@@ -1,3 +1,5 @@
+/* eslint no-invalid-regexp: 0 */
+
 var CHAR = require('../../util/char.js');
 var hex = require('../../util/hex.js');
 
@@ -8,17 +10,19 @@ var gRegexFlag = 1,
   iRegexFlag = mRegexFlag << 1;
 var regexFlagsSupported = 0;
 try {
-  new RegExp("lube", "g");
+  new RegExp('lube', 'g');
   regexFlagsSupported |= gRegexFlag;
-  new RegExp("lube", "u");
+  new RegExp('lube', 'u');
   regexFlagsSupported |= uRegexFlag;
-  new RegExp("lube", "y");
+  new RegExp('lube', 'y');
   regexFlagsSupported |= yRegexFlag;
-  new RegExp("lube", "m");
+  new RegExp('lube', 'm');
   regexFlagsSupported |= mRegexFlag;
-  new RegExp("lube", "i");
+  new RegExp('lube', 'i');
   regexFlagsSupported |= iRegexFlag;
-} catch (r) {}
+} catch (r) {
+  // swoosh
+}
 module.exports.curlyReplace = function(matchedString, b, matchIndex,
   wholeString) { // FIXME: wholestring unused
   var c = parseInt('0x' + b);

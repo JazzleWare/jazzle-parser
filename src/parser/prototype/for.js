@@ -56,7 +56,7 @@ module.exports.parseFor = function() {
     switch ( this.ltval ) {
     case 'in':
       kind = 'ForInStatement';
-      // FIXME: expected break
+      break;
     case 'of':
       if ( this.unsatisfiedAssignment )
         this.unsatisfiedAssignment = null;

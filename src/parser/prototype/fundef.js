@@ -1,12 +1,8 @@
-var CHAR = require('../../util/char.js');
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var SCOPE = CONST.SCOPE;
 var PREC = require('../../util/precedence.js');
 var arguments_or_eval = require('../../util/arguments_or_eval');
-var core = require('../../util/core.js');
-var fromcode = require('../../util/fromcode.js');
-var toNum = require('../../util/toNum.js');
 var has = require('../../util/has.js');
 
 module.exports.parseArgs = function(argLen) {

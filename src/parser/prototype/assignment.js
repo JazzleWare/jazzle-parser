@@ -6,7 +6,7 @@ module.exports.ensureSimpAssig = function(head) {
   switch(head.type) {
   case 'Identifier':
     this.assert( !( this.tight && arguments_or_eval(head.name) )  );
-    // FIXME: missing break
+    break;
   case 'MemberExpression':
     return;
 
@@ -24,7 +24,7 @@ module.exports.toAssig = function(head) {
   switch(head.type) {
   case 'Identifier':
     this.assert( !(this.tight && arguments_or_eval(head.name)) );
-    // FIXME: missing break
+    break;
   case 'MemberExpression':
     return;
 
@@ -88,7 +88,7 @@ module.exports.parseAssignment = function(head, context ) {
     this.unsatisfiedAssignment = false ;
   }
 
-  var prec = this.prec; // FIXME: unused
+  // var prec = this.prec;
   this.next();
 
   var right = this. parseNonSeqExpr(PREC.WITH_NO_OP, context ) ;

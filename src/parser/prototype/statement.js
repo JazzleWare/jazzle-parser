@@ -5,7 +5,8 @@ var core = require('../../util/core.js');
 var has = require('../../util/has.js');
 
 module.exports.parseStatement = function(allowNull) {
-  var head = null, l, e; // FIXME: l unused
+  var head = null, e;
+  // var l; // unused
   switch (this.lttype) {
   case '{':
     return this.parseBlckStatement();

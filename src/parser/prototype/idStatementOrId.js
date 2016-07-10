@@ -24,10 +24,10 @@ module.exports.parseIdStatementOrId =  function( context ) {
         return null;
 
       this.notId() ;
-      // FIXME: break
+      break;
     default: pendingExprHead = this.id(); break SWITCH ;
     }
-
+    break;
   case 3:
     switch (id) {
     case 'new':
@@ -52,10 +52,10 @@ module.exports.parseIdStatementOrId =  function( context ) {
     case 'int':
       if ( this.v <= 5 )
         this.errorReservedID();
-      // FIXME: break
+      break;
     default: pendingExprHead = this.id(); break SWITCH;
     }
-
+    break;
   case 4:
     switch (id) {
     case 'null':
@@ -79,22 +79,21 @@ module.exports.parseIdStatementOrId =  function( context ) {
 
     case 'else':
       this.notId();
-      // FIXME: break
+      break;
     case 'with':
       return this.parseWithStatement();
     case 'enum': case 'byte': case 'char': case 'goto':
     case 'long':
       if ( this. v <= 5 ) this.errorReservedID();
-      // FIXME: break
+      break;
     default: pendingExprHead = this.id(); break SWITCH  ;
     }
-
+    break;
   case 5:
     switch (id) {
     case 'super': pendingExprHead = this.parseSuper(); break SWITCH;
     case 'break': return this.parseBreakStatement();
-    case 'catch': this.notId ()  ;
-    // FIXME: break
+    case 'catch': this.notId (); break;
     case 'class': return this.parseClass(CONTEXT.NONE ) ;
     case 'const':
       this.assert(this.v>=5);
@@ -121,17 +120,17 @@ module.exports.parseIdStatementOrId =  function( context ) {
     case 'float':
     case 'short':
       if ( this. v <= 5 ) this.errorReservedID() ;
-    // FIXME: break
+      break;
     case 'await':
     default: pendingExprHead = this.id(); break SWITCH ;
     }
-
+    break;
   case 6:
     switch (id) {
     case 'static':
-        if ( this.tight || this.v <= 5 )
-          this.error();
-          // FIXME: expected break
+      if ( this.tight || this.v <= 5 )
+        this.error();
+      break;
     case 'delete':
     case 'typeof':
       if ( this.canBeStatement )
@@ -152,12 +151,12 @@ module.exports.parseIdStatementOrId =  function( context ) {
     case 'switch': return this.parseSwitchStatement();
     case 'double': case 'native': case 'throws':
       if ( this. v <= 5 ) this.errorReservedID();
-      // FIXME: expected break
+      break;
     default:
       pendingExprHead = this.id();
       break SWITCH ;
     }
-
+    break;
   case 7:
     switch (id) {
     case 'default':
@@ -166,20 +165,20 @@ module.exports.parseIdStatementOrId =  function( context ) {
 
     case 'extends': case 'finally':
       this.notId() ;
-    // FIXME: expected break
+      break;
     case 'package': case 'private':
       if ( this. tight  )
         this.errorReservedID();
-      // FIXME: expected break
+      break;
     case 'boolean':
       if ( this. v <= 5 )
         this.errorReservedID();
-      // FIXME: expected break
+      break;
     default:
       pendingExprHead = this.id();
       break SWITCH  ;
     }
-
+    break;
   case 8:
     switch (id) {
     case 'module.exports.': return this.parseFunc = function(context, CONTEXT_FOR, WHOLE_FUNCTION, ANY_ARG_LEN ) {}; // FIXME: noop?
@@ -187,40 +186,40 @@ module.exports.parseIdStatementOrId =  function( context ) {
     case 'continue': return this.parseContinueStatement();
     case 'abstract': case 'volatile':
       if ( this. v <= 5 ) this.errorReservedID();
-      // FIXME: expected break
+      break;
     default:
       pendingExprHead = this.id();
       break SWITCH  ;
     }
-
+    break;
   case 9:
     switch (id ) {
     case 'interface': case 'protected':
       if (this.tight) this.errorReservedID() ;
-      // FIXME: expected break
+      break;
     case 'transient':
       if (this.v <= 5) this.errorReservedID();
-      // FIXME: expected break
+      break;
     default:
       pendingExprHead = this.id();
       break SWITCH  ;
     }
-
+    break;
   case 10:
     switch ( id ) {
     case 'instanceof':
       this.notId();
-      // FIXME: expected break
+      break;
     case 'implements':
       if ( this.v <= 5 || this.tight ) this.resv();
-      // FIXME: expected break
+      break;
     default:
       pendingExprHead = this.id(); break SWITCH ;
     }
-
+    break;
   case 12:
     if ( this.v <= 5 && id === 'synchronized' ) this.errorReservedID();
-    // FIXME: expected break
+    break;
   default:
     pendingExprHead = this.id();
   }

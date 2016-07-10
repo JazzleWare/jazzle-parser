@@ -1,15 +1,5 @@
-var CHAR = require('../../util/char.js');
-var CTYPE = require('../../util/ctype.js');
 var CONST = require('../../util/constants.js');
-var CONTEXT = CONST.CONTEXT;
 var SCOPE = CONST.SCOPE;
-var PREC = require('../../util/precedence.js');
-var arguments_or_eval = require('../../util/arguments_or_eval');
-var core = require('../../util/core.js');
-var fromcode = require('../../util/fromcode.js');
-var toNum = require('../../util/toNum.js');
-var has = require('../../util/has.js');
-var hex = require('../../util/hex.js');
 
 module.exports.validateID = function(e) {
   var n = e || this.ltval;
@@ -35,6 +25,7 @@ module.exports.validateID = function(e) {
       case 'let':
         if (this.v <= 5 || !this.tight)
           break SWITCH;
+        break;
       case 'for':
       case 'try':
       case 'var':
@@ -43,6 +34,7 @@ module.exports.validateID = function(e) {
       default:
         break SWITCH;
       }
+      break;
     case 4:
       switch (n) {
       case 'byte':
@@ -50,6 +42,7 @@ module.exports.validateID = function(e) {
       case 'goto':
       case 'long':
         if (this.v > 5) break SWITCH;
+        break;
       case 'case':
       case 'else':
       case 'this':
@@ -60,10 +53,12 @@ module.exports.validateID = function(e) {
       default:
         break SWITCH;
       }
+      break;
     case 5:
       switch (n) {
       case 'await':
         if (this.isScript) break SWITCH;
+        break;
       case 'final':
       case 'float':
       case 'short':
@@ -72,6 +67,7 @@ module.exports.validateID = function(e) {
       case 'yield':
         if (!(this.tight || (this.scopeFlags & SCOPE.YIELD)))
           break SWITCH;
+        break;
       case 'break':
       case 'catch':
       case 'class':
@@ -83,6 +79,7 @@ module.exports.validateID = function(e) {
       default:
         break SWITCH;
       }
+      break;
     case 6:
       switch (n) {
       case 'double':
@@ -95,6 +92,7 @@ module.exports.validateID = function(e) {
       case 'static':
         if (this.v > 5 && !this.tight)
           break SWITCH;
+        break;
       case 'delete':
       case 'export':
       case 'import':
@@ -105,13 +103,16 @@ module.exports.validateID = function(e) {
       default:
         break SWITCH;
       }
+      break;
     case 7:
       switch (n) {
       case 'package':
       case 'private':
         if (this.tight) return this.errorReservedID();
+        break;
       case 'boolean':
         if (this.v > 5) break;
+        break;
       case 'default':
       case 'extends':
       case 'finally':
@@ -119,42 +120,50 @@ module.exports.validateID = function(e) {
       default:
         break SWITCH;
       }
+      break;
     case 8:
       switch (n) {
       case 'abstract':
       case 'volatile':
         if (this.v > 5) break;
-      case 'continue':
+      case 'continue': // eslint-disable-line no-fallthrough
       case 'debugger':
       case 'function':
         return this.errorReservedID();
       default:
         break SWITCH;
       }
+      break;
     case 9:
       switch (n) {
       case 'interface':
         if (this.tight) this.resv();
+        break;
       case 'protected':
       case 'transient':
         if (this.v <= 5)
           this.errorReservedID();
+        break;
       default:
         break SWITCH;
       }
+      break;
     case 10:
       switch (n) {
       case 'implements':
         if (this.v > 5 && !this.tight) break;
-      case 'instanceof':
+      case 'instanceof': // eslint-disable-line no-fallthrough
         this.errorReservedID();
+        break;
       default:
         break SWITCH;
       }
+      break;
     case 12:
       switch (n) {
       case 'synchronized':
         if (this.v <= 5) this.errorReservedID();
+        break;
       default:
         break SWITCH;
       }

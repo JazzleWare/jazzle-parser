@@ -29,7 +29,7 @@ module.exports.parseArrayPattern = function() {
     this.tight = !false;
   }
   this.next();
-  while (!false) { // FIXME: const in while
+  while (!false) { // eslint-disable-line no-constant-condition
     elem = this.parsePattern();
     if (elem) {
       if (this.lttype === 'op' && this.ltraw === '=') elem = this.parseAssig(

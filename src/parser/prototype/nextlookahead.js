@@ -12,14 +12,14 @@ module.exports.next =  function() {
   }
   var c = this.c,
     l = this.src,
-    e = l.length, // FIXME: unused
+  //  e = l.length, // FIXME: unused
     r = 0,
     peek,
     start =  c;
 
   peek  = this.src.charCodeAt(start);
   if ( CTYPE.isIDHead(peek) )this.readAnIdentifierToken('');
-  else if (Num(peek))this.readNumberLiteral(peek);
+  else if (CTYPE.Num(peek))this.readNumberLiteral(peek);
   else {
     switch (peek) {
     case CHAR.MIN: this.opMin(); break;
@@ -352,8 +352,7 @@ module.exports.skipS = function() {
     case CHAR.WHITESPACE :
       while ( ++c < e &&  l.charCodeAt(c) === CHAR.WHITESPACE );
       continue ;
-    case CHAR.CARRIAGE_RETURN : if ( CHAR.LINE_FEED == l.charCodeAt( c + 1 ) ) c ++;
-    // FIXME: break
+    case CHAR.CARRIAGE_RETURN : if ( CHAR.LINE_FEED == l.charCodeAt( c + 1 ) ) c ++; break;
     case CHAR.LINE_FEED :
       if ( noNewLine ) noNewLine = false ;
       start = ++ c ;
@@ -432,7 +431,7 @@ module.exports.skipS = function() {
         c = this.c;
         continue;
       }
-      // FIXME: break
+      break;
     default :
       this.col += (c-start ) ;
       this.c=c;
@@ -452,7 +451,7 @@ module.exports.readDot = function() {
     if (this.src.charCodeAt(++ this.c) == CHAR.SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
     this.err('Unexpectd ' + this.src[this.c]) ;
   }
-  else if ( Num(this.src.charCodeAt(this.c))) {
+  else if ( CTYPE.Num(this.src.charCodeAt(this.c))) {
     this.lttype = 'Literal' ;
     this.c0  = this.c - 1;
     this.li0 = this.li;

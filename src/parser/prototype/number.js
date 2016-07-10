@@ -94,7 +94,7 @@ module.exports.readNumberLiteral =  function(peek) {
   else  {
     b = this.c;
     c ++ ;
-    while (c < len && num(src.charCodeAt(c))) c++ ;
+    while (c < len && CTYPE.num(src.charCodeAt(c))) c++ ;
     this.c = c;
     if ( this.frac(b) )
       return;
@@ -112,7 +112,7 @@ module.exports . frac = function(n) {
     l = this.src,
     e = l.length ;
   if ( n == -1 || l.charCodeAt(c)== CHAR.SINGLEDOT )
-    while( ++c < e && Num(l.charCodeAt (c)));
+    while( ++c < e && CTYPE.Num(l.charCodeAt (c)));
 
   switch(l.charCodeAt(c)){
   case CHAR.E:
@@ -121,7 +121,7 @@ module.exports . frac = function(n) {
     switch(l.charCodeAt(c)) {
     case CHAR.MIN: case CHAR.ADD: c++ ;
     }
-    while ( c < e && Num(l.charCodeAt( c) )) c++ ;
+    while ( c < e && CTYPE.Num(l.charCodeAt( c) )) c++ ;
   }
   if ( c == this.c ) return false  ;
   this.ltraw = l.slice (n === -1 ? this.c - 1 : n, c);

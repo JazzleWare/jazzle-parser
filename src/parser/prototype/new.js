@@ -1,5 +1,6 @@
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
+var core = require('../../util/core.js');
 
 module.exports.parseNewHead = function() {
   var startc = this.c0, end = this.c, startLoc = this.locBegin(), li = this.li, col = this.col, raw = this.ltraw ;
@@ -46,8 +47,8 @@ module.exports.parseNewHead = function() {
   default: this.assert(false) ;
   }
 
-  var inner = core( head ) ;  // FIXME: inner already defined
-  while ( !false ) { // FIXME: const in while
+  inner = core( head );
+  while ( !false ) { // eslint-disable-line no-constant-condition
     switch (this. lttype) {
     case '.':
       this.next();

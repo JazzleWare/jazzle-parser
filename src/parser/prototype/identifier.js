@@ -1,6 +1,5 @@
 var CHAR = require('../../util/char.js');
 var CTYPE = require('../../util/ctype.js');
-var CONST = require('../../util/constants.js');
 var fromcode = require('../../util/fromcode.js');
 
 module.exports.readAnIdentifierToken =  function(v) {

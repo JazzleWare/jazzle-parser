@@ -50,7 +50,7 @@ module.exports.parseTemplateLiteral = function() {
         this.next(); // this must be done manually because we must have a lookahead before starting to parse an actual expression
         templExpressions.push(this.parseExpr(CONTEXT.NONE));
         this.assert(this.lttype === '}');
-        currentElemContents = "";
+        currentElemContents = '';
         startElemFragment = startElem = c = this.c; // right after the '}'
         startColIndex = c;
         li = this.li;

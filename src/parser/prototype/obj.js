@@ -111,5 +111,5 @@ module.exports.parseProperty = function(name) {
       computed: false
     };
   }
-  return n; // FIXME: unreachable
+//  return n; // unreachable
 };

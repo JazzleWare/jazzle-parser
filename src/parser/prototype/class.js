@@ -33,7 +33,7 @@ module.exports.parseClass = function(context) {
   var isStatic = false;
 
   WHILE:
-  while (!false) { // FIXME: use of constants is discouraged
+  while (!false) { // eslint-disable-line no-constant-condition
     if ( this.lttype === 'Identifier' && this.ltval === 'static' ) {
       startcStatic = this.c0;
       rawStatic = this.ltraw;

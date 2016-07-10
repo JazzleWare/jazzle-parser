@@ -55,7 +55,7 @@ module.exports.parseExprHead = function(context) {
   }
   inner = core(head);
   LOOP:
-    while (!false) {
+    while (!false) { // eslint-disable-line no-constant-condition
       switch (this.lttype) {
       case '.':
         this.next();
@@ -213,7 +213,7 @@ module.exports.parseParen = function() {
   var list = null,
     elem = null;
   var firstElem = null;
-  while (!false) { // FIXME: const
+  while (!false) { // eslint-disable-line no-constant-condition
     this.firstParen = null;
     this.next();
     this.unsatisfiedAssignment = null;

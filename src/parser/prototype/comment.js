@@ -1,14 +1,12 @@
 var CHAR = require('../../util/char.js');
-var CONST = require('../../util/constants.js');
 
 module.exports.readMultiComment = function() {
-  // FIXME: l not defined.
-  var c = this.c, src = this.src, len = l.length, start = c;
+  var c = this.c, src = this.src, start = c;
+  var len = l.length; // FIXME: l is not defined..
 
   var noNewLine  = true;
 
-  // FIXME: elen not defined
-  while (c < elen) {
+  while (c < len) {
     switch (src.charCodeAt(c++ ) ) {
     case CHAR.MUL:
       if (src.charCodeAt(c) == CHAR.DIV) {
@@ -21,7 +19,7 @@ module.exports.readMultiComment = function() {
 
     case CHAR.CARRIAGE_RETURN:
       if( CHAR.LINE_FEED === src.charCodeAt(c)) c++;
-      // FIXME: expect break
+      break;
     case CHAR.LINE_FEED:
     case 0x2028:
     case 0x2029:
@@ -38,15 +36,15 @@ module.exports.readMultiComment = function() {
 };
 
 module.exports.readLineComment = function() {
-  // FIXME: l not defined
-  var c = this.c, src = this.src, len = l.length;
+  var c = this.c, src = this.src;
+  var len = l.length; // FIXME: l not defined
 
   WHILE:
   while ( c < len ) {
     switch ( src.charCodeAt(c++) ) {
     case CHAR.CARRIAGE_RETURN:
       if (CHAR.LINE_FEED == l.charCodeAt(c)) c++;
-       // FIXME: expect break
+      break;
     case CHAR.LINE_FEED :
     case 0x2028:
     case 0x2029 :
