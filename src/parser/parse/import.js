@@ -1,3 +1,5 @@
+var CONST = require('../../util/constants.js');
+
 module.exports.parseImport = function() {
   this.assert( this.canBeStatement );
   this.canBeStatement = false;
@@ -9,10 +11,10 @@ module.exports.parseImport = function() {
   if ( this.lttype === 'Identifier' ) {
     local = this.validateID(null);
     list.push({ type: 'ImportDefaultSpecifier',
-               start: local.start,
-               loc: local.loc,
+              start: local.start,
+              loc: local.loc,
                 end: local.end,
-               local: local });
+              local: local });
   }
 
   if ( this.lttype === ',' ) {
@@ -22,65 +24,65 @@ module.exports.parseImport = function() {
 
   var spStartc = 0, spStartLoc = null;
 
-  switch ( this.lttype ) {   
-     case 'op':
-       this.assert( this.ltraw === '*' );
-       spStartc = this.c - 1;
-       spStartLoc = this.locOn(1);
-       this.next();
-       this.expectID('as');
-       this.assert(this.lttype === 'Identifier');
-       local = this.validateID(null);
-       list.push({ type: 'ImportNamespaceSpecifier',
-                  start: spStartc,
-                  loc: { start: spStartLoc, end: local.loc.end },
-                   end: local.end,
-                  local: local  }) ;
-       break;
+  switch ( this.lttype ) {
+  case 'op':
+    this.assert( this.ltraw === '*' );
+    spStartc = this.c - 1;
+    spStartLoc = this.locOn(1);
+    this.next();
+    this.expectID('as');
+    this.assert(this.lttype === 'Identifier');
+    local = this.validateID(null);
+    list.push({ type: 'ImportNamespaceSpecifier',
+                start: spStartc,
+                loc: { start: spStartLoc, end: local.loc.end },
+                end: local.end,
+                local: local  }) ;
+    break;
 
-    case '{':
-       hasList = !false;
-       this.next();
-       while ( this.lttype === 'Identifier' ) {
-          local = this.id();
-          var im = local; 
-          if ( this.lttype === 'Identifier' ) {
-             this.assert( this.ltval === 'as' );
-             this.next();
-             this.assert( this.lttype === 'Identifier' );
-             local = this.validateID(null);
-          }
-          else this.validateID(local);
+  case '{':
+    hasList = !false;
+    this.next();
+    while ( this.lttype === 'Identifier' ) {
+      local = this.id();
+      var im = local;
+      if ( this.lttype === 'Identifier' ) {
+        this.assert( this.ltval === 'as' );
+        this.next();
+        this.assert( this.lttype === 'Identifier' );
+        local = this.validateID(null);
+      }
+      else this.validateID(local);
 
-          list.push({ type: 'ImportSpecifier',
-                     start: im.start,
-                     loc: { start: im.loc.start, end: local.loc.end },
-                      end: local.end, imported: im,
-                    local: local }) ;
+      list.push({ type: 'ImportSpecifier',
+                start: im.start,
+                loc: { start: im.loc.start, end: local.loc.end },
+                  end: local.end, imported: im,
+                local: local }) ;
 
-          if ( this.lttype === ',' )
-             this.next();
-          else
-             break ;                                  
-       }
+      if ( this.lttype === ',' )
+        this.next();
+      else
+        break ;
+    }
 
-       this.expectType('}');
-       break ;
-   }
-    
-   if ( list.length || hasList )
-     this.expectID('from');
+    this.expectType('}');
+    break ;
+  }
 
-   this.assert(this.lttype === 'Literal' &&
-        typeof this.ltval === STRING_TYPE );
+  if ( list.length || hasList )
+    this.expectID('from');
 
-   var src = this.numstr();
-   var endI = this.semiI() || src.end, endLoc = this.semiLoc() || src.loc.end;
-   
-   this.foundStatement = !false;
-   return { type: 'ImportDeclaration',
-           start: startc,
-           loc: { start: startLoc, end: endLoc  },
+  this.assert(this.lttype === 'Literal' &&
+        typeof this.ltval === CONST.STRING_TYPE );
+
+  var src = this.numstr();
+  var endI = this.semiI() || src.end, endLoc = this.semiLoc() || src.loc.end;
+
+  this.foundStatement = !false;
+  return { type: 'ImportDeclaration',
+          start: startc,
+          loc: { start: startLoc, end: endLoc  },
             end:  endI , specifiers: list,
-           source: src };
-}; 
+          source: src };
+};

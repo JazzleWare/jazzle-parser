@@ -1,9 +1,14 @@
+var CONST = require('../../util/constants.js');
+var CONTEXT = CONST.CONTEXT;
+var SCOPE = CONST.SCOPE;
+var PREC = require('../../util/precedence.js');
+var core = require('../../util/core.js');
+
 module.exports.parseFor = function() {
   this.ensureStmt();
   this.fixupLabels(!false) ;
 
-  var startc = this.c0,
-      startLoc = this.locBegin();
+  var startc = this.c0, startLoc = this.locBegin();
 
   this.next () ;
   this.expectType('(' ) ;
@@ -14,66 +19,64 @@ module.exports.parseFor = function() {
   var scopeFlags = this.scopeFlags;
 
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
-     case 'var':
-        this.canBeStatement = !false;
-        head = this.parseVariableDeclaration(CONTEXT_FOR);
-        break;
+  case 'var':
+    this.canBeStatement = !false;
+    head = this.parseVariableDeclaration(CONTEXT.FOR);
+    break;
 
-     case 'let':
-        if ( this.v >= 5 ) {
-          this.canBeStatement = !false;
-          head = this.parseLet(CONTEXT_FOR);
-        }
+  case 'let':
+    if ( this.v >= 5 ) {
+      this.canBeStatement = !false;
+      head = this.parseLet(CONTEXT.FOR);
+    }
+    break;
 
-        break;
-
-     case 'const' :
-
-        this.assert( this.v >= 5 );
-        this.canBeStatement = !false;
-        head = this. parseVariableDeclaration(CONTEXT_FOR);
-           break ;
+  case 'const':
+    this.assert( this.v >= 5 );
+    this.canBeStatement = !false;
+    head = this. parseVariableDeclaration(CONTEXT.FOR);
+    break;
   }
 
   if ( head === null ) {
-       headIsExpr = !false;
-       head = this.parseExpr( CONTEXT_NULLABLE|CONTEXT_ELEM|CONTEXT_FOR ) ;
+    headIsExpr = !false;
+    head = this.parseExpr(CONTEXT.NULLABLE|CONTEXT.ELEM|CONTEXT.FOR) ;
   }
-  else 
-     this.foundStatement = false;
+  else
+    this.foundStatement = false;
 
   var kind = 'ForOfStatement';
   var nbody = null;
   var afterHead = null;
 
   if ( head !== null && // if we have a head
-       ( headIsExpr || // that is an expression
-       (head.declarations.length === 1 /* && !head.declarations[0].init */ ) ) && // or one and only one lone declarator
-       this.lttype === 'Identifier' ) { // then if the token ahead is an id
+      ( headIsExpr || // that is an expression
+      (head.declarations.length === 1 /* && !head.declarations[0].init */ ) ) && // or one and only one lone declarator
+      this.lttype === 'Identifier' ) { // then if the token ahead is an id
     switch ( this.ltval ) {
-       case 'in':
-          kind = 'ForInStatement';
+    case 'in':
+      kind = 'ForInStatement';
+      // FIXME: expected break
+    case 'of':
+      if ( this.unsatisfiedAssignment )
+        this.unsatisfiedAssignment = null;
 
-       case 'of':
-          if ( this.unsatisfiedAssignment )
-            this.unsatisfiedAssignment = null;
+      if (headIsExpr) this.toAssig(core(head));
 
-          if (headIsExpr) this.toAssig(core(head));
+      this.next();
+      afterHead = this.parseNonSeqExpr(PREC.WITH_NO_OP, CONTEXT.NONE) ;
+      this.expectType(')');
 
-          this.next();
-          afterHead = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE) ;
-          this.expectType(')');
+      this.scopeFlags |= ( SCOPE.BREAK|SCOPE.CONTINUE );
+      nbody = this.parseStatement(false);
+      this.scopeFlags = scopeFlags;
 
-          this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
-          nbody = this.parseStatement(false);
-          this.scopeFlags = scopeFlags;
+      this.foundStatement = !false;
+      return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
+        start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
 
-          this.foundStatement = !false;
-          return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
-            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
-
-       default:
-          this.assert(false) ;
+    default:
+      this.assert(false);
     }
   }
 
@@ -85,19 +88,19 @@ module.exports.parseFor = function() {
   }
 */
   this.expectType(';');
-  afterHead = this.parseExpr(CONTEXT_NULLABLE );
+  afterHead = this.parseExpr(CONTEXT.NULLABLE );
   this.expectType(';');
-  var tail = this.parseExpr(CONTEXT_NULLABLE );
+  var tail = this.parseExpr(CONTEXT.NULLABLE );
   this.expectType(')');
 
-  this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
+  this.scopeFlags |= ( SCOPE.CONTINUE|SCOPE.BREAK );
   nbody = this.parseStatement(false);
   this.scopeFlags = scopeFlags;
 
   this.foundStatement = !false;
   return { type: 'ForStatement', init: head && core(head), start : startc, end: nbody.end,
-         test: afterHead && core(afterHead),
-         loc: { start: startLoc, end: nbody.loc.end },
+        test: afterHead && core(afterHead),
+        loc: { start: startLoc, end: nbody.loc.end },
           update: tail && core(tail),
-         body: nbody };
-}
+        body: nbody };
+};

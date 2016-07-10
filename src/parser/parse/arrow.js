@@ -1,3 +1,9 @@
+var CONST = require('../../util/constants.js');
+var CONTEXT = CONST.CONTEXT;
+var SCOPE = CONST.SCOPE;
+var PREC = require('../../util/precedence.js');
+var core = require('../../util/core.js');
+
 module.exports.asArrowFuncArgList = function(head) {
   if (head === null) return;
 
@@ -5,13 +11,13 @@ module.exports.asArrowFuncArgList = function(head) {
     this.assert(head !== this.firstParen );
     var i = 0, list = head.expressions;
     while ( i < list.length ) {
-      asArrowFuncArg(list[i]);
+      exports.asArrowFuncArg(list[i]);
       i++;
     }
   } else {
-    asArrowFuncArg(head);
+    exports.asArrowFuncArg(head);
   }
-}
+};
 
 module.exports.asArrowFuncArg = function(arg) {
   var i = 0, list = null;
@@ -25,7 +31,7 @@ module.exports.asArrowFuncArg = function(arg) {
     list = arg.elements;
     while ( i < list.length ) {
       if ( list[i] ) {
-        asArrowFuncArg(list[i]);
+        exports.asArrowFuncArg(list[i]);
         if ( list[i].type === 'SpreadElement' ) {
           i++;
           break;
@@ -40,7 +46,7 @@ module.exports.asArrowFuncArg = function(arg) {
   case 'AssignmentExpression':
     this.assert(arg !== this.firstParen );
     this.assert(arg.operator === '=' ) ;
-    asArrowFuncArg(arg.left);
+    exports.asArrowFuncArg(arg.left);
     arg.type = 'AssignmentPattern';
     delete arg.operator ;
     return;
@@ -48,42 +54,39 @@ module.exports.asArrowFuncArg = function(arg) {
   case 'ObjectExpression':
     this.assert(arg !== this.firstParen    );
     list = arg.properties;
-    while ( i < list.length ) asArrowFuncArg(list[i++].value );
+    while ( i < list.length ) exports.asArrowFuncArg(list[i++].value );
     arg.type = 'ObjectPattern';
     return;
 
   case 'AssignmentPattern':
     this.assert(arg !== this.firstParen );
-    asArrowFuncArg(arg.left) ;
+    exports.asArrowFuncArg(arg.left) ;
     return;
 
   case 'ArrayPattern' :
     list = arg.elements;
     while ( i < list.length )
-      asArrowFuncArg(list[i++] ) ;
+      exports.asArrowFuncArg(list[i++] ) ;
     return;
 
   case 'SpreadElement':
-    asArrowFuncArg(arg.argument);
+    exports.asArrowFuncArg(arg.argument);
     arg.type = 'RestElement';
     return;
 
   case 'RestElement':
-    asArrowFuncArg(arg.argument);
+    exports.asArrowFuncArg(arg.argument);
     return;
 
   case 'ObjectPattern':
     list = arg.properties;
-    while (i < list.length) asArrowFuncArgList ( list[i++].value  );
+    while (i < list.length) exports.asArrowFuncArgList ( list[i++].value  );
     return;
 
   default:
     this.assert(false ) ;
   }
-}
-
-/* global PAREN, SCOPE_FUNCTION, SCOPE_METH, SCOPE_CONSTRUCTOR, CONTEXT_NONE */
-/* global PREC_WITH_NO_OP */
+};
 
 module.exports.parseArrow = function(arg, context) {
   if (this.unsatisfiedArg) this.unsatisfiedArg = null;
@@ -95,10 +98,10 @@ module.exports.parseArrow = function(arg, context) {
 
   switch ( arg.type ) {
   case 'Identifier':
-    asArrowFuncArg(arg, 0)  ;
+    exports.asArrowFuncArg(arg, 0)  ;
     break ;
-  case PAREN:
-    asArrowFuncArgList(core(arg)); // FIXME: this.core?
+  case CONST.PAREN:
+    exports.asArrowFuncArgList(core(arg));
     break ;
   default:
     this.assert(false);
@@ -107,7 +110,7 @@ module.exports.parseArrow = function(arg, context) {
   this.next();
 
   var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= ( SCOPE_FUNCTION|SCOPE_METH|SCOPE_CONSTRUCTOR);
+  this.scopeFlags &= ( SCOPE.FUNCTION|SCOPE.METH|SCOPE.CONSTRUCTOR);
 
   var isExpr = !false, nbody = null;
 
@@ -115,16 +118,16 @@ module.exports.parseArrow = function(arg, context) {
     var prevLabels = this.labels;
     this.labels = {};
     isExpr = false;
-    nbody = this.parseFuncBody(CONTEXT_NONE);
+    nbody = this.parseFuncBody(CONTEXT.NONE);
     this.labels = prevLabels;
   }
   else
-    nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context) ;
+    nbody = this. parseNonSeqExpr(PREC.WITH_NO_OP, context) ;
 
   this.argNames = prevArgNames;
   this.scopeFlags = scopeFlags;
 
-  var params = core(arg); // FIXME: this.core?
+  var params = core(arg);
 
   this.tight = tight;
 
@@ -138,8 +141,7 @@ module.exports.parseArrow = function(arg, context) {
     loc: { start: arg.loc.start, end: nbody.loc.end },
     generator: false,
     expression: isExpr,
-    body: core(nbody), // FIXME: this.core?
+    body: core(nbody),
     id : null
   };
-}
-
+};

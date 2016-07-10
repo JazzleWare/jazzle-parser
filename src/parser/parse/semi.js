@@ -1,16 +1,16 @@
 module.exports.semiLoc =  function() {
   switch (this.lttype) {
-    case ';':
-       var n = this.loc();
-       this.next();
-       return n;
+  case ';':
+    var n = this.loc();
+    this.next();
+    return n;
 
-    case 'eof':
-       return this.newLineBeforeLookAhead ? null : this.loc();
+  case 'eof':
+    return this.newLineBeforeLookAhead ? null : this.loc();
 
-    case '}':
-       if ( !this.newLineBeforeLookAhead )
-          return this.locOn(1);
+  case '}':
+    if ( !this.newLineBeforeLookAhead )
+      return this.locOn(1);
   }
   if (this.newLineBeforeLookAhead) return null;
 
@@ -18,6 +18,4 @@ module.exports.semiLoc =  function() {
 };
 
 module.exports.semiI = function() {
-   return this.lttype === ';' ? this.c : this.newLineBeforeLookAhead ? 0 : this.lttype === '}' ? this.c - 1 : this.lttype === 'eof' ? this.c : 0; };
-
-
+  return this.lttype === ';' ? this.c : this.newLineBeforeLookAhead ? 0 : this.lttype === '}' ? this.c - 1 : this.lttype === 'eof' ? this.c : 0; };

@@ -20,6 +20,4 @@ module.exports.parseSuper = function() {
   default:
     this.assert(false);
   }
-}
-
-module.exports.default =  parseSuper;
+};

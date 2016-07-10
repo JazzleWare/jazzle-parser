@@ -1,7 +1,10 @@
+var CHAR = require('../../util/char.js');
+var toNum = require('../../util/toNum.js');
+
 module.exports.peekTheSecondByte = function() {
   var e = this.src.charCodeAt(this.c);
-  if (CHAR_BACK_SLASH === e) {
-    this.assert(CHAR_u !== this.src.charCodeAt(++this.c));
+  if (CHAR.BACK_SLASH === e) {
+    this.assert(CHAR.u !== this.src.charCodeAt(++this.c));
     e = this.peekUSeq();
   }
 //else this.col--;
@@ -14,7 +17,7 @@ module.exports.peekUSeq = function() {
   var c = ++this.c, l = this.src, e = l.length;
   var byteVal = 0;
   var n = l.charCodeAt(c);
-  if (CHAR_LCURLY === n) { // u{ 
+  if (CHAR.LCURLY === n) { // u{
     ++c;
     n = l.charCodeAt(c);
     do {
@@ -24,9 +27,9 @@ module.exports.peekUSeq = function() {
       byteVal += n;
       this.assert (byteVal <= 0x010FFFF );
       n = l.charCodeAt( ++ c);
-    } while (c < e && n !== CHAR_RCURLY);
+    } while (c < e && n !== CHAR.RCURLY);
 
-    this.assert ( n === CHAR_RCURLY ) ;
+    this.assert ( n === CHAR.RCURLY ) ;
     this.c = c;
     return byteVal;
   }

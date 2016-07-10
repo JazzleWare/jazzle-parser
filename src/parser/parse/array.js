@@ -1,4 +1,5 @@
-/* global PREC_WITH_NO_OP, CONTEXT_NULLABLE, CONTEXT_ELEM */
+var PREC = require('../../util/precedence.js');
+var CONTEXT = require('../../util/constants.js').CONTEXT;
 
 module.exports.parseArray = function() {
   var startc = this.c - 1;
@@ -14,7 +15,7 @@ module.exports.parseArray = function() {
     this.firstUnassignable = this.firstParen = null;
     this.unsatisfiedAssignment = null ;
 
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NULLABLE|CONTEXT_ELEM);
+    elem = this.parseNonSeqExpr(PREC.WITH_NO_OP, CONTEXT.NULLABLE|CONTEXT.ELEM);
 
     if (elem) {
       if (!unsatisfiedAssignment && this.unsatisfiedAssignment) {
@@ -54,4 +55,4 @@ module.exports.parseArray = function() {
   this.expectType(']');
 
   return elem;
-}
+};
