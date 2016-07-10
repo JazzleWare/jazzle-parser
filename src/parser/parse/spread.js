@@ -1,6 +1,6 @@
 /* global PREC_WITH_NO_OP, CONTEXT_NONE */
 
-function parseSpread() {
+module.exports.parseSpread = function() {
   var startc = this.c - 1 - 2; // FIXME: -3?
   var startLoc = this.locOn(1 + 2);
   this.next ();
@@ -15,4 +15,4 @@ function parseSpread() {
   };
 }
 
-module.exports.default = module.exports = parseSpread;
+module.exports.default =  parseSpread;

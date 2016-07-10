@@ -1,4 +1,4 @@
-_class.readAnIdentifierToken = function (v) {
+module.exports.readAnIdentifierToken =  function(v) {
    // if head has been a u, the location has already been saved in #next()
    if ( !v ) {
      this.li0 = this.li;

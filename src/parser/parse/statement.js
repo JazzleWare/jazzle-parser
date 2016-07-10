@@ -1,4 +1,4 @@
-_class.parseStatement = function ( allowNull ) {
+module.exports.parseStatement =  function( allowNull ) {
   var head = null, l, e ;
 
   switch (this.lttype) {
@@ -40,12 +40,12 @@ _class.parseStatement = function ( allowNull ) {
   };
 };
 
-_class . findLabel = function(name) {
+module.exports . findLabel = function(name) {
     return has.call(this.labels, name) ?this.labels[name]:null;
 
 };
 
-_class .parseLabeledStatement = function(label, allowNull) {
+module.exports .parseLabeledStatement = function(label, allowNull) {
    this.next();
    var l = label.name;
    l += '%';
@@ -62,19 +62,19 @@ _class .parseLabeledStatement = function(label, allowNull) {
             loc: { start: label.loc.start, end: stmt.loc.end }, body: stmt };
 };
 
-_class .ensureStmt = function() {
+module.exports .ensureStmt = function() {
    if ( this.canBeStatement ) this.canBeStatement = false;
    else this.assert(false);
 };
 
-_class . fixupLabels = function(loop) {
+module.exports . fixupLabels = function(loop) {
     if ( this.unsatisfiedLabel ) {
          this.unsatisfiedLabel.loop = loop;
          this.unsatisfiedLabel = null;
     }
 };
 
-_class .parseEmptyStatement = function() {
+module.exports .parseEmptyStatement = function() {
   var n = { type: 'EmptyStatement',
            start: this.c - 1,
            loc: { start: this.locOn(1), end: this.loc() },
@@ -83,7 +83,7 @@ _class .parseEmptyStatement = function() {
   return n;
 };
 
-_class.parseIfStatement = function () {
+module.exports.parseIfStatement =  function() {
   this.ensureStmt ();
   this.fixupLabels(false);
 
@@ -108,7 +108,7 @@ _class.parseIfStatement = function () {
      loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt };
 };
 
-_class.parseWhileStatement = function () {
+module.exports.parseWhileStatement =  function() {
    this.ensureStmt();
    this.fixupLabels(!false);
 
@@ -128,7 +128,7 @@ _class.parseWhileStatement = function () {
        loc: { start: startLoc, end: nbody.loc.end }, body:nbody };
 };
 
-_class.parseBlckStatement = function () {
+module.exports.parseBlckStatement =  function() {
   this.fixupLabels(false);
   var startc = this.c - 1,
       startLoc = this.locOn(1);
@@ -140,7 +140,7 @@ _class.parseBlckStatement = function () {
   return n;
 };
 
-_class.parseDoWhileStatement = function () {
+module.exports.parseDoWhileStatement =  function() {
   this.ensureStmt () ;
   this.fixupLabels(!false);
 
@@ -168,7 +168,7 @@ _class.parseDoWhileStatement = function () {
           body: nbody, loc: { start: startLoc, end: { line: li, column: col } } } ;
 };
 
-_class.parseContinueStatement = function () {
+module.exports.parseContinueStatement =  function() {
    this.ensureStmt   () ;
    this.fixupLabels(false);
    this.assert(this.scopeFlags & SCOPE_CONTINUE );
@@ -195,7 +195,7 @@ _class.parseContinueStatement = function () {
            loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
 };
 
-_class.parseBreakStatement = function () {
+module.exports.parseBreakStatement =  function() {
    this.ensureStmt   () ;
    this.fixupLabels(false);
    this.assert(this.scopeFlags & SCOPE_BREAK);
@@ -222,7 +222,7 @@ _class.parseBreakStatement = function () {
            loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
 };
 
-_class.parseSwitchStatement = function () {
+module.exports.parseSwitchStatement =  function() {
   this.ensureStmt();
   this.fixupLabels(false) ;
 
@@ -256,7 +256,7 @@ _class.parseSwitchStatement = function () {
   return n;
 };
 
-_class.parseSwitchCase = function () {
+module.exports.parseSwitchCase =  function() {
   var startc,
       startLoc;
 
@@ -290,7 +290,7 @@ _class.parseSwitchCase = function () {
      loc: { start: startLoc, end: last ? last.loc.end : { line: li, column: col } }, consequent: nbody };
 };
 
-_class.parseReturnStatement = function () {
+module.exports.parseReturnStatement =  function() {
   this.ensureStmt();
   this.fixupLabels(false ) ;
 
@@ -321,7 +321,7 @@ _class.parseReturnStatement = function () {
      loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
 };
 
-_class.parseThrowStatement = function () {
+module.exports.parseThrowStatement =  function() {
   this.ensureStmt();
   this.fixupLabels(false ) ;
 
@@ -350,7 +350,7 @@ _class.parseThrowStatement = function () {
      loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
 };
 
-_class. parseBlockStatement_dependent = function() {
+module.exports. parseBlockStatement_dependent = function() {
     var startc = this.c - 1,
         startLoc = this.locOn(1);
     this.expectType ('{');
@@ -360,7 +360,7 @@ _class. parseBlockStatement_dependent = function() {
     return n;
 };
 
-_class.parseTryStatement = function () {
+module.exports.parseTryStatement =  function() {
   this.ensureStmt() ;
   this.fixupLabels(false);
   var startc = this.c0,
@@ -385,7 +385,7 @@ _class.parseTryStatement = function () {
             handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end } };
 };
 
-_class. parseCatchClause = function () {
+module.exports. parseCatchClause =  function() {
    var startc = this.c0,
        startLoc = this.locBegin();
 
@@ -404,7 +404,7 @@ _class. parseCatchClause = function () {
    };
 };
 
-_class . parseWithStatement = function() {
+module.exports . parseWithStatement = function() {
    this.ensureStmt() ;
    this.fixupLabels(false);
 
@@ -427,7 +427,7 @@ _class . parseWithStatement = function() {
    };
 };
 
-_class . prseDbg = function () {
+module.exports . prseDbg =  function() {
   this.ensureStmt() ;
   this.fixupLabels(false);
 
@@ -451,7 +451,7 @@ _class . prseDbg = function () {
    };
 }
 
-_class.blck = function () { // blck ([]stmt)
+module.exports.blck =  function() { // blck ([]stmt)
   var stmts = [], stmt;
   while (stmt = this.parseStatement(!false)) stmts.push(stmt);
   return (stmts);

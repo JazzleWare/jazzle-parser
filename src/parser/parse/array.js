@@ -1,6 +1,6 @@
 /* global PREC_WITH_NO_OP, CONTEXT_NULLABLE, CONTEXT_ELEM */
 
-function parseArray() {
+module.exports.parseArray = function() {
   var startc = this.c - 1;
   var startLoc = this.locOn(1);
   var elem = null, list = [];
@@ -55,5 +55,3 @@ function parseArray() {
 
   return elem;
 }
-
-module.exports.default = module.exports = parseArray;

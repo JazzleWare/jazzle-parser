@@ -1,4 +1,4 @@
-_class . parseTemplateLiteral = function() {
+module.exports . parseTemplateLiteral = function() {
   var li = this.li, col = this.col;
   var startc = this.c - 1, startLoc = this.locOn(1);
   var c = this.c, src = this.src, len = src.length;

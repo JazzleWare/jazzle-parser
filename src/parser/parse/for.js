@@ -1,4 +1,4 @@
-function parseFor() {
+module.exports.parseFor = function() {
   this.ensureStmt();
   this.fixupLabels(!false) ;
 

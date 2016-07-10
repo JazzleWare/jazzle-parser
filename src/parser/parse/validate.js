@@ -1,4 +1,4 @@
-_class .validateID  = function (e) {
+module.exports .validateID  =  function(e) {
   var n = e || this.ltval;
 
   SWITCH:
@@ -117,7 +117,7 @@ _class .validateID  = function (e) {
   return e ? null : this.id();
 };
 
-_class.errorReservedID = function() {
+module.exports.errorReservedID = function() {
     if ( !this.throwReserved ) {
        this.throwReserved = !false;
        return null;

@@ -1,4 +1,4 @@
-function asArrowFuncArgList(head) {
+module.exports.asArrowFuncArgList = function(head) {
   if (head === null) return;
 
   if ( head.type === 'SequenceExpression' ) {
@@ -13,7 +13,7 @@ function asArrowFuncArgList(head) {
   }
 }
 
-function asArrowFuncArg(arg) {
+module.exports.asArrowFuncArg = function(arg) {
   var i = 0, list = null;
 
   switch  ( arg.type ) {
@@ -85,7 +85,7 @@ function asArrowFuncArg(arg) {
 /* global PAREN, SCOPE_FUNCTION, SCOPE_METH, SCOPE_CONSTRUCTOR, CONTEXT_NONE */
 /* global PREC_WITH_NO_OP */
 
-function parseArrow(arg, context) {
+module.exports.parseArrow = function(arg, context) {
   if (this.unsatisfiedArg) this.unsatisfiedArg = null;
 
   var prevArgNames = this.argNames;
@@ -143,4 +143,3 @@ function parseArrow(arg, context) {
   };
 }
 
-module.exports.default = module.exports = parseArrow;

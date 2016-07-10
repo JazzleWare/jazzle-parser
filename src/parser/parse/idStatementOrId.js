@@ -1,5 +1,5 @@
-_class . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
-_class. parseIdStatementOrId = function ( context ) {
+module.exports . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
+module.exports. parseIdStatementOrId =  function( context ) {
   var id = this.ltval ;
   var pendingExprHead = null;
 
@@ -160,7 +160,7 @@ _class. parseIdStatementOrId = function ( context ) {
     }
 
     case 8: switch (id) {
-        case 'function': return this.parseFunc(context&CONTEXT_FOR, WHOLE_FUNCTION, ANY_ARG_LEN );
+        case 'module.exports.': return this.parseFunc = function(context&CONTEXT_FOR, WHOLE_FUNCTION, ANY_ARG_LEN );
         case 'debugger': return this.prseDbg();
         case 'continue': return this.parseContinueStatement();
         case 'abstract': case 'volatile':

@@ -1,5 +1,5 @@
 
-_class .parseMeth = function(name, isObj) {
+module.exports .parseMeth = function(name, isObj) {
    var val = null; 
 
    if ( isObj ) {
@@ -31,7 +31,7 @@ _class .parseMeth = function(name, isObj) {
             value: val,    'static': false };
 };
 
-_class .parseGen = function(isObj ) {
+module.exports .parseGen = function(isObj ) {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
@@ -73,7 +73,7 @@ _class .parseGen = function(isObj ) {
            loc : { start: startLoc, end: val.loc.end },    'static': false, value: val };
 };
 
-_class . parseSetGet= function(isObj) {
+module.exports . parseSetGet= function(isObj) {
   var startc = this.c0,
       startLoc = this.locBegin();
 

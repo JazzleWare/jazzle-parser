@@ -17,13 +17,13 @@ try {
 catch(r) {
 }
 
-function curlyReplace(matchedString, b, matchIndex, wholeString ) {
+module.exports.curlyReplace = function(matchedString, b, matchIndex, wholeString ) {
   var c = parseInt( '0x' + b );
   if ( c <= 0xFFFF ) return '\\u' + hex(c);
   return '\\uFFFF';
 }
 
-function regexReplace(matchedString, b, noB, matchIndex, wholeString) {
+module.exports.regexReplace = function(matchedString, b, noB, matchIndex, wholeString) {
   var c = parseInt('0x' + ( b || noB ) ) ;
   this.assert(c <= 0x010FFFF );
   
@@ -33,7 +33,7 @@ function regexReplace(matchedString, b, noB, matchIndex, wholeString) {
   return '\uFFFF';
 } 
 
-function verifyRegex(regex, flags) {
+module.exports.verifyRegex = function(regex, flags) {
   var regexVal = null;
 
   try {
@@ -42,7 +42,7 @@ function verifyRegex(regex, flags) {
 
 }
 
-_class.parseRegExpLiteral = function() {
+module.exports.parseRegExpLiteral = function() {
      var startc = this.c - 1, startLoc = this.locOn(1),
          c = this.c, src = this.src, len = src.length;
 

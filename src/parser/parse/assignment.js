@@ -1,5 +1,5 @@
 
-function ensureSimpAssig(head) {
+module.exports.ensureSimpAssig = function(head) {
   switch(head.type) {
     case 'Identifier':
        this.assert( !( this.tight && arguments_or_eval(head.name) )  );
@@ -13,7 +13,7 @@ function ensureSimpAssig(head) {
 }
 
 // an arr-pat is always to the left of an assig;
-function toAssig(head) {
+module.exports.toAssig = function(head) {
 
   var i = 0;
   var list = null;
@@ -72,7 +72,7 @@ function toAssig(head) {
   }
 }
 
-function parseAssignment(head, context ) {
+module.exports.parseAssignment = function(head, context ) {
     var o = this.ltraw;
     if ( o === '=' ) this.toAssig(core(head));
     else if ( o === '=>' )

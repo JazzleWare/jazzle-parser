@@ -1,4 +1,4 @@
-_class.parseExprHead = function (context) {
+module.exports.parseExprHead =  function(context) {
   var firstUnassignable = null;
   var firstParen = null;
 
@@ -125,7 +125,7 @@ _class.parseExprHead = function (context) {
   return head ;
 } ;
 
-_class .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
+module.exports .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
     this.assert( this.ltval === 'target' );
     var prop = this.id();
     return { type: 'MetaProperty',
@@ -136,28 +136,28 @@ _class .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
 
 };
 
-_class.numstr = function () {
+module.exports.numstr =  function() {
   var n = { type: 'Literal', value: this.ltval, start: this.c0, end: this.c,
            loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
   this.next();
   return n;
 };
 
-_class.idLit = function(val) {
+module.exports.idLit = function(val) {
   var n = { type: 'Literal', value: val, start: this.c0, end: this.c,
            loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
   this.next();
   return n;
 };
 
-_class.id = function() {
+module.exports.id = function() {
    var id = { type: 'Identifier', name: this.ltval, start: this.c0, end: this.c,
               loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
    this.next() ;
    return id;
 };
 
-_class.parseParen = function () {
+module.exports.parseParen =  function() {
   var firstParen = null;
   var unsatisfiedAssignment = this.unsatisfiedAssignment,
       startc = this.c - 1 ,
@@ -238,7 +238,7 @@ _class.parseParen = function () {
 };
 
 
-_class .parseThis = function() {
+module.exports .parseThis = function() {
     var n = { type : 'ThisExpression',
               loc: { start: this.locBegin(), end: this.loc() },
               start: this.c0,
@@ -249,7 +249,7 @@ _class .parseThis = function() {
 };
 
 
-_class.parseArgList = function () {
+module.exports.parseArgList =  function() {
     var elem = null;
     var list = [];
 

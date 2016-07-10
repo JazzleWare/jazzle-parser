@@ -1,4 +1,4 @@
-_class.parseImport = function() {
+module.exports.parseImport = function() {
   this.assert( this.canBeStatement );
   this.canBeStatement = false;
 

@@ -1,17 +1,16 @@
-function peekTheSecondByte() {
+module.exports.peekTheSecondByte = function() {
   var e = this.src.charCodeAt(this.c);
-  if (CHAR_BACK_SLASH == e) {
-    if (CHAR_u != this.src.charCodeAt(++this.c)) this.err('the \\ must have "u" after it ;instead, it has ' + this.src[this.c] );
-    e = (this.peekUSeq());
+  if (CHAR_BACK_SLASH === e) {
+    this.assert(CHAR_u !== this.src.charCodeAt(++this.c));
+    e = this.peekUSeq();
   }
-//  else this.col--;
-  if (e < 0x0DC00 || e > 0x0DFFF )
-      this.err('Byte (' + _h(e)+ ') must be in range 0x0DC00 to 0x0DFFF, but it is not ');
+//else this.col--;
+  this.assert (e >= 0x0DC00 || e <= 0x0DFFF );
 
   return e;
 };
 
-_class.peekUSeq = function () {
+module.exports.peekUSeq = function() {
   var c = ++this.c, l = this.src, e = l.length;
   var byteVal = 0;
   var n = l.charCodeAt(c);
@@ -41,5 +40,3 @@ _class.peekUSeq = function () {
 
   return byteVal;
 };
-
-

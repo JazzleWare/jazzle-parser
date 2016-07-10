@@ -1,6 +1,6 @@
 /* global SCOPE_CONSTRUCTOR, SCOPE_METH */
 
-function parseSuper() {
+module.exports.parseSuper = function() {
   var n = {
     type: 'Super',
     loc: { start: this.locBegin(), end: this.loc() },
@@ -22,4 +22,4 @@ function parseSuper() {
   }
 }
 
-module.exports.default = module.exports = parseSuper;
+module.exports.default =  parseSuper;

@@ -1,4 +1,4 @@
-_class.readNumberLiteral = function (peek) {
+module.exports.readNumberLiteral =  function(peek) {
   var c = this.c, src = this.src, len = src.length;
   var b = 10 , val = 0;
   this.lttype  = 'Literal' ;
@@ -104,7 +104,7 @@ _class.readNumberLiteral = function (peek) {
   this.assert ( !( c < len && isIDHead(src.charCodeAt(c))) ); // needless
 };
 
-_class . frac = function(n) {
+module.exports . frac = function(n) {
   var c = this.c,
       l = this.src,
       e = l.length ;

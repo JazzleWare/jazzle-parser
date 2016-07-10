@@ -1,4 +1,4 @@
-_class .parseArgs  = function (argLen) {
+module.exports.parseArgs = function(argLen) {
   var list = [], elem = null;
 
   this.expectType('(') ;
@@ -29,9 +29,9 @@ _class .parseArgs  = function (argLen) {
   this.expectType(')');
 
   return list;
-};
+}
 
-_class .addArg = function(id) {
+module.exports.addArg = function(id) {
   var name = id.name + '%';
   if ( has.call(this.argNames, name) ) {
     this.assert( !this.tight );
@@ -40,10 +40,9 @@ _class .addArg = function(id) {
   }
   else
      this.argNames[name] = null ;
-};
-
+}
   
-_class .parseFunc = function(context, argListMode, argLen ) {
+module.exports.parseFunc = function(context, argListMode, argLen ) {
   var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
   var prevLabels = this.labels;
   var prevStrict = this.tight;
@@ -114,9 +113,9 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   this.scopeFlags = prevScopeFlags;
 
   return  n  ;
-};
+}
 
-_class.parseFuncBody = function(context) {
+module.exports.parseFuncBody = function(context) {
   if ( this.lttype !== '{' )
     return this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
 
@@ -139,9 +138,9 @@ _class.parseFuncBody = function(context) {
   this.expectType ( '}' );
 
   return  n;
-};
+}
 
-_class . makeStrict  = function() {
+module.exports.makeStrict  = function = function() {
    if ( this.tight ) return;
 
    this.tight = !false;
@@ -158,6 +157,6 @@ _class . makeStrict  = function() {
       this.validateID(argName);
 
    }
-};
+}
 
 

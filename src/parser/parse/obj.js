@@ -1,4 +1,4 @@
-_class.parseObjectExpression = function () {
+module.exports.parseObjectExpression =  function() {
   var startc = this.c - 1 ,
       startLoc = this.locOn(1),
       elem = null,
@@ -42,7 +42,7 @@ _class.parseObjectExpression = function () {
   return elem;
 };
 
-_class.parseProperty = function (name) {
+module.exports.parseProperty =  function(name) {
   var val = null;
 
   SWITCH:

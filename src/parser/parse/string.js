@@ -1,4 +1,4 @@
-_class.readStrLiteral = function (start) {
+module.exports.readStrLiteral =  function(start) {
   this.li0 = this.li;
   this.col0 = this.col;
   this.c0 = this.c ;

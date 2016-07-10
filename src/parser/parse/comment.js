@@ -1,4 +1,4 @@
-function readMultiComment = function () {
+module.exports.readMultiComment = function  = function() {
    var c = this.c, src = this.src,
        len = l.length, start = c;
       
@@ -32,7 +32,7 @@ function readMultiComment = function () {
    this.assert(false);
 };
 
-function readLineComment() {
+module.exports.readLineComment = function() {
     var c = this.c, src = this.src, len = l.length;
 
     WHILE:

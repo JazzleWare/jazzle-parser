@@ -1,4 +1,4 @@
-_class.parseExpr = function (context) {
+module.exports.parseExpr =  function(context) {
   var head = this.parseNonSeqExpr(PREC_WITH_NO_OP,context );
   if ( this.unsatisfiedAssignment ) {
     this.assert( context & CONTEXT_ELEM ) ;
@@ -23,7 +23,7 @@ _class.parseExpr = function (context) {
   return head ;
 };
 
-_class .parseCond = function(cond,context ) {
+module.exports .parseCond = function(cond,context ) {
     this.next();
     var con = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
     this.expectType(':');
@@ -32,7 +32,7 @@ _class .parseCond = function(cond,context ) {
              loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(con), alternate: core(alt) };
 };
 
-_class .parseUnaryExpression = function(context ) {
+module.exports .parseUnaryExpression = function(context ) {
   var u = null, startLoc = null, startc = 0;
   if ( this.isVDT ) {
     this.isVDT = false;
@@ -53,7 +53,7 @@ _class .parseUnaryExpression = function(context ) {
            loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg) };
 };
 
-_class .parseUpdateExpression = function(arg, context) {
+module.exports .parseUpdateExpression = function(arg, context) {
     var c = 0,
         loc = null,
         u = this.ltraw;
@@ -79,7 +79,7 @@ _class .parseUpdateExpression = function(arg, context) {
 
 };
 
-_class .parseO = function(context ) {
+module.exports .parseO = function(context ) {
 
     switch ( this. lttype ) {
 
@@ -119,7 +119,7 @@ _class .parseO = function(context ) {
    return false ;
 };
 
-_class.parseNonSeqExpr = function (prec, context  ) {
+module.exports.parseNonSeqExpr =  function(prec, context  ) {
     var firstUnassignable = null, firstParen = null;
 
     var head = this. parseExprHead(context);

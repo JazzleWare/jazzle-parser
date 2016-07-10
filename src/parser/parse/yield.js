@@ -1,5 +1,5 @@
 
-_class.parseYield = function(context) {
+module.exports.parseYield = function(context) {
   var arg = null,
       deleg = false;
 

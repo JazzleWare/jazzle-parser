@@ -1,5 +1,5 @@
-_class .memberID = function() { return this.v > 5 ? this.id() : this.validateID(null) ; };
-_class .memberExpr = function() {
+module.exports .memberID = function() { return this.v > 5 ? this.id() : this.validateID(null) ; };
+module.exports .memberExpr = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next() ;

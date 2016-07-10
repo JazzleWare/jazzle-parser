@@ -1,6 +1,6 @@
 /* global CONTEXT_DEFAULT, PREC_WITH_NO_OP, CONTEXT_NONE, OBJ_MEM */
 
-function parseClass(context) {
+module.exports.parseClass = function(context) {
   var startc = this.c0;
   var startLoc = this.locBegin();
 
@@ -127,4 +127,3 @@ function parseClass(context) {
   return n;
 }
 
-module.exports = module.exports.default = parseClass;
