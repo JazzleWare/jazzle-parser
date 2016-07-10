@@ -1,4 +1,6 @@
 # jsRube
+
+[![Join the chat at https://gitter.im/icefapper/jsRube](https://badges.gitter.im/icefapper/jsRube.svg)](https://gitter.im/icefapper/jsRube?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 A small, simple, and ridiculously fast parser for all versions of ECMAScript/Javascript, written in plain ECMAScript3, on which I have been working on and [off](https://github.com/nodejs/node/issues/5900) since September 2015, under codename 'lube'.
 
 A bug in v8 (and consequently in node) made it very difficult to run on node versions 5 and below. The bug has been resolved, and it now runs smoothly (and fater than any other parser I know of) in node v6.2.0+. Please bear this notice in mind while trying to use this parser. 
