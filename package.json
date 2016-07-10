@@ -42,7 +42,8 @@
   ],
   "scripts": {
     "test": "node quick-test.js",
-    "benchmark": "node bench"
+    "benchmark": "node bench",
+    "lint": "node_modules/.bin/eslint src"
   },
   "devDependencies": {
     "acorn": "^3.2.0",
