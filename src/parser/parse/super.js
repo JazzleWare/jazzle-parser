@@ -22,4 +22,4 @@ function parseSuper() {
   }
 }
 
-module.exports.default = module.exports = parseSuper();
+module.exports.default = module.exports = parseSuper;

@@ -126,3 +126,5 @@ function parseClass(context) {
 
   return n;
 }
+
+module.exports = module.exports.default = parseClass;
