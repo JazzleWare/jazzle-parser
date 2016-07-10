@@ -143,11 +143,11 @@ module.exports.parseNonSeqExpr =  function(prec, context  ) {
       break ;
 
     case 'yield':
-      this.assert(prec === PREC.WITH_NO_OP ) ; // make sure there is no other expression before it
+      this.assert(prec === PREC.WITH_NO_OP ); // make sure there is no other expression before it
       return this.parseYield(); // everything that comes belongs to it
 
     default:
-      this.assert(context & CONTEXT.NULLABLE )  ;
+      this.assert(context & CONTEXT.NULLABLE );
       return null;
     }
   }

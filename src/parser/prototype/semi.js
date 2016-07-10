@@ -14,7 +14,7 @@ module.exports.semiLoc =  function() {
   }
   if (this.newLineBeforeLookAhead) return null;
 
-  this.err('EOS expected; found ' + this.ltraw ) ;
+  console.log('EOS expected; found ' + this.ltraw ) ;
 };
 
 module.exports.semiI = function() {

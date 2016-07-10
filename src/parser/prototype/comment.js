@@ -2,6 +2,7 @@ var CHAR = require('../../util/char.js');
 
 module.exports.readMultiComment = function() {
   var c = this.c, src = this.src, start = c;
+  var l = this.src;
   var len = l.length; // FIXME: l is not defined..
 
   var noNewLine  = true;
