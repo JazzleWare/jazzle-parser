@@ -5,7 +5,7 @@
   "description": "A very fast ECMAScript parser, fully written in plain ECMAScript 3",
   "homepage": "https://github.com/icefapper/jsrube",
   "engines": {
-    "node": "*"
+    "node": ">= 6.2.2"
   },
   "author": {
     "name": "Neni Onoda",
