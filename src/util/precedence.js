@@ -46,11 +46,11 @@ U:U
   };
 
   PREC.isRassoc= function(prec) {
-    return prec === this.PREC_U;
+    return prec === PREC.PREC_U;
   };
 
   PREC. isBin = function(prec) {
-    return prec !== this.BOOL_OR && prec !== this.PREC_BOOL_AND;
+    return prec !== PREC.BOOL_OR && prec !== PREC.BOOL_AND;
   };
 
   PREC. isMMorAA = function(prec) {
@@ -58,6 +58,6 @@ U:U
   };
 
   PREC. isQuestion= function(prec) {
-    return prec === this.COND;
+    return prec === PREC.COND;
   }
 

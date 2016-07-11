@@ -12,7 +12,8 @@ module.exports.parseTemplateLiteral = function() {
     len = src.length;
   var templStr = [],
     templExpressions = [];
-  var startElemFragment = c, // an element's content might get fragmented by an esc appearing in it, e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
+  var startElemFragment = c, // an element's content might get fragmented by an esc appearing in it,
+                             // e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
     startElem = c,
     currentElemContents = '',
     startColIndex = c,
@@ -26,25 +27,9 @@ module.exports.parseTemplateLiteral = function() {
         currentElemContents += src.slice(startElemFragment, c);
         this.col += (c - startColIndex);
         templStr.push({
-          type: 'TemplateElement',
-          start: startElem,
-          end: c,
-          tail: false,
-          loc: {
-            start: {
-              line: li,
-              column: col
-            },
-            end: {
-              line: this.li,
-              column: this.col
-            }
-          },
-          value: {
-            raw: src.slice(startElem, c).replace(/\r\n|\r/g, '\n'),
-            cooked: currentElemContents
-          }
-        });
+          type: 'TemplateElement', start: startElem, end: c, tail: false,
+          loc: { start: { line: li, column: col }, end: { line: this.li, column: this.col } },
+          value: { raw: src.slice(startElem, c).replace(/\r\n|\r/g, '\n'), cooked: currentElemContents } });
         this.c = c + 2; // ${
         this.col += 2; // ${
         this.next(); // this must be done manually because we must have a lookahead before starting to parse an actual expression

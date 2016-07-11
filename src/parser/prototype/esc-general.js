@@ -68,7 +68,7 @@ module.exports.readEsc = function() {
 
   case CHAR.CARRIAGE_RETURN:
     if ( src.charCodeAt(this.c + 1) === CHAR.LINE_FEED ) this.c++;
-    break;
+    // fall through 
   case CHAR.LINE_FEED:
   case 0x2028:
   case 0x2029:

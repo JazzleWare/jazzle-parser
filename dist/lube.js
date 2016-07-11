@@ -681,7 +681,7 @@ module.exports.readEsc = function() {
 
   case CHAR.CARRIAGE_RETURN:
     if ( src.charCodeAt(this.c + 1) === CHAR.LINE_FEED ) this.c++;
-    break;
+    // fall through 
   case CHAR.LINE_FEED:
   case 0x2028:
   case 0x2029:
@@ -4207,7 +4207,8 @@ module.exports.parseTemplateLiteral = function() {
     len = src.length;
   var templStr = [],
     templExpressions = [];
-  var startElemFragment = c, // an element's content might get fragmented by an esc appearing in it, e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
+  var startElemFragment = c, // an element's content might get fragmented by an esc appearing in it,
+                             // e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
     startElem = c,
     currentElemContents = '',
     startColIndex = c,
@@ -4221,25 +4222,9 @@ module.exports.parseTemplateLiteral = function() {
         currentElemContents += src.slice(startElemFragment, c);
         this.col += (c - startColIndex);
         templStr.push({
-          type: 'TemplateElement',
-          start: startElem,
-          end: c,
-          tail: false,
-          loc: {
-            start: {
-              line: li,
-              column: col
-            },
-            end: {
-              line: this.li,
-              column: this.col
-            }
-          },
-          value: {
-            raw: src.slice(startElem, c).replace(/\r\n|\r/g, '\n'),
-            cooked: currentElemContents
-          }
-        });
+          type: 'TemplateElement', start: startElem, end: c, tail: false,
+          loc: { start: { line: li, column: col }, end: { line: this.li, column: this.col } },
+          value: { raw: src.slice(startElem, c).replace(/\r\n|\r/g, '\n'), cooked: currentElemContents } });
         this.c = c + 2; // ${
         this.col += 2; // ${
         this.next(); // this must be done manually because we must have a lookahead before starting to parse an actual expression
@@ -4961,11 +4946,11 @@ U:U
   };
 
   PREC.isRassoc= function(prec) {
-    return prec === this.PREC_U;
+    return prec === PREC.PREC_U;
   };
 
   PREC. isBin = function(prec) {
-    return prec !== this.BOOL_OR && prec !== this.PREC_BOOL_AND;
+    return prec !== PREC.BOOL_OR && prec !== PREC.BOOL_AND;
   };
 
   PREC. isMMorAA = function(prec) {
@@ -4973,7 +4958,7 @@ U:U
   };
 
   PREC. isQuestion= function(prec) {
-    return prec === this.COND;
+    return prec === PREC.COND;
   }
 
 
