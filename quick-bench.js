@@ -17,7 +17,7 @@ try {
 try {
    var pLube = require( './dist/lube.js' );
    parsers.lube = function( src, withLoc ) {
-      return new pLube.Parser(src).parseProgram();
+      return new pLube(src).parseProgram();
    }
 } catch ( e ) {}
 
