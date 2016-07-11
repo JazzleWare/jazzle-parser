@@ -41,6 +41,7 @@
     "syntax"
   ],
   "scripts": {
+    "build": "node_modules/.bin/browserify src/index.js -s jsRube -o dist/lube.js",
     "test": "node quick-test.js",
     "benchmark": "node bench",
     "lint": "node_modules/.bin/eslint src"
