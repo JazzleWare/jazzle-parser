@@ -11,11 +11,11 @@ module.exports.asArrowFuncArgList = function(head) {
     this.assert(head !== this.firstParen );
     var i = 0, list = head.expressions;
     while ( i < list.length ) {
-      exports.asArrowFuncArg(list[i]);
+      this.asArrowFuncArg(list[i]);
       i++;
     }
   } else {
-    exports.asArrowFuncArg(head);
+    this.asArrowFuncArg(head);
   }
 };
 
@@ -31,7 +31,7 @@ module.exports.asArrowFuncArg = function(arg) {
     list = arg.elements;
     while ( i < list.length ) {
       if ( list[i] ) {
-        exports.asArrowFuncArg(list[i]);
+        this.asArrowFuncArg(list[i]);
         if ( list[i].type === 'SpreadElement' ) {
           i++;
           break;
@@ -46,7 +46,7 @@ module.exports.asArrowFuncArg = function(arg) {
   case 'AssignmentExpression':
     this.assert(arg !== this.firstParen );
     this.assert(arg.operator === '=' ) ;
-    exports.asArrowFuncArg(arg.left);
+    this.asArrowFuncArg(arg.left);
     arg.type = 'AssignmentPattern';
     delete arg.operator ;
     return;
@@ -54,33 +54,33 @@ module.exports.asArrowFuncArg = function(arg) {
   case 'ObjectExpression':
     this.assert(arg !== this.firstParen    );
     list = arg.properties;
-    while ( i < list.length ) exports.asArrowFuncArg(list[i++].value );
+    while ( i < list.length ) this.asArrowFuncArg(list[i++].value );
     arg.type = 'ObjectPattern';
     return;
 
   case 'AssignmentPattern':
     this.assert(arg !== this.firstParen );
-    exports.asArrowFuncArg(arg.left) ;
+    this.asArrowFuncArg(arg.left) ;
     return;
 
   case 'ArrayPattern' :
     list = arg.elements;
     while ( i < list.length )
-      exports.asArrowFuncArg(list[i++] ) ;
+      this.asArrowFuncArg(list[i++] ) ;
     return;
 
   case 'SpreadElement':
-    exports.asArrowFuncArg(arg.argument);
+    this.asArrowFuncArg(arg.argument);
     arg.type = 'RestElement';
     return;
 
   case 'RestElement':
-    exports.asArrowFuncArg(arg.argument);
+    this.asArrowFuncArg(arg.argument);
     return;
 
   case 'ObjectPattern':
     list = arg.properties;
-    while (i < list.length) exports.asArrowFuncArgList ( list[i++].value  );
+    while (i < list.length) this.asArrowFuncArgList ( list[i++].value  );
     return;
 
   default:
@@ -88,7 +88,7 @@ module.exports.asArrowFuncArg = function(arg) {
   }
 };
 
-module.exports.parseArrow = function(arg, context) {
+module.exports.parseArrowFunctionExpression = function(arg, context) {
   if (this.unsatisfiedArg) this.unsatisfiedArg = null;
 
   var prevArgNames = this.argNames;
@@ -98,10 +98,10 @@ module.exports.parseArrow = function(arg, context) {
 
   switch ( arg.type ) {
   case 'Identifier':
-    exports.asArrowFuncArg(arg, 0)  ;
+    this.asArrowFuncArg(arg, 0)  ;
     break ;
   case CONST.PAREN:
-    exports.asArrowFuncArgList(core(arg));
+    this.asArrowFuncArgList(core(arg));
     break ;
   default:
     this.assert(false);

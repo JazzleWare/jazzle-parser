@@ -52,7 +52,8 @@ module.exports.parseIdStatementOrId =  function( context ) {
     case 'int':
       if ( this.v <= 5 )
         this.errorReservedID();
-      break;
+      // fall through
+
     default: pendingExprHead = this.id(); break SWITCH;
     }
     break;
@@ -219,7 +220,7 @@ module.exports.parseIdStatementOrId =  function( context ) {
     break;
   case 12:
     if ( this.v <= 5 && id === 'synchronized' ) this.errorReservedID();
-    break;
+    // fall through
   default:
     pendingExprHead = this.id();
   }

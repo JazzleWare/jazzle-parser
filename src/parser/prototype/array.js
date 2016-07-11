@@ -33,11 +33,16 @@ module.exports.parseArrayExpression = function() {
       firstUnassignable =  this.firstUnassignable ;
     }
 
-    list.push(elem) ;
-    this.next();
-  } while (this.lttype === ',');
-
-  if (elem) list.push(elem);
+// this is actually crucial for the elision ( i.e., empty ) elements
+    if ( this.lttype === ',' ) {
+      list.push(elem) ;
+      this.next();
+    }
+    else {
+       if ( elem ) list.push(elem);
+       break ;
+    }
+  } while ( true );
 
   if (firstParen) this.firstParen = firstParen ;
   if (firstUnassignable) this.firstUnassignable = firstUnassignable;

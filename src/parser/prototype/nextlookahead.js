@@ -352,7 +352,9 @@ module.exports.skipS = function() {
     case CHAR.WHITESPACE :
       while ( ++c < e &&  l.charCodeAt(c) === CHAR.WHITESPACE );
       continue ;
-    case CHAR.CARRIAGE_RETURN : if ( CHAR.LINE_FEED == l.charCodeAt( c + 1 ) ) c ++; break;
+    case CHAR.CARRIAGE_RETURN : if ( CHAR.LINE_FEED == l.charCodeAt( c + 1 ) ) c ++;
+    // fall through
+
     case CHAR.LINE_FEED :
       if ( noNewLine ) noNewLine = false ;
       start = ++ c ;
@@ -431,7 +433,8 @@ module.exports.skipS = function() {
         c = this.c;
         continue;
       }
-      break;
+      // fall through
+
     default :
       this.col += (c-start ) ;
       this.c=c;
