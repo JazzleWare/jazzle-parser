@@ -484,7 +484,7 @@ module.exports.parseClass = function(context) {
       case 'constructor':
         this.assert( !foundConstructor );
         if ( !isStatic ) foundConstructor = !false;
-        break SWITCH;
+        // fall through
       default:
         elem = this.parseMeth(this.id(), !CONST.OBJ_MEM);
         break SWITCH;
@@ -4168,7 +4168,7 @@ module.exports.readStrLiteral = function(start) {
 };
 
 },{"../../util/char.js":40}],33:[function(require,module,exports){
-/* global SCOPE_CONSTRUCTOR, SCOPE_METH */
+var SCOPE = require( '../../util/constants.js' ).SCOPE ;
 
 module.exports.parseSuper = function() {
   var n = {
@@ -4181,18 +4181,18 @@ module.exports.parseSuper = function() {
 
   switch ( this.lttype ) {
   case '(':
-    this.assert(this.scopeFlags & SCOPE_CONSTRUCTOR);
+    this.assert(this.scopeFlags & SCOPE.CONSTRUCTOR);
     return n;
   case '.':
   case '[':
-    this.assert( this.scopeFlags & SCOPE_METH);
+    this.assert( this.scopeFlags & SCOPE.METH);
     return n;
   default:
     this.assert(false);
   }
 };
 
-},{}],34:[function(require,module,exports){
+},{"../../util/constants.js":42}],34:[function(require,module,exports){
 var CHAR = require('../../util/char.js');
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;

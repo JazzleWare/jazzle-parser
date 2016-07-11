@@ -1,4 +1,4 @@
-/* global SCOPE_CONSTRUCTOR, SCOPE_METH */
+var SCOPE = require( '../../util/constants.js' ).SCOPE ;
 
 module.exports.parseSuper = function() {
   var n = {
@@ -11,11 +11,11 @@ module.exports.parseSuper = function() {
 
   switch ( this.lttype ) {
   case '(':
-    this.assert(this.scopeFlags & SCOPE_CONSTRUCTOR);
+    this.assert(this.scopeFlags & SCOPE.CONSTRUCTOR);
     return n;
   case '.':
   case '[':
-    this.assert( this.scopeFlags & SCOPE_METH);
+    this.assert( this.scopeFlags & SCOPE.METH);
     return n;
   default:
     this.assert(false);

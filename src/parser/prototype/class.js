@@ -67,7 +67,7 @@ module.exports.parseClass = function(context) {
       case 'constructor':
         this.assert( !foundConstructor );
         if ( !isStatic ) foundConstructor = !false;
-        break SWITCH;
+        // fall through
       default:
         elem = this.parseMeth(this.id(), !CONST.OBJ_MEM);
         break SWITCH;
