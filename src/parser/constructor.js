@@ -44,6 +44,8 @@ function constructor(src, isModule) {
   this.firstUnassignable = null;
 
   this.throwReserved = !false;
+
+  return this;
 }
 
 module.exports.default = module.exports = constructor;

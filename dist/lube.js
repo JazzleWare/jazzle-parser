@@ -1,4 +1,7 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Parser = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.jsRube = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+module.exports.default = module.exports = require('./parser');
+
+},{"./parser":3}],2:[function(require,module,exports){
 /**
  * Parser's constructor
  * @param  {string}  src       Source to be parsed. FIXME: string??
@@ -45,11 +48,13 @@ function constructor(src, isModule) {
   this.firstUnassignable = null;
 
   this.throwReserved = !false;
+
+  return this;
 }
 
 module.exports.default = module.exports = constructor;
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 
 var Parser = require('./constructor.js');
 
@@ -101,7 +106,7 @@ mixin(Parser.prototype, require('./prototype/yield') );
 module.exports = Parser;
 
 
-},{"./constructor.js":1,"./prototype/array":3,"./prototype/arrow":4,"./prototype/assignment":5,"./prototype/class":6,"./prototype/comment":7,"./prototype/esc-general":8,"./prototype/esc-unicode":9,"./prototype/export":10,"./prototype/for":11,"./prototype/fundef":12,"./prototype/idStatementOrId":13,"./prototype/identifier":14,"./prototype/import":15,"./prototype/let":16,"./prototype/loc":17,"./prototype/memname":18,"./prototype/new":19,"./prototype/nextlookahead":20,"./prototype/non-assig":21,"./prototype/number":22,"./prototype/obj":24,"./prototype/obj-class-common":23,"./prototype/pattern":25,"./prototype/primary":26,"./prototype/program":27,"./prototype/regex":28,"./prototype/semi":29,"./prototype/spread":30,"./prototype/statement":31,"./prototype/string":32,"./prototype/super":33,"./prototype/template":34,"./prototype/validate":35,"./prototype/var":36,"./prototype/yield":37,"./util/assert.js":38}],3:[function(require,module,exports){
+},{"./constructor.js":2,"./prototype/array":4,"./prototype/arrow":5,"./prototype/assignment":6,"./prototype/class":7,"./prototype/comment":8,"./prototype/esc-general":9,"./prototype/esc-unicode":10,"./prototype/export":11,"./prototype/for":12,"./prototype/fundef":13,"./prototype/idStatementOrId":14,"./prototype/identifier":15,"./prototype/import":16,"./prototype/let":17,"./prototype/loc":18,"./prototype/memname":19,"./prototype/new":20,"./prototype/nextlookahead":21,"./prototype/non-assig":22,"./prototype/number":23,"./prototype/obj":25,"./prototype/obj-class-common":24,"./prototype/pattern":26,"./prototype/primary":27,"./prototype/program":28,"./prototype/regex":29,"./prototype/semi":30,"./prototype/spread":31,"./prototype/statement":32,"./prototype/string":33,"./prototype/super":34,"./prototype/template":35,"./prototype/validate":36,"./prototype/var":37,"./prototype/yield":38,"./util/assert.js":39}],4:[function(require,module,exports){
 var PREC = require('../../util/precedence.js');
 var CONTEXT = require('../../util/constants.js').CONTEXT;
 
@@ -161,7 +166,7 @@ module.exports.parseArrayExpression = function() {
   return elem;
 };
 
-},{"../../util/constants.js":42,"../../util/precedence.js":49}],4:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/precedence.js":50}],5:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var SCOPE = CONST.SCOPE;
@@ -310,7 +315,7 @@ module.exports.parseArrow = function(arg, context) {
   };
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43,"../../util/precedence.js":49}],5:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44,"../../util/precedence.js":50}],6:[function(require,module,exports){
 var arguments_or_eval = require('../../util/arguments_or_eval.js');
 var PREC = require('../../util/precedence.js');
 var core = require('../../util/core.js');
@@ -409,7 +414,7 @@ module.exports.parseAssignment = function(head, context ) {
            left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }};
 };
 
-},{"../../util/arguments_or_eval.js":39,"../../util/core.js":43,"../../util/precedence.js":49}],6:[function(require,module,exports){
+},{"../../util/arguments_or_eval.js":40,"../../util/core.js":44,"../../util/precedence.js":50}],7:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var PREC = require('../../util/precedence.js');
@@ -543,7 +548,7 @@ module.exports.parseClass = function(context) {
   return n;
 };
 
-},{"../../util/constants.js":42,"../../util/precedence.js":49}],7:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/precedence.js":50}],8:[function(require,module,exports){
 var CHAR = require('../../util/char.js');
 
 module.exports.readMultiComment = function() {
@@ -605,7 +610,7 @@ module.exports.readLineComment = function() {
   this.c=c;
 };
 
-},{"../../util/char.js":40}],8:[function(require,module,exports){
+},{"../../util/char.js":41}],9:[function(require,module,exports){
 var CHAR = require('../../util/char.js');
 var fromcode = require('../../util/fromcode.js');
 var toNum = require('../../util/toNum.js');
@@ -689,7 +694,7 @@ module.exports.readEsc = function() {
   }
 };
 
-},{"../../util/char.js":40,"../../util/fromcode.js":46,"../../util/toNum.js":50}],9:[function(require,module,exports){
+},{"../../util/char.js":41,"../../util/fromcode.js":47,"../../util/toNum.js":51}],10:[function(require,module,exports){
 var CHAR = require('../../util/char.js');
 var toNum = require('../../util/toNum.js');
 
@@ -736,7 +741,7 @@ module.exports.peekUSeq = function() {
   return byteVal;
 };
 
-},{"../../util/char.js":40,"../../util/toNum.js":50}],10:[function(require,module,exports){
+},{"../../util/char.js":41,"../../util/toNum.js":51}],11:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var PREC = require('../../util/precedence.js');
@@ -892,7 +897,7 @@ module.exports.parseExport = function() {
           end: endI || ex.end, declaration: core( ex ) };
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43,"../../util/precedence.js":49}],11:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44,"../../util/precedence.js":50}],12:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var SCOPE = CONST.SCOPE;
@@ -1000,7 +1005,7 @@ module.exports.parseFor = function() {
         body: nbody };
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43,"../../util/precedence.js":49}],12:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44,"../../util/precedence.js":50}],13:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var SCOPE = CONST.SCOPE;
@@ -1167,7 +1172,7 @@ module.exports.makeStrict  = function() {
   }
 };
 
-},{"../../util/arguments_or_eval":39,"../../util/constants.js":42,"../../util/has.js":47,"../../util/precedence.js":49}],13:[function(require,module,exports){
+},{"../../util/arguments_or_eval":40,"../../util/constants.js":43,"../../util/has.js":48,"../../util/precedence.js":50}],14:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var SCOPE = CONST.SCOPE;
@@ -1403,7 +1408,7 @@ module.exports.parseIdStatementOrId =  function( context ) {
   return pendingExprHead;
 };
 
-},{"../../util/constants.js":42}],14:[function(require,module,exports){
+},{"../../util/constants.js":43}],15:[function(require,module,exports){
 var CHAR = require('../../util/char.js');
 var CTYPE = require('../../util/ctype.js');
 var fromcode = require('../../util/fromcode.js');
@@ -1482,7 +1487,7 @@ module.exports.readAnIdentifierToken =  function(v) {
   this.lttype= 'Identifier';
 };
 
-},{"../../util/char.js":40,"../../util/ctype.js":44,"../../util/fromcode.js":46}],15:[function(require,module,exports){
+},{"../../util/char.js":41,"../../util/ctype.js":45,"../../util/fromcode.js":47}],16:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 
 module.exports.parseImport = function() {
@@ -1572,7 +1577,7 @@ module.exports.parseImport = function() {
           source: src };
 };
 
-},{"../../util/constants.js":42}],16:[function(require,module,exports){
+},{"../../util/constants.js":43}],17:[function(require,module,exports){
 
 module.exports.parseLet = function(context) {
 
@@ -1602,14 +1607,14 @@ module.exports.parseLet = function(context) {
   return null ;
 };
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 module.exports.loc = function() { return { line: this.li, column: this.col }; };
 module.exports.locBegin = function() { return  { line: this.li0, column: this.col0 }; };
 module.exports.locOn = function(l) { return { line: this.li, column: this.col - l }; };
 
 
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 
@@ -1624,7 +1629,7 @@ module.exports .memberExpr = function() {
   return n;
 };
 
-},{"../../util/constants.js":42}],19:[function(require,module,exports){
+},{"../../util/constants.js":43}],20:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var core = require('../../util/core.js');
@@ -1720,7 +1725,7 @@ module.exports.parseNewHead = function() {
   }
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43}],20:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44}],21:[function(require,module,exports){
 var CHAR = require('../../util/char.js');
 var CTYPE = require('../../util/ctype.js');
 var PREC = require('../../util/precedence.js');
@@ -2198,7 +2203,7 @@ module.exports.expectID =  function(n) {
   this.next();
 };
 
-},{"../../util/char.js":40,"../../util/ctype.js":44,"../../util/fromcode.js":46,"../../util/precedence.js":49}],21:[function(require,module,exports){
+},{"../../util/char.js":41,"../../util/ctype.js":45,"../../util/fromcode.js":47,"../../util/precedence.js":50}],22:[function(require,module,exports){
 var CHAR = require('../../util/char.js');
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
@@ -2413,7 +2418,7 @@ module.exports.parseNonSeqExpr =  function(prec, context  ) {
   return head;
 };
 
-},{"../../util/char.js":40,"../../util/constants.js":42,"../../util/core.js":43,"../../util/precedence.js":49}],22:[function(require,module,exports){
+},{"../../util/char.js":41,"../../util/constants.js":43,"../../util/core.js":44,"../../util/precedence.js":50}],23:[function(require,module,exports){
 var CHAR = require('../../util/char.js');
 var CTYPE = require('../../util/ctype.js');
 
@@ -2546,7 +2551,7 @@ module.exports . frac = function(n) {
   return ! false   ;
 };
 
-},{"../../util/char.js":40,"../../util/ctype.js":44}],23:[function(require,module,exports){
+},{"../../util/char.js":41,"../../util/ctype.js":45}],24:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var core = require('../../util/core.js');
@@ -2673,7 +2678,7 @@ module.exports . parseSetGet= function(isObj) {
           loc : { start: startLoc, end: val.loc.end }, 'static': false, value: val };
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43}],24:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44}],25:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var PREC = require('../../util/precedence.js');
@@ -2790,7 +2795,7 @@ module.exports.parseProperty = function(name) {
 //  return n; // unreachable
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43,"../../util/precedence.js":49}],25:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44,"../../util/precedence.js":50}],26:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var PREC = require('../../util/precedence.js');
@@ -2962,7 +2967,7 @@ module.exports.parseRestElement = function() {
   };
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43,"../../util/precedence.js":49}],26:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44,"../../util/precedence.js":50}],27:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var PREC = require('../../util/precedence.js');
@@ -3278,7 +3283,7 @@ module.exports.parseArgList = function() {
   return list;
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43,"../../util/precedence.js":49}],27:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44,"../../util/precedence.js":50}],28:[function(require,module,exports){
 module.exports.parseProgram =  function() {
   var startc = this.c;
   /* unused
@@ -3310,7 +3315,7 @@ module.exports.parseProgram =  function() {
   return n;
 };
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 /* eslint no-invalid-regexp: 0 */
 
 var CHAR = require('../../util/char.js');
@@ -3461,7 +3466,7 @@ module.exports.parseRegExpLiteral = function() {
   return regex;
 };
 
-},{"../../util/char.js":40,"../../util/hex.js":48}],29:[function(require,module,exports){
+},{"../../util/char.js":41,"../../util/hex.js":49}],30:[function(require,module,exports){
 module.exports.semiLoc =  function() {
   switch (this.lttype) {
   case ';':
@@ -3484,7 +3489,7 @@ module.exports.semiLoc =  function() {
 module.exports.semiI = function() {
   return this.lttype === ';' ? this.c : this.newLineBeforeLookAhead ? 0 : this.lttype === '}' ? this.c - 1 : this.lttype === 'eof' ? this.c : 0; };
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var PREC = require('../../util/precedence.js');
@@ -3505,7 +3510,7 @@ module.exports.parseSpread = function() {
   };
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43,"../../util/precedence.js":49}],31:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44,"../../util/precedence.js":50}],32:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var SCOPE = CONST.SCOPE;
@@ -4105,7 +4110,7 @@ module.exports.blck = function() { // blck ([]stmt)
   return (stmts);
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43,"../../util/has.js":47}],32:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44,"../../util/has.js":48}],33:[function(require,module,exports){
 var CHAR = require('../../util/char.js');
 
 module.exports.readStrLiteral = function(start) {
@@ -4157,7 +4162,7 @@ module.exports.readStrLiteral = function(start) {
   this.ltval = v;
 };
 
-},{"../../util/char.js":40}],33:[function(require,module,exports){
+},{"../../util/char.js":41}],34:[function(require,module,exports){
 /* global SCOPE_CONSTRUCTOR, SCOPE_METH */
 
 module.exports.parseSuper = function() {
@@ -4182,7 +4187,7 @@ module.exports.parseSuper = function() {
   }
 };
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 var CHAR = require('../../util/char.js');
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
@@ -4323,7 +4328,7 @@ module.exports.parseTemplateLiteral = function() {
   return n;
 };
 
-},{"../../util/char.js":40,"../../util/constants.js":42}],35:[function(require,module,exports){
+},{"../../util/char.js":41,"../../util/constants.js":43}],36:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var SCOPE = CONST.SCOPE;
 
@@ -4504,7 +4509,7 @@ module.exports.errorReservedID = function() {
   this.err(this.ltraw + ' is not an identifier ');
 };
 
-},{"../../util/constants.js":42}],36:[function(require,module,exports){
+},{"../../util/constants.js":43}],37:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var PREC = require('../../util/precedence.js');
@@ -4585,7 +4590,7 @@ module.exports.parseVariableDeclarator = function(context) {
   };
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43,"../../util/precedence.js":49}],37:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44,"../../util/precedence.js":50}],38:[function(require,module,exports){
 var CONST = require('../../util/constants.js');
 var CONTEXT = CONST.CONTEXT;
 var PREC = require('../../util/precedence.js');
@@ -4634,7 +4639,7 @@ module.exports.parseYield = function(context) { // FIXME: context never used
   };
 };
 
-},{"../../util/constants.js":42,"../../util/core.js":43,"../../util/precedence.js":49}],38:[function(require,module,exports){
+},{"../../util/constants.js":43,"../../util/core.js":44,"../../util/precedence.js":50}],39:[function(require,module,exports){
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -4642,7 +4647,7 @@ function assert(condition, message) {
 
 module.exports.default = module.exports = assert;
 
-},{}],39:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 function arguments_or_eval(l) {
   switch ( l ) {
   case 'arguments':
@@ -4655,7 +4660,7 @@ function arguments_or_eval(l) {
 
 module.exports.default = module.exports = arguments_or_eval;
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 var char2int = require('./char2int.js');
 
 module.exports = {
@@ -4738,14 +4743,14 @@ module.exports = {
   'GREATER_THAN': char2int('>')
 };
 
-},{"./char2int.js":41}],41:[function(require,module,exports){
+},{"./char2int.js":42}],42:[function(require,module,exports){
 function char2int(c) {
   return c.charCodeAt(0);
 }
 
 module.exports.default = module.exports = char2int;
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 var INTBITLEN = (function() { var i = 0;
   while ( 0 < (1 << (i++))) if (i >= 512) return 8;
   return i;
@@ -4796,7 +4801,7 @@ module.exports.default = module.exports = {
   STRING_TYPE: typeof 'string'
 };
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 var CONST = require('./constants.js');
 
 function core(n) {
@@ -4805,7 +4810,7 @@ function core(n) {
 
 module.exports.default = module.exports = core;
 
-},{"./constants.js":42}],44:[function(require,module,exports){
+},{"./constants.js":43}],45:[function(require,module,exports){
 var CHAR = require('./char.js');
 var CONST = require('./constants.js');
 var UNICODE = require('./unicode');
@@ -4848,7 +4853,7 @@ module.exports.default = module.exports = {
   num: Num
 };
 
-},{"./char.js":40,"./constants.js":42,"./unicode":51}],45:[function(require,module,exports){
+},{"./char.js":41,"./constants.js":43,"./unicode":52}],46:[function(require,module,exports){
 var CONST = require('./constants.js');
 
 function fromRunLenCodes(runLenArray, bitm) {
@@ -4871,7 +4876,7 @@ function fromRunLenCodes(runLenArray, bitm) {
 
 module.exports.default = module.exports = fromRunLenCodes;
 
-},{"./constants.js":42}],46:[function(require,module,exports){
+},{"./constants.js":43}],47:[function(require,module,exports){
 function fromcode(codePoint ) {
   if (codePoint <= 0xFFFF) return String.fromCharCode(codePoint);
 
@@ -4883,10 +4888,10 @@ function fromcode(codePoint ) {
 
 module.exports.default = module.exports = fromcode;
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 module.exports.default = module.exports = Object.prototype.hasOwnProperty;
 
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 var hexD = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
 
 function hex(number) {
@@ -4902,7 +4907,7 @@ function hex(number) {
 
 module.exports.default = module.exports = hex;
 
-},{}],49:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
 // > <= < >= in instanceof   == !=    &    ^   |   ?:    =       ...
 
@@ -4967,7 +4972,7 @@ U:U
   }
 
 
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 var CHAR = require('./char.js');
 
 function toNum (n) {
@@ -4978,7 +4983,7 @@ function toNum (n) {
 
 module.exports.default = module.exports = toNum;
 
-},{"./char.js":40}],51:[function(require,module,exports){
+},{"./char.js":41}],52:[function(require,module,exports){
 var CONST = require('./constants.js');
 var fromRunLenCodes = require('./fromRunLenCodes.js');
 
@@ -5144,5 +5149,5 @@ module.exports = {
   set: set
 };
 
-},{"./constants.js":42,"./fromRunLenCodes.js":45}]},{},[2])(2)
+},{"./constants.js":43,"./fromRunLenCodes.js":46}]},{},[1])(1)
 });
