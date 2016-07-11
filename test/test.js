@@ -1,6 +1,6 @@
 ( function(_exports) {
 
-var util = require( '../util.js' ), lube = require('../dist/lube.js'  ) , fs = require( 'fs' ) ;
+var util = require( '../util.js' ), lube = require('../src/parser'  ) , fs = require( 'fs' ) ;
 
 function compareAST(expected, actual) {
   return util.compare(expected, actual);
@@ -24,7 +24,7 @@ function TestSession() {
   this.failTarget = 0;
   this.passError = {};
   this.failError = {};
-  this.Parser = lube.Parser
+  this.Parser = lube;
   this.ignore = {};
 }
 
@@ -151,7 +151,7 @@ TestSession.prototype = {
   },
 
   parse: function(src, isModule ) {
-    var l = new lube. Parser(src);
+    var l = new this. Parser(src);
     l.isScript = !isModule;
     return ((l.parseProgram()));
   }

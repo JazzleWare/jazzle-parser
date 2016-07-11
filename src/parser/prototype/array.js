@@ -1,7 +1,7 @@
 var PREC = require('../../util/precedence.js');
 var CONTEXT = require('../../util/constants.js').CONTEXT;
 
-module.exports.parseArray = function() {
+module.exports.parseArrayExpression = function() {
   var startc = this.c - 1;
   var startLoc = this.locOn(1);
   var elem = null, list = [];
