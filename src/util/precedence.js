@@ -1,42 +1,63 @@
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
 // > <= < >= in instanceof   == !=    &    ^   |   ?:    =       ...
 
-module.exports.default = module.exports = {
-  WITH_NO_OP: 0,
-  SIMP_ASSIG: this.WITH_NO_OP + 1  ,
-  OP_ASSIG: this.SIMP_ASSIG + 40 ,
-  COND: this.OP_ASSIG + 1,
-  OO: -12 ,
+var WITH_NO_OP= 0;
+var SIMP_ASSIG= WITH_NO_OP + 1  ;
+var OP_ASSIG= SIMP_ASSIG + 40 ;
+var COND= OP_ASSIG + 1;
+var OO= -12 ;
 
-  BOOL_OR: this.COND + 2,
-  BOOL_AND : this.BOOL_OR + 2 ,
-  BIT_OR: this.BOOL_AND + 2 ,
-  XOR: this.BIT_OR + 2,
-  BIT_AND: this.XOR + 2,
-  EQUAL: this.BIT_AND + 2,
-  COMP: this.EQUAL + 2,
-  SH: this.COMP + 2,
-  ADD_MIN: this.SH + 2,
-  MUL: this.ADD_MIN + 2,
-  U: this.MUL + 1,
+var BOOL_OR= COND + 2;
+var BOOL_AND = BOOL_OR + 2 ;
+var BIT_OR= BOOL_AND + 2 ;
+var XOR= BIT_OR + 2;
+var BIT_AND= XOR + 2;
+var EQUAL= BIT_AND + 2;
+var COMP= EQUAL + 2;
+var SH= COMP + 2;
+var ADD_MIN= SH + 2;
+var MUL= ADD_MIN + 2;
+var U= MUL + 1;
 
-  isAssignment: function(prec) {
-    return prec === this.SIMP_ASSIG || prec === this.OP_ASSIG;
-  },
 
-  isRassoc: function(prec) {
+var PREC = module.exports.default = module.exports = {
+
+WITH_NO_OP:WITH_NO_OP,
+SIMP_ASSIG:SIMP_ASSIG,
+OP_ASSIG:OP_ASSIG,
+COND:COND,
+OO:OO,
+
+BOOL_OR:BOOL_OR,
+BOOL_AND :BOOL_AND ,
+BIT_OR:BIT_OR,
+XOR:XOR,
+BIT_AND:BIT_AND,
+EQUAL:EQUAL,
+COMP:COMP,
+SH:SH,
+ADD_MIN:ADD_MIN,
+MUL:MUL,
+U:U
+};
+
+   PREC. isAssignment = function (prec) {
+    return prec === PREC.SIMP_ASSIG || prec === PREC.OP_ASSIG;
+  };
+
+  PREC.isRassoc= function(prec) {
     return prec === this.PREC_U;
-  },
+  };
 
-  isBin: function(prec) {
+  PREC. isBin = function(prec) {
     return prec !== this.BOOL_OR && prec !== this.PREC_BOOL_AND;
-  },
+  };
 
-  isMMorAA: function(prec) {
+  PREC. isMMorAA = function(prec) {
     return prec < 0;
-  },
+  };
 
-  isQuestion: function(prec) {
+  PREC. isQuestion= function(prec) {
     return prec === this.COND;
   }
-};
+

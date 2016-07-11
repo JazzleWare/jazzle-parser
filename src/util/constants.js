@@ -6,18 +6,25 @@ var INTBITLEN = (function() { var i = 0;
 var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
 
+var BREAK=        1,
+    CONTINUE=     BREAK << 1,
+    FUNCTION=     CONTINUE << 1,
+    METH=         FUNCTION << 1,
+    YIELD=        METH << 1,
+    CONSTRUCTOR=  YIELD << 1
+ 
 module.exports.default = module.exports = {
   SCOPE: {
-    BREAK:        1,
-    CONTINUE:     this.BREAK << 1,
-    FUNCTION:     this.CONTINUE << 1,
-    METH:         this.FUNCTION << 1,
-    YIELD:        this.METH << 1,
-    CONSTRUCTOR:  this.YIELD << 1
+    BREAK:      BREAK ,  
+    CONTINUE:   CONTINUE,
+    FUNCTION:   FUNCTION,
+    METH:       METH ,
+    YIELD:      YIELD,
+    CONSTRUCTOR: CONSTRUCTOR
   },
 
   CONTEXT: {
-    FOR: 1, ELEM: 2, NONE: 0, NULLABE: 4, DEFAULT: 32
+    FOR: 1, ELEM: 2, NONE: 0, NULLABLE: 4, DEFAULT: 32
   },
 
   // INT BIT LEN

@@ -2,8 +2,7 @@ var CHAR = require('../../util/char.js');
 
 module.exports.readMultiComment = function() {
   var c = this.c, src = this.src, start = c;
-  var l = this.src;
-  var len = l.length; // FIXME: l is not defined..
+  var len = src.length; // FIXME: l is not defined..
 
   var noNewLine  = true;
 
@@ -38,13 +37,13 @@ module.exports.readMultiComment = function() {
 
 module.exports.readLineComment = function() {
   var c = this.c, src = this.src;
-  var len = l.length; // FIXME: l not defined
+  var len = src.length; 
 
   WHILE:
   while ( c < len ) {
     switch ( src.charCodeAt(c++) ) {
     case CHAR.CARRIAGE_RETURN:
-      if (CHAR.LINE_FEED == l.charCodeAt(c)) c++;
+      if (CHAR.LINE_FEED == src.charCodeAt(c)) c++;
       break;
     case CHAR.LINE_FEED :
     case 0x2028:

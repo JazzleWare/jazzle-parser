@@ -61,7 +61,6 @@ module.exports.parseFunc = function(context, argListMode, argLen ) {
   this.scopeFlags = 0;
 
   var isGen = false;
-
   if (argListMode & CONST.WHOLE_FUNCTION) {
     if ((canBeStatement = this.canBeStatement))
       this.canBeStatement = false;

@@ -181,7 +181,7 @@ module.exports.parseIdStatementOrId =  function( context ) {
     break;
   case 8:
     switch (id) {
-    case 'module.exports.': return this.parseFunc = function(context, CONTEXT_FOR, WHOLE_FUNCTION, ANY_ARG_LEN ) {}; // FIXME: noop?
+    case 'function': return this.parseFunc(CONTEXT.FOR, CONST.WHOLE_FUNCTION,  CONST.ANY_ARG_LEN );
     case 'debugger': return this.prseDbg();
     case 'continue': return this.parseContinueStatement();
     case 'abstract': case 'volatile':

@@ -11,15 +11,16 @@ module.exports.parseYield = function(context) { // FIXME: context never used
     col = this.col;
   var startc = this.c0,
     startLoc = this.locBegin();
+
   this.next();
   if (!this.newLineBeforeLookAhead) {
     if (this.lttype === 'op' && this.ltraw === '*') {
       deleg = !false;
       this.next();
-      arg = this.parseNonSeqExpr(PREC.WITH_NO_OP, CONTEXT.NONE);
+      arg = this.parseNonSeqExpr(PREC.WITH_NO_OP, context );
       this.assert(arg);
     } else
-      arg = this.parseNonSeqExpr(PREC.WITH_NO_OP, CONTEXT.NULLABLE);
+      arg = this.parseNonSeqExpr(PREC.WITH_NO_OP, context|CONTEXT.NULLABLE);
   }
   var endI, endLoc;
   if (arg) {

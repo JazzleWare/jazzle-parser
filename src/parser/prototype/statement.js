@@ -384,6 +384,7 @@ module.exports.parseSwitchCase = function() {
     consequent: nbody
   };
 };
+
 module.exports.parseReturnStatement = function() {
   this.ensureStmt();
   this.fixupLabels(false);
