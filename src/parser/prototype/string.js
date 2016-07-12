@@ -28,7 +28,7 @@ module.exports.readStrLiteral = function(start) {
       continue;
     case CHAR.CARRIAGE_RETURN:
       if (l.charCodeAt(c + 1) == CHAR.LINE_FEED) c++;
-      break;
+      //  fall through
     case CHAR.LINE_FEED:
     case 0x2028:
     case 0x2029:
