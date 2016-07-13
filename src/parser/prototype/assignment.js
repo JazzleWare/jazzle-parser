@@ -6,7 +6,8 @@ module.exports.ensureSimpAssig = function(head) {
   switch(head.type) {
   case 'Identifier':
     this.assert( !( this.tight && arguments_or_eval(head.name) )  );
-    break;
+  //  break;
+  // eslint-disable-next-line no-fallthrough
   case 'MemberExpression':
     return;
 
@@ -24,7 +25,8 @@ module.exports.toAssig = function(head) {
   switch(head.type) {
   case 'Identifier':
     this.assert( !(this.tight && arguments_or_eval(head.name)) );
-    break;
+  //  break;
+  // eslint-disable-next-line no-fallthrough
   case 'MemberExpression':
     return;
 

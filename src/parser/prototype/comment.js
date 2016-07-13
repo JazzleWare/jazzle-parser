@@ -19,7 +19,8 @@ module.exports.readMultiComment = function() {
 
     case CHAR.CARRIAGE_RETURN:
       if( CHAR.LINE_FEED === src.charCodeAt(c)) c++;
-      break;
+    //  break;
+    // eslint-disable-next-line no-fallthrough
     case CHAR.LINE_FEED:
     case 0x2028:
     case 0x2029:
@@ -37,14 +38,15 @@ module.exports.readMultiComment = function() {
 
 module.exports.readLineComment = function() {
   var c = this.c, src = this.src;
-  var len = src.length; 
+  var len = src.length;
 
   WHILE:
   while ( c < len ) {
     switch ( src.charCodeAt(c++) ) {
     case CHAR.CARRIAGE_RETURN:
       if (CHAR.LINE_FEED == src.charCodeAt(c)) c++;
-      break;
+    //  break;
+    // eslint-disable-next-line no-fallthrough
     case CHAR.LINE_FEED :
     case 0x2028:
     case 0x2029 :
