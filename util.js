@@ -187,77 +187,11 @@
   }
   _exports.compareArray = compareArray;  
 
+  var adjust = require('./adjuster' ).convertEsprimaToJSRube;
+
   function compareObj(expected, actual, name ) {
-    if ( _exports.has( expected, 'tokens' ) ) delete expected.tokens;
-    if ( _exports.has( expected, 'source' ) ) delete expected.source;
-    if ( _exports.has( expected, 'raw' ) ) delete expected.raw;
-    if ( _exports.has( expected, 'directive' ) ) delete expected.directive;
-    if ( _exports.has( expected, 'errors' ) ) delete expected.errors;
-    if ( _exports.has( expected, 'comments' ) ) delete expected.comments ;
 
-    if ( actual.regex ) {
-       delete actual.value;
-       _exports.assert( expected.regex ); delete expected.value;
-    }
-
-    if ( !expected.loc ) delete actual.loc;
-    if ( !expected.range ) delete actual.range;
-         
-    if ( name !== "loc" && _exports.has( actual, 'start' ) ) {
-      if ( expected.range )  actual.range = [actual.start, actual.end];
-      delete actual.start;
-      delete actual.end;
-    }
-    if ( _exports.has( actual, 'p' ) ) {
-      delete actual.p;  
-    }
-    if ( _exports.has( actual, 'raw' ) ) delete actual.raw ; 
-    if ( actual.type === 'AssignmentProperty' )
-         actual.type = 'Property';
-
-    if ( name === 'params' ) {
-      var i = 0;
-      while ( i < actual.length ) {
-         if ( actual[i].type === 'AssignmentPattern' && i < expected.length &&
-              actual[i].type !== expected[i].type ) {
-              actual[i] = actual[i].left;
-         }
-         i++ ; 
-      
-      }
-    }      
-
-    if ( expected.type === 'ForInStatement' && _exports.has(expected, 'each' ) )
-      delete expected.each;
-
-    if ( actual.type === 'TemplateLiteral' ) {
-      var list = actual.quasis, i = 0;
-      while ( i < list.length ) {
-         list[i].start -= 1;
-         list[i].end += i === list.length - 1 ? 1 : 2;
-         list[i].loc.start.column -= 1;
-         list[i].loc.end.column += i === list.length - 1 ? 1 : 2;
-         i++ ; 
-      }
-    }
-
-    if ( expected .type === 'AssignmentPattern' && !actual.o ) {
-         if ( expected.operator && !actual.operator ) actual.operator = '=';
-
-    }
-    
-    if ( ( expected.type === 'ExportNamedDeclaration' || 
-           expected.type === 'ImportDeclaration' ||
-           expected.type === 'ExportAllDeclaration' ) && !_exports.has(expected, 'source' ) )
-      delete actual.source;
-
-    if ( ( expected.type === 'FunctionExpression' || expected.type === 'FunctionDeclaration' ) ) delete expected.defaults;
-
-    if ( expected.type === 'TryStatement' ) {
-      delete expected.handlers; delete expected.guardedHandlers;
-  
-    }
-
+    adjust(expected, actual, name);
     var comp = null, item;
     for ( item in expected ) {
         if ( !_exports.has(expected, item) ) continue;
