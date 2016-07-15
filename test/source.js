@@ -42,6 +42,7 @@ function genTestTree(dir, base) {
   });
 }
 
+var compareAndAdjust = require( '../compare.js' ).compare;
 function runTests(tree, parse) {
   Object.keys(tree).forEach(function(branch) {
     if (tree[branch] && tree[branch].runnable) {
@@ -50,6 +51,8 @@ function runTests(tree, parse) {
         var src = fs.readFileSync(tree[branch].src, 'utf-8');
         var res = JSON.parse(fs.readFileSync(tree[branch].res, 'utf-8'));
         var AST = parse(src);
+        compareAndAdjust(res, 
+                        AST);
 
         expect(AST).to.be.eql(res);
       });
@@ -68,7 +71,6 @@ describe('jsRube (source)', function() {
   var Parser = require(path.join(__dirname, '../src'));
 
   runTests(tests, function(source) {
-    // TODO: hook adjuster "midleware"
     return new Parser(source).parseProgram();
   });
 });
