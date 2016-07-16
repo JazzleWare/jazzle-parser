@@ -167,6 +167,10 @@ _class.parseParen = function () {
   var list = null, elem = null;
 
   var firstElem = null;
+  var firstYS = this.firstYS;
+  this.firstYS = null;
+
+  var firstElemWithYS = this.firstElemWithYS = null, parenYS = this.parenYS = null;  
 
   while ( !false ) {
      this.firstParen = null;
@@ -179,6 +183,10 @@ _class.parseParen = function () {
            elem = this.parseSpreadElement();
            if ( !firstParen && this.firstParen ) firstParen = this.firstParen;
            if ( !unsatisfiedArg ) unsatisfiedArg = elem;
+           if ( !firstElemWithYS && this.firstYS ) {
+                 firstElemWithYS = elem;
+                 parenYS = this.firstYS;
+           }
         }
         break;
      }
@@ -189,6 +197,10 @@ _class.parseParen = function () {
      if ( !unsatisfiedArg && this.unsatisfiedAssignment)
            unsatisfiedArg =  this.unsatisfiedAssignment;
 
+     if ( !firstElemWithYS && this.firstYS ) {
+           parenYS = this.firstYS;
+           firstElemWithYS = elem;
+     } 
      if ( this.lttype !== ',' ) break ;
 
      if ( list ) list.push(core(elem));
@@ -233,6 +245,9 @@ _class.parseParen = function () {
 
   this.unsatisfiedAssignment = unsatisfiedAssignment ;
   this.expectType(')') ;
+
+  this.firstElemWithYS = firstElemWithYS;
+  this.parenYS = parenYS;
 
   return n;
 };

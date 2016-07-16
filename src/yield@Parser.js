@@ -23,8 +23,13 @@ _class.parseYield = function(context) {
   if ( arg ) { endI = arg.end; endLoc = arg.loc.end; }
   else { endI = c; endLoc = { line: li, column: col }; }  
 
-  return { type: 'YieldExpression', argument: arg && core(arg), start: startc, delegate: deleg,
-           end: endI, loc: { start : startLoc, end: endLoc } };
+  var n = { type: 'YieldExpression', argument: arg && core(arg), start: startc, delegate: deleg,
+           end: endI, loc: { start : startLoc, end: endLoc } }
+
+  if ( !this.firstYS )
+        this.firstYS = n;
+ 
+  return n;
 };
 
 

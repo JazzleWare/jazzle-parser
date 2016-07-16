@@ -33,3 +33,4 @@ test/tests/test/ES6/import-declaration/invalid-import-namespace-after-named
 test/tests/test/ES6/import-declaration/invalid-import-namespace-missing-as
 test/tests/test/ES6/import-declaration/invalid-import-specifiers
 test/tests/test/ES6/yield/invalid-yield-generator-export-default
+test/tests/test/ES6/yield/yield-generator-arrow-default

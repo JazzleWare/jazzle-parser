@@ -43,6 +43,7 @@ _class. asArrowFuncArg = function(arg  ) {
            this.assert(arg !== this.firstParen );
            this.assert(arg.operator === '=' ) ;
            this.asArrowFuncArg(arg.left);
+           this.assert( arg !== this.firstElemWithYS );
            arg.type = 'AssignmentPattern';
            delete arg.operator ;
            return;
@@ -119,11 +120,13 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
   var isExpr = !false, nbody = null;
 
   if ( this.lttype === '{' ) {
-       var prevLabels = this.labels;
+       var prevLabels = this.labels, prevYS = this.firstYS;
+       this.firstYS = null;
        this.labels = {};
        isExpr = false;
        nbody = this.parseFuncBody(CONTEXT_NONE);
        this.labels = prevLabels;
+       this.firstYS = prevYS;
   }
   else
     nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context) ;

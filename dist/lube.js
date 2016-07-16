@@ -36,11 +36,16 @@ var Parser = function (src, isModule) {
   this.currentFuncName = null;
   this.tight = !!isModule ;
 
+  this.parenYS = null;
+
   this.isScript = !isModule;
   this.v = 12 ;
 
   this.firstParen = null;
   this.firstUnassignable = null;
+
+  this.firstElemWithYS = null;
+  this.firstYS = null;
   
   this.throwReserved = !false;
 };
@@ -158,6 +163,7 @@ _class. asArrowFuncArg = function(arg  ) {
            this.assert(arg !== this.firstParen );
            this.assert(arg.operator === '=' ) ;
            this.asArrowFuncArg(arg.left);
+           this.assert( arg !== this.firstElemWithYS );
            arg.type = 'AssignmentPattern';
            delete arg.operator ;
            return;
@@ -234,11 +240,13 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
   var isExpr = !false, nbody = null;
 
   if ( this.lttype === '{' ) {
-       var prevLabels = this.labels;
+       var prevLabels = this.labels, prevYS = this.firstYS;
+       this.firstYS = null;
        this.labels = {};
        isExpr = false;
        nbody = this.parseFuncBody(CONTEXT_NONE);
        this.labels = prevLabels;
+       this.firstYS = prevYS;
   }
   else
     nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context) ;
@@ -474,15 +482,20 @@ _class.parseSuper  = function   () {
    switch ( this.lttype ) {
         case '(':
           this.assert(this.scopeFlags & SCOPE_CONSTRUCTOR);
-          return n;
+          break ;
         case '.':
         case '[':
            this.assert( this.scopeFlags & SCOPE_METH );
-           return n;
+           break ;
         
        default:
           this.assert(false); 
    }
+
+   if ( !this.firstYS )
+         this.firstYS = n;
+
+   return n;
 };
 
 
@@ -1066,6 +1079,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   var prevInArgList = this.isInArgList;
   var prevArgNames = this.argNames;
   var prevScopeFlags = this.scopeFlags;
+  var prevYieldOrSuper = this.currentYieldOrSuper;
 
   this.scopeFlags = 0;
 
@@ -1127,6 +1141,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   this.argNames = prevArgNames; 
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
+  this.cuurentYieldOrSuper = prevYieldOrSuper;
 
   return  n  ;
 };
@@ -2957,6 +2972,10 @@ _class.parseParen = function () {
   var list = null, elem = null;
 
   var firstElem = null;
+  var firstYS = this.firstYS;
+  this.firstYS = null;
+
+  var firstElemWithYS = this.firstElemWithYS = null, parenYS = this.parenYS = null;  
 
   while ( !false ) {
      this.firstParen = null;
@@ -2969,6 +2988,10 @@ _class.parseParen = function () {
            elem = this.parseSpreadElement();
            if ( !firstParen && this.firstParen ) firstParen = this.firstParen;
            if ( !unsatisfiedArg ) unsatisfiedArg = elem;
+           if ( !firstElemWithYS && this.firstYS ) {
+                 firstElemWithYS = elem;
+                 parenYS = this.firstYS;
+           }
         }
         break;
      }
@@ -2979,6 +3002,10 @@ _class.parseParen = function () {
      if ( !unsatisfiedArg && this.unsatisfiedAssignment)
            unsatisfiedArg =  this.unsatisfiedAssignment;
 
+     if ( !firstElemWithYS && this.firstYS ) {
+           parenYS = this.firstYS;
+           firstElemWithYS = elem;
+     } 
      if ( this.lttype !== ',' ) break ;
 
      if ( list ) list.push(core(elem));
@@ -3023,6 +3050,9 @@ _class.parseParen = function () {
 
   this.unsatisfiedAssignment = unsatisfiedAssignment ;
   this.expectType(')') ;
+
+  this.firstElemWithYS = firstElemWithYS;
+  this.parenYS = parenYS;
 
   return n;
 };
@@ -4080,8 +4110,13 @@ _class.parseYield = function(context) {
   if ( arg ) { endI = arg.end; endLoc = arg.loc.end; }
   else { endI = c; endLoc = { line: li, column: col }; }  
 
-  return { type: 'YieldExpression', argument: arg && core(arg), start: startc, delegate: deleg,
-           end: endI, loc: { start : startLoc, end: endLoc } };
+  var n = { type: 'YieldExpression', argument: arg && core(arg), start: startc, delegate: deleg,
+           end: endI, loc: { start : startLoc, end: endLoc } }
+
+  if ( !this.firstYS )
+        this.firstYS = n;
+ 
+  return n;
 };
 
 

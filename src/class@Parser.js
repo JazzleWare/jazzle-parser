@@ -113,15 +113,20 @@ _class.parseSuper  = function   () {
    switch ( this.lttype ) {
         case '(':
           this.assert(this.scopeFlags & SCOPE_CONSTRUCTOR);
-          return n;
+          break ;
         case '.':
         case '[':
            this.assert( this.scopeFlags & SCOPE_METH );
-           return n;
+           break ;
         
        default:
           this.assert(false); 
    }
+
+   if ( !this.firstYS )
+         this.firstYS = n;
+
+   return n;
 };
 
 

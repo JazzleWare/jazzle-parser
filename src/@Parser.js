@@ -33,11 +33,16 @@ var Parser = function (src, isModule) {
   this.currentFuncName = null;
   this.tight = !!isModule ;
 
+  this.parenYS = null;
+
   this.isScript = !isModule;
   this.v = 12 ;
 
   this.firstParen = null;
   this.firstUnassignable = null;
+
+  this.firstElemWithYS = null;
+  this.firstYS = null;
   
   this.throwReserved = !false;
 };
