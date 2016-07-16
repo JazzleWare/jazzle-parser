@@ -1079,7 +1079,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   var prevInArgList = this.isInArgList;
   var prevArgNames = this.argNames;
   var prevScopeFlags = this.scopeFlags;
-  var prevYieldOrSuper = this.currentYieldOrSuper;
+  var prevYS = this.firstYS ;
 
   this.scopeFlags = 0;
 
@@ -1141,7 +1141,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   this.argNames = prevArgNames; 
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
-  this.cuurentYieldOrSuper = prevYieldOrSuper;
+  this.firstYS = prevYS;
 
   return  n  ;
 };
