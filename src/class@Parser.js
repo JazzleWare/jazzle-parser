@@ -42,7 +42,7 @@ _class. parseClass = function(context) {
         
         if ( this.lttype === '(' ) {
           elem = this.parseMeth( { type: 'Identifier', name: 'static', start: startcStatic, end: cStatic, raw: rawStatic,
-                                  loc: { start: startLocStatic, end: { line: liStatic, column: colStatic } }}   , !OBJ_MEM);
+                                  loc: { start: startLocStatic, end: { line: liStatic, column: colStatic } }}   , CLASS_MEM);
           list.push(elem);
           continue;
         }
@@ -52,7 +52,7 @@ _class. parseClass = function(context) {
       switch ( this.lttype ) {
           case 'Identifier': switch ( this.ltval ) {
              case 'get': case 'set': 
-               elem = this.parseSetGet(!OBJ_MEM);
+               elem = this.parseSetGet(CLASS_MEM);
                break SWITCH;
 
              case 'constructor':
@@ -61,16 +61,16 @@ _class. parseClass = function(context) {
                  if ( !isStatic ) foundConstructor = !false;
                 
              default:
-               elem = this.parseMeth(this.id(), !OBJ_MEM);
+               elem = this.parseMeth(this.id(), CLASS_MEM);
                break SWITCH;
           }
-          case '[': elem = this.parseMeth(this.memberExpr(), !OBJ_MEM); break;
-          case 'Literal': elem = this.parseMeth(this.numstr(), !OBJ_MEM); break ;
+          case '[': elem = this.parseMeth(this.memberExpr(), CLASS_MEM); break;
+          case 'Literal': elem = this.parseMeth(this.numstr(), CLASS_MEM); break ;
 
           case ';': this.next(); continue;
           case 'op': 
             if ( this.ltraw === '*' ) {
-              elem = this.parseGen(!OBJ_MEM);
+              elem = this.parseGen(CLASS_MEM);
               break ;
             }
 

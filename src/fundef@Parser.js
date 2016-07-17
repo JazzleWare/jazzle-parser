@@ -2,11 +2,16 @@ _class .parseArgs  = function (argLen) {
   var list = [], elem = null;
 
   this.expectType('(') ;
+
+  var firstNonSimpArg = null;
   while ( list.length !== argLen ) {
     elem = this.parsePattern();
     if ( elem ) {
        if ( this.lttype === 'op' && this.ltraw === '=' )
          elem = this.parseAssig(elem);
+
+       if ( !firstNonSimpArg && elem.type !== 'Identifier' )
+             firstNonSimpArg =  elem;
 
        list.push(elem);
     }
@@ -20,14 +25,21 @@ _class .parseArgs  = function (argLen) {
  
   }
   if ( argLen === ANY_ARG_LEN ) {
-     if ( this.lttype === '...' )
-      list.push( this.parseRestElement() );
+     if ( this.lttype === '...' ) {
+        elem = this.parseRestElement()
+        list.push( elem  );
+        if ( !firstNonSimpArg )
+              firstNonSimpArg = elem;
+     }
   }
   else
      this.assert( list.length === argLen );
 
   this.expectType(')');
 
+  if ( firstNonSimpArg )
+     this.firstNonSimpArg = firstNonSimpArg ;
+ 
   return list;
 };
 
@@ -52,6 +64,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   var prevArgNames = this.argNames;
   var prevScopeFlags = this.scopeFlags;
   var prevYS = this.firstYS ;
+  var prevNonSimpArg = this.firstNonSimpArg;
 
   this.scopeFlags = 0;
 
@@ -114,6 +127,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
   this.firstYS = prevYS;
+  this.firstNonSimpArg = prevNonSimpArg;
 
   return  n  ;
 };
@@ -144,6 +158,7 @@ _class.parseFuncBody = function(context) {
 };
 
 _class . makeStrict  = function() {
+   this.assert( !this.firstNonSimpArg )  ; 
    if ( this.tight ) return;
 
    this.tight = !false;

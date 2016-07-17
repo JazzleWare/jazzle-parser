@@ -37,6 +37,7 @@ var Parser = function (src, isModule) {
   this.tight = !!isModule ;
 
   this.parenYS = null;
+  this.firstNonSimpArg = null;
 
   this.isScript = !isModule;
   this.v = 12 ;
@@ -48,8 +49,12 @@ var Parser = function (src, isModule) {
   this.firstYS = null;
   
   this.throwReserved = !false;
-};
+ 
+  this.errorHandlers = {};
+  this.errorHandlerOutput = null;
 
+  this.first__proto__ = false;
+};
 
 ;
 var _class = Parser.prototype;
@@ -793,6 +798,40 @@ _class.parseImport = function() {
             end:  endI , specifiers: list,
            source: src };
 }; 
+_class.err = function(errorType, errorTok, args) {
+   if ( has.call(this.errorHandlers, errorType) )
+     return this.handleError(this.errorHandlers[errorType], errorTok, args );
+
+   throw new CustomError( createMessage( Errors[errorType], errorTok, args ) );
+};
+
+function CustomError(start,li,col,message) {
+   this.atChar = start;
+   this.atLine = li;
+   this.atCol = col;
+   this.message = message;
+
+}
+
+function createMessage( errorMessage, errorTok, args  ) {
+  return errorMessage.replace( /%\{([^\}]*)\}/g,
+  function(matchedString, name, matchIndex, wholeString) {
+     if ( name.length === 0 )
+       throw new Error( "placeholder empty on " + matchIndex + " for [" + errorMessage + "]" );
+
+     if ( !has.call(args, name) )
+       throw new Error( "[" + name + "] not found in params " );
+     
+     return args[name] + "" ;
+  }) ;
+
+}
+   
+_class.handleError = function(handlerFunction, errorTok, args ) {
+   return handlerFunction.call( this, params, coords );
+
+};
+
 _class.readEsc = function ()  {
   var src = this.src, b0 = 0, b = 0;
   switch ( src.charCodeAt ( ++this.c ) ) {
@@ -1030,11 +1069,16 @@ _class .parseArgs  = function (argLen) {
   var list = [], elem = null;
 
   this.expectType('(') ;
+
+  var firstNonSimpArg = null;
   while ( list.length !== argLen ) {
     elem = this.parsePattern();
     if ( elem ) {
        if ( this.lttype === 'op' && this.ltraw === '=' )
          elem = this.parseAssig(elem);
+
+       if ( !firstNonSimpArg && elem.type !== 'Identifier' )
+             firstNonSimpArg =  elem;
 
        list.push(elem);
     }
@@ -1048,14 +1092,21 @@ _class .parseArgs  = function (argLen) {
  
   }
   if ( argLen === ANY_ARG_LEN ) {
-     if ( this.lttype === '...' )
-      list.push( this.parseRestElement() );
+     if ( this.lttype === '...' ) {
+        elem = this.parseRestElement()
+        list.push( elem  );
+        if ( !firstNonSimpArg )
+              firstNonSimpArg = elem;
+     }
   }
   else
      this.assert( list.length === argLen );
 
   this.expectType(')');
 
+  if ( firstNonSimpArg )
+     this.firstNonSimpArg = firstNonSimpArg ;
+ 
   return list;
 };
 
@@ -1080,6 +1131,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   var prevArgNames = this.argNames;
   var prevScopeFlags = this.scopeFlags;
   var prevYS = this.firstYS ;
+  var prevNonSimpArg = this.firstNonSimpArg;
 
   this.scopeFlags = 0;
 
@@ -1142,6 +1194,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
   this.firstYS = prevYS;
+  this.firstNonSimpArg = prevNonSimpArg;
 
   return  n  ;
 };
@@ -1172,6 +1225,7 @@ _class.parseFuncBody = function(context) {
 };
 
 _class . makeStrict  = function() {
+   this.assert( !this.firstNonSimpArg )  ; 
    if ( this.tight ) return;
 
    this.tight = !false;
@@ -2555,10 +2609,17 @@ _class.parseObjectExpression = function () {
   var firstUnassignable = null, firstParen = null, 
       unsatisfiedAssignment = this.unsatisfiedAssignment;
 
+  var first__proto__ = null;
+
   do {
      this.next();
      this.unsatisfiedAssignment = null;
+  
+     this.first__proto__ = first__proto__;
      elem = this.parseProperty(null);
+     if ( !first__proto__ && this.first__proto__ )
+          first__proto__ =  this.first__proto__ ;
+
      if ( elem ) {
        list.push(elem);
        if ( !unsatisfiedAssignment && this.unsatisfiedAssignment )
@@ -2591,6 +2652,7 @@ _class.parseObjectExpression = function () {
 };
 
 _class.parseProperty = function (name) {
+  var __proto__ = false, first__proto__ = this.first__proto__ ;
   var val = null;
 
   SWITCH:
@@ -2603,11 +2665,18 @@ _class.parseProperty = function (name) {
             return this.parseSetGet(OBJ_MEM);
          case 'set':
             return this.parseSetGet(OBJ_MEM);
+
+         case '__proto__':
+            __proto__ = !false;
+
          default:
             name = this.memberID();
             break SWITCH;
       }
       case 'Literal':
+            if ( this.ltval === '__proto__' )
+               __proto__ = !false;
+ 
             name = this.numstr();
             break SWITCH;
 
@@ -2622,11 +2691,17 @@ _class.parseProperty = function (name) {
 
   switch (this.lttype) {
       case ':':
+         this.assert( !( __proto__ && first__proto__ ) ) ;
+
          this.next();
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, CONTEXT_NONE )  ;
-         return { type: 'Property', start: name.start, key: core(name), end: val.end,
+         val = { type: 'Property', start: name.start, key: core(name), end: val.end,
                   kind: 'init', loc: { start: name.loc.start, end: val.loc.end }, computed: name.type === PAREN ,
                   method: false, shorthand: false, value: core(val) };
+         if ( __proto__ )
+            this.first__proto__ = val;
+
+         return val;
 
       case '(':
          return this.parseMeth(name, OBJ_MEM);
@@ -4258,8 +4333,6 @@ function isHex(e) {
 }
 
 
-;
-var ErrorMessages = {};
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
 // > <= < >= in instanceof   == !=    &    ^   |   ?:    =       ...

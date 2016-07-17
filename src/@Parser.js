@@ -34,6 +34,7 @@ var Parser = function (src, isModule) {
   this.tight = !!isModule ;
 
   this.parenYS = null;
+  this.firstNonSimpArg = null;
 
   this.isScript = !isModule;
   this.v = 12 ;
@@ -45,6 +46,10 @@ var Parser = function (src, isModule) {
   this.firstYS = null;
   
   this.throwReserved = !false;
-};
+ 
+  this.errorHandlers = {};
+  this.errorHandlerOutput = null;
 
+  this.first__proto__ = false;
+};
 

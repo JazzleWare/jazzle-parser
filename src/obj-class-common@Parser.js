@@ -1,8 +1,8 @@
 
-_class .parseMeth = function(name, isObj) {
+_class .parseMeth = function(name, isClass) {
    var val = null; 
 
-   if ( isObj ) {
+   if ( !isClass ) {
      val = this.parseFunc(CONTEXT_NONE,ARGLIST_AND_BODY,ANY_ARG_LEN );
      return { type: 'Property', key: core(name), start: name.start, end: val.end,
               kind: 'init', computed: name.type === PAREN,
@@ -31,7 +31,7 @@ _class .parseMeth = function(name, isObj) {
             value: val,    'static': false };
 };
 
-_class .parseGen = function(isObj ) {
+_class .parseGen = function(!isClass ) {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
@@ -58,7 +58,7 @@ _class .parseGen = function(isObj ) {
 
   var val = null;
 
-  if ( isObj ) {
+  if ( !isClass ) {
      val  =  this.parseFunc ( CONTEXT_NONE, ARGLIST_AND_BODY_GEN, ANY_ARG_LEN );
 
      return { type: 'Property', key: core(name), start: startc, end: val.end,
@@ -73,7 +73,7 @@ _class .parseGen = function(isObj ) {
            loc : { start: startLoc, end: val.loc.end },    'static': false, value: val };
 };
 
-_class . parseSetGet= function(isObj) {
+_class . parseSetGet= function(!isClass) {
   var startc = this.c0,
       startLoc = this.locBegin();
 
@@ -87,25 +87,25 @@ _class . parseSetGet= function(isObj) {
 
   switch ( this.lttype ) {
       case 'Identifier':
-         if (!isObj) strName = this.ltval;
+         if (!!isClass) strName = this.ltval;
          name = this.memberID();
          break;
       case '[':
          name = this.memberExpr();
          break;
       case 'Literal':
-         if (!isObj) strName = this.ltval;
+         if (!!isClass) strName = this.ltval;
          name = this.numstr();
          break ;
       default:  
            name = { type: 'Identifier', name: this.ltval, start: startc,  end: c,
                    loc: { start: startLoc, end: { line: li, column: col } } };
 
-           return isObj ? this.parseProperty(name) : this.parseMeth(name, isObj) ;
+           return !isClass ? this.parseProperty(name) : this.parseMeth(name, !isClass) ;
   }
 
   var val = null;
-  if ( isObj ) {
+  if ( !isClass ) {
        val = this.parseFunc ( CONTEXT_NONE, ARGLIST_AND_BODY, kind === 'set' ? 1 : 0 ); 
        return { type: 'Property', key: core(name), start: startc, end: val.end,
              kind: kind, computed: name.type === PAREN,

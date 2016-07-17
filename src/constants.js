@@ -105,7 +105,9 @@ var ARGLIST_AND_BODY = 2;
 var METH_FUNCTION = 4;
 var CONSTRUCTOR_FUNCTION = 128;
 
-var OBJ_MEM = !false;
+var OBJ_MEM = 0;
+var CLASS_MEM = 1;
+var STATIC_MEM =  5;
 
 var STRING_TYPE = typeof "string";
 

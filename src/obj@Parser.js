@@ -7,10 +7,17 @@ _class.parseObjectExpression = function () {
   var firstUnassignable = null, firstParen = null, 
       unsatisfiedAssignment = this.unsatisfiedAssignment;
 
+  var first__proto__ = null;
+
   do {
      this.next();
      this.unsatisfiedAssignment = null;
+  
+     this.first__proto__ = first__proto__;
      elem = this.parseProperty(null);
+     if ( !first__proto__ && this.first__proto__ )
+          first__proto__ =  this.first__proto__ ;
+
      if ( elem ) {
        list.push(elem);
        if ( !unsatisfiedAssignment && this.unsatisfiedAssignment )
@@ -43,6 +50,7 @@ _class.parseObjectExpression = function () {
 };
 
 _class.parseProperty = function (name) {
+  var __proto__ = false, first__proto__ = this.first__proto__ ;
   var val = null;
 
   SWITCH:
@@ -55,11 +63,18 @@ _class.parseProperty = function (name) {
             return this.parseSetGet(OBJ_MEM);
          case 'set':
             return this.parseSetGet(OBJ_MEM);
+
+         case '__proto__':
+            __proto__ = !false;
+
          default:
             name = this.memberID();
             break SWITCH;
       }
       case 'Literal':
+            if ( this.ltval === '__proto__' )
+               __proto__ = !false;
+ 
             name = this.numstr();
             break SWITCH;
 
@@ -74,11 +89,17 @@ _class.parseProperty = function (name) {
 
   switch (this.lttype) {
       case ':':
+         this.assert( !( __proto__ && first__proto__ ) ) ;
+
          this.next();
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, CONTEXT_NONE )  ;
-         return { type: 'Property', start: name.start, key: core(name), end: val.end,
+         val = { type: 'Property', start: name.start, key: core(name), end: val.end,
                   kind: 'init', loc: { start: name.loc.start, end: val.loc.end }, computed: name.type === PAREN ,
                   method: false, shorthand: false, value: core(val) };
+         if ( __proto__ )
+            this.first__proto__ = val;
+
+         return val;
 
       case '(':
          return this.parseMeth(name, OBJ_MEM);
