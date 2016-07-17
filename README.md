@@ -33,7 +33,31 @@ In jsRube repository's root, run the build script, i.e., `./build-and-test.js`;
 node ./build-and-test.js
 ```
 
-it bundles the sources under the 'src' directory in to a single file, to be found under `dist/lube.js`
+It bundles the sources under the 'src' directory in to a single file, to be found under `dist/lube.js`.
+It also runs a self-test after bundling is complete; the parser should only be used if the test stage passes without any errors.
+
+#Quick Testing
+Even though a thorough test is performed during the build process (that is, while building via `build-and-test.js`), quick tests occasionally come in handy. To run quick tests, do:
+
+```sh
+ node quick-test.js
+```
+
+#Benchmarking
+Before beginning to run a benchmark, make sure you have 'esprima', 'acorn', and 'benchmark' packages installed; if it is not the case, install them this way:
+```sh
+npm install esprima@latest
+npm install acorn@latest
+npm install benchmark@latest
+```
+
+Then run the actual benchmarking facility this way:
+
+```sh
+ node quick-bench.js
+```
+
+This will feed the corpus located under `sources` into each parser, asks the to parse each file while recording node location data, collects the timings for each parser, and prints the results.
 
 #Using jsRube via npm
 First,
