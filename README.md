@@ -57,7 +57,7 @@ Then run the actual benchmarking facility this way:
  node quick-bench.js
 ```
 
-This will feed the corpus located under `sources` into each parser, asks the to parse each file while recording node location data, collects the timings for each parser, and prints the results.
+This will feed the corpus located under `sources` into each parser, asks them to parse each file while recording node location data, collects the timings for each parser, and prints the results.
 
 #Using jsRube via npm
 First,
