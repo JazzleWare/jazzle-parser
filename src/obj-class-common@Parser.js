@@ -31,7 +31,7 @@ _class .parseMeth = function(name, isClass) {
             value: val,    'static': false };
 };
 
-_class .parseGen = function(!isClass ) {
+_class .parseGen = function(isClass ) {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
@@ -73,7 +73,7 @@ _class .parseGen = function(!isClass ) {
            loc : { start: startLoc, end: val.loc.end },    'static': false, value: val };
 };
 
-_class . parseSetGet= function(!isClass) {
+_class . parseSetGet= function(isClass) {
   var startc = this.c0,
       startLoc = this.locBegin();
 

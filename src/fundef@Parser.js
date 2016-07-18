@@ -59,16 +59,18 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
   var prevLabels = this.labels;
   var prevStrict = this.tight;
-  var prevFuncName = this.currentFuncName;
   var prevInArgList = this.isInArgList;
   var prevArgNames = this.argNames;
   var prevScopeFlags = this.scopeFlags;
   var prevYS = this.firstYS ;
   var prevNonSimpArg = this.firstNonSimpArg;
 
-  this.scopeFlags = 0;
+  if ( !this.canBeStatement )
+    this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
 
   var isGen = false;
+
+  var currentFuncName = null;
 
   if ( argListMode & WHOLE_FUNCTION ) {
      if ( canBeStatement = this.canBeStatement )
@@ -82,15 +84,21 @@ _class .parseFunc = function(context, argListMode, argLen ) {
      }
      if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
         this.assert( this.lttype === 'Identifier' ) ;
-        this.currentFuncName = this.validateID(null);
+        currentFuncName = this.validateID(null);
+        this.assert( !( this.tight && arguments_or_eval(currentFuncName.name) ) );
      }
-     else if ( this. lttype == 'Identifier' )
-        this.currentFuncName = this.validateID(null);
+     else if ( this. lttype == 'Identifier' ) {
+        currentFuncName = this.validateID(null);
+        this.assert( !( this.tight && arguments_or_eval(currentFuncName.name) ) );
+     }
      else
-        this.currentFuncName = null;
+        currentFuncName = null;
   }
   else if ( argListMode & ARGLIST_AND_BODY_GEN )
      isGen = !false; 
+
+  if ( this.scopeFlags )
+       this.scopeFlags = 0;
 
   this.isInArgList = !false;
   this.argNames = {};
@@ -108,7 +116,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
    
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
-            id: this.currentFuncName,
+            id: currentFuncName,
            start: startc,
            end: nbody.end,
            generator: isGen,
@@ -122,7 +130,6 @@ _class .parseFunc = function(context, argListMode, argLen ) {
 
   this.labels = prevLabels;
   this.isInArgList = prevInArgList;
-  this.currentFuncName = prevFuncName;
   this.argNames = prevArgNames; 
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;

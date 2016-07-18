@@ -33,7 +33,7 @@ var Parser = function (src, isModule) {
 
   this.isInArgList = false;
   this.argNames = null;
-  this.currentFuncName = null;
+
   this.tight = !!isModule ;
 
   this.parenYS = null;
@@ -416,7 +416,7 @@ _class. parseClass = function(context) {
         
         if ( this.lttype === '(' ) {
           elem = this.parseMeth( { type: 'Identifier', name: 'static', start: startcStatic, end: cStatic, raw: rawStatic,
-                                  loc: { start: startLocStatic, end: { line: liStatic, column: colStatic } }}   , !OBJ_MEM);
+                                  loc: { start: startLocStatic, end: { line: liStatic, column: colStatic } }}   , CLASS_MEM);
           list.push(elem);
           continue;
         }
@@ -426,7 +426,7 @@ _class. parseClass = function(context) {
       switch ( this.lttype ) {
           case 'Identifier': switch ( this.ltval ) {
              case 'get': case 'set': 
-               elem = this.parseSetGet(!OBJ_MEM);
+               elem = this.parseSetGet(CLASS_MEM);
                break SWITCH;
 
              case 'constructor':
@@ -435,16 +435,16 @@ _class. parseClass = function(context) {
                  if ( !isStatic ) foundConstructor = !false;
                 
              default:
-               elem = this.parseMeth(this.id(), !OBJ_MEM);
+               elem = this.parseMeth(this.id(), CLASS_MEM);
                break SWITCH;
           }
-          case '[': elem = this.parseMeth(this.memberExpr(), !OBJ_MEM); break;
-          case 'Literal': elem = this.parseMeth(this.numstr(), !OBJ_MEM); break ;
+          case '[': elem = this.parseMeth(this.memberExpr(), CLASS_MEM); break;
+          case 'Literal': elem = this.parseMeth(this.numstr(), CLASS_MEM); break ;
 
           case ';': this.next(); continue;
           case 'op': 
             if ( this.ltraw === '*' ) {
-              elem = this.parseGen(!OBJ_MEM);
+              elem = this.parseGen(CLASS_MEM);
               break ;
             }
 
@@ -1126,16 +1126,18 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
   var prevLabels = this.labels;
   var prevStrict = this.tight;
-  var prevFuncName = this.currentFuncName;
   var prevInArgList = this.isInArgList;
   var prevArgNames = this.argNames;
   var prevScopeFlags = this.scopeFlags;
   var prevYS = this.firstYS ;
   var prevNonSimpArg = this.firstNonSimpArg;
 
-  this.scopeFlags = 0;
+  if ( !this.canBeStatement )
+    this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
 
   var isGen = false;
+
+  var currentFuncName = null;
 
   if ( argListMode & WHOLE_FUNCTION ) {
      if ( canBeStatement = this.canBeStatement )
@@ -1149,15 +1151,21 @@ _class .parseFunc = function(context, argListMode, argLen ) {
      }
      if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
         this.assert( this.lttype === 'Identifier' ) ;
-        this.currentFuncName = this.validateID(null);
+        currentFuncName = this.validateID(null);
+        this.assert( !( this.tight && arguments_or_eval(currentFuncName.name) ) );
      }
-     else if ( this. lttype == 'Identifier' )
-        this.currentFuncName = this.validateID(null);
+     else if ( this. lttype == 'Identifier' ) {
+        currentFuncName = this.validateID(null);
+        this.assert( !( this.tight && arguments_or_eval(currentFuncName.name) ) );
+     }
      else
-        this.currentFuncName = null;
+        currentFuncName = null;
   }
   else if ( argListMode & ARGLIST_AND_BODY_GEN )
      isGen = !false; 
+
+  if ( this.scopeFlags )
+       this.scopeFlags = 0;
 
   this.isInArgList = !false;
   this.argNames = {};
@@ -1175,7 +1183,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
    
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
-            id: this.currentFuncName,
+            id: currentFuncName,
            start: startc,
            end: nbody.end,
            generator: isGen,
@@ -1189,7 +1197,6 @@ _class .parseFunc = function(context, argListMode, argLen ) {
 
   this.labels = prevLabels;
   this.isInArgList = prevInArgList;
-  this.currentFuncName = prevFuncName;
   this.argNames = prevArgNames; 
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
@@ -2477,10 +2484,10 @@ _class . frac = function(n) {
 
 
 
-_class .parseMeth = function(name, isObj) {
+_class .parseMeth = function(name, isClass) {
    var val = null; 
 
-   if ( isObj ) {
+   if ( !isClass ) {
      val = this.parseFunc(CONTEXT_NONE,ARGLIST_AND_BODY,ANY_ARG_LEN );
      return { type: 'Property', key: core(name), start: name.start, end: val.end,
               kind: 'init', computed: name.type === PAREN,
@@ -2509,7 +2516,7 @@ _class .parseMeth = function(name, isObj) {
             value: val,    'static': false };
 };
 
-_class .parseGen = function(isObj ) {
+_class .parseGen = function(isClass ) {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
@@ -2536,7 +2543,7 @@ _class .parseGen = function(isObj ) {
 
   var val = null;
 
-  if ( isObj ) {
+  if ( !isClass ) {
      val  =  this.parseFunc ( CONTEXT_NONE, ARGLIST_AND_BODY_GEN, ANY_ARG_LEN );
 
      return { type: 'Property', key: core(name), start: startc, end: val.end,
@@ -2551,7 +2558,7 @@ _class .parseGen = function(isObj ) {
            loc : { start: startLoc, end: val.loc.end },    'static': false, value: val };
 };
 
-_class . parseSetGet= function(isObj) {
+_class . parseSetGet= function(isClass) {
   var startc = this.c0,
       startLoc = this.locBegin();
 
@@ -2565,25 +2572,25 @@ _class . parseSetGet= function(isObj) {
 
   switch ( this.lttype ) {
       case 'Identifier':
-         if (!isObj) strName = this.ltval;
+         if (!!isClass) strName = this.ltval;
          name = this.memberID();
          break;
       case '[':
          name = this.memberExpr();
          break;
       case 'Literal':
-         if (!isObj) strName = this.ltval;
+         if (!!isClass) strName = this.ltval;
          name = this.numstr();
          break ;
       default:  
            name = { type: 'Identifier', name: this.ltval, start: startc,  end: c,
                    loc: { start: startLoc, end: { line: li, column: col } } };
 
-           return isObj ? this.parseProperty(name) : this.parseMeth(name, isObj) ;
+           return !isClass ? this.parseProperty(name) : this.parseMeth(name, !isClass) ;
   }
 
   var val = null;
-  if ( isObj ) {
+  if ( !isClass ) {
        val = this.parseFunc ( CONTEXT_NONE, ARGLIST_AND_BODY, kind === 'set' ? 1 : 0 ); 
        return { type: 'Property', key: core(name), start: startc, end: val.end,
              kind: kind, computed: name.type === PAREN,
@@ -4303,7 +4310,9 @@ var ARGLIST_AND_BODY = 2;
 var METH_FUNCTION = 4;
 var CONSTRUCTOR_FUNCTION = 128;
 
-var OBJ_MEM = !false;
+var OBJ_MEM = 0;
+var CLASS_MEM = 1;
+var STATIC_MEM =  5;
 
 var STRING_TYPE = typeof "string";
 

@@ -30,7 +30,7 @@ var Parser = function (src, isModule) {
 
   this.isInArgList = false;
   this.argNames = null;
-  this.currentFuncName = null;
+
   this.tight = !!isModule ;
 
   this.parenYS = null;
