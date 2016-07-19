@@ -50,6 +50,13 @@ var Parser = function (src, isModule) {
   this.errorHandlers = {};
   this.errorHandlerOutput = null;
 
+  this.arrowParen = false;
+  this.firstEA = null;
+  this.firstEAContainer = null;
+  this.defaultEA = null;
+
   this.first__proto__ = false;
+
+  this.paramParen = CONTEXT_NONE ;
 };
 

@@ -53,7 +53,14 @@ var Parser = function (src, isModule) {
   this.errorHandlers = {};
   this.errorHandlerOutput = null;
 
+  this.arrowParen = false;
+  this.firstEA = null;
+  this.firstEAContainer = null;
+  this.defaultEA = null;
+
   this.first__proto__ = false;
+
+  this.paramParen = CONTEXT_NONE ;
 };
 
 ;
@@ -66,16 +73,20 @@ _class.parseArrayExpression = function () {
 
   this.next () ;
 
+  var context = this.paramParen|CONTEXT_NULLABLE|CONTEXT_ELEM, firstEA = null;
   var firstUnassignable = null, firstParen = null;
   var unsatisfiedAssignment = this.unsatisfiedAssignment;
   do {
      this.firstUnassignable = this.firstParen = null;
      this.unsatisfiedAssignment = null ;
 
-     elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, CONTEXT_NULLABLE|CONTEXT_ELEM);
+     this.firstEA = null;
+
+     elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
      if ( elem ) {
         if ( !unsatisfiedAssignment && this.unsatisfiedAssignment )
               unsatisfiedAssignment =  this.unsatisfiedAssignment;
+
      }
      else if ( this.lttype === '...' )
          elem = this.parseSpreadElement();
@@ -85,6 +96,9 @@ _class.parseArrayExpression = function () {
 
      if ( !firstUnassignable && this.firstUnassignable )
            firstUnassignable =  this.firstUnassignable ;
+
+     if ( !firstEA && this.firstEA )
+           firstEA =  this.firstEA ;
 
      if ( this.lttype === ',' ) { 
         list.push(elem) ;
@@ -100,6 +114,7 @@ _class.parseArrayExpression = function () {
   if ( firstParen ) this.firstParen = firstParen ;
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
 
+  this.firstEA = firstEA;
   this.unsatisfiedAssignment = unsatisfiedAssignment;
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
@@ -295,31 +310,44 @@ _class .ensureSimpAssig = function(head) {
 _class .toAssig = function(head) {
 
   var i = 0;
+  var firstEA = null;
   var list = null;
+
+  this.firstEA = null;
 
   switch(head.type) {
      case 'Identifier':
-        this.assert( !(this.tight && arguments_or_eval(head.name)) );
+        if (this.tight && arguments_or_eval(head.name))
+          this.firstEA = head;
      case 'MemberExpression':
         return;
 
      case 'ObjectExpression':
         this.assert(head !== this.firstUnassignable )  ;
+
         list = head.properties;
+
         while ( i < list.length ) {
            this.toAssig(list[i].value);
+           if ( !firstEA && this.firstEA )
+                 firstEA =  this.firstEA ;
            list[i].type = 'AssignmentProperty';
            i++;
         }
         head.type = 'ObjectPattern';
+        this.firstEA = firstEA ;
         return;
 
      case 'ArrayExpression':
         this.assert(head !== this.firstUnassignable )  ;
+
         list = head.elements;
         while ( i < list.length ) {
           if ( list[i] ) {
              this.toAssig(list[i]);
+             if ( !firstEA && this.firstEA )
+                   firstEA =  this.firstEA ;
+
              if ( list[i].type === 'SpreadElement' ) {
                 i++;
                 break ;
@@ -329,6 +357,7 @@ _class .toAssig = function(head) {
         }
         this.assert( i === list.length );
         head.type = 'ArrayPattern';
+        this.firstEA = firstEA ;
         return;
 
      case 'AssignmentExpression':
@@ -336,6 +365,9 @@ _class .toAssig = function(head) {
        this.assert(head.operator === '='  ) ;
        head.type = 'AssignmentPattern';
        delete head.operator;
+       if ( head === this.firstEAContainer )
+          this.firstEA = this.defaultEA ;
+
        return;
 
      case 'SpreadElement':
@@ -353,22 +385,42 @@ _class .toAssig = function(head) {
 
 _class .parseAssignment = function(head, context ) {
     var o = this.ltraw;
-    if ( o === '=' ) this.toAssig(core(head));
+    var firstEA = null ;
+    if ( o === '=' ) {
+       if ( this.firstEA ) {
+            this.defaultEA = this.firstEA;
+            this.firstEA = null;
+       }
+
+       this.toAssig(core(head));
+       firstEA = this.firstEA;
+    }
     else if ( o === '=>' )
-      return this.parseArrowFunctionExpression (head, context);
+      return this.parseArrowFunctionExpression (head, context & CONTEXT_FOR );
     else this.ensureSimpAssig(core(head));
 
     if ( this.unsatisfiedAssignment ) {
-      this.assert( this.prec === PREC_SIMP_ASSIG ) ;
+      this.assert( o === '=' ) ;
       this.unsatisfiedAssignment = false ;
     }
+
+    if ( firstEA ) 
+       this.assert( context & CONTEXT_ELEM_OR_PARAM );
+    
 
     var prec = this.prec;
     this.next();
 
-    var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
-    return { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
+    this.firstEA = null;
+    var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR ) ;
+    this.firstEA = firstEA;
+    var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
              left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }};
+
+    if ( firstEA )
+      this.firstEAContainer = n;
+
+    return n;
 };
 
 
@@ -2303,12 +2355,12 @@ _class.parseNonSeqExpr = function (prec, context  ) {
        if ( isAssignment(this.prec) ) {
          this.assert( prec === PREC_WITH_NO_OP );
          this.firstUnassignable = firstUnassignable;
-         head = this. parseAssignment(head, context & CONTEXT_FOR );
+         head = this. parseAssignment(head, context );
          break ;
        }
 
        if ( this.unsatisfiedAssignment ) {
-         this.assert(prec===PREC_WITH_NO_OP && context === CONTEXT_ELEM );
+         this.assert(prec===PREC_WITH_NO_OP && (context & CONTEXT_ELEM_OR_PARAM ) );
          break ;
        }
 
@@ -2618,14 +2670,23 @@ _class.parseObjectExpression = function () {
 
   var first__proto__ = null;
 
+  var paramParen = this.paramParen;
+  var firstEA = null;
+
   do {
      this.next();
      this.unsatisfiedAssignment = null;
   
      this.first__proto__ = first__proto__;
+
+     this.firstEA = null;
+     this.paramParen = paramParen;
      elem = this.parseProperty(null);
      if ( !first__proto__ && this.first__proto__ )
           first__proto__ =  this.first__proto__ ;
+
+     if ( !firstEA && this.firstEA )
+           firstEA =  this.firstEA ;
 
      if ( elem ) {
        list.push(elem);
@@ -2651,6 +2712,7 @@ _class.parseObjectExpression = function () {
 
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
   if ( firstParen ) this.firstParen = firstParen;
+  if ( firstEA ) this.firstEA = firstEA;
   
   if ( unsatisfiedAssignment )
      this.unsatisfiedAssignment = unsatisfiedAssignment ;
@@ -2659,8 +2721,11 @@ _class.parseObjectExpression = function () {
 };
 
 _class.parseProperty = function (name) {
-  var __proto__ = false, first__proto__ = this.first__proto__ ;
+
+  var first__proto__ = this.first__proto__ ;
   var val = null;
+  var context = this.paramParen|CONTEXT_ELEM;
+  var __proto__ = false;
 
   SWITCH:
   if ( name === null ) switch ( this.lttype  ) {
@@ -2701,7 +2766,7 @@ _class.parseProperty = function (name) {
          this.assert( !( __proto__ && first__proto__ ) ) ;
 
          this.next();
-         val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, CONTEXT_NONE )  ;
+         val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
          val = { type: 'Property', start: name.start, key: core(name), end: val.end,
                   kind: 'init', loc: { start: name.loc.start, end: val.loc.end }, computed: name.type === PAREN ,
                   method: false, shorthand: false, value: core(val) };
@@ -2907,6 +2972,7 @@ _class.parseExprHead = function (context) {
         case '[' :
             this.firstUnassignable = this.firstParen = null;
 
+            this.paramParen = context & CONTEXT_PARAM;
             head = this. parseArrayExpression();
             if ( this. unsatisfiedAssignment )
                return head ;
@@ -2917,6 +2983,7 @@ _class.parseExprHead = function (context) {
             break ;
 
         case '(' :
+            this.arrowParen = !false;
             head = this. parseParen() ;
             if ( this.unsatisfiedArg )
                return head ;
@@ -2925,6 +2992,8 @@ _class.parseExprHead = function (context) {
 
         case '{' :
             this.firstUnassignable = this.firstParen = null;
+
+            this.paramParen = context & CONTEXT_PARAM;
             head = this. parseObjectExpression() ;
             if ( this.unsatisfiedAssignment )
               return head;
@@ -2954,6 +3023,10 @@ _class.parseExprHead = function (context) {
 
   }
 
+  if ( this.firstEA )  switch ( this.lttype )   {
+    case '.': case '(': case '[': case '`': this.assert(false) ;
+  }
+     
   inner = core( head ) ;
 
   LOOP:
@@ -3059,21 +3132,32 @@ _class.parseParen = function () {
 
   var firstElemWithYS = this.firstElemWithYS = null, parenYS = this.parenYS = null;  
 
+  var context = CONTEXT_NULLABLE;
+  if ( this.arrowParen ) {
+       this.arrowParen = false; 
+       context |= CONTEXT_PARAM;
+  }
+       
+  var firstEA = null;
+
   while ( !false ) {
      this.firstParen = null;
      this.next() ;
      this.unsatisfiedAssignment = null;
+     this.firstEA = null;
      elem =   // unsatisfiedArg ? this.parsePattern() :
-            this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_ELEM|CONTEXT_NULLABLE ) ;
+            this.parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
+
      if ( !elem ) {
         if ( this.lttype === '...' ) {
            elem = this.parseSpreadElement();
            if ( !firstParen && this.firstParen ) firstParen = this.firstParen;
-           if ( !unsatisfiedArg ) unsatisfiedArg = elem;
+           if ( !firstEA && this.firstEA ) firstEA = this.firstEA;
            if ( !firstElemWithYS && this.firstYS ) {
                  firstElemWithYS = elem;
                  parenYS = this.firstYS;
            }
+           if ( !unsatisfiedArg ) unsatisfiedArg = elem;
         }
         break;
      }
@@ -3081,13 +3165,17 @@ _class.parseParen = function () {
      if ( !firstParen && this.firstParen )
            firstParen =  this.firstParen ;
 
-     if ( !unsatisfiedArg && this.unsatisfiedAssignment)
-           unsatisfiedArg =  this.unsatisfiedAssignment;
+     if ( !firstEA && this.firstEA )
+           firstEA =  this.firstEA ;
 
      if ( !firstElemWithYS && this.firstYS ) {
            parenYS = this.firstYS;
            firstElemWithYS = elem;
      } 
+
+     if ( !unsatisfiedArg && this.unsatisfiedAssignment)
+           unsatisfiedArg =  this.unsatisfiedAssignment;
+
      if ( this.lttype !== ',' ) break ;
 
      if ( list ) list.push(core(elem));
@@ -3130,6 +3218,7 @@ _class.parseParen = function () {
   else if ( !elem ) // we got an empty paren (), which certainly is an arg list
      this.unsatisfiedArg = n;
 
+  this.firstEA = firstEA ;
   this.unsatisfiedAssignment = unsatisfiedAssignment ;
   this.expectType(')') ;
 
@@ -4285,8 +4374,8 @@ var SCOPE_METH        = SCOPE_FUNCTION << 1;
 var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 
-var CONTEXT_FOR = 1, CONTEXT_ELEM = 2, CONTEXT_NONE = 0;
-var CONTEXT_NULLABLE = 4, CONTEXT_DEFAULT = 32;
+var CONTEXT_PARAM = 128, CONTEXT_FOR = 1, CONTEXT_NONE = 0;
+var CONTEXT_NULLABLE = 4, CONTEXT_DEFAULT = 32, CONTEXT_ELEM = 2, CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM ;
 
 var INTBITLEN = (function() { var i = 0;
   while ( 0 < (1 << (i++)))

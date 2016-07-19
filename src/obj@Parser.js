@@ -9,14 +9,23 @@ _class.parseObjectExpression = function () {
 
   var first__proto__ = null;
 
+  var paramParen = this.paramParen;
+  var firstEA = null;
+
   do {
      this.next();
      this.unsatisfiedAssignment = null;
   
      this.first__proto__ = first__proto__;
+
+     this.firstEA = null;
+     this.paramParen = paramParen;
      elem = this.parseProperty(null);
      if ( !first__proto__ && this.first__proto__ )
           first__proto__ =  this.first__proto__ ;
+
+     if ( !firstEA && this.firstEA )
+           firstEA =  this.firstEA ;
 
      if ( elem ) {
        list.push(elem);
@@ -42,6 +51,7 @@ _class.parseObjectExpression = function () {
 
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
   if ( firstParen ) this.firstParen = firstParen;
+  if ( firstEA ) this.firstEA = firstEA;
   
   if ( unsatisfiedAssignment )
      this.unsatisfiedAssignment = unsatisfiedAssignment ;
@@ -50,8 +60,11 @@ _class.parseObjectExpression = function () {
 };
 
 _class.parseProperty = function (name) {
-  var __proto__ = false, first__proto__ = this.first__proto__ ;
+
+  var first__proto__ = this.first__proto__ ;
   var val = null;
+  var context = this.paramParen|CONTEXT_ELEM;
+  var __proto__ = false;
 
   SWITCH:
   if ( name === null ) switch ( this.lttype  ) {
@@ -92,7 +105,7 @@ _class.parseProperty = function (name) {
          this.assert( !( __proto__ && first__proto__ ) ) ;
 
          this.next();
-         val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, CONTEXT_NONE )  ;
+         val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
          val = { type: 'Property', start: name.start, key: core(name), end: val.end,
                   kind: 'init', loc: { start: name.loc.start, end: val.loc.end }, computed: name.type === PAREN ,
                   method: false, shorthand: false, value: core(val) };

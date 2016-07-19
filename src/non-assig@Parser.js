@@ -154,12 +154,12 @@ _class.parseNonSeqExpr = function (prec, context  ) {
        if ( isAssignment(this.prec) ) {
          this.assert( prec === PREC_WITH_NO_OP );
          this.firstUnassignable = firstUnassignable;
-         head = this. parseAssignment(head, context & CONTEXT_FOR );
+         head = this. parseAssignment(head, context );
          break ;
        }
 
        if ( this.unsatisfiedAssignment ) {
-         this.assert(prec===PREC_WITH_NO_OP && context === CONTEXT_ELEM );
+         this.assert(prec===PREC_WITH_NO_OP && (context & CONTEXT_ELEM_OR_PARAM ) );
          break ;
        }
 

@@ -61,7 +61,7 @@ function parseLater( parserName, sourceName ) {
 for ( sourceName in sources ) {
      if ( parsers.esprima ) {
           var comp = util.compare(parsers.esprima(sources[sourceName],!false),
-                                  parsers.lube(sources[sourceName],!false));
+                                  parsers.jsRube(sources[sourceName],!false));
           if ( comp ) {
             console.log( util.obj2str(comp) );
             throw new Error( 'Incompatible Parsing for ' + sourceName );

@@ -1,0 +1,34 @@
+an assig calls 'toAssig' before starting to parse the right of '='; when toAssig is done, 'firstEA' will either be null or non-null;
+if it is null, prseAssignment will continue as it should; if it is not, it means left is containing an element that is an assignEA;
+the assignment will only continue if it is itself an element of another container. If 'firstEA' is non-null before doing a call to
+assignment-making-function-toAssig, it means the argument to toAssig is actually a container containing an element that is an assignEA; in this case, 'defaultEA' will be set to 'firstEA' before proceeding;
+
+[ arguments=12, eval] : ea: arguments, eac: arguments = 12
+
+ea && ( `defaultEA = ea )
+toAssig([arguments=12, eval]): {
+   var firstEA = null
+   toAssig(arguments=12): {
+      (arguments=12) ==eac && (`firstEA = defaultEA)
+   }
+   !firstEA && (`firstEA) && (firstEA = arguments);
+   
+   toAssig(eval): {
+      eval in ['arguments', 'eval'] && (`firstEA = eval)
+   }
+
+   !firstEA == false
+
+   `firstEA = firstEA // `firstEA: arguments
+}
+
+var firstEA = `firstEA // firstEA == `firstEA == arguments
+if firstEA { %assert context & CONTEXT_ELEM_OR_PARAM }
+
+`firstEA = null
+var assig = { r: `prseExpr(), o: '=', l: l }
+
+`firstEA = firstEA
+`firstEAContainer = `assig    
+   
+      

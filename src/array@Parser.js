@@ -6,16 +6,20 @@ _class.parseArrayExpression = function () {
 
   this.next () ;
 
+  var context = this.paramParen|CONTEXT_NULLABLE|CONTEXT_ELEM, firstEA = null;
   var firstUnassignable = null, firstParen = null;
   var unsatisfiedAssignment = this.unsatisfiedAssignment;
   do {
      this.firstUnassignable = this.firstParen = null;
      this.unsatisfiedAssignment = null ;
 
-     elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, CONTEXT_NULLABLE|CONTEXT_ELEM);
+     this.firstEA = null;
+
+     elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
      if ( elem ) {
         if ( !unsatisfiedAssignment && this.unsatisfiedAssignment )
               unsatisfiedAssignment =  this.unsatisfiedAssignment;
+
      }
      else if ( this.lttype === '...' )
          elem = this.parseSpreadElement();
@@ -25,6 +29,9 @@ _class.parseArrayExpression = function () {
 
      if ( !firstUnassignable && this.firstUnassignable )
            firstUnassignable =  this.firstUnassignable ;
+
+     if ( !firstEA && this.firstEA )
+           firstEA =  this.firstEA ;
 
      if ( this.lttype === ',' ) { 
         list.push(elem) ;
@@ -40,6 +47,7 @@ _class.parseArrayExpression = function () {
   if ( firstParen ) this.firstParen = firstParen ;
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
 
+  this.firstEA = firstEA;
   this.unsatisfiedAssignment = unsatisfiedAssignment;
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
