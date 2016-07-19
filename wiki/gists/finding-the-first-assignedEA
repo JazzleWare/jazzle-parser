@@ -1,0 +1,107 @@
+while converting to an assignable, an identifier with that is named 'eval' or 'arguments' will be the current EA if it is in parameter-postion; otherwise, it's an assignment-error.
+
+if an array, an obj, or an assignment is an elem in a paren that is a 'parameter-paren', it is in parameter-position.
+example ([a], l = [e]) // [a] and l are in the parameter-position
+
+if an array, an obj, or an assignment is an elem in a an array or obj that is in parameter-position, it is in parameter-position itself
+
+if an assignment is in parameter-position, its left is in parameter-position too
+
+[eval, eval = 12 ] = 12 
+
+[ eval = 12, [ eval, [ eval = 120 ] ] ] = 12
+[ // firstEA: null
+  eval = 12, // firstEA: eval = 12
+  [ // firstEA: null
+    eval, // firstEA: null
+    [ // firstEA: null
+      eval = 120 // firstEA: eval = 120
+    ]
+    // firstEA: eval = 120
+  ]
+  // firstEA: eval = 120
+]  =  12 // firstEA: eval = 12
+
+[eval, [ e, eval = 12 ] ] = 12
+[ // firstEA: null
+  eval, // firstEA: null
+  [ e, // firstEA: null
+    eval = 12 // firstEA: eval = 12
+  ] // firstEA: eval = 12
+] = 12 // firstEA: eval
+
+
+prseParen() {
+   var context = CONTEXT_ELEM|CONTEXT_NULLABLE;
+   if  `paramParen  {
+     context |= CONTEXT_PARAM;
+     `paramParen = false;
+   } 
+  
+   var firstEA_ = null
+   var elem = null;
+   while !false {
+      `paramPosition = context & CONTEXT_PARAM
+      `firstEA = null
+      elem = `prseExpr(PREC_WITH_NO_OP, context);
+      if !elem { 
+         if `lttype == '...' {
+           elem = `prseSpreadElem(context)
+           if !firstEA_ && `firstEA { firstEA_ = `firstEA }
+         }
+         break
+      }
+
+      if !firstEA_ && `firstEA {
+          firstEA_ =  `firstEA
+      }
+   }
+
+   `firstEA = firstEA_
+}
+
+prseArr() {
+   var context = CONTEXT_ELEM         
+   if `paramPosition {
+      context |= CONTEXT_PARAM
+   }
+   while !false {
+      `paramPosition = context & CONTEXT_PARAM
+      `firstEA = null
+      elem = `prseExpr(PREC_WITH_NO_OP, context)
+      if !elem: break
+      if !firstEA_ && `firstEA { firstEA_ = `firstEA }
+   }     
+   `firstEA = firstEA_
+}
+
+prseObj() {
+   var paramPosition_ = `paramPosition   
+   var elem = null
+   while !false {
+      `paramPosition = paramPosition_
+      `firstEA = null
+      elem = `prseProp()
+      if !elem: break
+      if !firstEA_ && `firstEA: firstEA_ = `firstEA
+   }
+      
+   `firstEA = firstEA_
+}
+
+prseAssig(head, context) {
+   var firstEA_ = null
+   
+
+   `paramPosition = context & CONTEXT_PARAM
+   `toAssig(head)
+   firstEA_ = `firstEA
+
+   `next()
+   var right = `prseExpr(context & CONTEXT_FOR ) 
+
+   `firstEA = firstEA_
+}
+   
+   
+ 
