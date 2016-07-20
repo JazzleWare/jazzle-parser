@@ -112,10 +112,15 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
        this.assert(false);
   }
 
+  if ( this.firstEA )
+     this.firstEA = null;
+
   this.next();
 
   var scopeFlags = this.scopeFlags;
   this.scopeFlags &= ( SCOPE_FUNCTION|SCOPE_METH|SCOPE_CONSTRUCTOR) ;
+
+  
 
   var isExpr = !false, nbody = null;
 

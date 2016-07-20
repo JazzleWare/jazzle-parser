@@ -123,6 +123,7 @@ _class.parseNonSeqExpr = function (prec, context  ) {
     var firstUnassignable = null, firstParen = null;
 
     var head = this. parseExprHead(context);
+    if ( this.firstEA ) this.assert(context & CONTEXT_ELEM_OR_PARAM ) ;
 
     if ( head === null ) {
          switch ( this.lttype ) {
@@ -163,7 +164,7 @@ _class.parseNonSeqExpr = function (prec, context  ) {
          break ;
        }
 
-       this.assert( !this.unsatisfiedArg );
+       this.assert( !this.unsatisfiedArg && !this.firstEA );
        if ( isMMorAA(this.prec) ) {
          if ( this. newLineBeforeLookAhead )
            break ;
