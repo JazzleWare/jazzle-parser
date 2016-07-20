@@ -2206,10 +2206,6 @@ _class.expectID = function (n) {
 
 _class.parseExpr = function (context) {
   var head = this.parseNonSeqExpr(PREC_WITH_NO_OP,context );
-  if ( this.unsatisfiedAssignment ) {
-    this.assert( context & CONTEXT_ELEM ) ;
-    return head;
-  }
 
   var lastExpr;
   if ( this.lttype === ',' ) {
@@ -2329,7 +2325,6 @@ _class.parseNonSeqExpr = function (prec, context  ) {
     var firstUnassignable = null, firstParen = null;
 
     var head = this. parseExprHead(context);
-    if ( this.firstEA ) this.assert(context & CONTEXT_ELEM_OR_PARAM ) ;
 
     if ( head === null ) {
          switch ( this.lttype ) {
@@ -2356,21 +2351,27 @@ _class.parseNonSeqExpr = function (prec, context  ) {
       firstUnassignable = this.firstUnassignable;
     }   
 
+    var op = false;
     while ( !false ) {
-       if ( !this. parseO( context ) ) break ;
-       if ( isAssignment(this.prec) ) {
+       op = this. parseO( context );
+       if ( op && isAssignment(this.prec) ) {
          this.assert( prec === PREC_WITH_NO_OP );
          this.firstUnassignable = firstUnassignable;
          head = this. parseAssignment(head, context );
          break ;
        }
+       else {
+         this.assert( !this.unsatisfiedArg ); 
+         if ( this.firstEA )
+            this.assert( (context & CONTEXT_ELEM_OR_PARAM) && !op );
 
-       if ( this.unsatisfiedAssignment ) {
-         this.assert(prec===PREC_WITH_NO_OP && (context & CONTEXT_ELEM_OR_PARAM ) );
-         break ;
+         if ( this.unsatisfiedAssignment ) {
+            this.assert(prec===PREC_WITH_NO_OP && (context & CONTEXT_ELEM_OR_PARAM ) );
+            break ;
+         }
+         if ( !op ) break;
        }
 
-       this.assert( !this.unsatisfiedArg && !this.firstEA );
        if ( isMMorAA(this.prec) ) {
          if ( this. newLineBeforeLookAhead )
            break ;

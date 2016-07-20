@@ -183,5 +183,5 @@ the only case an feoaa will be 'cleaned' without being set to a non-null value i
 convert_paren_to_params(head)
 if feoaa: feoaa = null
 
-feoaa is set after the head is parsed for an expression. if it is non null, it will be an error, unless the expression is in elem or param position, in which case it can only be the head of an assignment
+after the head of expr is parsed, feoaa is checked for being null. if it is null, parsing resumes. otherwise, parsing resumes, but only if the context is elem or param.
 
