@@ -183,6 +183,8 @@ rp.regexEscape = function(inClass) {
   return isEscape;
 };
 
+// leading - startVal = leading, leading: 0
+// leading trailing 
 rp.regexRanges = function() {
    this.c++;
    this.assert( this.c < this.src.length );
@@ -193,6 +195,20 @@ rp.regexRanges = function() {
      switch ( ch = this.src.charCodeAt(this.c) ) {
        case CHAR_BACK_SLASH:
           val = this.regexEscape(!false);
+          if ( this.flagsMask & uRegexFlag ) {
+             if ( leading ) {
+                if ( val >= 0x0dc00 && val <= 0x0dfff ) {
+                  val = ((leading-0x0d800)<<10)+(val-0x0dc00)+0x010000;
+                }
+                else if ( rangeState === 2 ) 
+                  pendingVal = val;
+
+                leading = 0;
+             }
+             else if ( val >= 0x0d800 && val <= 0x0dbff )
+                leading = val;
+          }
+                
           break;
        case CHAR_RBRAC:
           this.c++;
@@ -200,6 +216,7 @@ rp.regexRanges = function() {
        case CHAR_MIN:
           this.c++;
           if ( rangeState === 1 ) {
+               if ( leading ) leading = 0;
                rangeState++;
                continue;
           }
@@ -226,21 +243,36 @@ rp.regexRanges = function() {
 };
 
 rp.regexUEScape = function() {
-   var v = this.regexU();
-   if ( this.flagsMask & uRegexFlag ) {
-      if ( val >= 0x0d800 && val <= 0x0dbff ) {
-        if ( this.c < this.src.length - 2 &&
-             this.src.charCodeAt(this.c+1) === CHAR_BACK_SLASH &&
-             this.src.charCodeAt(this.c+2) === CHAR_u ) {
-             this.c++;
-             var v2 = this.regexU();
-             if ( v2 >= 0x0dc00 && v2 <= 0x0dfff )
-                v = ( (v-0x0d800)<<10 ) + (v2 - 0x0dc00) + 0x010000;
-             else
-                this.pendingUEScape = v2 ;
-         }
-      }
-   }
-   return v;
+  this.c++;
+  this.assert( this.c < this.src.length );
+  var ch = this.src.charCodeAt(this.c) ;
+  var val = 0;
+  if ( ch !== CHAR_LCURLY ) {
+     var l = 4;
+     while ( l-- ) {
+       ch = toNum(ch);
+       this.assert(ch !== -1 );
+       val = (val << 4)|ch;
+       this.c++;
+       this.assert(this.c < this.src.length);
+       ch = this.src.charCodeAt(this.c);
+     }
+     return val;
+  }
+  
+  this.assert(this.flagsMask & uRegexFlag);
+  this.c++;
+  this.assert(this.c < this.src.length) ;
+  ch = this.src.charCodeAt(this.c);
+  do {
+    ch = toNum(ch);
+    this.assert(ch !== -1);
+    val = (val << 4)|ch;
+    this.c++;
+    this.assert(this.c < this.src.length) ;
+    ch = this.charCodeAt(this.c) ;
+  } while ( ch !== CHAR_RCURLY ) ;
+
+  return val;
 };
   
