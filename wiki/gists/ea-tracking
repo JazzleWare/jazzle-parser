@@ -183,5 +183,37 @@ the only case an feoaa will be 'cleaned' without being set to a non-null value i
 convert_paren_to_params(head)
 if feoaa: feoaa = null
 
-after the head of expr is parsed, feoaa is checked for being null. if it is null, parsing resumes. otherwise, parsing resumes, but only if the context is elem or param.
+an feoaa could be set in the following situations only:
+* after parsing a container that contains an feoaa
+* after parsing an assignment, if its left has had an feoaa
+
+the above mean that, when parsing an expression, the only time an feoaa is set (and must be checked) is right after parsing the head.
+if feoaa is null, parsing resumes; if it is non-null, parsing resumes only if the context is elem or param, and there is either no op after head, or there is an '=' after head:
+
+parseExpr(prec, context) {
+   var head = parseExprHead()
+   if feoaa: 
+      %assert context & CONTEXT_ELEM_OR_PARAM
+   
+   while !false {
+      var lookAheadIsOp = parseOp(context)
+      if lookAheadIsOp && lookAheadIsAssignment() {
+         %assert prec is is top level
+         parseAssignment(head)
+         break
+      }
+      else {
+         %assert !unsatisfiedArg
+         if feoaa {
+            %assert context & CONTEXT_ELEM_OR_PARAM 
+            %assert !lookAheadIsOp
+         }
+         if unsatisfiedAssignment {
+            %assert context & CONTEXT_ELEM_OR_PARAM
+         }
+         if !lookAheadIsOp: break
+      }
+      resume parsing
+    }
+}
 
