@@ -43,7 +43,7 @@ rp.regexPattern = function() {
           this.hasHead = false;
           continue;
       case CHAR_BACK_SLASH:
-          if ( this.regexEscape(false) ) break;
+          if ( this.regexEscape(false) >= 0 ) break;
           this.hasHead = false;
           continue;
       case CHAR_LBRACE:
@@ -110,81 +110,53 @@ rp.regexCapture = function() {
 };
 
 rp.regexEscape = function(inClass) {
-  var isEscape = !false;
   this.c++;
   this.assert(this.c < this.src.length);
   var ch = -1; 
-  switch ( this.src.charCodeAt(this.c) ) {
-     case CHAR_u:
-         this.escapeVal = this.regexUEscape();
-         break;
-     case CHAR_x:
-         this.escapeVal = this.regexHexEscape();
-         break;
+  switch (ch = this.src.charCodeAt(this.c) ) {
+     case CHAR_u: return this.regexUEscape();
+     case CHAR_x: return this.regexHexEscape();
      case CHAR_c:
          this.c++;
          this.assert( this.c < this.src.length );
          ch = this.src.charCodeAt(this.c);
          this.assert( (ch >= CHAR_a && ch <= CHAR_z) ||
                       (ch >= CHAR_A && ch <= CHAR_Z) );
-         this.escapeVal = ch >> 5;
-         break;
+         return ch >> 5;
      case CHAR_t:
          this.c++;
-         this.escapeVal = CHAR_TAB;
-         break;
+         return CHAR_TAB;
      case CHAR_r: 
          this.c++;
-         this.escapeVal = CHAR_CARRIAGE_RETURN;
-         break;
-     case CHAR_n:
-         this.c++;
-         this.escapeVal = CHAR_NEWLINE;
-         break;
-     case CHAR_v:
-         this.c++;
-         this.escapeVal = CHAR_VTAB;
-         break;
-     case CHAR_f:
-         this.c++;
-         this.escapeVal = CHAR_FORM_FEED;
-         break;
+         return CHAR_CARRIAGE_RETURN;
+     case CHAR_n: this.c++; return CHAR_NEWLINE;
+     case CHAR_v: this.c++; return CHAR_VTAB;
+     case CHAR_f: this.c++; return CHAR_FORM_FEED;
      case CHAR_b:
          this.c++;
-         if ( inClass ) this.escapeVal = CHAR_BACKSPACE;
-         else { isEscape = false; this.escapeVal = -ch; }
-         break;
+         if ( inClass ) return CHAR_BACKSPACE;
+         return -ch;
      case CHAR_B:
          this.assert(!inClass);
          this.c++;
-         isEscape = false;
-         this.escapeVal = -ch;
-         break;
+         return -ch;
      case CHAR_w: case CHAR_d: case CHAR_s:
      case CHAR_D: case CHAR_W: case CHAR_S:
          this.c++;
-         this.escapeVal = -ch;
-         break;
+         return -ch;
  
      default:
-         if ( num(ch) ) {
-            this.escapeVal = this.regexRef();
-            break;
-         }
+         if ( num(ch) )
+           return this.regexRef();
          if ( this.flagsMask & uRegexFlag )
-            this.escapeVal = this.regexIdenEscape();
+           return this.regexIdenEscape();
 
-         else {
-            this.assert(! IDContinue(ch) )   ;
-            this.c++ ;
-            this.escapeVal = ch ;
-         }
+         this.assert(! IDBody (ch) )   ;
+         this.c++ ;
+         return ch ;
   }
-  return isEscape;
 };
 
-// leading - startVal = leading, leading: 0
-// leading trailing 
 rp.regexRanges = function() {
    this.c++;
    this.assert( this.c < this.src.length );
@@ -195,20 +167,6 @@ rp.regexRanges = function() {
      switch ( ch = this.src.charCodeAt(this.c) ) {
        case CHAR_BACK_SLASH:
           val = this.regexEscape(!false);
-          if ( this.flagsMask & uRegexFlag ) {
-             if ( leading ) {
-                if ( val >= 0x0dc00 && val <= 0x0dfff ) {
-                  val = ((leading-0x0d800)<<10)+(val-0x0dc00)+0x010000;
-                }
-                else if ( rangeState === 2 ) 
-                  pendingVal = val;
-
-                leading = 0;
-             }
-             else if ( val >= 0x0d800 && val <= 0x0dbff )
-                leading = val;
-          }
-                
           break;
        case CHAR_RBRAC:
           this.c++;
@@ -216,7 +174,6 @@ rp.regexRanges = function() {
        case CHAR_MIN:
           this.c++;
           if ( rangeState === 1 ) {
-               if ( leading ) leading = 0;
                rangeState++;
                continue;
           }
@@ -243,6 +200,25 @@ rp.regexRanges = function() {
 };
 
 rp.regexUEScape = function() {
+  this.c++;
+  var val = this.regexU();
+  if ( this.flagsMask & uRegexFlag &&
+       val >= 0x0d800 && val <= 0x0dbff &&
+       this.c < this.src.length - 2 &&
+       this.src.charCodeAt(this.c+1) === CHAR_BACK_SLASH &&
+       this.src.charCodeAt(this.c+2) === CHAR_u ) {
+     var start = this.c;
+     this.c++;
+     var v2 = this.regexU();
+     if ( v2 >= 0x0dc00 && v2 <= 0x0dfff )
+        val = ((val-0x0d800)<<10)+(v2-0x0dc00)+0x010000;
+     else
+        this.c = start;
+  }
+  return val;
+};
+
+rp.regexU = function() {
   this.c++;
   this.assert( this.c < this.src.length );
   var ch = this.src.charCodeAt(this.c) ;
@@ -276,3 +252,17 @@ rp.regexUEScape = function() {
   return val;
 };
   
+rp.regexHexEscape = function() {
+   var val = 0, ch = 0;
+   this.c++;
+   this.assert(this.c < this.src.length);
+   val = toNum(this.src.charCodeAt(this.c));
+   this.assert(val !== -1 );
+   this.c++;
+   this.assert(this.c < this.src.length);
+   ch = toNum(this.src.charCodeAt(this.c));
+   this.assert( ch !== -1);
+   val = (val << 4)|ch;
+   return val;
+};
+
