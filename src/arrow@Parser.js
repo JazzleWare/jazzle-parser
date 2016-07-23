@@ -94,6 +94,8 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
   if ( this.unsatisfiedArg )
        this.unsatisfiedArg = null;
 
+  this.assert( !this.yieldAssignmentLocation );
+
   var prevArgNames = this.argNames;
   this.argNames = {};
 

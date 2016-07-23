@@ -8,14 +8,27 @@ _class.parseYield = function(context) {
 
   this.next();
   if (  !this.newLineBeforeLookAhead  ) {
-     if ( this.lttype === 'op' && this.ltraw === '*' ) {
-        deleg = !false;
-        this.next();
-        arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, CONTEXT_NONE);
-        this.assert(arg);
+     if ( this.lttype === 'op' ) {
+        if ( this.ltraw === '*' ) {
+            deleg = !false;
+            this.next();
+            arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CONTEXT_FOR );
+            this.assert(arg);
+        }
+        else {
+           if ( this.ltraw === '=' ) {
+             this.assert( context & CONTEXT_PARAM );
+             var yieldAssignmentLocation = { start: this.c - 1, loc: { start: this.locOn(1) } };
+             this.next();
+             this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR );
+             this.yieldAssignmentLocation = yieldAssignmentLocation;
+           }
+           else
+              arg =  this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR );
+        }
      }
      else
-        arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, CONTEXT_NULLABLE );
+        arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CONTEXT_FOR)|CONTEXT_NULLABLE );
   }
 
   var endI, endLoc;

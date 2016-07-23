@@ -133,7 +133,7 @@ _class.parseNonSeqExpr = function (prec, context  ) {
 
            case 'yield':
               this.assert(prec === PREC_WITH_NO_OP ) ; // make sure there is no other expression before it
-              return this.parseYield(); // everything that comes belongs to it
+              return this.parseYield(context); // everything that comes belongs to it
    
            default:
               this.assert(context & CONTEXT_NULLABLE )  ; 
@@ -156,6 +156,8 @@ _class.parseNonSeqExpr = function (prec, context  ) {
        }
        else {
          this.assert( !this.unsatisfiedArg ); 
+         this.assert( !this.yieldAssignmentLocation );
+
          if ( this.firstEA )
             this.assert( (context & CONTEXT_ELEM_OR_PARAM) && !op );
 

@@ -59,6 +59,8 @@ var Parser = function (src, isModule) {
   this.defaultEA = null;
 
   this.first__proto__ = false;
+  this.yieldAssignmentLocation = null;
+
 };
 
 ;
@@ -238,6 +240,8 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
 
   if ( this.unsatisfiedArg )
        this.unsatisfiedArg = null;
+
+  this.assert( !this.yieldAssignmentLocation );
 
   var prevArgNames = this.argNames;
   this.argNames = {};
@@ -2344,7 +2348,7 @@ _class.parseNonSeqExpr = function (prec, context  ) {
 
            case 'yield':
               this.assert(prec === PREC_WITH_NO_OP ) ; // make sure there is no other expression before it
-              return this.parseYield(); // everything that comes belongs to it
+              return this.parseYield(context); // everything that comes belongs to it
    
            default:
               this.assert(context & CONTEXT_NULLABLE )  ; 
@@ -2367,6 +2371,8 @@ _class.parseNonSeqExpr = function (prec, context  ) {
        }
        else {
          this.assert( !this.unsatisfiedArg ); 
+         this.assert( !this.yieldAssignmentLocation );
+
          if ( this.firstEA )
             this.assert( (context & CONTEXT_ELEM_OR_PARAM) && !op );
 
@@ -3156,6 +3162,7 @@ _class.parseParen = function () {
   }
        
   var firstEA = null;
+  var yieldAssignmentLocation = null;
 
   while ( !false ) {
      this.firstParen = null;
@@ -3192,6 +3199,9 @@ _class.parseParen = function () {
 
      if ( !unsatisfiedArg && this.unsatisfiedAssignment)
            unsatisfiedArg =  this.unsatisfiedAssignment;
+
+     if ( !yieldAssignmentLocation && this.yieldAssignmentLocation )
+           yieldAssignmentLocation = this.yieldAssignmentLocation ;
 
      if ( this.lttype !== ',' ) break ;
 
@@ -3241,6 +3251,7 @@ _class.parseParen = function () {
 
   this.firstElemWithYS = firstElemWithYS;
   this.parenYS = parenYS;
+  this.yieldAssignmentLocation = yieldAssignmentLocation;
 
   return n;
 };
@@ -4283,14 +4294,27 @@ _class.parseYield = function(context) {
 
   this.next();
   if (  !this.newLineBeforeLookAhead  ) {
-     if ( this.lttype === 'op' && this.ltraw === '*' ) {
-        deleg = !false;
-        this.next();
-        arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, CONTEXT_NONE);
-        this.assert(arg);
+     if ( this.lttype === 'op' ) {
+        if ( this.ltraw === '*' ) {
+            deleg = !false;
+            this.next();
+            arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CONTEXT_FOR );
+            this.assert(arg);
+        }
+        else {
+           if ( this.ltraw === '=' ) {
+             this.assert( context & CONTEXT_PARAM );
+             var yieldAssignmentLocation = { start: this.c - 1, loc: { start: this.locOn(1) } };
+             this.next();
+             this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR );
+             this.yieldAssignmentLocation = yieldAssignmentLocation;
+           }
+           else
+              arg =  this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR );
+        }
      }
      else
-        arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, CONTEXT_NULLABLE );
+        arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CONTEXT_FOR)|CONTEXT_NULLABLE );
   }
 
   var endI, endLoc;

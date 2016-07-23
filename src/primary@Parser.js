@@ -187,6 +187,7 @@ _class.parseParen = function () {
   }
        
   var firstEA = null;
+  var yieldAssignmentLocation = null;
 
   while ( !false ) {
      this.firstParen = null;
@@ -223,6 +224,9 @@ _class.parseParen = function () {
 
      if ( !unsatisfiedArg && this.unsatisfiedAssignment)
            unsatisfiedArg =  this.unsatisfiedAssignment;
+
+     if ( !yieldAssignmentLocation && this.yieldAssignmentLocation )
+           yieldAssignmentLocation = this.yieldAssignmentLocation ;
 
      if ( this.lttype !== ',' ) break ;
 
@@ -272,6 +276,7 @@ _class.parseParen = function () {
 
   this.firstElemWithYS = firstElemWithYS;
   this.parenYS = parenYS;
+  this.yieldAssignmentLocation = yieldAssignmentLocation;
 
   return n;
 };
