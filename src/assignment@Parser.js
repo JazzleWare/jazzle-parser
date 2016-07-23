@@ -110,9 +110,9 @@ _class .parseAssignment = function(head, context ) {
       this.unsatisfiedAssignment = false ;
     }
 
-    if ( firstEA ) 
+    if ( firstEA ) {
        this.assert( context & CONTEXT_ELEM_OR_PARAM );
-    
+    }
 
     var prec = this.prec;
     this.next();

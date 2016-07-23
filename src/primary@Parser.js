@@ -20,8 +20,8 @@ _class.parseExprHead = function (context) {
         case '[' :
             this.firstUnassignable = this.firstParen = null;
 
-            this.paramParen = context & CONTEXT_PARAM;
-            head = this. parseArrayExpression();
+            head = this. parseArrayExpression(
+              context & (CONTEXT_UNASSIGNABLE_CONTAINER|CONTEXT_PARAM) );
             if ( this. unsatisfiedAssignment )
                return head ;
 
@@ -41,8 +41,8 @@ _class.parseExprHead = function (context) {
         case '{' :
             this.firstUnassignable = this.firstParen = null;
 
-            this.paramParen = context & CONTEXT_PARAM;
-            head = this. parseObjectExpression() ;
+            head = this. parseObjectExpression(
+              context & (CONTEXT_UNASSIGNABLE_CONTAINER|CONTEXT_PARAM) ) ;
             if ( this.unsatisfiedAssignment )
               return head;
 

@@ -43,7 +43,7 @@ _class .parseUnaryExpression = function(context ) {
   }
 
   this.next();
-  var arg = this. parseNonSeqExpr(PREC_U,context );
+  var arg = this. parseNonSeqExpr(PREC_U,context|CONTEXT_UNASSIGNABLE_CONTAINER );
 
   return { type: 'UnaryExpression', operator: u, start: startc, end: arg.end,
            loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg) };
@@ -58,7 +58,7 @@ _class .parseUpdateExpression = function(arg, context) {
        c  = this.c-2;
        loc = this.locOn(2);
        this.next() ;
-       arg = this. parseExprHead(context&CONTEXT_FOR);
+       arg = this. parseExprHead(context|CONTEXT_UNASSIGNABLE_CONTAINER );
        this.assert(arg);
 
        this.ensureSimpAssig(core(arg));
@@ -185,7 +185,7 @@ _class.parseNonSeqExpr = function (prec, context  ) {
        var o = this.ltraw;
        var currentPrec = this. prec;
        this.next();
-       var right = this.parseNonSeqExpr(currentPrec, context & CONTEXT_FOR );
+       var right = this.parseNonSeqExpr(currentPrec, (context & CONTEXT_FOR)|CONTEXT_UNASSIGNABLE_CONTAINER );
        head = { type: !isBin(currentPrec )  ? 'LogicalExpression' :   'BinaryExpression',
                 operator: o,
                 start: head.start,

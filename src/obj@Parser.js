@@ -1,4 +1,4 @@
-_class.parseObjectExpression = function () {
+_class.parseObjectExpression = function (context) {
   var startc = this.c - 1 ,
       startLoc = this.locOn(1),
       elem = null,
@@ -8,9 +8,13 @@ _class.parseObjectExpression = function () {
       unsatisfiedAssignment = this.unsatisfiedAssignment;
 
   var first__proto__ = null;
-
-  var paramParen = this.paramParen;
   var firstEA = null;
+
+  if ( context & CONTEXT_UNASSIGNABLE_CONTAINER ) 
+    context = context & CONTEXT_PARAM;
+
+  else
+    context = context & CONTEXT_PARAM|CONTEXT_ELEM;
 
   do {
      this.next();
@@ -19,8 +23,7 @@ _class.parseObjectExpression = function () {
      this.first__proto__ = first__proto__;
 
      this.firstEA = null;
-     this.paramParen = paramParen;
-     elem = this.parseProperty(null);
+     elem = this.parseProperty(null,context);
      if ( !first__proto__ && this.first__proto__ )
           first__proto__ =  this.first__proto__ ;
 
@@ -29,8 +32,10 @@ _class.parseObjectExpression = function () {
 
      if ( elem ) {
        list.push(elem);
-       if ( !unsatisfiedAssignment && this.unsatisfiedAssignment )
+       if (!unsatisfiedAssignment && this.unsatisfiedAssignment ) {
+           this.assert( context & CONTEXT_ELEM );
            unsatisfiedAssignment =  this.unsatisfiedAssignment ;
+       }
        
        if ( !firstParen && this.firstParen )
              firstParen =  this.firstParen ;
@@ -59,12 +64,11 @@ _class.parseObjectExpression = function () {
   return elem;
 };
 
-_class.parseProperty = function (name) {
+_class.parseProperty = function (name, context) {
 
-  var first__proto__ = this.first__proto__ ;
+  var __proto__ = false, first__proto__ = this.first__proto__ ;
   var val = null;
-  var context = this.paramParen|CONTEXT_ELEM;
-  var __proto__ = false;
+  
 
   SWITCH:
   if ( name === null ) switch ( this.lttype  ) {
@@ -121,6 +125,7 @@ _class.parseProperty = function (name) {
           this.assert(name.type === 'Identifier' ) ;
           if ( this.lttype === 'op' ) {
              this.assert(this.ltraw === '=' );
+             this.assert(context & CONTEXT_ELEM );
              val = this.parseAssig(name);
              this.unsatisfiedAssignment = val;
           }

@@ -59,13 +59,11 @@ var Parser = function (src, isModule) {
   this.defaultEA = null;
 
   this.first__proto__ = false;
-
-  this.paramParen = CONTEXT_NONE ;
 };
 
 ;
 var _class = Parser.prototype;
-_class.parseArrayExpression = function () {
+_class.parseArrayExpression = function (context ) {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   var elem = null,
@@ -73,7 +71,13 @@ _class.parseArrayExpression = function () {
 
   this.next () ;
 
-  var context = this.paramParen|CONTEXT_NULLABLE|CONTEXT_ELEM, firstEA = null;
+  if ( context & CONTEXT_UNASSIGNABLE_CONTAINER )
+      context = (context & CONTEXT_PARAM)|CONTEXT_NULLABLE;
+
+  else
+      context = (context & CONTEXT_PARAM)|CONTEXT_NULLABLE|CONTEXT_ELEM;
+
+  var firstEA = null;
   var firstUnassignable = null, firstParen = null;
   var unsatisfiedAssignment = this.unsatisfiedAssignment;
   do {
@@ -84,9 +88,10 @@ _class.parseArrayExpression = function () {
 
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
      if ( elem ) {
-        if ( !unsatisfiedAssignment && this.unsatisfiedAssignment )
+        if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
+              this.assert ( context & CONTEXT_ELEM );
               unsatisfiedAssignment =  this.unsatisfiedAssignment;
-
+        }
      }
      else if ( this.lttype === '...' )
          elem = this.parseSpreadElement();
@@ -409,9 +414,9 @@ _class .parseAssignment = function(head, context ) {
       this.unsatisfiedAssignment = false ;
     }
 
-    if ( firstEA ) 
+    if ( firstEA ) {
        this.assert( context & CONTEXT_ELEM_OR_PARAM );
-    
+    }
 
     var prec = this.prec;
     this.next();
@@ -2249,7 +2254,7 @@ _class .parseUnaryExpression = function(context ) {
   }
 
   this.next();
-  var arg = this. parseNonSeqExpr(PREC_U,context );
+  var arg = this. parseNonSeqExpr(PREC_U,context|CONTEXT_UNASSIGNABLE_CONTAINER );
 
   return { type: 'UnaryExpression', operator: u, start: startc, end: arg.end,
            loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg) };
@@ -2264,7 +2269,7 @@ _class .parseUpdateExpression = function(arg, context) {
        c  = this.c-2;
        loc = this.locOn(2);
        this.next() ;
-       arg = this. parseExprHead(context&CONTEXT_FOR);
+       arg = this. parseExprHead(context|CONTEXT_UNASSIGNABLE_CONTAINER );
        this.assert(arg);
 
        this.ensureSimpAssig(core(arg));
@@ -2391,7 +2396,7 @@ _class.parseNonSeqExpr = function (prec, context  ) {
        var o = this.ltraw;
        var currentPrec = this. prec;
        this.next();
-       var right = this.parseNonSeqExpr(currentPrec, context & CONTEXT_FOR );
+       var right = this.parseNonSeqExpr(currentPrec, (context & CONTEXT_FOR)|CONTEXT_UNASSIGNABLE_CONTAINER );
        head = { type: !isBin(currentPrec )  ? 'LogicalExpression' :   'BinaryExpression',
                 operator: o,
                 start: head.start,
@@ -2666,7 +2671,7 @@ _class . parseSetGet= function(isClass) {
 };
 
 
-_class.parseObjectExpression = function () {
+_class.parseObjectExpression = function (context) {
   var startc = this.c - 1 ,
       startLoc = this.locOn(1),
       elem = null,
@@ -2676,9 +2681,13 @@ _class.parseObjectExpression = function () {
       unsatisfiedAssignment = this.unsatisfiedAssignment;
 
   var first__proto__ = null;
-
-  var paramParen = this.paramParen;
   var firstEA = null;
+
+  if ( context & CONTEXT_UNASSIGNABLE_CONTAINER ) 
+    context = context & CONTEXT_PARAM;
+
+  else
+    context = context & CONTEXT_PARAM|CONTEXT_ELEM;
 
   do {
      this.next();
@@ -2687,8 +2696,7 @@ _class.parseObjectExpression = function () {
      this.first__proto__ = first__proto__;
 
      this.firstEA = null;
-     this.paramParen = paramParen;
-     elem = this.parseProperty(null);
+     elem = this.parseProperty(null,context);
      if ( !first__proto__ && this.first__proto__ )
           first__proto__ =  this.first__proto__ ;
 
@@ -2697,8 +2705,10 @@ _class.parseObjectExpression = function () {
 
      if ( elem ) {
        list.push(elem);
-       if ( !unsatisfiedAssignment && this.unsatisfiedAssignment )
+       if (!unsatisfiedAssignment && this.unsatisfiedAssignment ) {
+           this.assert( context & CONTEXT_ELEM );
            unsatisfiedAssignment =  this.unsatisfiedAssignment ;
+       }
        
        if ( !firstParen && this.firstParen )
              firstParen =  this.firstParen ;
@@ -2727,12 +2737,11 @@ _class.parseObjectExpression = function () {
   return elem;
 };
 
-_class.parseProperty = function (name) {
+_class.parseProperty = function (name, context) {
 
-  var first__proto__ = this.first__proto__ ;
+  var __proto__ = false, first__proto__ = this.first__proto__ ;
   var val = null;
-  var context = this.paramParen|CONTEXT_ELEM;
-  var __proto__ = false;
+  
 
   SWITCH:
   if ( name === null ) switch ( this.lttype  ) {
@@ -2789,6 +2798,7 @@ _class.parseProperty = function (name) {
           this.assert(name.type === 'Identifier' ) ;
           if ( this.lttype === 'op' ) {
              this.assert(this.ltraw === '=' );
+             this.assert(context & CONTEXT_ELEM );
              val = this.parseAssig(name);
              this.unsatisfiedAssignment = val;
           }
@@ -2979,8 +2989,8 @@ _class.parseExprHead = function (context) {
         case '[' :
             this.firstUnassignable = this.firstParen = null;
 
-            this.paramParen = context & CONTEXT_PARAM;
-            head = this. parseArrayExpression();
+            head = this. parseArrayExpression(
+              context & (CONTEXT_UNASSIGNABLE_CONTAINER|CONTEXT_PARAM) );
             if ( this. unsatisfiedAssignment )
                return head ;
 
@@ -3000,8 +3010,8 @@ _class.parseExprHead = function (context) {
         case '{' :
             this.firstUnassignable = this.firstParen = null;
 
-            this.paramParen = context & CONTEXT_PARAM;
-            head = this. parseObjectExpression() ;
+            head = this. parseObjectExpression(
+              context & (CONTEXT_UNASSIGNABLE_CONTAINER|CONTEXT_PARAM) ) ;
             if ( this.unsatisfiedAssignment )
               return head;
 
@@ -4381,7 +4391,7 @@ var SCOPE_METH        = SCOPE_FUNCTION << 1;
 var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 
-var CONTEXT_PARAM = 128, CONTEXT_FOR = 1, CONTEXT_NONE = 0;
+var CONTEXT_PARAM = 128, CONTEXT_FOR = 1, CONTEXT_NONE = 0, CONTEXT_UNASSIGNABLE_CONTAINER = 512;
 var CONTEXT_NULLABLE = 4, CONTEXT_DEFAULT = 32, CONTEXT_ELEM = 2, CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM ;
 
 var INTBITLEN = (function() { var i = 0;

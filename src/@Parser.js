@@ -56,7 +56,5 @@ var Parser = function (src, isModule) {
   this.defaultEA = null;
 
   this.first__proto__ = false;
-
-  this.paramParen = CONTEXT_NONE ;
 };
 

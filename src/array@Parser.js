@@ -1,4 +1,4 @@
-_class.parseArrayExpression = function () {
+_class.parseArrayExpression = function (context ) {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   var elem = null,
@@ -6,7 +6,13 @@ _class.parseArrayExpression = function () {
 
   this.next () ;
 
-  var context = this.paramParen|CONTEXT_NULLABLE|CONTEXT_ELEM, firstEA = null;
+  if ( context & CONTEXT_UNASSIGNABLE_CONTAINER )
+      context = (context & CONTEXT_PARAM)|CONTEXT_NULLABLE;
+
+  else
+      context = (context & CONTEXT_PARAM)|CONTEXT_NULLABLE|CONTEXT_ELEM;
+
+  var firstEA = null;
   var firstUnassignable = null, firstParen = null;
   var unsatisfiedAssignment = this.unsatisfiedAssignment;
   do {
@@ -17,9 +23,10 @@ _class.parseArrayExpression = function () {
 
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
      if ( elem ) {
-        if ( !unsatisfiedAssignment && this.unsatisfiedAssignment )
+        if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
+              this.assert ( context & CONTEXT_ELEM );
               unsatisfiedAssignment =  this.unsatisfiedAssignment;
-
+        }
      }
      else if ( this.lttype === '...' )
          elem = this.parseSpreadElement();
