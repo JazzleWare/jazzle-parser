@@ -3808,8 +3808,8 @@ _class.parseThrowStatement = function () {
   this.next();
 
   var semi;
-  if ( !this.newLineBeforeLookAhead )
-     retVal = this.parseExpr(CONTEXT_NULLABLE );
+  this.assert ( !this.newLineBeforeLookAhead );
+  retVal = this.parseExpr(CONTEXT_NULLABLE );
 
   semi = this.semiI();
   if ( retVal ) {
