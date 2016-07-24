@@ -53,11 +53,13 @@ _class. asArrowFuncArg = function(arg  ) {
            list = arg.properties;
            while ( i < list.length )
               this.asArrowFuncArg(list[i++].value );
+
            arg.type = 'ObjectPattern';
            return;
 
         case 'AssignmentPattern':
            this.assert(arg !== this.firstParen );
+           this.assert( arg !== this.firstElemWithYS );
            this.asArrowFuncArg(arg.left) ;
            return;
 
@@ -93,8 +95,6 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
 
   if ( this.unsatisfiedArg )
        this.unsatisfiedArg = null;
-
-  this.assert( !this.yieldAssignmentLocation );
 
   var prevArgNames = this.argNames;
   this.argNames = {};

@@ -176,9 +176,8 @@ _class.parseParen = function () {
 
   var firstElem = null;
   var firstYS = this.firstYS;
-  this.firstYS = null;
 
-  var firstElemWithYS = this.firstElemWithYS = null, parenYS = this.parenYS = null;  
+  var firstElemWithYS = null, parenYS = null;  
 
   var context = CONTEXT_NULLABLE;
   if ( this.arrowParen ) {
@@ -187,13 +186,14 @@ _class.parseParen = function () {
   }
        
   var firstEA = null;
-  var yieldAssignmentLocation = null;
 
   while ( !false ) {
      this.firstParen = null;
      this.next() ;
      this.unsatisfiedAssignment = null;
      this.firstEA = null;
+     this.firstElemWithYS = null;
+     this.firstYS = null;
      elem =   // unsatisfiedArg ? this.parsePattern() :
             this.parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
 
@@ -217,16 +217,16 @@ _class.parseParen = function () {
      if ( !firstEA && this.firstEA )
            firstEA =  this.firstEA ;
 
-     if ( !firstElemWithYS && this.firstYS ) {
-           parenYS = this.firstYS;
-           firstElemWithYS = elem;
+     if ( !firstElemWithYS && this.firstElemWithYS ) {
+           parenYS = this.parenYS;
+           firstElemWithYS = this.firstElemWithYS ;
      } 
+
+     if ( !firstYS && this.firstYS ) 
+       firstYS = this.firstYS;
 
      if ( !unsatisfiedArg && this.unsatisfiedAssignment)
            unsatisfiedArg =  this.unsatisfiedAssignment;
-
-     if ( !yieldAssignmentLocation && this.yieldAssignmentLocation )
-           yieldAssignmentLocation = this.yieldAssignmentLocation ;
 
      if ( this.lttype !== ',' ) break ;
 
@@ -276,7 +276,7 @@ _class.parseParen = function () {
 
   this.firstElemWithYS = firstElemWithYS;
   this.parenYS = parenYS;
-  this.yieldAssignmentLocation = yieldAssignmentLocation;
+  this.firstYS = firstYS || parenYS ;
 
   return n;
 };

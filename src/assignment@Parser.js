@@ -92,6 +92,7 @@ _class .toAssig = function(head) {
 _class .parseAssignment = function(head, context ) {
     var o = this.ltraw;
     var firstEA = null ;
+
     if ( o === '=' ) {
        if ( this.firstEA ) {
             this.defaultEA = this.firstEA;
@@ -118,10 +119,30 @@ _class .parseAssignment = function(head, context ) {
     this.next();
 
     this.firstEA = null;
+    var currentYS = this.firstYS;
+    this.firstYS = null;
+
+    var firstElemWithYS = this.firstElemWithYS;
+    var parenYS = this.parenYS;
+
     var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR ) ;
     this.firstEA = firstEA;
     var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
              left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }};
+
+    if ( this.firstYS ) {
+       if ( context & CONTEXT_PARAM ) {
+            this.firstElemWithYS = n;
+            this.parenYS = this.firstYS;
+       }
+    }
+    else {
+       if ( context & CONTEXT_PARAM ) {
+            this.firstElemWithYS = firstElemWithYS;
+            this.parenYS = parenYS;
+       }  
+       this.firstYS = currentYS;
+    }
 
     if ( firstEA )
       this.firstEAContainer = n;

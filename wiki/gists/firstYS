@@ -1,0 +1,155 @@
+([e = yield]=yield)
+
+
+var currentYS = `firstYS
+var currentYSAssig = `firstYSAssig
+`firstYS = null
+var right = `parseExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR )
+var n = { type: 'assig', o: o, left: head, right: right }
+if `firstYS: `firstYSAssig = n
+else: `firstYS = currentYS
+
+( l = ([e = yield] = yield) )
+
+
+( l = [e = yield] = yield )
+
+var currentYS = `firstYS,
+    currentYSAssig = `firstYSAssig
+`firstYS = null
+
+var right = `parseExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR)
+var n = { type: 'assig', o: o, left: head, right: right }
+if `firstYS {
+   if context & CONTEXT_PARAM:
+      `firstYSAssig = n
+}
+else:
+   `firstYS = currentYS
+
+( // firstYS: null, firstYSA: null
+  [ e // firstYS: null, firstYSA: null
+      =
+    yield // firstYS: yield, firstYSA: e = yield
+  ] =
+  yield 12
+  //   firstYS: yield 12, firstYSA: [e = yield] = yield 12
+  , // firstYS: yield 12, firstYSA: [e = yield] = yield 12
+  [ r // firstYS: null, firstYSA: null
+    =
+    yield
+    //   firstYS: yield, firstYSA: r = yield
+  ] = // firstYS: null
+  12
+  // firstYS: yield, firstYSA: r = yield
+) // firstYS: yield 12, firstYSA: [ e = yield ] = yield 12
+
+function *l() {
+   (yield)=>12;
+   (yield=12)=>12;
+   ([yield]=12)=>12;
+   ([[[yield=12]=12]=12]=12)=>12;
+   [yield] = 12; // not assignable
+   ([yield]=12); // not assignable
+   [[yield]=12] = 12 ; // not assignable
+   ([yield]=12)=>12 ; // not a valid param
+   ([[yield=12]=12])=>12 ; // not a valid param
+ 
+}
+
+`toAssig(head) {
+     switch   head.type {
+        case 'YieldExpression':
+           %assert `paramPosition
+           %assert !head.arg
+           `firstAssignedYS = head
+           head.type = YS_ASSIGNED
+           return
+     }
+}
+
+}  
+
+   
+ ( e = (yield) )
+(
+  e = 
+    ( 
+      yield
+    ) 
+    // firstYS: yield, firstYSA: null
+  // firstYS: yield, firstYSA: e = (yield)
+)
+//  firstYS: yield, firstYSA: e = (yield)
+
+( [ [e = [ e = yield ] = yield ] = yield ] = 12 )
+( 
+  [
+    [e =
+         [
+           e = yield
+           // firstYS: yield, firstYSA: e = yield
+         ]
+         
+
+( e = [r = yield] = yield )
+[ r = yield ] = yield
+
+`parseParen() {
+   var firstYSA = null
+   var firstYS = `firstYS
+   while !false {
+      `firstYSA = null
+      `firstYS = null
+      elem = `parseExpr()
+      if !firstYS && `firstYS: firstYS = `firstYS
+      if !firstYSA && `firstYSA {
+          firstYSA = `firstYSA
+          parenYS = `firstYS
+      }
+   }
+   `parenYS = parenYS
+   `firstYSA = firstYSA
+   `firstYS = firstYS
+}
+
+if `firstYS is on after the head of an assignment is parsed, the head is a container, and `firstYS has occur'd inside it
+the only context where `firstYS matters is inside a paren; it is set to null before parsing every elem
+
+`parseAssignment(head) {
+    var firstYSA = null, parenYS = null
+    if context & CONTEXT_PARAM {
+       firstYSA = `firstYSA
+       parenYS = `parenYS
+    }
+    `firstYS = null
+    var n = { type: 'assig', o: o, left: head, right: parseExpr() }
+    if context & CONTEXT_PARAM {
+      if `firstYS {
+         `firstYSA = n
+         `parenYS = `firstYS
+      }
+      else {
+         `firstYSA = firstYSA
+         `parenYS = parenYS
+      }
+   }
+}
+
+(e = (r = yield) 
+       
+`parseArray(context) {
+   var firstYSA = null, parenYS = null
+   
+   while !false {
+      `firstYSA = `parenYS = null
+      var elem = `parseExpr(context)
+      if !firstYSA && `firstYSA {
+          firstYSA =  `firstYSA
+          parenYS = `parenYS
+      }
+      if !elem: break
+  }    
+  
+}
+

@@ -156,7 +156,6 @@ _class.parseNonSeqExpr = function (prec, context  ) {
        }
        else {
          this.assert( !this.unsatisfiedArg ); 
-         this.assert( !this.yieldAssignmentLocation );
 
          if ( this.firstEA )
             this.assert( (context & CONTEXT_ELEM_OR_PARAM) && !op );
