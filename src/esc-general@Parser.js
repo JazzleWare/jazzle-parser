@@ -64,6 +64,9 @@ _class.readEsc = function ()  {
        }
        return String.fromCharCode(b)  ;
 
+   case CHAR_8:
+   case CHAR_9:
+       this.assert(false);
    case CHAR_CARRIAGE_RETURN:
       if ( src.charCodeAt(this.c + 1) === CHAR_LINE_FEED ) this.c++;
    case CHAR_LINE_FEED:

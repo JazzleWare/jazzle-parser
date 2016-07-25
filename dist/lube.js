@@ -77,25 +77,28 @@ _class.parseArrayExpression = function (context ) {
   else
       context = (context & CONTEXT_PARAM)|CONTEXT_NULLABLE|CONTEXT_ELEM;
 
-  var firstEA = null, firstElemWithYS = null;
-  var firstUnassignable = null, firstParen = null;
-  var unsatisfiedAssignment = this.unsatisfiedAssignment;
-  var parenYS = null;
-  do {
-     this.firstUnassignable = this.firstParen = null;
-     this.unsatisfiedAssignment = null ;
+  var firstEA = null,
+      firstElemWithYS = null,
+      firstUnassignable = null,
+      parenYS = null,
+      firstParen = null,
+      unsatisfiedAssignment = null;
 
-     this.firstEA = null;
+  do {
+     this.firstUnassignable =
+     this.firstParen = 
+     this.unsatisfiedAssignment = 
+     this.firstEA = 
      this.firstElemWithYS = null;
+
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
-     if ( elem ) {
-        if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
-              this.assert ( context & CONTEXT_ELEM );
-              unsatisfiedAssignment =  this.unsatisfiedAssignment;
-        }
-     }
-     else if ( this.lttype === '...' )
+     if ( !elem && this.lttype === '...' )
          elem = this.parseSpreadElement();
+
+     if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
+           this.assert ( context & CONTEXT_ELEM );
+           unsatisfiedAssignment =  this.unsatisfiedAssignment;
+     }
  
      if ( !firstParen && this.firstParen )
            firstParen =  this.firstParen ;
@@ -106,9 +109,11 @@ _class.parseArrayExpression = function (context ) {
      if ( !firstEA && this.firstEA )
            firstEA =  this.firstEA ;
 
-     if ( (context & CONTEXT_PARAM) && !firstElemWithYS && this.firstElemWithYS ) {
-           parenYS = this.parenYS;
-           firstElemWithYS =  this.firstElemWithYS;
+     if ( context & CONTEXT_PARAM) {
+        if ( !firstElemWithYS && this.firstElemWithYS ) {
+              firstElemWithYS =  this.firstElemWithYS;
+              parenYS = this.parenYS;
+        }
      }
 
      if ( this.lttype === ',' ) { 
@@ -124,11 +129,12 @@ _class.parseArrayExpression = function (context ) {
 
   if ( firstParen ) this.firstParen = firstParen ;
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
-
-  this.firstEA = firstEA;
-  this.firstElemWithYS = firstElemWithYS; 
-  this.unsatisfiedAssignment = unsatisfiedAssignment;
-  this.parenYS = parenYS;
+  if ( firstEA ) this.firstEA = firstEA;
+  if ( unsatisfiedAssignment ) this.unsatisfiedAssignment = unsatisfiedAssignment;
+  if ( firstElemWithYS ) {
+     this.firstElemWithYS = firstElemWithYS;
+     this.parenYS = parenYS;
+  } 
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
@@ -434,27 +440,31 @@ _class .parseAssignment = function(head, context ) {
     this.next();
 
     this.firstEA = null;
-    var currentYS = this.firstYS;
-    this.firstYS = null;
+    var currentYS = this.firstYS; // save the current YS
+    this.firstYS = null; // look for first YS in right hand side; please note this is the only case
+                         // where firstYS is nulld
 
-    var firstElemWithYS = this.firstElemWithYS;
-    var parenYS = this.parenYS;
+    if ( context & CONTEXT_PARAM ) { // if head is in paramPosition
+      // save the first YS found in head
+      var firstElemWithYS = this.firstElemWithYS; 
+      var parenYS = this.parenYS;
+    }
 
     var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR ) ;
     this.firstEA = firstEA;
     var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
              left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }};
 
-    if ( this.firstYS ) {
-       if ( context & CONTEXT_PARAM ) {
-            this.firstElemWithYS = n;
-            this.parenYS = this.firstYS;
+    if ( this.firstYS ) { // if there was a YS in the right hand side; for example [ e = yield ] = -->yield 12<--is yield!
+       if ( context & CONTEXT_PARAM ) { 
+            this.firstElemWithYS = n; // the current assignment has a YS in its right hand side (`[e=yield]=yield 12`)
+            this.parenYS = this.firstYS; // this is the YS in the right hand side (`yield 12`)
        }
     }
-    else {
+    else { // if there is no YS in the right hand side; for example [e = yield 120 ] = --> 12 <--not yield
        if ( context & CONTEXT_PARAM ) {
-            this.firstElemWithYS = firstElemWithYS;
-            this.parenYS = parenYS;
+            this.firstElemWithYS = firstElemWithYS; // `e = yield 120`
+            this.parenYS = parenYS; // `yield 120`
        }  
        this.firstYS = currentYS;
     }
@@ -992,6 +1002,9 @@ _class.readEsc = function ()  {
        }
        return String.fromCharCode(b)  ;
 
+   case CHAR_8:
+   case CHAR_9:
+       this.assert(false);
    case CHAR_CARRIAGE_RETURN:
       if ( src.charCodeAt(this.c + 1) === CHAR_LINE_FEED ) this.c++;
    case CHAR_LINE_FEED:
@@ -1330,10 +1343,6 @@ _class . makeStrict  = function() {
    if ( this.tight ) return;
 
    this.tight = !false;
-   if ( this.currentFuncName ) {
-     this.assert(!arguments_or_eval(this.currentFuncName));
-     this.validateID(this.currentFuncName.name) ;
-   }
 
    var argName = null;
    for ( argName in this.argNames ) {
@@ -4443,8 +4452,14 @@ var SCOPE_METH        = SCOPE_FUNCTION << 1;
 var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 
-var CONTEXT_PARAM = 128, CONTEXT_FOR = 1, CONTEXT_NONE = 0, CONTEXT_UNASSIGNABLE_CONTAINER = 512;
-var CONTEXT_NULLABLE = 4, CONTEXT_DEFAULT = 32, CONTEXT_ELEM = 2, CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM ;
+var  CONTEXT_FOR = 1,
+     CONTEXT_ELEM = CONTEXT_FOR << 1 ,
+     CONTEXT_NONE = 0,
+     CONTEXT_PARAM = CONTEXT_ELEM << 1,
+     CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
+     CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
+     CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1, 
+     CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
 
 var INTBITLEN = (function() { var i = 0;
   while ( 0 < (1 << (i++)))

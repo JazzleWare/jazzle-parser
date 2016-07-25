@@ -119,27 +119,31 @@ _class .parseAssignment = function(head, context ) {
     this.next();
 
     this.firstEA = null;
-    var currentYS = this.firstYS;
-    this.firstYS = null;
+    var currentYS = this.firstYS; // save the current YS
+    this.firstYS = null; // look for first YS in right hand side; please note this is the only case
+                         // where firstYS is nulld
 
-    var firstElemWithYS = this.firstElemWithYS;
-    var parenYS = this.parenYS;
+    if ( context & CONTEXT_PARAM ) { // if head is in paramPosition
+      // save the first YS found in head
+      var firstElemWithYS = this.firstElemWithYS; 
+      var parenYS = this.parenYS;
+    }
 
     var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR ) ;
     this.firstEA = firstEA;
     var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
              left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }};
 
-    if ( this.firstYS ) {
-       if ( context & CONTEXT_PARAM ) {
-            this.firstElemWithYS = n;
-            this.parenYS = this.firstYS;
+    if ( this.firstYS ) { // if there was a YS in the right hand side; for example [ e = yield ] = -->yield 12<--is yield!
+       if ( context & CONTEXT_PARAM ) { 
+            this.firstElemWithYS = n; // the current assignment has a YS in its right hand side (`[e=yield]=yield 12`)
+            this.parenYS = this.firstYS; // this is the YS in the right hand side (`yield 12`)
        }
     }
-    else {
+    else { // if there is no YS in the right hand side; for example [e = yield 120 ] = --> 12 <--not yield
        if ( context & CONTEXT_PARAM ) {
-            this.firstElemWithYS = firstElemWithYS;
-            this.parenYS = parenYS;
+            this.firstElemWithYS = firstElemWithYS; // `e = yield 120`
+            this.parenYS = parenYS; // `yield 120`
        }  
        this.firstYS = currentYS;
     }

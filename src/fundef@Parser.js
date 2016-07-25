@@ -169,10 +169,6 @@ _class . makeStrict  = function() {
    if ( this.tight ) return;
 
    this.tight = !false;
-   if ( this.currentFuncName ) {
-     this.assert(!arguments_or_eval(this.currentFuncName));
-     this.validateID(this.currentFuncName.name) ;
-   }
 
    var argName = null;
    for ( argName in this.argNames ) {

@@ -12,25 +12,28 @@ _class.parseArrayExpression = function (context ) {
   else
       context = (context & CONTEXT_PARAM)|CONTEXT_NULLABLE|CONTEXT_ELEM;
 
-  var firstEA = null, firstElemWithYS = null;
-  var firstUnassignable = null, firstParen = null;
-  var unsatisfiedAssignment = this.unsatisfiedAssignment;
-  var parenYS = null;
-  do {
-     this.firstUnassignable = this.firstParen = null;
-     this.unsatisfiedAssignment = null ;
+  var firstEA = null,
+      firstElemWithYS = null,
+      firstUnassignable = null,
+      parenYS = null,
+      firstParen = null,
+      unsatisfiedAssignment = null;
 
-     this.firstEA = null;
+  do {
+     this.firstUnassignable =
+     this.firstParen = 
+     this.unsatisfiedAssignment = 
+     this.firstEA = 
      this.firstElemWithYS = null;
+
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
-     if ( elem ) {
-        if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
-              this.assert ( context & CONTEXT_ELEM );
-              unsatisfiedAssignment =  this.unsatisfiedAssignment;
-        }
-     }
-     else if ( this.lttype === '...' )
+     if ( !elem && this.lttype === '...' )
          elem = this.parseSpreadElement();
+
+     if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
+           this.assert ( context & CONTEXT_ELEM );
+           unsatisfiedAssignment =  this.unsatisfiedAssignment;
+     }
  
      if ( !firstParen && this.firstParen )
            firstParen =  this.firstParen ;
@@ -41,9 +44,11 @@ _class.parseArrayExpression = function (context ) {
      if ( !firstEA && this.firstEA )
            firstEA =  this.firstEA ;
 
-     if ( (context & CONTEXT_PARAM) && !firstElemWithYS && this.firstElemWithYS ) {
-           parenYS = this.parenYS;
-           firstElemWithYS =  this.firstElemWithYS;
+     if ( context & CONTEXT_PARAM) {
+        if ( !firstElemWithYS && this.firstElemWithYS ) {
+              firstElemWithYS =  this.firstElemWithYS;
+              parenYS = this.parenYS;
+        }
      }
 
      if ( this.lttype === ',' ) { 
@@ -59,11 +64,12 @@ _class.parseArrayExpression = function (context ) {
 
   if ( firstParen ) this.firstParen = firstParen ;
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
-
-  this.firstEA = firstEA;
-  this.firstElemWithYS = firstElemWithYS; 
-  this.unsatisfiedAssignment = unsatisfiedAssignment;
-  this.parenYS = parenYS;
+  if ( firstEA ) this.firstEA = firstEA;
+  if ( unsatisfiedAssignment ) this.unsatisfiedAssignment = unsatisfiedAssignment;
+  if ( firstElemWithYS ) {
+     this.firstElemWithYS = firstElemWithYS;
+     this.parenYS = parenYS;
+  } 
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
