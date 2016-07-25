@@ -17,7 +17,8 @@ _class.parseArrayExpression = function (context ) {
       firstUnassignable = null,
       parenYS = null,
       firstParen = null,
-      unsatisfiedAssignment = null;
+      unsatisfiedAssignment = null,
+      firstYS = this.firstYS;
 
   do {
      this.firstUnassignable =
@@ -51,6 +52,8 @@ _class.parseArrayExpression = function (context ) {
         }
      }
 
+     if ( !firstYS && this.firstYS ) firstYS = this.firstYS;
+
      if ( this.lttype === ',' ) { 
         list.push(elem) ;
         this.next();
@@ -70,6 +73,7 @@ _class.parseArrayExpression = function (context ) {
      this.firstElemWithYS = firstElemWithYS;
      this.parenYS = parenYS;
   } 
+  this.firstYS = firstYS;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};

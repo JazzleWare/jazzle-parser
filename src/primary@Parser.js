@@ -193,7 +193,6 @@ _class.parseParen = function () {
      this.unsatisfiedAssignment = null;
      this.firstEA = null;
      this.firstElemWithYS = null;
-     this.firstYS = null;
      elem =   // unsatisfiedArg ? this.parsePattern() :
             this.parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
 
@@ -276,7 +275,7 @@ _class.parseParen = function () {
 
   this.firstElemWithYS = firstElemWithYS;
   this.parenYS = parenYS;
-  this.firstYS = firstYS || parenYS ;
+  this.firstYS = firstYS;
 
   return n;
 };

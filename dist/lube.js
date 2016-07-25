@@ -82,7 +82,8 @@ _class.parseArrayExpression = function (context ) {
       firstUnassignable = null,
       parenYS = null,
       firstParen = null,
-      unsatisfiedAssignment = null;
+      unsatisfiedAssignment = null,
+      firstYS = this.firstYS;
 
   do {
      this.firstUnassignable =
@@ -116,6 +117,8 @@ _class.parseArrayExpression = function (context ) {
         }
      }
 
+     if ( !firstYS && this.firstYS ) firstYS = this.firstYS;
+
      if ( this.lttype === ',' ) { 
         list.push(elem) ;
         this.next();
@@ -135,6 +138,7 @@ _class.parseArrayExpression = function (context ) {
      this.firstElemWithYS = firstElemWithYS;
      this.parenYS = parenYS;
   } 
+  this.firstYS = firstYS;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
@@ -2728,6 +2732,8 @@ _class.parseObjectExpression = function (context) {
   var firstElemWithYS = null;
   var parenYS = null;
 
+  var firstYS = this.firstYS;
+
   if ( context & CONTEXT_UNASSIGNABLE_CONTAINER ) 
     context = context & CONTEXT_PARAM;
 
@@ -2739,7 +2745,6 @@ _class.parseObjectExpression = function (context) {
      this.unsatisfiedAssignment = null;
   
      this.first__proto__ = first__proto__;
-
      this.firstEA = null;
      this.firstElemWithYS = null;
 
@@ -2768,6 +2773,9 @@ _class.parseObjectExpression = function (context) {
        if ( !firstUnassignable && this.firstUnassignable )
              firstUnassignable =  this.firstUnassignable ;
 
+       if ( !firstYS && this.firstYS )
+         firstYS = this.firstYS;
+
      }
      else
         break ;
@@ -2789,6 +2797,8 @@ _class.parseObjectExpression = function (context) {
      
   if ( unsatisfiedAssignment )
      this.unsatisfiedAssignment = unsatisfiedAssignment ;
+
+  this.firstYS = firstYS;
 
   return elem;
 };
@@ -3218,7 +3228,6 @@ _class.parseParen = function () {
      this.unsatisfiedAssignment = null;
      this.firstEA = null;
      this.firstElemWithYS = null;
-     this.firstYS = null;
      elem =   // unsatisfiedArg ? this.parsePattern() :
             this.parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
 
@@ -3301,7 +3310,7 @@ _class.parseParen = function () {
 
   this.firstElemWithYS = firstElemWithYS;
   this.parenYS = parenYS;
-  this.firstYS = firstYS || parenYS ;
+  this.firstYS = firstYS;
 
   return n;
 };

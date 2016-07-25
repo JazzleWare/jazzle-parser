@@ -13,6 +13,8 @@ _class.parseObjectExpression = function (context) {
   var firstElemWithYS = null;
   var parenYS = null;
 
+  var firstYS = this.firstYS;
+
   if ( context & CONTEXT_UNASSIGNABLE_CONTAINER ) 
     context = context & CONTEXT_PARAM;
 
@@ -24,7 +26,6 @@ _class.parseObjectExpression = function (context) {
      this.unsatisfiedAssignment = null;
   
      this.first__proto__ = first__proto__;
-
      this.firstEA = null;
      this.firstElemWithYS = null;
 
@@ -53,6 +54,9 @@ _class.parseObjectExpression = function (context) {
        if ( !firstUnassignable && this.firstUnassignable )
              firstUnassignable =  this.firstUnassignable ;
 
+       if ( !firstYS && this.firstYS )
+         firstYS = this.firstYS;
+
      }
      else
         break ;
@@ -74,6 +78,8 @@ _class.parseObjectExpression = function (context) {
      
   if ( unsatisfiedAssignment )
      this.unsatisfiedAssignment = unsatisfiedAssignment ;
+
+  this.firstYS = firstYS;
 
   return elem;
 };
