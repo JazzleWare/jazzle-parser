@@ -3,7 +3,7 @@ _class.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
-       if ( this.isInArgList ) 
+       if ( this.inComplexArgs ) 
           this.addArg(id);
  
        return id;
@@ -22,11 +22,10 @@ _class. parseArrayPattern = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1),
       elem = null,
-      list = [], tight;
+      list = [];
 
   if ( this.isInArgList ) {
-    tight = this.tight; 
-    this.tight = !false;
+     this.inComplexArgs = !false;
   }
 
   this.next();
@@ -53,7 +52,7 @@ _class. parseArrayPattern = function() {
   } 
 
   if ( this.isInArgList )
-    this.tight = tight;
+       this.inComplexArgs = this.tight;
 
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
@@ -71,11 +70,9 @@ _class.parseObjectPattern  = function() {
     var list = [];
     var val = null;
     var name = null;
-    var tight;
 
     if ( this.isInArgList ) {
-      tight = this.tight;
-      this.tight = !false;
+         this.inComplexArgs = !false;
     }
 
     LOOP:
@@ -117,8 +114,8 @@ _class.parseObjectPattern  = function() {
 
     } while ( this.lttype === ',' );
 
-    if ( this.isInArgList )
-       this.tight = tight ;      
+    if ( this.isInArgList  )
+         this.inComplexArgs = this.tight; 
 
     var n = { type: 'ObjectPattern',
              loc: { start: startLoc, end: this.loc() },

@@ -54,6 +54,7 @@ var Parser = function (src, isModule) {
   this.firstEA = null;
   this.firstEAContainer = null;
   this.defaultEA = null;
+  this.inComplexArgs = false;
 
   this.first__proto__ = false;
 };

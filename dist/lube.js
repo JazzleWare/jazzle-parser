@@ -57,6 +57,7 @@ var Parser = function (src, isModule) {
   this.firstEA = null;
   this.firstEAContainer = null;
   this.defaultEA = null;
+  this.inComplexArgs = false;
 
   this.first__proto__ = false;
 };
@@ -1181,12 +1182,20 @@ _class .parseArgs  = function (argLen) {
 
   this.expectType('(') ;
 
-  var firstNonSimpArg = null;
+  var firstNonSimpArg = null, id = false;
   while ( list.length !== argLen ) {
     elem = this.parsePattern();
     if ( elem ) {
-       if ( this.lttype === 'op' && this.ltraw === '=' )
+       id = elem.type === 'Identifier' && !this.inComplexArgs;
+       if ( this.lttype === 'op' && this.ltraw === '=' ) {
+         if ( id ) {
+           this.inComplexArgs = !false;
+           this.addArg(elem);
+           this.inComplexArgs = this.tight;
+         }
          elem = this.parseAssig(elem);
+       }
+       else if ( id ) this.addArg(elem);
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
              firstNonSimpArg =  elem;
@@ -1204,7 +1213,9 @@ _class .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        elem = this.parseRestElement()
+        this.inComplexArgs = !false;
+        elem = this.parseRestElement();
+        this.inComplexArgs = this.tight ;
         list.push( elem  );
         if ( !firstNonSimpArg )
               firstNonSimpArg = elem;
@@ -1224,7 +1235,7 @@ _class .parseArgs  = function (argLen) {
 _class .addArg = function(id) {
   var name = id.name + '%';
   if ( has.call(this.argNames, name) ) {
-    this.assert( !this.tight );
+    this.assert( !this.inComplexArgs );
     if ( this.argNames[name] === null )
       this.argNames[name] = id ;
   }
@@ -1278,6 +1289,8 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   if ( this.scopeFlags )
        this.scopeFlags = 0;
 
+  var prevComplexArgs = this.inComplexArgs;
+  this.inComplexArgs = this.tight;
   this.isInArgList = !false;
   this.argNames = {};
   var argList = this.parseArgs(argLen) ;
@@ -1292,6 +1305,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
 
   if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
    
+  this.inComplexArgs = false;
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
             id: currentFuncName,
@@ -1313,6 +1327,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   this.scopeFlags = prevScopeFlags;
   this.firstYS = prevYS;
   this.firstNonSimpArg = prevNonSimpArg;
+  this.inComplexArgs = prevComplexArgs;
 
   return  n  ;
 };
@@ -2885,7 +2900,7 @@ _class.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
-       if ( this.isInArgList ) 
+       if ( this.inComplexArgs ) 
           this.addArg(id);
  
        return id;
@@ -2904,11 +2919,10 @@ _class. parseArrayPattern = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1),
       elem = null,
-      list = [], tight;
+      list = [];
 
   if ( this.isInArgList ) {
-    tight = this.tight; 
-    this.tight = !false;
+     this.inComplexArgs = !false;
   }
 
   this.next();
@@ -2935,7 +2949,7 @@ _class. parseArrayPattern = function() {
   } 
 
   if ( this.isInArgList )
-    this.tight = tight;
+       this.inComplexArgs = this.tight;
 
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
@@ -2953,11 +2967,9 @@ _class.parseObjectPattern  = function() {
     var list = [];
     var val = null;
     var name = null;
-    var tight;
 
     if ( this.isInArgList ) {
-      tight = this.tight;
-      this.tight = !false;
+         this.inComplexArgs = !false;
     }
 
     LOOP:
@@ -2999,8 +3011,8 @@ _class.parseObjectPattern  = function() {
 
     } while ( this.lttype === ',' );
 
-    if ( this.isInArgList )
-       this.tight = tight ;      
+    if ( this.isInArgList  )
+         this.inComplexArgs = this.tight; 
 
     var n = { type: 'ObjectPattern',
              loc: { start: startLoc, end: this.loc() },

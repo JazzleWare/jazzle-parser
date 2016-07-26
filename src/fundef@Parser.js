@@ -3,12 +3,20 @@ _class .parseArgs  = function (argLen) {
 
   this.expectType('(') ;
 
-  var firstNonSimpArg = null;
+  var firstNonSimpArg = null, id = false;
   while ( list.length !== argLen ) {
     elem = this.parsePattern();
     if ( elem ) {
-       if ( this.lttype === 'op' && this.ltraw === '=' )
+       id = elem.type === 'Identifier' && !this.inComplexArgs;
+       if ( this.lttype === 'op' && this.ltraw === '=' ) {
+         if ( id ) {
+           this.inComplexArgs = !false;
+           this.addArg(elem);
+           this.inComplexArgs = this.tight;
+         }
          elem = this.parseAssig(elem);
+       }
+       else if ( id ) this.addArg(elem);
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
              firstNonSimpArg =  elem;
@@ -26,7 +34,9 @@ _class .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        elem = this.parseRestElement()
+        this.inComplexArgs = !false;
+        elem = this.parseRestElement();
+        this.inComplexArgs = this.tight ;
         list.push( elem  );
         if ( !firstNonSimpArg )
               firstNonSimpArg = elem;
@@ -46,7 +56,7 @@ _class .parseArgs  = function (argLen) {
 _class .addArg = function(id) {
   var name = id.name + '%';
   if ( has.call(this.argNames, name) ) {
-    this.assert( !this.tight );
+    this.assert( !this.inComplexArgs );
     if ( this.argNames[name] === null )
       this.argNames[name] = id ;
   }
@@ -100,6 +110,8 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   if ( this.scopeFlags )
        this.scopeFlags = 0;
 
+  var prevComplexArgs = this.inComplexArgs;
+  this.inComplexArgs = this.tight;
   this.isInArgList = !false;
   this.argNames = {};
   var argList = this.parseArgs(argLen) ;
@@ -114,6 +126,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
 
   if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
    
+  this.inComplexArgs = false;
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
             id: currentFuncName,
@@ -135,6 +148,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   this.scopeFlags = prevScopeFlags;
   this.firstYS = prevYS;
   this.firstNonSimpArg = prevNonSimpArg;
+  this.inComplexArgs = prevComplexArgs;
 
   return  n  ;
 };
