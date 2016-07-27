@@ -1,4 +1,4 @@
-_class.parseObjectExpression = function (context) {
+this.parseObjectExpression = function (context) {
   var startc = this.c - 1 ,
       startLoc = this.locOn(1),
       elem = null,
@@ -84,7 +84,7 @@ _class.parseObjectExpression = function (context) {
   return elem;
 };
 
-_class.parseProperty = function (name, context) {
+this.parseProperty = function (name, context) {
 
   var __proto__ = false, first__proto__ = this.first__proto__ ;
   var val = null;

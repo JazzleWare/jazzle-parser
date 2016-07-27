@@ -1,4 +1,4 @@
-_class . parseVariableDeclaration = function(context) {
+this . parseVariableDeclaration = function(context) {
      this.assert ( this.canBeStatement );
      this.canBeStatement = false;
 
@@ -39,7 +39,7 @@ _class . parseVariableDeclaration = function(context) {
               loc: { start: startLoc, end: endLoc }, kind: kind };
 };
 
-_class . parseVariableDeclarator = function(context) {
+this . parseVariableDeclarator = function(context) {
   if ( (context & CONTEXT_FOR) &&
        this.lttype === 'Identifier' &&
        this.ltval === 'in' )

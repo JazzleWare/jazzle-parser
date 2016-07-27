@@ -1,4 +1,4 @@
-_class.parseArrayExpression = function (context ) {
+this.parseArrayExpression = function (context ) {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   var elem = null,
@@ -83,7 +83,7 @@ _class.parseArrayExpression = function (context ) {
   return elem;
 };
 
-_class . parseSpreadElement = function() {
+this . parseSpreadElement = function() {
   var startc = this.c-1-2,
       startLoc = this.locOn(1+2);
   this.next ();

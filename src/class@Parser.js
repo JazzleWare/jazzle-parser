@@ -1,4 +1,4 @@
-_class. parseClass = function(context) {
+this. parseClass = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin();
 
@@ -107,7 +107,7 @@ _class. parseClass = function(context) {
   return n;
 };
 
-_class.parseSuper  = function   () {
+this.parseSuper  = function   () {
    var n = { type: 'Super', loc: { start: this.locBegin(), end: this.loc() }, start: this.c0 , end: this.c };
    this.next() ;
    switch ( this.lttype ) {

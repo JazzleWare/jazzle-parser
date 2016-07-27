@@ -1,4 +1,4 @@
-_class.parseNewHead = function () {
+this.parseNewHead = function () {
   var startc = this.c0, end = this.c, startLoc = this.locBegin(), li = this.li, col = this.col, raw = this.ltraw ;
   this.next () ;
   if ( this.lttype === '.' ) {

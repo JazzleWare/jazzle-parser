@@ -1,4 +1,4 @@
-_class.semiLoc = function () {
+this.semiLoc = function () {
   switch (this.lttype) {
     case ';':
        var n = this.loc();
@@ -17,7 +17,7 @@ _class.semiLoc = function () {
   this.err('EOS expected; found ' + this.ltraw ) ;
 };
 
-_class.semiI = function() {
+this.semiI = function() {
    return this.lttype === ';' ? this.c : this.newLineBeforeLookAhead ? 0 : this.lttype === '}' ? this.c - 1 : this.lttype === 'eof' ? this.c : 0; };
 
 

@@ -1,4 +1,4 @@
-_class.readEsc = function ()  {
+this.readEsc = function ()  {
   var src = this.src, b0 = 0, b = 0;
   switch ( src.charCodeAt ( ++this.c ) ) {
    case CHAR_BACK_SLASH: return '\\';

@@ -1,5 +1,5 @@
 
-_class.parsePattern = function() {
+this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
@@ -18,7 +18,7 @@ _class.parsePattern = function() {
   }
 };
 
-_class. parseArrayPattern = function() {
+this. parseArrayPattern = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1),
       elem = null,
@@ -62,7 +62,7 @@ _class. parseArrayPattern = function() {
   return elem;
 };
 
-_class.parseObjectPattern  = function() {
+this.parseObjectPattern  = function() {
 
     var sh = false;
     var startc = this.c-1;
@@ -128,7 +128,7 @@ _class.parseObjectPattern  = function() {
     return n;
 };
 
-_class .parseAssig = function (head) {
+this .parseAssig = function (head) {
     this.next() ;
     var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
     return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
@@ -136,7 +136,7 @@ _class .parseAssig = function (head) {
 };
 
 
-_class.parseRestElement = function() {
+this.parseRestElement = function() {
    var startc = this.c-1-2,
        startLoc = this.locOn(1+2);
 

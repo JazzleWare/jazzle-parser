@@ -1,4 +1,4 @@
-_class .asArrowFuncArgList = function(head) {
+this .asArrowFuncArgList = function(head) {
    if ( head === null )
      return;
 
@@ -14,7 +14,7 @@ _class .asArrowFuncArgList = function(head) {
       this.asArrowFuncArg(head);
 };
 
-_class. asArrowFuncArg = function(arg  ) {
+this. asArrowFuncArg = function(arg  ) {
     var i = 0, list = null;
 
     switch  ( arg.type ) {
@@ -91,7 +91,7 @@ _class. asArrowFuncArg = function(arg  ) {
     }
 };
 
-_class . parseArrowFunctionExpression = function(arg,context)   {
+this . parseArrowFunctionExpression = function(arg,context)   {
 
   if ( this.unsatisfiedArg )
        this.unsatisfiedArg = null;

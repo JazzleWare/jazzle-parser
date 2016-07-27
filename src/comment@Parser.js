@@ -1,5 +1,5 @@
 
-_class.readMultiComment = function () {
+this.readMultiComment = function () {
    var c = this.c,
        l = this.src,
        e = l.length,
@@ -34,7 +34,7 @@ _class.readMultiComment = function () {
    this.err( ' */ ' ) ;
 };
 
-_class.readLineComment = function() {
+this.readLineComment = function() {
     var c = this.c,
         l = this.src,
         e = l.length,

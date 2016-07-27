@@ -42,7 +42,7 @@ function verifyRegex(regex, flags) {
 
 }
 
-_class.parseRegExpLiteral = function() {
+this.parseRegExpLiteral = function() {
      var startc = this.c - 1, startLoc = this.locOn(1),
          c = this.c, src = this.src, len = src.length;
 

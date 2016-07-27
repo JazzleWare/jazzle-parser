@@ -1,4 +1,4 @@
-_class.parseExprHead = function (context) {
+this.parseExprHead = function (context) {
   var firstUnassignable = null;
   var firstParen = null;
 
@@ -133,7 +133,7 @@ _class.parseExprHead = function (context) {
   return head ;
 } ;
 
-_class .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
+this .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
     this.assert( this.ltval === 'target' );
     var prop = this.id();
     return { type: 'MetaProperty',
@@ -144,28 +144,28 @@ _class .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
 
 };
 
-_class.numstr = function () {
+this.numstr = function () {
   var n = { type: 'Literal', value: this.ltval, start: this.c0, end: this.c,
            loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
   this.next();
   return n;
 };
 
-_class.idLit = function(val) {
+this.idLit = function(val) {
   var n = { type: 'Literal', value: val, start: this.c0, end: this.c,
            loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
   this.next();
   return n;
 };
 
-_class.id = function() {
+this.id = function() {
    var id = { type: 'Identifier', name: this.ltval, start: this.c0, end: this.c,
               loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
    this.next() ;
    return id;
 };
 
-_class.parseParen = function () {
+this.parseParen = function () {
   var firstParen = null;
   var unsatisfiedAssignment = this.unsatisfiedAssignment,
       startc = this.c - 1 ,
@@ -281,7 +281,7 @@ _class.parseParen = function () {
 };
 
 
-_class .parseThis = function() {
+this .parseThis = function() {
     var n = { type : 'ThisExpression',
               loc: { start: this.locBegin(), end: this.loc() },
               start: this.c0,
@@ -292,7 +292,7 @@ _class .parseThis = function() {
 };
 
 
-_class.parseArgList = function () {
+this.parseArgList = function () {
     var elem = null;
     var list = [];
 

@@ -1,4 +1,4 @@
-_class .parseArgs  = function (argLen) {
+this .parseArgs  = function (argLen) {
   var list = [], elem = null;
 
   this.expectType('(') ;
@@ -53,7 +53,7 @@ _class .parseArgs  = function (argLen) {
   return list;
 };
 
-_class .addArg = function(id) {
+this .addArg = function(id) {
   var name = id.name + '%';
   if ( has.call(this.argNames, name) ) {
     this.assert( !this.inComplexArgs );
@@ -65,7 +65,7 @@ _class .addArg = function(id) {
 };
 
   
-_class .parseFunc = function(context, argListMode, argLen ) {
+this .parseFunc = function(context, argListMode, argLen ) {
   var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
   var prevLabels = this.labels;
   var prevStrict = this.tight;
@@ -153,7 +153,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   return  n  ;
 };
 
-_class.parseFuncBody = function(context) {
+this.parseFuncBody = function(context) {
   if ( this.lttype !== '{' )
     return this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
 
@@ -178,7 +178,7 @@ _class.parseFuncBody = function(context) {
   return  n;
 };
 
-_class . makeStrict  = function() {
+this . makeStrict  = function() {
    this.assert( !this.firstNonSimpArg )  ; 
    if ( this.tight ) return;
 

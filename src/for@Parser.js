@@ -1,5 +1,5 @@
 
-_class . parseFor = function() {
+this . parseFor = function() {
   this.ensureStmt();
   this.fixupLabels(!false) ;
 

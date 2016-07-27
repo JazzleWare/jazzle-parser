@@ -1,4 +1,4 @@
-_class.next = function () {
+this.next = function () {
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
       this. lttype =  'eof' ;
@@ -184,7 +184,7 @@ _class.next = function () {
   this.col += ( this.c - start );
 };
 
-_class . opEq = function()  {
+this . opEq = function()  {
     var c = this.c;
     var l = this.src;
     this.lttype = 'op';
@@ -211,7 +211,7 @@ _class . opEq = function()  {
     this.c=c;
 };
 
-_class . opMin = function() {
+this . opMin = function() {
    var c = this.c;
    var l = this.src;
    c++;
@@ -237,7 +237,7 @@ _class . opMin = function() {
    this.c=c;
 };
 
-_class . opLess = function () {
+this . opLess = function () {
   var c = this.c;
   var l = this.src;
   this.lttype = 'op';
@@ -267,7 +267,7 @@ _class . opLess = function () {
   this.c=c;
 };
 
-_class . opAdd = function() {
+this . opAdd = function() {
    var c = this.c;
    var l = this.src;
    c++ ;
@@ -293,7 +293,7 @@ _class . opAdd = function() {
    this.c=c;
 };
 
-_class . opGrea = function()   {
+this . opGrea = function()   {
   var c = this.c;
   var l = this.src;
   this.lttype = 'op';
@@ -334,7 +334,7 @@ _class . opGrea = function()   {
   this.c=c;
 };
 
-_class.skipS = function() {
+this.skipS = function() {
      var noNewLine = !false,
          startOffset = this.c,
          c = this.c,
@@ -441,7 +441,7 @@ _class.skipS = function() {
   this.newLineBeforeLookAhead = !noNewLine ;
 };
 
-_class.readDot = function() {
+this.readDot = function() {
    ++this.c;
    if( this.src.charCodeAt(this.c)==CHAR_SINGLEDOT) {
      if (this.src.charCodeAt(++ this.c) == CHAR_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
@@ -459,14 +459,14 @@ _class.readDot = function() {
    this. ltraw = this.lttype = '.' ;
 };
 
-_class.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
+this.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
 
-_class.expectType = function (n)  {
+this.expectType = function (n)  {
   this.assert(this.lttype === n, 'expected ' + n + '; got ' + this.lttype  )  ;
   this.next();
 };
 
-_class.expectID = function (n) {
+this.expectID = function (n) {
   this.assert(this.lttype === 'Identifier' && this.ltval === n)  ;
   this.next();
 };

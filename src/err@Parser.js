@@ -1,4 +1,4 @@
-_class.err = function(errorType, errorTok, args) {
+this.err = function(errorType, errorTok, args) {
    if ( has.call(this.errorHandlers, errorType) )
      return this.handleError(this.errorHandlers[errorType], errorTok, args );
 
@@ -27,7 +27,7 @@ function createMessage( errorMessage, errorTok, args  ) {
 
 }
    
-_class.handleError = function(handlerFunction, errorTok, args ) {
+this.handleError = function(handlerFunction, errorTok, args ) {
    return handlerFunction.call( this, params, coords );
 
 };

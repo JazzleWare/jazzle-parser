@@ -1,5 +1,5 @@
 
-_class .ensureSimpAssig = function(head) {
+this .ensureSimpAssig = function(head) {
   switch(head.type) {
     case 'Identifier':
        this.assert( !( this.tight && arguments_or_eval(head.name) )  );
@@ -13,7 +13,7 @@ _class .ensureSimpAssig = function(head) {
 };
 
 // an arr-pat is always to the left of an assig;
-_class .toAssig = function(head) {
+this .toAssig = function(head) {
 
   var i = 0;
   var firstEA = null;
@@ -89,7 +89,7 @@ _class .toAssig = function(head) {
   }
 };
 
-_class .parseAssignment = function(head, context ) {
+this .parseAssignment = function(head, context ) {
     var o = this.ltraw;
     var firstEA = null ;
 

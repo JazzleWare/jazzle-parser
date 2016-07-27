@@ -1,4 +1,4 @@
-_class.parseExport = function() {
+this.parseExport = function() {
    this.assert( this.canBeStatement );
    this.canBeStatement = false;
 

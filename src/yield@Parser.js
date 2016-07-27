@@ -1,5 +1,5 @@
 
-_class.parseYield = function(context) {
+this.parseYield = function(context) {
   var arg = null,
       deleg = false;
 

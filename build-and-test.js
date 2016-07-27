@@ -63,12 +63,14 @@ Builder.prototype.writeModule = function(  module ) {
    console.log( "----SUBMODULES" );
    this. write_string(  ';\n' );
 
-   this. write_string( 'var _class = ' + module.name + '.prototype;\n' );
    var e = 0;
 
    while ( e < module.submodules.length ) {
      console.log( "----WRITING SUBMODULE", module.submodules[e] );
+     this.write_string( ';(function(){\n' );
      this. write_string(  fs .readFileSync(module.submodules[e] ) );
+     this.write_string( '\n}).call(' + module.name + '.prototype);\n')   ;
+ 
      console.log( "----FINISHED", module.submodules[e] );
      e++;
    }

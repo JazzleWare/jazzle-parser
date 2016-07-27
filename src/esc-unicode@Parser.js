@@ -1,5 +1,5 @@
 
-_class.peekTheSecondByte = function () {
+this.peekTheSecondByte = function () {
   var e = this.src.charCodeAt(this.c);
   if (CHAR_BACK_SLASH == e) {
     if (CHAR_u != this.src.charCodeAt(++this.c)) this.err('the \\ must have "u" after it ;instead, it has ' + this.src[this.c] );
@@ -12,7 +12,7 @@ _class.peekTheSecondByte = function () {
   return e;
 };
 
-_class.peekUSeq = function () {
+this.peekUSeq = function () {
   var c = ++this.c, l = this.src, e = l.length;
   var byteVal = 0;
   var n = l.charCodeAt(c);

@@ -63,8 +63,8 @@ var Parser = function (src, isModule) {
 };
 
 ;
-var _class = Parser.prototype;
-_class.parseArrayExpression = function (context ) {
+;(function(){
+this.parseArrayExpression = function (context ) {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   var elem = null,
@@ -149,7 +149,7 @@ _class.parseArrayExpression = function (context ) {
   return elem;
 };
 
-_class . parseSpreadElement = function() {
+this . parseSpreadElement = function() {
   var startc = this.c-1-2,
       startLoc = this.locOn(1+2);
   this.next ();
@@ -163,7 +163,10 @@ _class . parseSpreadElement = function() {
 };
 
 
-_class .asArrowFuncArgList = function(head) {
+
+}).call(Parser.prototype);
+;(function(){
+this .asArrowFuncArgList = function(head) {
    if ( head === null )
      return;
 
@@ -179,7 +182,7 @@ _class .asArrowFuncArgList = function(head) {
       this.asArrowFuncArg(head);
 };
 
-_class. asArrowFuncArg = function(arg  ) {
+this. asArrowFuncArg = function(arg  ) {
     var i = 0, list = null;
 
     switch  ( arg.type ) {
@@ -256,7 +259,7 @@ _class. asArrowFuncArg = function(arg  ) {
     }
 };
 
-_class . parseArrowFunctionExpression = function(arg,context)   {
+this . parseArrowFunctionExpression = function(arg,context)   {
 
   if ( this.unsatisfiedArg )
        this.unsatisfiedArg = null;
@@ -323,9 +326,15 @@ _class . parseArrowFunctionExpression = function(arg,context)   {
 };
 
 
-_class . assert = function(cond, message) { if ( !cond ) throw new Error ( message )  ; }
 
-_class .ensureSimpAssig = function(head) {
+}).call(Parser.prototype);
+;(function(){
+this . assert = function(cond, message) { if ( !cond ) throw new Error ( message )  ; }
+
+}).call(Parser.prototype);
+;(function(){
+
+this .ensureSimpAssig = function(head) {
   switch(head.type) {
     case 'Identifier':
        this.assert( !( this.tight && arguments_or_eval(head.name) )  );
@@ -339,7 +348,7 @@ _class .ensureSimpAssig = function(head) {
 };
 
 // an arr-pat is always to the left of an assig;
-_class .toAssig = function(head) {
+this .toAssig = function(head) {
 
   var i = 0;
   var firstEA = null;
@@ -415,7 +424,7 @@ _class .toAssig = function(head) {
   }
 };
 
-_class .parseAssignment = function(head, context ) {
+this .parseAssignment = function(head, context ) {
     var o = this.ltraw;
     var firstEA = null ;
 
@@ -481,7 +490,10 @@ _class .parseAssignment = function(head, context ) {
 };
 
 
-_class. parseClass = function(context) {
+
+}).call(Parser.prototype);
+;(function(){
+this. parseClass = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin();
 
@@ -590,7 +602,7 @@ _class. parseClass = function(context) {
   return n;
 };
 
-_class.parseSuper  = function   () {
+this.parseSuper  = function   () {
    var n = { type: 'Super', loc: { start: this.locBegin(), end: this.loc() }, start: this.c0 , end: this.c };
    this.next() ;
    switch ( this.lttype ) {
@@ -614,7 +626,10 @@ _class.parseSuper  = function   () {
 
 
 
-_class.readMultiComment = function () {
+}).call(Parser.prototype);
+;(function(){
+
+this.readMultiComment = function () {
    var c = this.c,
        l = this.src,
        e = l.length,
@@ -649,7 +664,7 @@ _class.readMultiComment = function () {
    this.err( ' */ ' ) ;
 };
 
-_class.readLineComment = function() {
+this.readLineComment = function() {
     var c = this.c,
         l = this.src,
         e = l.length,
@@ -672,7 +687,10 @@ _class.readLineComment = function() {
 };
 
 
-_class.parseExport = function() {
+
+}).call(Parser.prototype);
+;(function(){
+this.parseExport = function() {
    this.assert( this.canBeStatement );
    this.canBeStatement = false;
 
@@ -821,7 +839,10 @@ _class.parseExport = function() {
            loc: { start: startLoc, end: endLoc || ex.loc.end },
             end: endI || ex.end, declaration: core( ex ) };
 }; 
-_class.parseImport = function() {
+
+}).call(Parser.prototype);
+;(function(){
+this.parseImport = function() {
   this.assert( this.canBeStatement );
   this.canBeStatement = false;
 
@@ -907,7 +928,10 @@ _class.parseImport = function() {
             end:  endI , specifiers: list,
            source: src };
 }; 
-_class.err = function(errorType, errorTok, args) {
+
+}).call(Parser.prototype);
+;(function(){
+this.err = function(errorType, errorTok, args) {
    if ( has.call(this.errorHandlers, errorType) )
      return this.handleError(this.errorHandlers[errorType], errorTok, args );
 
@@ -936,12 +960,15 @@ function createMessage( errorMessage, errorTok, args  ) {
 
 }
    
-_class.handleError = function(handlerFunction, errorTok, args ) {
+this.handleError = function(handlerFunction, errorTok, args ) {
    return handlerFunction.call( this, params, coords );
 
 };
 
-_class.readEsc = function ()  {
+
+}).call(Parser.prototype);
+;(function(){
+this.readEsc = function ()  {
   var src = this.src, b0 = 0, b = 0;
   switch ( src.charCodeAt ( ++this.c ) ) {
    case CHAR_BACK_SLASH: return '\\';
@@ -1026,7 +1053,10 @@ _class.readEsc = function ()  {
 
 
 
-_class.peekTheSecondByte = function () {
+}).call(Parser.prototype);
+;(function(){
+
+this.peekTheSecondByte = function () {
   var e = this.src.charCodeAt(this.c);
   if (CHAR_BACK_SLASH == e) {
     if (CHAR_u != this.src.charCodeAt(++this.c)) this.err('the \\ must have "u" after it ;instead, it has ' + this.src[this.c] );
@@ -1039,7 +1069,7 @@ _class.peekTheSecondByte = function () {
   return e;
 };
 
-_class.peekUSeq = function () {
+this.peekUSeq = function () {
   var c = ++this.c, l = this.src, e = l.length;
   var byteVal = 0;
   var n = l.charCodeAt(c);
@@ -1072,7 +1102,10 @@ _class.peekUSeq = function () {
 
 
 
-_class . parseFor = function() {
+}).call(Parser.prototype);
+;(function(){
+
+this . parseFor = function() {
   this.ensureStmt();
   this.fixupLabels(!false) ;
 
@@ -1177,7 +1210,10 @@ _class . parseFor = function() {
 };
 
 
-_class .parseArgs  = function (argLen) {
+
+}).call(Parser.prototype);
+;(function(){
+this .parseArgs  = function (argLen) {
   var list = [], elem = null;
 
   this.expectType('(') ;
@@ -1232,7 +1268,7 @@ _class .parseArgs  = function (argLen) {
   return list;
 };
 
-_class .addArg = function(id) {
+this .addArg = function(id) {
   var name = id.name + '%';
   if ( has.call(this.argNames, name) ) {
     this.assert( !this.inComplexArgs );
@@ -1244,7 +1280,7 @@ _class .addArg = function(id) {
 };
 
   
-_class .parseFunc = function(context, argListMode, argLen ) {
+this .parseFunc = function(context, argListMode, argLen ) {
   var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
   var prevLabels = this.labels;
   var prevStrict = this.tight;
@@ -1332,7 +1368,7 @@ _class .parseFunc = function(context, argListMode, argLen ) {
   return  n  ;
 };
 
-_class.parseFuncBody = function(context) {
+this.parseFuncBody = function(context) {
   if ( this.lttype !== '{' )
     return this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
 
@@ -1357,7 +1393,7 @@ _class.parseFuncBody = function(context) {
   return  n;
 };
 
-_class . makeStrict  = function() {
+this . makeStrict  = function() {
    this.assert( !this.firstNonSimpArg )  ; 
    if ( this.tight ) return;
 
@@ -1374,8 +1410,11 @@ _class . makeStrict  = function() {
 };
 
 
-_class . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
-_class. parseIdStatementOrId = function ( context ) {
+
+}).call(Parser.prototype);
+;(function(){
+this . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
+this. parseIdStatementOrId = function ( context ) {
   var id = this.ltval ;
   var pendingExprHead = null;
 
@@ -1581,7 +1620,10 @@ _class. parseIdStatementOrId = function ( context ) {
   return pendingExprHead;
 };
  
-_class.readAnIdentifierToken = function (v) {
+
+}).call(Parser.prototype);
+;(function(){
+this.readAnIdentifierToken = function (v) {
    // if head has been a u, the location has already been saved in #next()
    if ( !v ) {
      this.li0 = this.li;
@@ -1656,7 +1698,10 @@ _class.readAnIdentifierToken = function (v) {
 
 
 
-_class.parseLet = function(context) {
+}).call(Parser.prototype);
+;(function(){
+
+this.parseLet = function(context) {
 
 // this function is only calld when we have a 'let' at the start of an statement,
 // or else when we have a 'let' at the start of a for's init; so, CONTEXT_FOR means "at the start of a for's init ",
@@ -1685,13 +1730,19 @@ _class.parseLet = function(context) {
 };
 
 
-_class.loc = function() { return { line: this.li, column: this.col }; };
-_class.locBegin = function() { return  { line: this.li0, column: this.col0 }; };
-_class.locOn = function(l) { return { line: this.li, column: this.col - l }; };
+
+}).call(Parser.prototype);
+;(function(){
+this.loc = function() { return { line: this.li, column: this.col }; };
+this.locBegin = function() { return  { line: this.li0, column: this.col0 }; };
+this.locOn = function(l) { return { line: this.li, column: this.col - l }; };
 
 
-_class .memberID = function() { return this.v > 5 ? this.id() : this.validateID(null) ; };
-_class .memberExpr = function() {
+
+}).call(Parser.prototype);
+;(function(){
+this .memberID = function() { return this.v > 5 ? this.id() : this.validateID(null) ; };
+this .memberExpr = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next() ;
@@ -1703,7 +1754,10 @@ _class .memberExpr = function() {
 };
 
 
-_class.parseNewHead = function () {
+
+}).call(Parser.prototype);
+;(function(){
+this.parseNewHead = function () {
   var startc = this.c0, end = this.c, startLoc = this.locBegin(), li = this.li, col = this.col, raw = this.ltraw ;
   this.next () ;
   if ( this.lttype === '.' ) {
@@ -1795,7 +1849,10 @@ _class.parseNewHead = function () {
   }
 };
 
-_class.next = function () {
+
+}).call(Parser.prototype);
+;(function(){
+this.next = function () {
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
       this. lttype =  'eof' ;
@@ -1981,7 +2038,7 @@ _class.next = function () {
   this.col += ( this.c - start );
 };
 
-_class . opEq = function()  {
+this . opEq = function()  {
     var c = this.c;
     var l = this.src;
     this.lttype = 'op';
@@ -2008,7 +2065,7 @@ _class . opEq = function()  {
     this.c=c;
 };
 
-_class . opMin = function() {
+this . opMin = function() {
    var c = this.c;
    var l = this.src;
    c++;
@@ -2034,7 +2091,7 @@ _class . opMin = function() {
    this.c=c;
 };
 
-_class . opLess = function () {
+this . opLess = function () {
   var c = this.c;
   var l = this.src;
   this.lttype = 'op';
@@ -2064,7 +2121,7 @@ _class . opLess = function () {
   this.c=c;
 };
 
-_class . opAdd = function() {
+this . opAdd = function() {
    var c = this.c;
    var l = this.src;
    c++ ;
@@ -2090,7 +2147,7 @@ _class . opAdd = function() {
    this.c=c;
 };
 
-_class . opGrea = function()   {
+this . opGrea = function()   {
   var c = this.c;
   var l = this.src;
   this.lttype = 'op';
@@ -2131,7 +2188,7 @@ _class . opGrea = function()   {
   this.c=c;
 };
 
-_class.skipS = function() {
+this.skipS = function() {
      var noNewLine = !false,
          startOffset = this.c,
          c = this.c,
@@ -2238,7 +2295,7 @@ _class.skipS = function() {
   this.newLineBeforeLookAhead = !noNewLine ;
 };
 
-_class.readDot = function() {
+this.readDot = function() {
    ++this.c;
    if( this.src.charCodeAt(this.c)==CHAR_SINGLEDOT) {
      if (this.src.charCodeAt(++ this.c) == CHAR_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
@@ -2256,20 +2313,23 @@ _class.readDot = function() {
    this. ltraw = this.lttype = '.' ;
 };
 
-_class.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
+this.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
 
-_class.expectType = function (n)  {
+this.expectType = function (n)  {
   this.assert(this.lttype === n, 'expected ' + n + '; got ' + this.lttype  )  ;
   this.next();
 };
 
-_class.expectID = function (n) {
+this.expectID = function (n) {
   this.assert(this.lttype === 'Identifier' && this.ltval === n)  ;
   this.next();
 };
 
 
-_class.parseExpr = function (context) {
+
+}).call(Parser.prototype);
+;(function(){
+this.parseExpr = function (context) {
   var head = this.parseNonSeqExpr(PREC_WITH_NO_OP,context );
 
   var lastExpr;
@@ -2290,7 +2350,7 @@ _class.parseExpr = function (context) {
   return head ;
 };
 
-_class .parseCond = function(cond,context ) {
+this .parseCond = function(cond,context ) {
     this.next();
     var con = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
     this.expectType(':');
@@ -2299,7 +2359,7 @@ _class .parseCond = function(cond,context ) {
              loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(con), alternate: core(alt) };
 };
 
-_class .parseUnaryExpression = function(context ) {
+this .parseUnaryExpression = function(context ) {
   var u = null, startLoc = null, startc = 0;
   if ( this.isVDT ) {
     this.isVDT = false;
@@ -2320,7 +2380,7 @@ _class .parseUnaryExpression = function(context ) {
            loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg) };
 };
 
-_class .parseUpdateExpression = function(arg, context) {
+this .parseUpdateExpression = function(arg, context) {
     var c = 0,
         loc = null,
         u = this.ltraw;
@@ -2346,7 +2406,7 @@ _class .parseUpdateExpression = function(arg, context) {
 
 };
 
-_class .parseO = function(context ) {
+this .parseO = function(context ) {
 
     switch ( this. lttype ) {
 
@@ -2386,7 +2446,7 @@ _class .parseO = function(context ) {
    return false ;
 };
 
-_class.parseNonSeqExpr = function (prec, context  ) {
+this.parseNonSeqExpr = function (prec, context  ) {
     var firstUnassignable = null, firstParen = null;
 
     var head = this. parseExprHead(context);
@@ -2480,7 +2540,10 @@ _class.parseNonSeqExpr = function (prec, context  ) {
 };
 
 
-_class.readNumberLiteral = function (peek) {
+
+}).call(Parser.prototype);
+;(function(){
+this.readNumberLiteral = function (peek) {
   var c = this.c, src = this.src, len = src.length;
   var b = 10 , val = 0;
   this.lttype  = 'Literal' ;
@@ -2586,7 +2649,7 @@ _class.readNumberLiteral = function (peek) {
   this.assert ( !( c < len && isIDHead(src.charCodeAt(c))) ); // needless
 };
 
-_class . frac = function(n) {
+this . frac = function(n) {
   var c = this.c,
       l = this.src,
       e = l.length ;
@@ -2609,7 +2672,10 @@ _class . frac = function(n) {
 
 
 
-_class .parseMeth = function(name, isClass) {
+}).call(Parser.prototype);
+;(function(){
+
+this .parseMeth = function(name, isClass) {
    var val = null; 
 
    if ( !isClass ) {
@@ -2641,7 +2707,7 @@ _class .parseMeth = function(name, isClass) {
             value: val,    'static': false };
 };
 
-_class .parseGen = function(isClass ) {
+this .parseGen = function(isClass ) {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
@@ -2683,7 +2749,7 @@ _class .parseGen = function(isClass ) {
            loc : { start: startLoc, end: val.loc.end },    'static': false, value: val };
 };
 
-_class . parseSetGet= function(isClass) {
+this . parseSetGet= function(isClass) {
   var startc = this.c0,
       startLoc = this.locBegin();
 
@@ -2732,7 +2798,10 @@ _class . parseSetGet= function(isClass) {
 };
 
 
-_class.parseObjectExpression = function (context) {
+
+}).call(Parser.prototype);
+;(function(){
+this.parseObjectExpression = function (context) {
   var startc = this.c - 1 ,
       startLoc = this.locOn(1),
       elem = null,
@@ -2818,7 +2887,7 @@ _class.parseObjectExpression = function (context) {
   return elem;
 };
 
-_class.parseProperty = function (name, context) {
+this.parseProperty = function (name, context) {
 
   var __proto__ = false, first__proto__ = this.first__proto__ ;
   var val = null;
@@ -2896,7 +2965,10 @@ _class.parseProperty = function (name, context) {
 
 
 
-_class.parsePattern = function() {
+}).call(Parser.prototype);
+;(function(){
+
+this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
@@ -2915,7 +2987,7 @@ _class.parsePattern = function() {
   }
 };
 
-_class. parseArrayPattern = function() {
+this. parseArrayPattern = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1),
       elem = null,
@@ -2959,7 +3031,7 @@ _class. parseArrayPattern = function() {
   return elem;
 };
 
-_class.parseObjectPattern  = function() {
+this.parseObjectPattern  = function() {
 
     var sh = false;
     var startc = this.c-1;
@@ -3025,7 +3097,7 @@ _class.parseObjectPattern  = function() {
     return n;
 };
 
-_class .parseAssig = function (head) {
+this .parseAssig = function (head) {
     this.next() ;
     var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
     return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
@@ -3033,7 +3105,7 @@ _class .parseAssig = function (head) {
 };
 
 
-_class.parseRestElement = function() {
+this.parseRestElement = function() {
    var startc = this.c-1-2,
        startLoc = this.locOn(1+2);
 
@@ -3045,7 +3117,10 @@ _class.parseRestElement = function() {
 };
 
 
-_class.parseExprHead = function (context) {
+
+}).call(Parser.prototype);
+;(function(){
+this.parseExprHead = function (context) {
   var firstUnassignable = null;
   var firstParen = null;
 
@@ -3180,7 +3255,7 @@ _class.parseExprHead = function (context) {
   return head ;
 } ;
 
-_class .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
+this .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
     this.assert( this.ltval === 'target' );
     var prop = this.id();
     return { type: 'MetaProperty',
@@ -3191,28 +3266,28 @@ _class .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
 
 };
 
-_class.numstr = function () {
+this.numstr = function () {
   var n = { type: 'Literal', value: this.ltval, start: this.c0, end: this.c,
            loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
   this.next();
   return n;
 };
 
-_class.idLit = function(val) {
+this.idLit = function(val) {
   var n = { type: 'Literal', value: val, start: this.c0, end: this.c,
            loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
   this.next();
   return n;
 };
 
-_class.id = function() {
+this.id = function() {
    var id = { type: 'Identifier', name: this.ltval, start: this.c0, end: this.c,
               loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
    this.next() ;
    return id;
 };
 
-_class.parseParen = function () {
+this.parseParen = function () {
   var firstParen = null;
   var unsatisfiedAssignment = this.unsatisfiedAssignment,
       startc = this.c - 1 ,
@@ -3328,7 +3403,7 @@ _class.parseParen = function () {
 };
 
 
-_class .parseThis = function() {
+this .parseThis = function() {
     var n = { type : 'ThisExpression',
               loc: { start: this.locBegin(), end: this.loc() },
               start: this.c0,
@@ -3339,7 +3414,7 @@ _class .parseThis = function() {
 };
 
 
-_class.parseArgList = function () {
+this.parseArgList = function () {
     var elem = null;
     var list = [];
 
@@ -3358,7 +3433,10 @@ _class.parseArgList = function () {
 };
 
 
-_class.parseProgram = function () {
+
+}).call(Parser.prototype);
+;(function(){
+this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
   this.next();
@@ -3386,6 +3464,9 @@ _class.parseProgram = function () {
 };
 
 
+
+}).call(Parser.prototype);
+;(function(){
 
 var gRegexFlag =               1 ,
     uRegexFlag = gRegexFlag << 1 ,
@@ -3430,7 +3511,7 @@ function verifyRegex(regex, flags) {
 
 }
 
-_class.parseRegExpLiteral = function() {
+this.parseRegExpLiteral = function() {
      var startc = this.c - 1, startLoc = this.locOn(1),
          c = this.c, src = this.src, len = src.length;
 
@@ -3519,7 +3600,10 @@ _class.parseRegExpLiteral = function() {
 };
 
 
-_class.semiLoc = function () {
+
+}).call(Parser.prototype);
+;(function(){
+this.semiLoc = function () {
   switch (this.lttype) {
     case ';':
        var n = this.loc();
@@ -3538,11 +3622,14 @@ _class.semiLoc = function () {
   this.err('EOS expected; found ' + this.ltraw ) ;
 };
 
-_class.semiI = function() {
+this.semiI = function() {
    return this.lttype === ';' ? this.c : this.newLineBeforeLookAhead ? 0 : this.lttype === '}' ? this.c - 1 : this.lttype === 'eof' ? this.c : 0; };
 
 
-_class.parseStatement = function ( allowNull ) {
+
+}).call(Parser.prototype);
+;(function(){
+this.parseStatement = function ( allowNull ) {
   var head = null, l, e ;
 
   switch (this.lttype) {
@@ -3584,12 +3671,12 @@ _class.parseStatement = function ( allowNull ) {
   };
 };
 
-_class . findLabel = function(name) {
+this . findLabel = function(name) {
     return has.call(this.labels, name) ?this.labels[name]:null;
 
 };
 
-_class .parseLabeledStatement = function(label, allowNull) {
+this .parseLabeledStatement = function(label, allowNull) {
    this.next();
    var l = label.name;
    l += '%';
@@ -3606,19 +3693,19 @@ _class .parseLabeledStatement = function(label, allowNull) {
             loc: { start: label.loc.start, end: stmt.loc.end }, body: stmt };
 };
 
-_class .ensureStmt = function() {
+this .ensureStmt = function() {
    if ( this.canBeStatement ) this.canBeStatement = false;
    else this.assert(false);
 };
 
-_class . fixupLabels = function(loop) {
+this . fixupLabels = function(loop) {
     if ( this.unsatisfiedLabel ) {
          this.unsatisfiedLabel.loop = loop;
          this.unsatisfiedLabel = null;
     }
 };
 
-_class .parseEmptyStatement = function() {
+this .parseEmptyStatement = function() {
   var n = { type: 'EmptyStatement',
            start: this.c - 1,
            loc: { start: this.locOn(1), end: this.loc() },
@@ -3627,7 +3714,7 @@ _class .parseEmptyStatement = function() {
   return n;
 };
 
-_class.parseIfStatement = function () {
+this.parseIfStatement = function () {
   this.ensureStmt ();
   this.fixupLabels(false);
 
@@ -3652,7 +3739,7 @@ _class.parseIfStatement = function () {
      loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt };
 };
 
-_class.parseWhileStatement = function () {
+this.parseWhileStatement = function () {
    this.ensureStmt();
    this.fixupLabels(!false);
 
@@ -3672,7 +3759,7 @@ _class.parseWhileStatement = function () {
        loc: { start: startLoc, end: nbody.loc.end }, body:nbody };
 };
 
-_class.parseBlckStatement = function () {
+this.parseBlckStatement = function () {
   this.fixupLabels(false);
   var startc = this.c - 1,
       startLoc = this.locOn(1);
@@ -3684,7 +3771,7 @@ _class.parseBlckStatement = function () {
   return n;
 };
 
-_class.parseDoWhileStatement = function () {
+this.parseDoWhileStatement = function () {
   this.ensureStmt () ;
   this.fixupLabels(!false);
 
@@ -3712,7 +3799,7 @@ _class.parseDoWhileStatement = function () {
           body: nbody, loc: { start: startLoc, end: { line: li, column: col } } } ;
 };
 
-_class.parseContinueStatement = function () {
+this.parseContinueStatement = function () {
    this.ensureStmt   () ;
    this.fixupLabels(false);
    this.assert(this.scopeFlags & SCOPE_CONTINUE );
@@ -3739,7 +3826,7 @@ _class.parseContinueStatement = function () {
            loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
 };
 
-_class.parseBreakStatement = function () {
+this.parseBreakStatement = function () {
    this.ensureStmt   () ;
    this.fixupLabels(false);
    this.assert(this.scopeFlags & SCOPE_BREAK);
@@ -3766,7 +3853,7 @@ _class.parseBreakStatement = function () {
            loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
 };
 
-_class.parseSwitchStatement = function () {
+this.parseSwitchStatement = function () {
   this.ensureStmt();
   this.fixupLabels(false) ;
 
@@ -3800,7 +3887,7 @@ _class.parseSwitchStatement = function () {
   return n;
 };
 
-_class.parseSwitchCase = function () {
+this.parseSwitchCase = function () {
   var startc,
       startLoc;
 
@@ -3834,7 +3921,7 @@ _class.parseSwitchCase = function () {
      loc: { start: startLoc, end: last ? last.loc.end : { line: li, column: col } }, consequent: nbody };
 };
 
-_class.parseReturnStatement = function () {
+this.parseReturnStatement = function () {
   this.ensureStmt();
   this.fixupLabels(false ) ;
 
@@ -3865,7 +3952,7 @@ _class.parseReturnStatement = function () {
      loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
 };
 
-_class.parseThrowStatement = function () {
+this.parseThrowStatement = function () {
   this.ensureStmt();
   this.fixupLabels(false ) ;
 
@@ -3894,7 +3981,7 @@ _class.parseThrowStatement = function () {
      loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
 };
 
-_class. parseBlockStatement_dependent = function() {
+this. parseBlockStatement_dependent = function() {
     var startc = this.c - 1,
         startLoc = this.locOn(1);
     this.expectType ('{');
@@ -3904,7 +3991,7 @@ _class. parseBlockStatement_dependent = function() {
     return n;
 };
 
-_class.parseTryStatement = function () {
+this.parseTryStatement = function () {
   this.ensureStmt() ;
   this.fixupLabels(false);
   var startc = this.c0,
@@ -3929,7 +4016,7 @@ _class.parseTryStatement = function () {
             handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end } };
 };
 
-_class. parseCatchClause = function () {
+this. parseCatchClause = function () {
    var startc = this.c0,
        startLoc = this.locBegin();
 
@@ -3948,7 +4035,7 @@ _class. parseCatchClause = function () {
    };
 };
 
-_class . parseWithStatement = function() {
+this . parseWithStatement = function() {
    this.ensureStmt() ;
    this.fixupLabels(false);
 
@@ -3971,7 +4058,7 @@ _class . parseWithStatement = function() {
    };
 };
 
-_class . prseDbg = function () {
+this . prseDbg = function () {
   this.ensureStmt() ;
   this.fixupLabels(false);
 
@@ -3995,14 +4082,17 @@ _class . prseDbg = function () {
    };
 }
 
-_class.blck = function () { // blck ([]stmt)
+this.blck = function () { // blck ([]stmt)
   var stmts = [], stmt;
   while (stmt = this.parseStatement(!false)) stmts.push(stmt);
   return (stmts);
 };
 
 
-_class.readStrLiteral = function (start) {
+
+}).call(Parser.prototype);
+;(function(){
+this.readStrLiteral = function (start) {
   this.li0 = this.li;
   this.col0 = this.col;
   this.c0 = this.c ;
@@ -4045,7 +4135,10 @@ _class.readStrLiteral = function (start) {
 };
 
 
-_class . parseTemplateLiteral = function() {
+
+}).call(Parser.prototype);
+;(function(){
+this . parseTemplateLiteral = function() {
   var li = this.li, col = this.col;
   var startc = this.c - 1, startLoc = this.locOn(1);
   var c = this.c, src = this.src, len = src.length;
@@ -4162,7 +4255,10 @@ _class . parseTemplateLiteral = function() {
   return n
 };
 
-_class .validateID  = function (e) {
+
+}).call(Parser.prototype);
+;(function(){
+this .validateID  = function (e) {
   var n = e || this.ltval;
 
   SWITCH:
@@ -4281,7 +4377,7 @@ _class .validateID  = function (e) {
   return e ? null : this.id();
 };
 
-_class.errorReservedID = function() {
+this.errorReservedID = function() {
     if ( !this.throwReserved ) {
        this.throwReserved = !false;
        return null;
@@ -4290,7 +4386,10 @@ _class.errorReservedID = function() {
 }
 
 
-_class . parseVariableDeclaration = function(context) {
+
+}).call(Parser.prototype);
+;(function(){
+this . parseVariableDeclaration = function(context) {
      this.assert ( this.canBeStatement );
      this.canBeStatement = false;
 
@@ -4331,7 +4430,7 @@ _class . parseVariableDeclaration = function(context) {
               loc: { start: startLoc, end: endLoc }, kind: kind };
 };
 
-_class . parseVariableDeclarator = function(context) {
+this . parseVariableDeclarator = function(context) {
   if ( (context & CONTEXT_FOR) &&
        this.lttype === 'Identifier' &&
        this.ltval === 'in' )
@@ -4356,7 +4455,10 @@ _class . parseVariableDeclarator = function(context) {
 };
 
 
-_class.parseYield = function(context) {
+}).call(Parser.prototype);
+;(function(){
+
+this.parseYield = function(context) {
   var arg = null,
       deleg = false;
 
@@ -4390,6 +4492,8 @@ _class.parseYield = function(context) {
 };
 
 
+
+}).call(Parser.prototype);
 ;
 var CHAR_1 = char2int('1'),
     CHAR_2 = char2int('2'),

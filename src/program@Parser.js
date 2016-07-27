@@ -1,4 +1,4 @@
-_class.parseProgram = function () {
+this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
   this.next();
