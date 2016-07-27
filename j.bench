@@ -1,0 +1,63 @@
+LOAD angular-1.2.5.js
+LOAD backbone-1.1.0.js
+LOAD benchmark.js
+LOAD jquery-1.9.1.js
+LOAD jquery.mobile-1.4.2.js
+LOAD mootools-1.4.5.js
+LOAD underscore-1.5.2.js
+LOAD yui-3.12.0.js
+PARSER: jsRube
+-----------START---------
+ source:  angular-1.2.5.js
+0.03531748238738739 '(jsRube)'
+------------DONE---------
+
+
+-----------START---------
+ source:  backbone-1.1.0.js
+0.00444849315216768 '(jsRube)'
+------------DONE---------
+
+
+-----------START---------
+ source:  benchmark.js
+0.006912924264745673 '(jsRube)'
+------------DONE---------
+
+
+-----------START---------
+ source:  jquery-1.9.1.js
+0.025176281464285712 '(jsRube)'
+------------DONE---------
+
+
+-----------START---------
+ source:  jquery.mobile-1.4.2.js
+0.04252474375490195 '(jsRube)'
+------------DONE---------
+
+
+-----------START---------
+ source:  mootools-1.4.5.js
+0.020022559435227277 '(jsRube)'
+------------DONE---------
+
+
+-----------START---------
+ source:  underscore-1.5.2.js
+0.004331465000876291 '(jsRube)'
+------------DONE---------
+
+
+-----------START---------
+ source:  yui-3.12.0.js
+0.017719135120833333 '(jsRube)'
+------------DONE---------
+
+
+-----------START---------
+ source:  lube
+0.014317720985897432 '(jsRube)'
+------------DONE---------
+
+

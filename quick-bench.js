@@ -1,7 +1,7 @@
 var parsers = {};
 
 try {
-   var pEsprima = require( 'esprima-' );
+   var pEsprima = require( 'esprima' );
    parsers.esprima = function(src, withLoc) {
       return pEsprima.parse(src, { loc: withLoc, ranges: withLoc });
    };
@@ -58,11 +58,14 @@ function parseLater( parserName, sourceName ) {
 
 }
  
+var parserNames = { e: 'esprima', a: 'acorn', j: 'jsRube' };
+console.log( "PARSER:", parserNames[process.argv[2]] );
+
 for ( sourceName in sources ) {
  var l = 1;
  while ( l-- ) {
      if ( parsers.esprima ) {
-          var comp = false && util.compare(parsers.esprima(sources[sourceName],!false),
+          var comp =  util.compare(parsers.esprima(sources[sourceName],!false),
                                   parsers.jsRube(sources[sourceName],!false));
           if ( comp ) {
             console.log( util.obj2str(comp) );
@@ -71,8 +74,12 @@ for ( sourceName in sources ) {
      }     
 
      var benchmarkSet = new Benchmark.Suite();
-     for ( parserName in parsers ) {
-        benchmarkSet.add( parserName, parseLater(parserName, sourceName) );
+     var str = process.argv[2];
+     var e = 0;
+     while ( e < str.length ) { 
+       var parserName = parserNames[str[e]];
+       benchmarkSet.add( parserName, parseLater(parserName, sourceName) );
+       e++ ;
      }
 
      benchmarkSet.on( 'complete', function(r) {
