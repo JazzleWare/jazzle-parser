@@ -114,7 +114,7 @@ this.parseRegExpLiteral = function() {
      // flags ^ rsf returns a bit set in which the 1 bits mean "this flag is either not used in flags, or yt is not supported";
      // for knowing whether the 1 bit has also been 1 in flags, we '&' the above bit set with flags; the 1 bits in the
      // given bit set must both be 1 in flags and in flags ^ rsf; that is, they are both "used" and "unsupoorted or unused",
-     // which would be equal to this: [used && (unsupported || !used)] == unsopprted
+     // which would be equal to this: [used && (unsupported || !used)] === unsopprted
      if ( flags & (regexFlagsSupported^flags) )
         verifyRegex(normalizedRegex, "");
      else

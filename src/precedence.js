@@ -1,5 +1,5 @@
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
-// > <= < >= in instanceof   == !=    &    ^   |   ?:    =       ...
+// > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
 
 var PREC_WITH_NO_OP = 0;
 var PREC_SIMP_ASSIG = PREC_WITH_NO_OP + 1  ;

@@ -26,7 +26,7 @@ this.parseStatement = function ( allowNull ) {
     return null;
   }
 
-  if ( head.type == 'Identifier' && this.lttype == ':')
+  if ( head.type === 'Identifier' && this.lttype === ':')
     return this.parseLabeledStatement(head, allowNull);
 
   this.fixupLabels(false) ;

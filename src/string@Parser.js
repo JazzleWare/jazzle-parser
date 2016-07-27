@@ -18,12 +18,12 @@ this.readStrLiteral = function (start) {
         startC =  this.c = c;
         v  += this.readEsc()  ;
         c  = this.c;
-        if ( this.col == 0 ) startC = c   +  1   ;
+        if ( this.col === 0 ) startC = c   +  1   ;
         else  { this.col += ( c - startC  )  ; startC = c ;   }
         v_start = ++c ;
         continue ;
 
-     case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) == CHAR_LINE_FEED ) c++ ;
+     case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CHAR_LINE_FEED ) c++ ;
      case CHAR_LINE_FEED :
      case 0x2028 :
      case 0x2029 : this.err( 'a newline can not appear in a str literal' ) ;
@@ -31,7 +31,7 @@ this.readStrLiteral = function (start) {
     c++;
   }
 
-  if ( v_start != c ) { v += l.slice(v_start,c ) ; }
+  if ( v_start !== c ) { v += l.slice(v_start,c ) ; }
   if (!(c < e && (l.charCodeAt(c)) === start)) { this.err('s lit open'); }
   this.c = c + 1 ;
   this.col += (this. c - startC   )  ;

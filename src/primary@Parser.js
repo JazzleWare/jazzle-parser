@@ -2,9 +2,9 @@ this.parseExprHead = function (context) {
   var firstUnassignable = null;
   var firstParen = null;
 
-  var head;
-  var inner ;
-  var elem;
+  var head = null;
+  var inner = null;
+  var elem = null;
 
   if ( this. pendingExprHead ) {
       head = this. pendingExprHead;

@@ -97,7 +97,7 @@ this .parseFunc = function(context, argListMode, argLen ) {
         currentFuncName = this.validateID(null);
         this.assert( !( this.tight && arguments_or_eval(currentFuncName.name) ) );
      }
-     else if ( this. lttype == 'Identifier' ) {
+     else if ( this. lttype === 'Identifier' ) {
         currentFuncName = this.validateID(null);
         this.assert( !( this.tight && arguments_or_eval(currentFuncName.name) ) );
      }

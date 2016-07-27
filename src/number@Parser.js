@@ -6,7 +6,7 @@ this.readNumberLiteral = function (peek) {
   this.col0 = this.col;
   this.c0 = this.c;
 
-  if (peek == CHAR_0) { // if our num lit starts with a 0
+  if (peek === CHAR_0) { // if our num lit starts with a 0
     b = src.charCodeAt(++c);
     switch (b) { // check out what the next is
       case CHAR_X: case CHAR_x:
@@ -108,7 +108,7 @@ this . frac = function(n) {
   var c = this.c,
       l = this.src,
       e = l.length ;
-  if ( n == -1 || l.charCodeAt(c)== CHAR_SINGLEDOT )
+  if ( n === -1 || l.charCodeAt(c)=== CHAR_SINGLEDOT )
      while( ++c < e && Num(l.charCodeAt (c)))  ;
 
   switch(l.charCodeAt(c)){
@@ -118,7 +118,7 @@ this . frac = function(n) {
         switch(l.charCodeAt(c)){case CHAR_MIN: case CHAR_ADD: c++ ; }
         while ( c < e && Num(l.charCodeAt( c) )) c++ ;
   }
-  if ( c == this.c ) return false  ;
+  if ( c === this.c ) return false  ;
   this.ltraw = l.slice (n === -1 ? this.c - 1 : n, c);
   this.ltval =  parseFloat(this.ltraw )  ;
   this.c = c ;

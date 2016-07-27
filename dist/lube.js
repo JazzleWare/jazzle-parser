@@ -640,7 +640,7 @@ this.readMultiComment = function () {
    while ( c < e )
         switch (r = l.charCodeAt(c++ ) ) {
           case CHAR_MUL:
-             if ( l.charCodeAt(c) == CHAR_DIV) {
+             if ( l.charCodeAt(c) === CHAR_DIV) {
                 c++;
                 this.col += (c-start);
                 this.c=c;
@@ -648,7 +648,7 @@ this.readMultiComment = function () {
              }
              continue ;
 
-          case CHAR_CARRIAGE_RETURN: if( CHAR_LINE_FEED == l.charCodeAt(c)) c++;
+          case CHAR_CARRIAGE_RETURN: if( CHAR_LINE_FEED === l.charCodeAt(c)) c++;
           case CHAR_LINE_FEED:
           case 0x2028:
           case 0x2029:
@@ -672,7 +672,7 @@ this.readLineComment = function() {
     L:
     while ( c < e )
      switch (r = l.charCodeAt(c++ ) ) {
-        case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED == l . charCodeAt ( c) ) c++ ;
+        case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED === l . charCodeAt ( c) ) c++ ;
         case CHAR_LINE_FEED :
         case 0x2028:
         case 0x2029 :
@@ -1058,8 +1058,8 @@ this.readEsc = function ()  {
 
 this.peekTheSecondByte = function () {
   var e = this.src.charCodeAt(this.c);
-  if (CHAR_BACK_SLASH == e) {
-    if (CHAR_u != this.src.charCodeAt(++this.c)) this.err('the \\ must have "u" after it ;instead, it has ' + this.src[this.c] );
+  if (CHAR_BACK_SLASH === e) {
+    if (CHAR_u !== this.src.charCodeAt(++this.c)) this.err('the \\ must have "u" after it ;instead, it has ' + this.src[this.c] );
     e = (this.peekUSeq());
   }
 //  else this.col--;
@@ -1312,7 +1312,7 @@ this .parseFunc = function(context, argListMode, argLen ) {
         currentFuncName = this.validateID(null);
         this.assert( !( this.tight && arguments_or_eval(currentFuncName.name) ) );
      }
-     else if ( this. lttype == 'Identifier' ) {
+     else if ( this. lttype === 'Identifier' ) {
         currentFuncName = this.validateID(null);
         this.assert( !( this.tight && arguments_or_eval(currentFuncName.name) ) );
      }
@@ -1888,7 +1888,7 @@ this.next = function () {
            this.ltraw = '**';
            c++ ;
          }
-         if (l.charCodeAt(c) == CHAR_EQUALITY_SIGN) {
+         if (l.charCodeAt(c) === CHAR_EQUALITY_SIGN) {
            c++;
            this. prec = PREC_OP_ASSIG;
            this.ltraw += '=';
@@ -1902,7 +1902,7 @@ this.next = function () {
       case CHAR_MODULO:
          this.lttype = 'op';
          c++ ;
-         if (l.charCodeAt(c) == CHAR_EQUALITY_SIGN) {
+         if (l.charCodeAt(c) === CHAR_EQUALITY_SIGN) {
            c++;
            this. prec = PREC_OP_ASSIG;
            this.ltraw = '%=';
@@ -1920,7 +1920,7 @@ this.next = function () {
            this. lttype = 'op';
            c++;
            this.prec = PREC_EQUAL;
-           if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+           if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
              this.ltraw = '!==';
              c++;
            }
@@ -1990,7 +1990,7 @@ this.next = function () {
       case CHAR_XOR:
         c++;
         this.lttype = 'op';
-        if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+        if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
           c++;
           this.prec = PREC_OP_ASSIG;
           this.ltraw = '^=';
@@ -2047,7 +2047,7 @@ this . opEq = function()  {
     if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
       c++;
       this.prec = PREC_EQUAL ;
-      if ( l.charCodeAt(c ) == CHAR_EQUALITY_SIGN ){
+      if ( l.charCodeAt(c ) === CHAR_EQUALITY_SIGN ){
         c++ ;
         this.ltraw = '===';
       }
@@ -2055,7 +2055,7 @@ this . opEq = function()  {
     }
     else {
         this.prec = PREC_SIMP_ASSIG;
-        if ( l.charCodeAt(c) == CHAR_GREATER_THAN) {
+        if ( l.charCodeAt(c) === CHAR_GREATER_THAN) {
           c++;
           this. ltraw = '=>';
         }
@@ -2097,9 +2097,9 @@ this . opLess = function () {
   this.lttype = 'op';
   c++ ;
 
-  if ( l.charCodeAt(c ) == CHAR_LESS_THAN ) {
+  if ( l.charCodeAt(c ) === CHAR_LESS_THAN ) {
      c++;
-     if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+     if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
         c++;
         this. prec = PREC_OP_ASSIG ;
         this. ltraw = '<<=' ;
@@ -2111,7 +2111,7 @@ this . opLess = function () {
   }
   else  {
      this. prec = PREC_COMP ;
-     if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+     if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
         c++ ;
         this.ltraw = '<=';
      }
@@ -2155,9 +2155,9 @@ this . opGrea = function()   {
 
   if ( l.charCodeAt(c) === CHAR_GREATER_THAN ) {
     c++;
-    if ( l.charCodeAt(c) == CHAR_GREATER_THAN ) {
+    if ( l.charCodeAt(c) === CHAR_GREATER_THAN ) {
        c++;
-       if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+       if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
          c++ ;
          this. prec = PREC_OP_ASSIG;
          this. ltraw = '>>>=';
@@ -2179,7 +2179,7 @@ this . opGrea = function()   {
   }
   else  {
     this. prec = PREC_COMP  ;
-    if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+    if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
       c++ ;
       this. ltraw = '>=';
     }
@@ -2201,7 +2201,7 @@ this.skipS = function() {
          case CHAR_WHITESPACE :
              while ( ++c < e &&  l.charCodeAt(c) === CHAR_WHITESPACE );
              continue ;
-         case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED == l.charCodeAt( c + 1 ) ) c ++;
+         case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
          case CHAR_LINE_FEED :
             if ( noNewLine ) noNewLine = false ;
             start = ++ c ;
@@ -2297,8 +2297,8 @@ this.skipS = function() {
 
 this.readDot = function() {
    ++this.c;
-   if( this.src.charCodeAt(this.c)==CHAR_SINGLEDOT) {
-     if (this.src.charCodeAt(++ this.c) == CHAR_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
+   if( this.src.charCodeAt(this.c)===CHAR_SINGLEDOT) {
+     if (this.src.charCodeAt(++ this.c) === CHAR_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
      this.err('Unexpectd ' + this.src[this.c]) ;
    }
    else if ( Num(this.src.charCodeAt(this.c))) {
@@ -2551,7 +2551,7 @@ this.readNumberLiteral = function (peek) {
   this.col0 = this.col;
   this.c0 = this.c;
 
-  if (peek == CHAR_0) { // if our num lit starts with a 0
+  if (peek === CHAR_0) { // if our num lit starts with a 0
     b = src.charCodeAt(++c);
     switch (b) { // check out what the next is
       case CHAR_X: case CHAR_x:
@@ -2653,7 +2653,7 @@ this . frac = function(n) {
   var c = this.c,
       l = this.src,
       e = l.length ;
-  if ( n == -1 || l.charCodeAt(c)== CHAR_SINGLEDOT )
+  if ( n === -1 || l.charCodeAt(c)=== CHAR_SINGLEDOT )
      while( ++c < e && Num(l.charCodeAt (c)))  ;
 
   switch(l.charCodeAt(c)){
@@ -2663,7 +2663,7 @@ this . frac = function(n) {
         switch(l.charCodeAt(c)){case CHAR_MIN: case CHAR_ADD: c++ ; }
         while ( c < e && Num(l.charCodeAt( c) )) c++ ;
   }
-  if ( c == this.c ) return false  ;
+  if ( c === this.c ) return false  ;
   this.ltraw = l.slice (n === -1 ? this.c - 1 : n, c);
   this.ltval =  parseFloat(this.ltraw )  ;
   this.c = c ;
@@ -3124,9 +3124,9 @@ this.parseExprHead = function (context) {
   var firstUnassignable = null;
   var firstParen = null;
 
-  var head;
-  var inner ;
-  var elem;
+  var head = null;
+  var inner = null;
+  var elem = null;
 
   if ( this. pendingExprHead ) {
       head = this. pendingExprHead;
@@ -3583,7 +3583,7 @@ this.parseRegExpLiteral = function() {
      // flags ^ rsf returns a bit set in which the 1 bits mean "this flag is either not used in flags, or yt is not supported";
      // for knowing whether the 1 bit has also been 1 in flags, we '&' the above bit set with flags; the 1 bits in the
      // given bit set must both be 1 in flags and in flags ^ rsf; that is, they are both "used" and "unsupoorted or unused",
-     // which would be equal to this: [used && (unsupported || !used)] == unsopprted
+     // which would be equal to this: [used && (unsupported || !used)] === unsopprted
      if ( flags & (regexFlagsSupported^flags) )
         verifyRegex(normalizedRegex, "");
      else
@@ -3657,7 +3657,7 @@ this.parseStatement = function ( allowNull ) {
     return null;
   }
 
-  if ( head.type == 'Identifier' && this.lttype == ':')
+  if ( head.type === 'Identifier' && this.lttype === ':')
     return this.parseLabeledStatement(head, allowNull);
 
   this.fixupLabels(false) ;
@@ -4112,12 +4112,12 @@ this.readStrLiteral = function (start) {
         startC =  this.c = c;
         v  += this.readEsc()  ;
         c  = this.c;
-        if ( this.col == 0 ) startC = c   +  1   ;
+        if ( this.col === 0 ) startC = c   +  1   ;
         else  { this.col += ( c - startC  )  ; startC = c ;   }
         v_start = ++c ;
         continue ;
 
-     case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) == CHAR_LINE_FEED ) c++ ;
+     case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CHAR_LINE_FEED ) c++ ;
      case CHAR_LINE_FEED :
      case 0x2028 :
      case 0x2029 : this.err( 'a newline can not appear in a str literal' ) ;
@@ -4125,7 +4125,7 @@ this.readStrLiteral = function (start) {
     c++;
   }
 
-  if ( v_start != c ) { v += l.slice(v_start,c ) ; }
+  if ( v_start !== c ) { v += l.slice(v_start,c ) ; }
   if (!(c < e && (l.charCodeAt(c)) === start)) { this.err('s lit open'); }
   this.c = c + 1 ;
   this.col += (this. c - startC   )  ;
@@ -4214,7 +4214,7 @@ this . parseTemplateLiteral = function() {
            currentElemContents += src.slice( startElemFragment, c ) + this.readEsc();
            c  = this.c;
            c++;
-           if ( this.col == 0 ) // if we had an escaped newline 
+           if ( this.col === 0 ) // if we had an escaped newline 
              startColIndex = c;
            
            startElemFragment = c ;
@@ -4642,7 +4642,7 @@ function isHex(e) {
 
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
-// > <= < >= in instanceof   == !=    &    ^   |   ?:    =       ...
+// > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
 
 var PREC_WITH_NO_OP = 0;
 var PREC_SIMP_ASSIG = PREC_WITH_NO_OP + 1  ;

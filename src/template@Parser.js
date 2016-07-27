@@ -74,7 +74,7 @@ this . parseTemplateLiteral = function() {
            currentElemContents += src.slice( startElemFragment, c ) + this.readEsc();
            c  = this.c;
            c++;
-           if ( this.col == 0 ) // if we had an escaped newline 
+           if ( this.col === 0 ) // if we had an escaped newline 
              startColIndex = c;
            
            startElemFragment = c ;

@@ -34,7 +34,7 @@ this.next = function () {
            this.ltraw = '**';
            c++ ;
          }
-         if (l.charCodeAt(c) == CHAR_EQUALITY_SIGN) {
+         if (l.charCodeAt(c) === CHAR_EQUALITY_SIGN) {
            c++;
            this. prec = PREC_OP_ASSIG;
            this.ltraw += '=';
@@ -48,7 +48,7 @@ this.next = function () {
       case CHAR_MODULO:
          this.lttype = 'op';
          c++ ;
-         if (l.charCodeAt(c) == CHAR_EQUALITY_SIGN) {
+         if (l.charCodeAt(c) === CHAR_EQUALITY_SIGN) {
            c++;
            this. prec = PREC_OP_ASSIG;
            this.ltraw = '%=';
@@ -66,7 +66,7 @@ this.next = function () {
            this. lttype = 'op';
            c++;
            this.prec = PREC_EQUAL;
-           if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+           if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
              this.ltraw = '!==';
              c++;
            }
@@ -136,7 +136,7 @@ this.next = function () {
       case CHAR_XOR:
         c++;
         this.lttype = 'op';
-        if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+        if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
           c++;
           this.prec = PREC_OP_ASSIG;
           this.ltraw = '^=';
@@ -193,7 +193,7 @@ this . opEq = function()  {
     if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
       c++;
       this.prec = PREC_EQUAL ;
-      if ( l.charCodeAt(c ) == CHAR_EQUALITY_SIGN ){
+      if ( l.charCodeAt(c ) === CHAR_EQUALITY_SIGN ){
         c++ ;
         this.ltraw = '===';
       }
@@ -201,7 +201,7 @@ this . opEq = function()  {
     }
     else {
         this.prec = PREC_SIMP_ASSIG;
-        if ( l.charCodeAt(c) == CHAR_GREATER_THAN) {
+        if ( l.charCodeAt(c) === CHAR_GREATER_THAN) {
           c++;
           this. ltraw = '=>';
         }
@@ -243,9 +243,9 @@ this . opLess = function () {
   this.lttype = 'op';
   c++ ;
 
-  if ( l.charCodeAt(c ) == CHAR_LESS_THAN ) {
+  if ( l.charCodeAt(c ) === CHAR_LESS_THAN ) {
      c++;
-     if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+     if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
         c++;
         this. prec = PREC_OP_ASSIG ;
         this. ltraw = '<<=' ;
@@ -257,7 +257,7 @@ this . opLess = function () {
   }
   else  {
      this. prec = PREC_COMP ;
-     if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+     if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
         c++ ;
         this.ltraw = '<=';
      }
@@ -301,9 +301,9 @@ this . opGrea = function()   {
 
   if ( l.charCodeAt(c) === CHAR_GREATER_THAN ) {
     c++;
-    if ( l.charCodeAt(c) == CHAR_GREATER_THAN ) {
+    if ( l.charCodeAt(c) === CHAR_GREATER_THAN ) {
        c++;
-       if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+       if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
          c++ ;
          this. prec = PREC_OP_ASSIG;
          this. ltraw = '>>>=';
@@ -325,7 +325,7 @@ this . opGrea = function()   {
   }
   else  {
     this. prec = PREC_COMP  ;
-    if ( l.charCodeAt(c) == CHAR_EQUALITY_SIGN ) {
+    if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
       c++ ;
       this. ltraw = '>=';
     }
@@ -347,7 +347,7 @@ this.skipS = function() {
          case CHAR_WHITESPACE :
              while ( ++c < e &&  l.charCodeAt(c) === CHAR_WHITESPACE );
              continue ;
-         case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED == l.charCodeAt( c + 1 ) ) c ++;
+         case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
          case CHAR_LINE_FEED :
             if ( noNewLine ) noNewLine = false ;
             start = ++ c ;
@@ -443,8 +443,8 @@ this.skipS = function() {
 
 this.readDot = function() {
    ++this.c;
-   if( this.src.charCodeAt(this.c)==CHAR_SINGLEDOT) {
-     if (this.src.charCodeAt(++ this.c) == CHAR_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
+   if( this.src.charCodeAt(this.c)===CHAR_SINGLEDOT) {
+     if (this.src.charCodeAt(++ this.c) === CHAR_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
      this.err('Unexpectd ' + this.src[this.c]) ;
    }
    else if ( Num(this.src.charCodeAt(this.c))) {
