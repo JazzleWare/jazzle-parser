@@ -59,7 +59,6 @@ function parseLater( parserName, sourceName ) {
 }
  
 var parserNames = { e: 'esprima', a: 'acorn', j: 'jsRube' };
-console.log( "PARSER:", parserNames[process.argv[2]] );
 
 for ( sourceName in sources ) {
  var l = 1;
