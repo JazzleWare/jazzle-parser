@@ -58,6 +58,23 @@ function parseLater( parserName, sourceName ) {
 
 }
  
+var JEA = 'jea';
+function randJEA() {
+   var str = "";
+   var jea = JEA;
+   while ( str.length < JEA.length ) {
+      var i = (Math.random()*jea.length)|0;
+      str += jea.charAt(i);
+      if ( i < jea.length - 1 ) 
+         jea = jea.substring(0,i) + jea.substring(i+1);
+      else
+         jea = jea.substring(0,jea.length);
+  
+   }
+
+   return str;
+}
+   
 var parserNames = { e: 'esprima', a: 'acorn', j: 'jsRube' };
 
 for ( sourceName in sources ) {
@@ -73,7 +90,7 @@ for ( sourceName in sources ) {
      }     
 
      var benchmarkSet = new Benchmark.Suite();
-     var str = process.argv[2];
+     var str = process.argv[2] || randJEA() ;
      var e = 0;
      while ( e < str.length ) { 
        var parserName = parserNames[str[e]];
