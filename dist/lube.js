@@ -1218,20 +1218,17 @@ this .parseArgs  = function (argLen) {
 
   this.expectType('(') ;
 
-  var firstNonSimpArg = null, id = false;
+  var firstNonSimpArg = null;
   while ( list.length !== argLen ) {
     elem = this.parsePattern();
     if ( elem ) {
-       id = elem.type === 'Identifier' && !this.inComplexArgs;
        if ( this.lttype === 'op' && this.ltraw === '=' ) {
-         if ( id ) {
-           this.inComplexArgs = !false;
-           this.addArg(elem);
-           this.inComplexArgs = this.tight;
-         }
          elem = this.parseAssig(elem);
+         if ( elem.left.type === 'Identifier' ) {
+           this.assert( this.argNames[elem.left.name+'%'] === null );
+           this.argNames[elem.left.name+'%'] = elem;
+         }
        }
-       else if ( id ) this.addArg(elem);
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
              firstNonSimpArg =  elem;
@@ -1273,7 +1270,9 @@ this .addArg = function(id) {
   if ( has.call(this.argNames, name) ) {
     this.assert( !this.inComplexArgs );
     if ( this.argNames[name] === null )
-      this.argNames[name] = id ;
+      this.argNames[name] = id ; // this will be useful if the body has a strictness directive
+    else
+      this.assert( this.argNames[name].type === 'Identifier' );
   }
   else
      this.argNames[name] = null ;
@@ -2972,7 +2971,7 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
-       if ( this.inComplexArgs ) 
+       if ( this.isInArgList ) 
           this.addArg(id);
  
        return id;

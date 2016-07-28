@@ -21,6 +21,13 @@ try {
    }
 } catch ( e ) {}
 
+try {
+   var pShift = require( 'shift-parser' );
+   parsers.shift = function(src, withLoc) {
+      return pShift.parseScript(src, { earlyErrors: false, loc: withLoc } );
+   };
+} catch ( e ) {}
+
 var fs = require( 'fs' ), util = require( './util.js' ) ;
 
 function readFile(filePath) {
@@ -58,24 +65,24 @@ function parseLater( parserName, sourceName ) {
 
 }
  
-var JEA = 'jea';
-function randJEA() {
+var JEAP = 'jeap';
+function randJEAP() {
    var str = "";
-   var jea = JEA;
-   while ( str.length < JEA.length ) {
+   var jea = JEAP;
+   while ( str.length < JEAP.length ) {
       var i = (Math.random()*jea.length)|0;
       str += jea.charAt(i);
       if ( i < jea.length - 1 ) 
          jea = jea.substring(0,i) + jea.substring(i+1);
       else
-         jea = jea.substring(0,jea.length);
+         jea = jea.substring(0,jea.length-1);
   
    }
 
    return str;
 }
    
-var parserNames = { e: 'esprima', a: 'acorn', j: 'jsRube' };
+var parserNames = { e: 'esprima', a: 'acorn', j: 'jsRube', p: 'shift' };
 
 for ( sourceName in sources ) {
  var l = 1;
@@ -90,7 +97,7 @@ for ( sourceName in sources ) {
      }     
 
      var benchmarkSet = new Benchmark.Suite();
-     var str = process.argv[2] || randJEA() ;
+     var str = process.argv[2] || randJEAP() ;
      var e = 0;
      while ( e < str.length ) { 
        var parserName = parserNames[str[e]];

@@ -3,7 +3,7 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
-       if ( this.inComplexArgs ) 
+       if ( this.isInArgList ) 
           this.addArg(id);
  
        return id;
