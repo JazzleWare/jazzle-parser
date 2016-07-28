@@ -1,7 +1,10 @@
-_exports.parse = function(src, isModule ) {
+this.parse = function(src, isModule ) {
   var newp = new Parser(src, isModule);
   return newp.parseProgram();
 };
 
-_exports.Parser = 
+this.Parser = 
 Parser;  
+
+this.Scope = Scope;
+
