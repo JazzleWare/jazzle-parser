@@ -5,6 +5,7 @@ this.err = function(errorType, errorTok, args) {
    throw new CustomError( createMessage( Errors[errorType], errorTok, args ) );
 };
 
+
 function CustomError(start,li,col,message) {
    this.atChar = start;
    this.atLine = li;
@@ -12,6 +13,8 @@ function CustomError(start,li,col,message) {
    this.message = message;
 
 }
+
+CustomError.prototype = Error.prototype;
 
 function createMessage( errorMessage, errorTok, args  ) {
   return errorMessage.replace( /%\{([^\}]*)\}/g,
@@ -28,7 +31,12 @@ function createMessage( errorMessage, errorTok, args  ) {
 }
    
 this.handleError = function(handlerFunction, errorTok, args ) {
-   return handlerFunction.call( this, params, coords );
+   var output = handlerFunction.call( this, params, coords );
+   if ( output ) {
+     this.errorHandlerOutput = output;
+     return !false;
+   }
 
+   return false;
 };
 

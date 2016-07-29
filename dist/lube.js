@@ -209,6 +209,31 @@ function isHex(e) {
 
 
 ;
+var Errors = {};
+
+Errors['u.token'] = "Unexpected token {0}";
+Errors['u.invalid.token'] = "Unexpected {0}";
+Errors['u.newline']= "Unexpected line terminator";
+Errors['u.eos']= "Unexpected end of input";
+Errors['u.num']= "Unexpected #{toktype(arg.tok)}";
+Errors['u.newline']= "Unexpected line terminator";
+Errors['u.comma.after.rest'] = "Unexpected comma after rest";
+Errors['err.throw.newline'] = "Illegal newline after throw";
+Errors['err.regex.incompl'] = "Invalid regular expression= missing /";
+Errors['err.regex.flags'] = "Invalid regular expression flags";
+Errors['err.assig.not'] = "Invalid left-hand side in assignment";
+Errors['err.bind.not']= "Invalid left-hand side in binding";
+Errors['err.assig.for-in']= "Invalid left-hand side in for-in";
+Errors['err.assig.for-of']= "Invalid left-hand side in for-of";
+Errors['err.assig.simple.not']= "Increment/decrement target must be an identifier or member expression";
+Errors['err.switch.multi']= "More than one default clause in switch statement";
+Errors['err.try.tail.no']= "Missing catch or finally after try";
+Errors['err.ret.not.allowed'] = "Illegal return statement";
+Errors['err.arrow.arg']= "Illegal arrow function parameter list";
+Errors['err.for.init.decl'] = "Invalid variable declaration in for-in statement";
+Errors['err.prop.init'] = "Illegal property initializer";
+
+;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
 // > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
 
@@ -435,7 +460,9 @@ this.parseArrayExpression = function (context ) {
          elem = this.parseSpreadElement();
 
      if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
-           this.assert ( context & CONTEXT_ELEM );
+           if ( !(context & CONTEXT_ELEM) && 
+                this.err('err.prop.init', this.unsatisfiedAssignment) )
+                return this.errorHandlerOutput ;
            unsatisfiedAssignment =  this.unsatisfiedAssignment;
      }
  
@@ -503,12 +530,35 @@ this . parseSpreadElement = function() {
 
 },
 function(){
+
+this.parenParamError = function() {
+  return this.err('err.arrow.arg', this.firstParen);
+};
+
+this.restError = function(r) {
+  return this.err('err.arrow.arg', r);
+};
+
+this.containsYieldOrSuperError = function() {
+  return this.err('err.arrow.arg', this.firstElemWithYS );
+};
+ 
+this.notBindableError = function(l) {
+  return this.err('err.arrow.arg', l) ;
+};
+
+this.notParamList = function(l) {
+  return this.err('err.arrow.arg', l);
+};
+
 this .asArrowFuncArgList = function(head) {
    if ( head === null )
      return;
 
    if ( head.type === 'SequenceExpression' ) {
-         this.assert(head !== this.firstParen );
+         if ( head === this.firstParen && this.parenParamError() )
+           return this.errorHandlerOutput ;
+
          var i = 0, list = head.expressions;
          while ( i < list.length ) {
            this.asArrowFuncArg(list[i]);
@@ -524,11 +574,15 @@ this. asArrowFuncArg = function(arg  ) {
 
     switch  ( arg.type ) {
         case 'Identifier':
-           this.assert(arg !== this.firstParen )  ;
+           if ( arg === this.firstParen && this.parenParamError() )
+              return this.errorHandlerOutput ;
+
            return this.addArg(arg);
 
         case 'ArrayExpression':
-           this.assert(arg !== this.firstParen )  ;
+           if ( arg === this.firstParen && this.parenParamError() ) 
+             return errorHandlerOutput ;
+
            list = arg.elements;
            while ( i < list.length ) {
               if ( list[i] ) {
@@ -540,21 +594,30 @@ this. asArrowFuncArg = function(arg  ) {
               }
               i++;
            }
-           this.assert( i === list.length );
+           if ( i !== list.length && this.restError() )
+             return this.errorHandlerOutput;
+
            arg.type = 'ArrayPattern';
            return;
 
         case 'AssignmentExpression':
-           this.assert(arg !== this.firstParen );
-           this.assert(arg.operator === '=' ) ;
+           if (arg === this.firstParen && this.parenParamError() )
+             return this.errorHandlerOutput;
+
+           if (arg.operator !== '=' && this.notBindableError(arg) )
+             return this.errorHandlerOutput ;
+
            this.asArrowFuncArg(arg.left);
-           this.assert( arg !== this.firstElemWithYS );
+           if ( arg === this.firstElemWithYS && this.containsYieldOrSuperError() )
+             return this.errorHandlerOutput;
+
            arg.type = 'AssignmentPattern';
            delete arg.operator ;
            return;
 
         case 'ObjectExpression':
-           this.assert(arg !== this.firstParen    );
+           if (arg === this.firstParen && this.parenParamError() )
+             return this.errorHandlerOutput ;
            list = arg.properties;
            while ( i < list.length )
               this.asArrowFuncArg(list[i++].value );
@@ -563,8 +626,12 @@ this. asArrowFuncArg = function(arg  ) {
            return;
 
         case 'AssignmentPattern':
-           this.assert(arg !== this.firstParen );
-           this.assert( arg !== this.firstElemWithYS );
+           if (arg === this.firstParen && this.parenParamError() )
+             return this.errorHandlerOutput ;
+
+           if ( arg === this.firstElemWithYS && this.containsYieldOrSuper() )
+             return this.errorHandlerOutput;
+
            this.asArrowFuncArg(arg.left) ;
            return;
 
@@ -592,9 +659,11 @@ this. asArrowFuncArg = function(arg  ) {
             return;
 
         default:
-           this.assert(false ) ;
+           if ( this.notBindableError(arg) )
+             return this.errorHandlerOutput;
     }
 };
+
 
 this . parseArrowFunctionExpression = function(arg,context)   {
 
@@ -616,7 +685,8 @@ this . parseArrowFunctionExpression = function(arg,context)   {
        break ;
 
     default:
-       this.assert(false);
+       if ( this.notParamList(arg) )
+         return this.errorHandlerOutput ;
   }
 
   if ( this.firstEA )
@@ -626,8 +696,6 @@ this . parseArrowFunctionExpression = function(arg,context)   {
 
   var scopeFlags = this.scopeFlags;
   this.scopeFlags &= ( SCOPE_FUNCTION|SCOPE_METH|SCOPE_CONSTRUCTOR) ;
-
-  
 
   var isExpr = !false, nbody = null;
 
@@ -671,18 +739,38 @@ this . assert = function(cond, message) { if ( !cond ) throw new Error ( message
 },
 function(){
 
+this.evalArgumentsError = function(l) {
+  return this.err('err.assig.not', l || this.firstEA ) ;
+};
+
+this.notSimpleError = function(l) {
+  return this.err('err.assig.simple.not', l);
+};
+
+this.notAssignableError = function(l) {
+  return this.err('err.assig.not', l || this.firstUnassignable );
+};
+
+this.parenUnassigableError = this.notAssignableError;
+
+this.restNotLastError = this.notAssignableError;
+
 this .ensureSimpAssig = function(head) {
   switch(head.type) {
     case 'Identifier':
-       this.assert( !( this.tight && arguments_or_eval(head.name) )  );
+       if ( this.tight && arguments_or_eval(head.name) &&
+            this.notSimpleError(head) )
+          return this.errorHandlerOutput ;
 
     case 'MemberExpression':
        return;
 
     default:
-       this.assert(false);
+       if ( this.notSimpleError() )
+         return this.errorHandlerOutput;
   }
 };
+
 
 // an arr-pat is always to the left of an assig;
 this .toAssig = function(head) {
@@ -695,7 +783,7 @@ this .toAssig = function(head) {
 
   switch(head.type) {
      case 'Identifier':
-        if (this.tight && arguments_or_eval(head.name))
+        if ( this.tight && arguments_or_eval(head.name) )
           this.firstEA = head;
      case 'MemberExpression':
         return;
@@ -717,7 +805,8 @@ this .toAssig = function(head) {
         return;
 
      case 'ArrayExpression':
-        this.assert(head !== this.firstUnassignable )  ;
+        if (head === this.firstUnassignable && this.parenUnassignableError() )
+          return this.errorHandlerOutput   ;
 
         list = head.elements;
         while ( i < list.length ) {
@@ -733,14 +822,20 @@ this .toAssig = function(head) {
           }
           i++;
         }
-        this.assert( i === list.length );
+        if ( i !== list.length && this.restNotLastError() )
+          return this.errorHandlerOutput ;
+
         head.type = 'ArrayPattern';
         this.firstEA = firstEA ;
         return;
 
      case 'AssignmentExpression':
-       this.assert(head !== this.firstUnassignable ) ;
-       this.assert(head.operator === '='  ) ;
+       if (head === this.firstUnassignable && this.parenUnassignableError() )
+         return this.errorHandlerOutput ;
+
+       if (head.operator !== '=' && this.notAssignableError()  )
+         return this.errorHandlerOutput ;
+
        head.type = 'AssignmentPattern';
        delete head.operator;
        if ( head === this.firstEAContainer )
@@ -779,12 +874,16 @@ this .parseAssignment = function(head, context ) {
     else this.ensureSimpAssig(core(head));
 
     if ( this.unsatisfiedAssignment ) {
-      this.assert( o === '=' ) ;
-      this.unsatisfiedAssignment = false ;
+       if ( o !== '=' && this.err('err.prop.init', this.unsatisfiedAssignment ) )
+          return this.errorHandlerOutput ;
+
+       this.unsatisfiedAssignment = false ;
     }
 
     if ( firstEA ) {
-       this.assert( context & CONTEXT_ELEM_OR_PARAM );
+      
+       if ( !( context & CONTEXT_ELEM_OR_PARAM ) && this.evalArgumentsError() )
+         return this.errorHandlerOutput ;
     }
 
     var prec = this.prec;
@@ -838,8 +937,8 @@ this. parseClass = function(context) {
   this.next () ;
 
   if ( canBeStatement && context !== CONTEXT_DEFAULT  ) {
-     this.canBeStatement = false;
      this.assert ( this.lttype === 'Identifier' );
+     this.canBeStatement = false;
      name = this. validateID(null);
   }
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
@@ -1275,6 +1374,7 @@ this.err = function(errorType, errorTok, args) {
    throw new CustomError( createMessage( Errors[errorType], errorTok, args ) );
 };
 
+
 function CustomError(start,li,col,message) {
    this.atChar = start;
    this.atLine = li;
@@ -1282,6 +1382,8 @@ function CustomError(start,li,col,message) {
    this.message = message;
 
 }
+
+CustomError.prototype = Error.prototype;
 
 function createMessage( errorMessage, errorTok, args  ) {
   return errorMessage.replace( /%\{([^\}]*)\}/g,
@@ -1298,8 +1400,13 @@ function createMessage( errorMessage, errorTok, args  ) {
 }
    
 this.handleError = function(handlerFunction, errorTok, args ) {
-   return handlerFunction.call( this, params, coords );
+   var output = handlerFunction.call( this, params, coords );
+   if ( output ) {
+     this.errorHandlerOutput = output;
+     return !false;
+   }
 
+   return false;
 };
 
 
@@ -4821,6 +4928,7 @@ this.parseYield = function(context) {
 
 
 }]  ],
+null,
 null,
 null,
 null,

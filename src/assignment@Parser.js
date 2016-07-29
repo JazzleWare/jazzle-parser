@@ -1,16 +1,36 @@
 
+this.evalArgumentsError = function(l) {
+  return this.err('err.assig.not', l || this.firstEA ) ;
+};
+
+this.notSimpleError = function(l) {
+  return this.err('err.assig.simple.not', l);
+};
+
+this.notAssignableError = function(l) {
+  return this.err('err.assig.not', l || this.firstUnassignable );
+};
+
+this.parenUnassigableError = this.notAssignableError;
+
+this.restNotLastError = this.notAssignableError;
+
 this .ensureSimpAssig = function(head) {
   switch(head.type) {
     case 'Identifier':
-       this.assert( !( this.tight && arguments_or_eval(head.name) )  );
+       if ( this.tight && arguments_or_eval(head.name) &&
+            this.notSimpleError(head) )
+          return this.errorHandlerOutput ;
 
     case 'MemberExpression':
        return;
 
     default:
-       this.assert(false);
+       if ( this.notSimpleError() )
+         return this.errorHandlerOutput;
   }
 };
+
 
 // an arr-pat is always to the left of an assig;
 this .toAssig = function(head) {
@@ -23,13 +43,14 @@ this .toAssig = function(head) {
 
   switch(head.type) {
      case 'Identifier':
-        if (this.tight && arguments_or_eval(head.name))
+        if ( this.tight && arguments_or_eval(head.name) )
           this.firstEA = head;
      case 'MemberExpression':
         return;
 
      case 'ObjectExpression':
-        this.assert(head !== this.firstUnassignable )  ;
+        if (head === this.firstUnassignable && this.parenUnassignableError() )
+          return this.errorHandlerOutput  ;
 
         list = head.properties;
 
@@ -45,7 +66,8 @@ this .toAssig = function(head) {
         return;
 
      case 'ArrayExpression':
-        this.assert(head !== this.firstUnassignable )  ;
+        if (head === this.firstUnassignable && this.parenUnassignableError() )
+          return this.errorHandlerOutput   ;
 
         list = head.elements;
         while ( i < list.length ) {
@@ -61,14 +83,20 @@ this .toAssig = function(head) {
           }
           i++;
         }
-        this.assert( i === list.length );
+        if ( i !== list.length && this.restNotLastError() )
+          return this.errorHandlerOutput ;
+
         head.type = 'ArrayPattern';
         this.firstEA = firstEA ;
         return;
 
      case 'AssignmentExpression':
-       this.assert(head !== this.firstUnassignable ) ;
-       this.assert(head.operator === '='  ) ;
+       if (head === this.firstUnassignable && this.parenUnassignableError() )
+         return this.errorHandlerOutput ;
+
+       if (head.operator !== '=' && this.notAssignableError()  )
+         return this.errorHandlerOutput ;
+
        head.type = 'AssignmentPattern';
        delete head.operator;
        if ( head === this.firstEAContainer )
@@ -85,7 +113,8 @@ this .toAssig = function(head) {
        return;
 
      default:
-        this.assert(false ) ;
+        if ( this.notAssignableError(head) )
+          return this.errorHandlerOutput;
   }
 };
 
@@ -107,12 +136,16 @@ this .parseAssignment = function(head, context ) {
     else this.ensureSimpAssig(core(head));
 
     if ( this.unsatisfiedAssignment ) {
-      this.assert( o === '=' ) ;
-      this.unsatisfiedAssignment = false ;
+       if ( o !== '=' && this.err('err.prop.init', this.unsatisfiedAssignment ) )
+          return this.errorHandlerOutput ;
+
+       this.unsatisfiedAssignment = false ;
     }
 
     if ( firstEA ) {
-       this.assert( context & CONTEXT_ELEM_OR_PARAM );
+      
+       if ( !( context & CONTEXT_ELEM_OR_PARAM ) && this.evalArgumentsError() )
+         return this.errorHandlerOutput ;
     }
 
     var prec = this.prec;

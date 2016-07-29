@@ -6,8 +6,8 @@ this. parseClass = function(context) {
   this.next () ;
 
   if ( canBeStatement && context !== CONTEXT_DEFAULT  ) {
-     this.canBeStatement = false;
      this.assert ( this.lttype === 'Identifier' );
+     this.canBeStatement = false;
      name = this. validateID(null);
   }
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
