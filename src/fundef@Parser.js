@@ -13,6 +13,7 @@ this .parseArgs  = function (argLen) {
            this.assert( this.argNames[elem.left.name+'%'] === null );
            this.argNames[elem.left.name+'%'] = elem;
          }
+         this.inComplexArgs = !false;
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
@@ -33,7 +34,6 @@ this .parseArgs  = function (argLen) {
      if ( this.lttype === '...' ) {
         this.inComplexArgs = !false;
         elem = this.parseRestElement();
-        this.inComplexArgs = this.tight ;
         list.push( elem  );
         if ( !firstNonSimpArg )
               firstNonSimpArg = elem;

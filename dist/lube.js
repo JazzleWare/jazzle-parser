@@ -1,4 +1,4 @@
-(function(_exports){
+(function(){
 "use strict";
 ;
 var Parser = function (src, isModule) {
@@ -63,7 +63,344 @@ var Parser = function (src, isModule) {
 };
 
 ;
-;(function(){
+var CHAR_1 = char2int('1'),
+    CHAR_2 = char2int('2'),
+    CHAR_3 = char2int('3'),
+    CHAR_4 = char2int('4'),
+    CHAR_5 = char2int('5'),
+    CHAR_6 = char2int('6'),
+    CHAR_7 = char2int('7'),
+    CHAR_8 = char2int('8'),
+    CHAR_9 = char2int('9'),
+    CHAR_0 = char2int('0'),
+
+    CHAR_a = char2int('a'), CHAR_A = char2int('A'),
+    CHAR_b = char2int('b'), CHAR_B = char2int('B'),
+    CHAR_e = char2int('e'), CHAR_E = char2int('E'),
+    CHAR_g = char2int('g'),
+    CHAR_f = char2int('f'), CHAR_F = char2int('F'),
+    CHAR_i = char2int('i'),
+    CHAR_m = char2int('m'),
+    CHAR_n = char2int('n'),
+    CHAR_o = char2int('o'), CHAR_O = char2int('O'),
+    CHAR_r = char2int('r'),
+    CHAR_t = char2int('t'),
+    CHAR_u = char2int('u'), CHAR_U = char2int('U'),
+    CHAR_v = char2int('v'), CHAR_X = char2int('X'),
+    CHAR_x = char2int('x'),
+    CHAR_y = char2int('y'),
+    CHAR_z = char2int('z'), CHAR_Z = char2int('Z'),
+
+    CHAR_UNDERLINE = char2int('_'),
+    CHAR_$ = char2int('$'),
+
+    CHAR_TAB = char2int('\t'),
+    CHAR_CARRIAGE_RETURN = char2int('\r'),
+    CHAR_LINE_FEED = char2int('\n'),
+    CHAR_VTAB = char2int('\v'),
+    CHAR_FORM_FEED   = char2int( '\f') ,
+
+    CHAR_WHITESPACE = char2int(' '),
+
+    CHAR_BACKTICK = char2int('`'),
+    CHAR_SINGLE_QUOTE = char2int('\''),
+    CHAR_MULTI_QUOTE = char2int('"'),
+    CHAR_BACK_SLASH = char2int(('\\')),
+
+    CHAR_DIV = char2int('/'),
+    CHAR_MUL = char2int('*'),
+    CHAR_MIN = char2int('-'),
+    CHAR_ADD = char2int('+'),
+    CHAR_AND = char2int('&'),
+    CHAR_XOR = char2int('^'),
+    CHAR_MODULO = char2int('%'),
+    CHAR_OR = char2int('|'),
+    CHAR_EQUALITY_SIGN = char2int('='),
+
+    CHAR_SEMI = char2int(';'),
+    CHAR_COMMA = char2int(','),
+    CHAR_SINGLEDOT = char2int('.'),
+    CHAR_COLON = char2int((':')),
+    CHAR_QUESTION = char2int('?'),
+
+    CHAR_EXCLAMATION = char2int('!'),
+    CHAR_COMPLEMENT = char2int('~'),
+
+    CHAR_ATSIGN = char2int('@'),
+
+    CHAR_LPAREN = char2int('('),
+    CHAR_RPAREN = char2int(')'),
+    CHAR_LSQBRACKET = char2int('['),
+    CHAR_RSQBRACKET = char2int(']'),
+    CHAR_LCURLY = char2int('{'),
+    CHAR_RCURLY = char2int('}'),
+    CHAR_LESS_THAN = char2int('<'),
+    CHAR_GREATER_THAN = char2int('>')
+ ;
+
+var SCOPE_BREAK       = 1;
+var SCOPE_CONTINUE    = SCOPE_BREAK << 1;
+var SCOPE_FUNCTION    = SCOPE_CONTINUE << 1;
+var SCOPE_METH        = SCOPE_FUNCTION << 1;
+var SCOPE_YIELD       = SCOPE_METH << 1;
+var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
+
+var  CONTEXT_FOR = 1,
+     CONTEXT_ELEM = CONTEXT_FOR << 1 ,
+     CONTEXT_NONE = 0,
+     CONTEXT_PARAM = CONTEXT_ELEM << 1,
+     CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
+     CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
+     CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1, 
+     CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
+
+var INTBITLEN = (function() { var i = 0;
+  while ( 0 < (1 << (i++)))
+     if (i >= 512) return 8;
+
+  return i;
+}());
+
+
+var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
+while ( M_INTBITLEN >> (++D_INTBITLEN) );
+
+var PAREN = 'paren';
+
+
+var ANY_ARG_LEN = -1;
+
+var WHOLE_FUNCTION = 8;
+var ARGLIST_AND_BODY_GEN = 1 ;
+var ARGLIST_AND_BODY = 2;
+var METH_FUNCTION = 4;
+var CONSTRUCTOR_FUNCTION = 128;
+
+var OBJ_MEM = 0;
+var CLASS_MEM = 1;
+var STATIC_MEM =  5;
+
+var STRING_TYPE = typeof "string";
+
+;
+var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
+function isIDHead(c) {
+  return (c <= CHAR_z && c >= CHAR_a) ||
+          c === CHAR_$ ||
+         (c <= CHAR_Z && c >= CHAR_A) ||
+          c === CHAR_UNDERLINE ||
+         (IDS_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN)));
+};
+
+function isIDBody (c) {
+  return (c <= CHAR_z && c >= CHAR_a) ||
+          c === CHAR_$ ||
+         (c <= CHAR_Z && c >= CHAR_A) ||
+          c === CHAR_UNDERLINE ||
+         (c <= CHAR_9 && c >= CHAR_0) ||
+         (IDC_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN)));
+};
+
+function isHex(e) {
+    return ( e >= CHAR_a && e <= CHAR_f ) ||
+           ( e >= CHAR_0 && e <= CHAR_9 ) ||
+           ( e >= CHAR_A && e <= CHAR_F );
+}
+
+
+;
+// ! ~ - + typeof void delete    % ** * /    - +    << >>
+// > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
+
+var PREC_WITH_NO_OP = 0;
+var PREC_SIMP_ASSIG = PREC_WITH_NO_OP + 1  ;
+var PREC_OP_ASSIG = PREC_SIMP_ASSIG + 40 ;
+var PREC_COND = PREC_OP_ASSIG + 1;
+var PREC_OO = -12 ;
+
+var PREC_BOOL_OR = PREC_COND + 2;
+var PREC_BOOL_AND  = PREC_BOOL_OR + 2 ;
+var PREC_BIT_OR = PREC_BOOL_AND + 2 ;
+var PREC_XOR = PREC_BIT_OR + 2;
+var PREC_BIT_AND = PREC_XOR + 2;
+var PREC_EQUAL = PREC_BIT_AND + 2;
+var PREC_COMP = PREC_EQUAL + 2;
+var PREC_SH = PREC_COMP + 2;
+var PREC_ADD_MIN = PREC_SH + 2;
+var PREC_MUL = PREC_ADD_MIN + 2;
+var PREC_U = PREC_MUL + 1;
+
+function isAssignment(prec) { return prec === PREC_SIMP_ASSIG || prec === PREC_OP_ASSIG ;  }
+function isRassoc(prec) { return prec === PREC_U ; }
+function isBin(prec) { return prec !== PREC_BOOL_OR && prec !== PREC_BOOL_AND ;  }
+function isMMorAA(prec) { return prec < 0 ;  }
+function isQuestion(prec) { return prec === PREC_COND  ; }
+
+
+;
+var IDS_ = fromRunLenCodes([0,8472,1,21,1,3948,2],
+ fromRunLenCodes([0,65,26,6,26,47,1,10,1,4,1,5,23,1,31,1,458,4,12,14,5,7,1,1,1,129,
+5,1,2,2,4,1,1,6,1,1,3,1,1,1,20,1,83,1,139,8,166,1,38,2,1,7,39,72,27,5,3,45,43,35,2,
+1,99,1,1,15,2,7,2,10,3,2,1,16,1,1,30,29,89,11,1,24,33,9,2,4,1,5,22,4,1,9,1,3,1,23,
+25,71,21,79,54,3,1,18,1,7,10,15,16,4,8,2,2,2,22,1,7,1,1,3,4,3,1,16,1,13,2,1,3,14,2,
+19,6,4,2,2,22,1,7,1,2,1,2,1,2,31,4,1,1,19,3,16,9,1,3,1,22,1,7,1,2,1,5,3,1,18,1,15,
+2,23,1,11,8,2,2,2,22,1,7,1,2,1,5,3,1,30,2,1,3,15,1,17,1,1,6,3,3,1,4,3,2,1,1,1,2,3,
+2,3,3,3,12,22,1,52,8,1,3,1,23,1,16,3,1,26,3,5,2,35,8,1,3,1,23,1,10,1,5,3,1,32,1,1,
+2,15,2,18,8,1,3,1,41,2,1,16,1,16,3,24,6,5,18,3,24,1,9,1,1,2,7,58,48,1,2,12,7,58,2,
+1,1,2,2,1,1,2,1,6,4,1,7,1,3,1,1,1,1,2,2,1,4,1,2,9,1,2,5,1,1,21,4,32,1,63,8,1,36,27,
+5,115,43,20,1,16,6,4,4,3,1,3,2,7,3,4,13,12,1,17,38,1,1,5,1,2,43,1,333,1,4,2,7,1,1,
+1,4,2,41,1,4,2,33,1,4,2,7,1,1,1,4,2,15,1,57,1,4,2,67,37,16,16,86,2,6,3,620,2,17,1,
+26,5,75,3,11,7,13,1,4,14,18,14,18,14,13,1,3,15,52,35,1,4,1,67,88,8,41,1,1,5,70,10,
+31,49,30,2,5,11,44,4,26,54,23,9,53,82,1,93,47,17,7,55,30,13,2,10,44,26,36,41,3,10,
+36,107,4,1,4,3,2,9,192,64,278,2,6,2,38,2,6,2,8,1,1,1,1,1,1,1,31,2,53,1,7,1,1,3,3,1,
+7,3,4,2,6,4,13,5,3,1,7,116,1,13,1,16,13,101,1,4,1,2,10,1,1,2,6,6,1,1,1,1,1,1,16,2,
+4,5,5,4,1,17,41,2679,47,1,47,1,133,6,4,3,2,12,38,1,1,5,1,2,56,7,1,16,23,9,7,1,7,1,
+7,1,7,1,7,1,7,1,7,1,7,550,3,25,9,7,5,2,5,4,86,4,5,1,90,1,4,5,41,3,94,17,27,53,16,512,
+6582,74,20950,42,1165,67,46,2,269,3,16,10,2,20,47,16,31,2,80,39,9,2,103,2,35,2,8,63,
+11,1,3,1,4,1,23,29,52,14,50,62,6,3,1,1,1,12,28,10,23,25,29,7,47,28,1,16,5,1,10,10,
+5,1,41,23,3,1,8,20,23,3,1,3,50,1,1,3,2,2,5,2,1,1,1,24,3,2,11,7,3,12,6,2,6,2,6,9,7,
+1,7,1,43,1,10,10,115,29,11172,12,23,4,49,8452,366,2,106,38,7,12,5,5,1,1,10,1,13,1,
+5,1,1,1,2,1,2,1,108,33,363,18,64,2,54,40,12,116,5,1,135,36,26,6,26,11,89,3,6,2,6,2,
+6,2,3,35,12,1,26,1,19,1,2,1,15,2,14,34,123,69,53,267,29,3,49,47,32,16,27,5,38,10,30,
+2,36,4,8,1,5,42,158,98,40,8,52,156,311,9,22,10,8,152,6,2,1,1,44,1,2,3,1,2,23,10,23,
+9,31,65,19,1,2,10,22,10,26,70,56,6,2,64,1,15,4,1,3,1,27,44,29,3,29,35,8,1,28,27,54,
+10,22,10,19,13,18,110,73,55,51,13,51,784,53,75,45,32,25,26,36,41,35,3,1,12,48,14,4,
+21,1,1,1,35,18,1,25,84,7,1,1,1,4,1,15,1,10,7,47,38,8,2,2,2,22,1,7,1,2,1,5,3,1,18,1,
+12,5,286,48,20,2,1,1,184,47,41,4,36,48,20,1,59,43,85,26,390,64,31,1,448,57,1287,922,
+102,111,17,196,2748,1071,4049,583,8633,569,7,31,113,30,18,48,16,4,31,21,5,19,880,69,
+11,1,66,13,16480,2,3070,107,5,13,3,9,7,10,5990,85,1,71,1,2,2,1,2,2,2,4,1,12,1,1,1,
+7,1,65,1,4,2,8,1,7,1,28,1,4,1,5,1,1,3,7,1,340,2,25,1,25,1,31,1,25,1,31,1,25,1,31,1,
+25,1,31,1,25,1,8,4148,197,1339,4,1,27,1,2,1,1,2,1,1,10,1,4,1,1,1,1,6,1,4,1,1,1,1,1,
+1,3,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,4,1,7,1,4,1,4,1,1,1,10,1,17,5,3,1,5,1,17,
+4420,42711,41,4149,11,222,2,5762,10590,542]));
+
+var IDC_ = fromRunLenCodes([0,183,1,719,1,4065,9,1640,1],fromRunLenCodes ( ( [ 0 ,
+48,10,7,26,4,1,1,26,47,1,10,1,1,1,2,1,5,23,1,31,1,458,4,12,14,5,7,1,1,1,17,117,1,2,
+2,4,1,1,6,5,1,1,1,20,1,83,1,139,1,5,2,166,1,38,2,1,7,39,9,45,1,1,1,2,1,2,1,1,8,27,
+5,3,29,11,5,74,4,102,1,8,2,10,1,19,2,1,16,59,2,101,14,54,4,1,5,46,18,28,68,21,46,129,
+2,10,1,19,1,8,2,2,2,22,1,7,1,1,3,4,2,9,2,2,2,4,8,1,4,2,1,5,2,12,15,3,1,6,4,2,2,22,
+1,7,1,2,1,2,1,2,2,1,1,5,4,2,2,3,3,1,7,4,1,1,7,16,11,3,1,9,1,3,1,22,1,7,1,2,1,5,2,10,
+1,3,1,3,2,1,15,4,2,10,9,1,7,3,1,8,2,2,2,22,1,7,1,2,1,5,2,9,2,2,2,3,8,2,4,2,1,5,2,10,
+1,1,16,2,1,6,3,3,1,4,3,2,1,1,1,2,3,2,3,3,3,12,4,5,3,3,1,4,2,1,6,1,14,10,16,4,1,8,1,
+3,1,23,1,16,3,8,1,3,1,4,7,2,1,3,5,4,2,10,17,3,1,8,1,3,1,23,1,10,1,5,2,9,1,3,1,4,7,
+2,7,1,1,4,2,10,1,2,14,3,1,8,1,3,1,41,2,8,1,3,1,5,8,1,7,5,2,10,10,6,2,2,1,18,3,24,1,
+9,1,1,2,7,3,1,4,6,1,1,1,8,6,10,2,2,13,58,5,15,1,10,39,2,1,1,2,2,1,1,2,1,6,4,1,7,1,
+3,1,1,1,1,2,2,1,13,1,3,2,5,1,1,1,6,2,10,2,4,32,1,23,2,6,10,11,1,1,1,1,1,4,10,1,36,
+4,20,1,18,1,36,9,1,57,74,6,78,2,38,1,1,5,1,2,43,1,333,1,4,2,7,1,1,1,4,2,41,1,4,2,33,
+1,4,2,7,1,1,1,4,2,15,1,57,1,4,2,67,2,3,9,9,14,16,16,86,2,6,3,620,2,17,1,26,5,75,3,
+11,7,13,1,7,11,21,11,20,12,13,1,3,1,2,12,84,3,1,4,2,2,10,33,3,2,10,6,88,8,43,5,70,
+10,31,1,12,4,12,10,40,2,5,11,44,4,26,6,11,37,28,4,63,1,29,2,11,6,10,13,1,8,14,66,76,
+4,10,17,9,12,116,12,56,8,10,3,49,82,3,1,35,1,2,6,246,6,282,2,6,2,38,2,6,2,8,1,1,1,
+1,1,1,1,31,2,53,1,7,1,1,3,3,1,7,3,4,2,6,4,13,5,3,1,7,66,2,19,1,28,1,13,1,16,13,51,
+13,4,1,3,12,17,1,4,1,2,10,1,1,2,6,6,1,1,1,1,1,1,16,2,4,5,5,4,1,17,41,2679,47,1,47,
+1,133,6,9,12,38,1,1,5,1,2,56,7,1,15,24,9,7,1,7,1,7,1,7,1,7,1,7,1,7,1,7,1,32,517,3,
+25,15,1,5,2,5,4,86,2,7,1,90,1,4,5,41,3,94,17,27,53,16,512,6582,74,20950,42,1165,67,
+46,2,269,3,28,20,48,4,10,1,115,37,9,2,103,2,35,2,8,63,49,24,52,12,69,11,10,6,24,3,
+1,1,1,2,46,2,36,12,29,3,65,14,11,6,31,1,55,9,14,2,10,6,23,3,73,24,3,2,16,2,5,10,6,
+2,6,2,6,9,7,1,7,1,43,1,10,10,123,1,2,2,10,6,11172,12,23,4,49,8452,366,2,106,38,7,12,
+5,5,12,1,13,1,5,1,1,1,2,1,2,1,108,33,363,18,64,2,54,40,12,4,16,16,16,3,2,24,3,32,5,
+1,135,19,10,7,26,4,1,1,26,11,89,3,6,2,6,2,6,2,3,35,12,1,26,1,19,1,2,1,15,2,14,34,123,
+69,53,136,1,130,29,3,49,15,1,31,32,16,27,5,43,5,30,2,36,4,8,1,5,42,158,2,10,86,40,
+8,52,156,311,9,22,10,8,152,6,2,1,1,44,1,2,3,1,2,23,10,23,9,31,65,19,1,2,10,22,10,26,
+70,56,6,2,64,4,1,2,5,8,1,3,1,27,4,3,4,1,32,29,3,29,35,8,1,30,25,54,10,22,10,19,13,
+18,110,73,55,51,13,51,781,71,31,10,15,60,21,25,7,10,6,53,1,10,16,36,2,1,9,69,5,3,3,
+11,1,1,35,18,1,37,72,7,1,1,1,4,1,15,1,10,7,59,5,10,6,4,1,8,2,2,2,22,1,7,1,2,1,5,2,
+9,2,2,2,3,2,1,6,1,5,7,2,7,3,5,267,70,1,1,8,10,166,54,2,9,23,6,34,65,3,1,11,10,38,56,
+8,10,54,26,3,15,4,10,358,74,21,1,448,57,1287,922,102,111,17,196,2748,1071,4049,583,
+8633,569,7,31,1,10,102,30,2,5,11,55,9,4,12,10,9,21,5,19,880,69,11,47,16,17,16480,2,
+3070,107,5,13,3,9,7,10,3,2,5318,5,3,6,8,8,2,7,30,4,148,3,443,85,1,71,1,2,2,1,2,2,2,
+4,1,12,1,1,1,7,1,65,1,4,2,8,1,7,1,28,1,4,1,5,1,1,3,7,1,340,2,25,1,25,1,31,1,25,1,31,
+1,25,1,31,1,25,1,31,1,25,1,8,2,50,512,55,4,50,8,1,14,1,22,5,1,15,3408,197,11,7,1321,
+4,1,27,1,2,1,1,2,1,1,10,1,4,1,1,1,1,6,1,4,1,1,1,1,1,1,3,1,2,1,1,2,1,1,1,1,1,1,1,1,
+1,1,2,1,1,2,4,1,7,1,4,1,4,1,1,1,10,1,17,5,3,1,5,1,17,4420,42711,41,4149,11,222,2,5762,
+10590,542,722658,240 ]) ) )  ;
+
+function set(bits, i) {
+  bits[i>>D_INTBITLEN] |= ( 1 << ( i & M_INTBITLEN ) );
+
+}
+
+set(IDC_,0x200C);
+set(IDC_,0x200D);
+
+
+;
+
+function char2int(c) { return c.charCodeAt(0); }
+var hexD = [ '1', '2', '3', '4', '5',
+             '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' ];
+hexD = ['0'].concat(hexD);
+
+function hex(number) {
+  var str = "";
+  str = hexD[number&0xf] + str
+  str = hexD[(number>>=4)&0xf] + str ;
+  str = hexD[(number>>=4)&0xf] + str ;
+  str = hexD[(number>>=4)&0xf] + str ;
+  
+  return str;
+}
+
+function fromRunLenCodes(runLenArray, bitm) {
+  bitm = bitm || [];
+  var bit = runLenArray[0];
+  var runLenIdx = 1, bitIdx = 0;
+  var runLen = 0;
+  while (runLenIdx < runLenArray.length) {
+    runLen = runLenArray[runLenIdx];
+    while (runLen--) {
+      while ((INTBITLEN * (bitm.length)) < bitIdx) bitm.push(0);
+      if (bit) bitm[bitIdx >> D_INTBITLEN] |= (1 << (M_INTBITLEN & bitIdx));
+      bitIdx++ ;
+    }
+    runLenIdx++ ;
+    bit ^= 1;
+  }
+  return (bitm);
+}
+
+function arguments_or_eval(l) {
+  switch ( l ) {
+     case 'arguments':
+     case 'eval':
+       return !false;
+  }
+
+  return false;
+};
+
+var has   = Object.prototype.hasOwnProperty;
+
+function fromcode(codePoint )  {
+  if ( codePoint <= 0xFFFF)
+    return String.fromCharCode(codePoint) ;
+
+  return String.fromCharCode(((codePoint-0x10000 )>>10)+0x0D800,
+                             ((codePoint-0x10000 )&(1024-1))+0x0DC00);
+
+}
+
+function core(n) { return n.type === PAREN ? n.expr : n; };
+
+function toNum (n) {
+  return (n >= CHAR_0 && n <= CHAR_9) ? n - CHAR_0 :
+         (n <= CHAR_f && n >= CHAR_a) ? 10 + n - CHAR_a :
+         (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
+};
+
+
+;
+ (function(){
+       var i = 0;
+       while(i < this.length){
+          var def = this[i++];
+          if ( !def ) continue;
+          var e = 0;
+          while ( e < def[1].length )
+             def[1][e++].call(def[0]);
+       }
+     }).call([
+[Parser.prototype, [function(){
 this.parseArrayExpression = function (context ) {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
@@ -164,8 +501,8 @@ this . parseSpreadElement = function() {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this .asArrowFuncArgList = function(head) {
    if ( head === null )
      return;
@@ -327,12 +664,12 @@ this . parseArrowFunctionExpression = function(arg,context)   {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this . assert = function(cond, message) { if ( !cond ) throw new Error ( message )  ; }
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 
 this .ensureSimpAssig = function(head) {
   switch(head.type) {
@@ -491,8 +828,8 @@ this .parseAssignment = function(head, context ) {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this. parseClass = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin();
@@ -626,8 +963,8 @@ this.parseSuper  = function   () {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 
 this.readMultiComment = function () {
    var c = this.c,
@@ -688,8 +1025,8 @@ this.readLineComment = function() {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.parseExport = function() {
    this.assert( this.canBeStatement );
    this.canBeStatement = false;
@@ -840,8 +1177,8 @@ this.parseExport = function() {
             end: endI || ex.end, declaration: core( ex ) };
 }; 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.parseImport = function() {
   this.assert( this.canBeStatement );
   this.canBeStatement = false;
@@ -929,8 +1266,8 @@ this.parseImport = function() {
            source: src };
 }; 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.err = function(errorType, errorTok, args) {
    if ( has.call(this.errorHandlers, errorType) )
      return this.handleError(this.errorHandlers[errorType], errorTok, args );
@@ -966,8 +1303,8 @@ this.handleError = function(handlerFunction, errorTok, args ) {
 };
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.readEsc = function ()  {
   var src = this.src, b0 = 0, b = 0;
   switch ( src.charCodeAt ( ++this.c ) ) {
@@ -1053,8 +1390,8 @@ this.readEsc = function ()  {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 
 this.peekTheSecondByte = function () {
   var e = this.src.charCodeAt(this.c);
@@ -1102,8 +1439,8 @@ this.peekUSeq = function () {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 
 this . parseFor = function() {
   this.ensureStmt();
@@ -1211,8 +1548,8 @@ this . parseFor = function() {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this .parseArgs  = function (argLen) {
   var list = [], elem = null;
 
@@ -1228,6 +1565,7 @@ this .parseArgs  = function (argLen) {
            this.assert( this.argNames[elem.left.name+'%'] === null );
            this.argNames[elem.left.name+'%'] = elem;
          }
+         this.inComplexArgs = !false;
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
@@ -1248,7 +1586,6 @@ this .parseArgs  = function (argLen) {
      if ( this.lttype === '...' ) {
         this.inComplexArgs = !false;
         elem = this.parseRestElement();
-        this.inComplexArgs = this.tight ;
         list.push( elem  );
         if ( !firstNonSimpArg )
               firstNonSimpArg = elem;
@@ -1410,8 +1747,8 @@ this . makeStrict  = function() {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
 this. parseIdStatementOrId = function ( context ) {
   var id = this.ltval ;
@@ -1620,8 +1957,8 @@ this. parseIdStatementOrId = function ( context ) {
 };
  
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.readAnIdentifierToken = function (v) {
    // if head has been a u, the location has already been saved in #next()
    if ( !v ) {
@@ -1697,8 +2034,8 @@ this.readAnIdentifierToken = function (v) {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 
 this.parseLet = function(context) {
 
@@ -1730,16 +2067,16 @@ this.parseLet = function(context) {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.loc = function() { return { line: this.li, column: this.col }; };
 this.locBegin = function() { return  { line: this.li0, column: this.col0 }; };
 this.locOn = function(l) { return { line: this.li, column: this.col - l }; };
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this .memberID = function() { return this.v > 5 ? this.id() : this.validateID(null) ; };
 this .memberExpr = function() {
   var startc = this.c - 1,
@@ -1754,8 +2091,8 @@ this .memberExpr = function() {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.parseNewHead = function () {
   var startc = this.c0, end = this.c, startLoc = this.locBegin(), li = this.li, col = this.col, raw = this.ltraw ;
   this.next () ;
@@ -1849,8 +2186,8 @@ this.parseNewHead = function () {
 };
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.next = function () {
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
@@ -2326,8 +2663,8 @@ this.expectID = function (n) {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.parseExpr = function (context) {
   var head = this.parseNonSeqExpr(PREC_WITH_NO_OP,context );
 
@@ -2540,8 +2877,8 @@ this.parseNonSeqExpr = function (prec, context  ) {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.readNumberLiteral = function (peek) {
   var c = this.c, src = this.src, len = src.length;
   var b = 10 , val = 0;
@@ -2671,8 +3008,8 @@ this . frac = function(n) {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 
 this .parseMeth = function(name, isClass) {
    var val = null; 
@@ -2798,8 +3135,8 @@ this . parseSetGet= function(isClass) {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.parseObjectExpression = function (context) {
   var startc = this.c - 1 ,
       startLoc = this.locOn(1),
@@ -2964,8 +3301,8 @@ this.parseProperty = function (name, context) {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 
 this.parsePattern = function() {
   switch ( this.lttype ) {
@@ -3018,9 +3355,6 @@ this. parseArrayPattern = function() {
          break ;
       }
   } 
-
-  if ( this.isInArgList )
-       this.inComplexArgs = this.tight;
 
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
@@ -3082,9 +3416,6 @@ this.parseObjectPattern  = function() {
 
     } while ( this.lttype === ',' );
 
-    if ( this.isInArgList  )
-         this.inComplexArgs = this.tight; 
-
     var n = { type: 'ObjectPattern',
              loc: { start: startLoc, end: this.loc() },
              start: startc,
@@ -3117,8 +3448,8 @@ this.parseRestElement = function() {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.parseExprHead = function (context) {
   var firstUnassignable = null;
   var firstParen = null;
@@ -3433,8 +3764,8 @@ this.parseArgList = function () {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
@@ -3464,8 +3795,8 @@ this.parseProgram = function () {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 
 var gRegexFlag =               1 ,
     uRegexFlag = gRegexFlag << 1 ,
@@ -3600,8 +3931,8 @@ this.parseRegExpLiteral = function() {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.semiLoc = function () {
   switch (this.lttype) {
     case ';':
@@ -3626,8 +3957,8 @@ this.semiI = function() {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.parseStatement = function ( allowNull ) {
   var head = null, l, e ;
 
@@ -4089,8 +4420,8 @@ this.blck = function () { // blck ([]stmt)
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this.readStrLiteral = function (start) {
   this.li0 = this.li;
   this.col0 = this.col;
@@ -4135,8 +4466,8 @@ this.readStrLiteral = function (start) {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this . parseTemplateLiteral = function() {
   var li = this.li, col = this.col;
   var startc = this.c - 1, startLoc = this.locOn(1);
@@ -4255,8 +4586,8 @@ this . parseTemplateLiteral = function() {
 };
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this .validateID  = function (e) {
   var n = e || this.ltval;
 
@@ -4386,8 +4717,8 @@ this.errorReservedID = function() {
 
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 this . parseVariableDeclaration = function(context) {
      this.assert ( this.canBeStatement );
      this.canBeStatement = false;
@@ -4454,8 +4785,8 @@ this . parseVariableDeclarator = function(context) {
 };
 
 
-}).call(Parser.prototype);
-;(function(){
+},
+function(){
 
 this.parseYield = function(context) {
   var arg = null,
@@ -4492,340 +4823,18 @@ this.parseYield = function(context) {
 
 
 
-}).call(Parser.prototype);
-;
-var CHAR_1 = char2int('1'),
-    CHAR_2 = char2int('2'),
-    CHAR_3 = char2int('3'),
-    CHAR_4 = char2int('4'),
-    CHAR_5 = char2int('5'),
-    CHAR_6 = char2int('6'),
-    CHAR_7 = char2int('7'),
-    CHAR_8 = char2int('8'),
-    CHAR_9 = char2int('9'),
-    CHAR_0 = char2int('0'),
-
-    CHAR_a = char2int('a'), CHAR_A = char2int('A'),
-    CHAR_b = char2int('b'), CHAR_B = char2int('B'),
-    CHAR_e = char2int('e'), CHAR_E = char2int('E'),
-    CHAR_g = char2int('g'),
-    CHAR_f = char2int('f'), CHAR_F = char2int('F'),
-    CHAR_i = char2int('i'),
-    CHAR_m = char2int('m'),
-    CHAR_n = char2int('n'),
-    CHAR_o = char2int('o'), CHAR_O = char2int('O'),
-    CHAR_r = char2int('r'),
-    CHAR_t = char2int('t'),
-    CHAR_u = char2int('u'), CHAR_U = char2int('U'),
-    CHAR_v = char2int('v'), CHAR_X = char2int('X'),
-    CHAR_x = char2int('x'),
-    CHAR_y = char2int('y'),
-    CHAR_z = char2int('z'), CHAR_Z = char2int('Z'),
-
-    CHAR_UNDERLINE = char2int('_'),
-    CHAR_$ = char2int('$'),
-
-    CHAR_TAB = char2int('\t'),
-    CHAR_CARRIAGE_RETURN = char2int('\r'),
-    CHAR_LINE_FEED = char2int('\n'),
-    CHAR_VTAB = char2int('\v'),
-    CHAR_FORM_FEED   = char2int( '\f') ,
-
-    CHAR_WHITESPACE = char2int(' '),
-
-    CHAR_BACKTICK = char2int('`'),
-    CHAR_SINGLE_QUOTE = char2int('\''),
-    CHAR_MULTI_QUOTE = char2int('"'),
-    CHAR_BACK_SLASH = char2int(('\\')),
-
-    CHAR_DIV = char2int('/'),
-    CHAR_MUL = char2int('*'),
-    CHAR_MIN = char2int('-'),
-    CHAR_ADD = char2int('+'),
-    CHAR_AND = char2int('&'),
-    CHAR_XOR = char2int('^'),
-    CHAR_MODULO = char2int('%'),
-    CHAR_OR = char2int('|'),
-    CHAR_EQUALITY_SIGN = char2int('='),
-
-    CHAR_SEMI = char2int(';'),
-    CHAR_COMMA = char2int(','),
-    CHAR_SINGLEDOT = char2int('.'),
-    CHAR_COLON = char2int((':')),
-    CHAR_QUESTION = char2int('?'),
-
-    CHAR_EXCLAMATION = char2int('!'),
-    CHAR_COMPLEMENT = char2int('~'),
-
-    CHAR_ATSIGN = char2int('@'),
-
-    CHAR_LPAREN = char2int('('),
-    CHAR_RPAREN = char2int(')'),
-    CHAR_LSQBRACKET = char2int('['),
-    CHAR_RSQBRACKET = char2int(']'),
-    CHAR_LCURLY = char2int('{'),
-    CHAR_RCURLY = char2int('}'),
-    CHAR_LESS_THAN = char2int('<'),
-    CHAR_GREATER_THAN = char2int('>')
- ;
-
-var SCOPE_BREAK       = 1;
-var SCOPE_CONTINUE    = SCOPE_BREAK << 1;
-var SCOPE_FUNCTION    = SCOPE_CONTINUE << 1;
-var SCOPE_METH        = SCOPE_FUNCTION << 1;
-var SCOPE_YIELD       = SCOPE_METH << 1;
-var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
-
-var  CONTEXT_FOR = 1,
-     CONTEXT_ELEM = CONTEXT_FOR << 1 ,
-     CONTEXT_NONE = 0,
-     CONTEXT_PARAM = CONTEXT_ELEM << 1,
-     CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
-     CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
-     CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1, 
-     CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
-
-var INTBITLEN = (function() { var i = 0;
-  while ( 0 < (1 << (i++)))
-     if (i >= 512) return 8;
-
-  return i;
-}());
-
-
-var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
-while ( M_INTBITLEN >> (++D_INTBITLEN) );
-
-var PAREN = 'paren';
-
-
-var ANY_ARG_LEN = -1;
-
-var WHOLE_FUNCTION = 8;
-var ARGLIST_AND_BODY_GEN = 1 ;
-var ARGLIST_AND_BODY = 2;
-var METH_FUNCTION = 4;
-var CONSTRUCTOR_FUNCTION = 128;
-
-var OBJ_MEM = 0;
-var CLASS_MEM = 1;
-var STATIC_MEM =  5;
-
-var STRING_TYPE = typeof "string";
-
-;
-var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
-function isIDHead(c) {
-  return (c <= CHAR_z && c >= CHAR_a) ||
-          c === CHAR_$ ||
-         (c <= CHAR_Z && c >= CHAR_A) ||
-          c === CHAR_UNDERLINE ||
-         (IDS_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN)));
-};
-
-function isIDBody (c) {
-  return (c <= CHAR_z && c >= CHAR_a) ||
-          c === CHAR_$ ||
-         (c <= CHAR_Z && c >= CHAR_A) ||
-          c === CHAR_UNDERLINE ||
-         (c <= CHAR_9 && c >= CHAR_0) ||
-         (IDC_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN)));
-};
-
-function isHex(e) {
-    return ( e >= CHAR_a && e <= CHAR_f ) ||
-           ( e >= CHAR_0 && e <= CHAR_9 ) ||
-           ( e >= CHAR_A && e <= CHAR_F );
-}
-
-
-;
-// ! ~ - + typeof void delete    % ** * /    - +    << >>
-// > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
-
-var PREC_WITH_NO_OP = 0;
-var PREC_SIMP_ASSIG = PREC_WITH_NO_OP + 1  ;
-var PREC_OP_ASSIG = PREC_SIMP_ASSIG + 40 ;
-var PREC_COND = PREC_OP_ASSIG + 1;
-var PREC_OO = -12 ;
-
-var PREC_BOOL_OR = PREC_COND + 2;
-var PREC_BOOL_AND  = PREC_BOOL_OR + 2 ;
-var PREC_BIT_OR = PREC_BOOL_AND + 2 ;
-var PREC_XOR = PREC_BIT_OR + 2;
-var PREC_BIT_AND = PREC_XOR + 2;
-var PREC_EQUAL = PREC_BIT_AND + 2;
-var PREC_COMP = PREC_EQUAL + 2;
-var PREC_SH = PREC_COMP + 2;
-var PREC_ADD_MIN = PREC_SH + 2;
-var PREC_MUL = PREC_ADD_MIN + 2;
-var PREC_U = PREC_MUL + 1;
-
-function isAssignment(prec) { return prec === PREC_SIMP_ASSIG || prec === PREC_OP_ASSIG ;  }
-function isRassoc(prec) { return prec === PREC_U ; }
-function isBin(prec) { return prec !== PREC_BOOL_OR && prec !== PREC_BOOL_AND ;  }
-function isMMorAA(prec) { return prec < 0 ;  }
-function isQuestion(prec) { return prec === PREC_COND  ; }
-
-
-;
-var IDS_ = fromRunLenCodes([0,8472,1,21,1,3948,2],
- fromRunLenCodes([0,65,26,6,26,47,1,10,1,4,1,5,23,1,31,1,458,4,12,14,5,7,1,1,1,129,
-5,1,2,2,4,1,1,6,1,1,3,1,1,1,20,1,83,1,139,8,166,1,38,2,1,7,39,72,27,5,3,45,43,35,2,
-1,99,1,1,15,2,7,2,10,3,2,1,16,1,1,30,29,89,11,1,24,33,9,2,4,1,5,22,4,1,9,1,3,1,23,
-25,71,21,79,54,3,1,18,1,7,10,15,16,4,8,2,2,2,22,1,7,1,1,3,4,3,1,16,1,13,2,1,3,14,2,
-19,6,4,2,2,22,1,7,1,2,1,2,1,2,31,4,1,1,19,3,16,9,1,3,1,22,1,7,1,2,1,5,3,1,18,1,15,
-2,23,1,11,8,2,2,2,22,1,7,1,2,1,5,3,1,30,2,1,3,15,1,17,1,1,6,3,3,1,4,3,2,1,1,1,2,3,
-2,3,3,3,12,22,1,52,8,1,3,1,23,1,16,3,1,26,3,5,2,35,8,1,3,1,23,1,10,1,5,3,1,32,1,1,
-2,15,2,18,8,1,3,1,41,2,1,16,1,16,3,24,6,5,18,3,24,1,9,1,1,2,7,58,48,1,2,12,7,58,2,
-1,1,2,2,1,1,2,1,6,4,1,7,1,3,1,1,1,1,2,2,1,4,1,2,9,1,2,5,1,1,21,4,32,1,63,8,1,36,27,
-5,115,43,20,1,16,6,4,4,3,1,3,2,7,3,4,13,12,1,17,38,1,1,5,1,2,43,1,333,1,4,2,7,1,1,
-1,4,2,41,1,4,2,33,1,4,2,7,1,1,1,4,2,15,1,57,1,4,2,67,37,16,16,86,2,6,3,620,2,17,1,
-26,5,75,3,11,7,13,1,4,14,18,14,18,14,13,1,3,15,52,35,1,4,1,67,88,8,41,1,1,5,70,10,
-31,49,30,2,5,11,44,4,26,54,23,9,53,82,1,93,47,17,7,55,30,13,2,10,44,26,36,41,3,10,
-36,107,4,1,4,3,2,9,192,64,278,2,6,2,38,2,6,2,8,1,1,1,1,1,1,1,31,2,53,1,7,1,1,3,3,1,
-7,3,4,2,6,4,13,5,3,1,7,116,1,13,1,16,13,101,1,4,1,2,10,1,1,2,6,6,1,1,1,1,1,1,16,2,
-4,5,5,4,1,17,41,2679,47,1,47,1,133,6,4,3,2,12,38,1,1,5,1,2,56,7,1,16,23,9,7,1,7,1,
-7,1,7,1,7,1,7,1,7,1,7,550,3,25,9,7,5,2,5,4,86,4,5,1,90,1,4,5,41,3,94,17,27,53,16,512,
-6582,74,20950,42,1165,67,46,2,269,3,16,10,2,20,47,16,31,2,80,39,9,2,103,2,35,2,8,63,
-11,1,3,1,4,1,23,29,52,14,50,62,6,3,1,1,1,12,28,10,23,25,29,7,47,28,1,16,5,1,10,10,
-5,1,41,23,3,1,8,20,23,3,1,3,50,1,1,3,2,2,5,2,1,1,1,24,3,2,11,7,3,12,6,2,6,2,6,9,7,
-1,7,1,43,1,10,10,115,29,11172,12,23,4,49,8452,366,2,106,38,7,12,5,5,1,1,10,1,13,1,
-5,1,1,1,2,1,2,1,108,33,363,18,64,2,54,40,12,116,5,1,135,36,26,6,26,11,89,3,6,2,6,2,
-6,2,3,35,12,1,26,1,19,1,2,1,15,2,14,34,123,69,53,267,29,3,49,47,32,16,27,5,38,10,30,
-2,36,4,8,1,5,42,158,98,40,8,52,156,311,9,22,10,8,152,6,2,1,1,44,1,2,3,1,2,23,10,23,
-9,31,65,19,1,2,10,22,10,26,70,56,6,2,64,1,15,4,1,3,1,27,44,29,3,29,35,8,1,28,27,54,
-10,22,10,19,13,18,110,73,55,51,13,51,784,53,75,45,32,25,26,36,41,35,3,1,12,48,14,4,
-21,1,1,1,35,18,1,25,84,7,1,1,1,4,1,15,1,10,7,47,38,8,2,2,2,22,1,7,1,2,1,5,3,1,18,1,
-12,5,286,48,20,2,1,1,184,47,41,4,36,48,20,1,59,43,85,26,390,64,31,1,448,57,1287,922,
-102,111,17,196,2748,1071,4049,583,8633,569,7,31,113,30,18,48,16,4,31,21,5,19,880,69,
-11,1,66,13,16480,2,3070,107,5,13,3,9,7,10,5990,85,1,71,1,2,2,1,2,2,2,4,1,12,1,1,1,
-7,1,65,1,4,2,8,1,7,1,28,1,4,1,5,1,1,3,7,1,340,2,25,1,25,1,31,1,25,1,31,1,25,1,31,1,
-25,1,31,1,25,1,8,4148,197,1339,4,1,27,1,2,1,1,2,1,1,10,1,4,1,1,1,1,6,1,4,1,1,1,1,1,
-1,3,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,4,1,7,1,4,1,4,1,1,1,10,1,17,5,3,1,5,1,17,
-4420,42711,41,4149,11,222,2,5762,10590,542]));
-
-var IDC_ = fromRunLenCodes([0,183,1,719,1,4065,9,1640,1],fromRunLenCodes ( ( [ 0 ,
-48,10,7,26,4,1,1,26,47,1,10,1,1,1,2,1,5,23,1,31,1,458,4,12,14,5,7,1,1,1,17,117,1,2,
-2,4,1,1,6,5,1,1,1,20,1,83,1,139,1,5,2,166,1,38,2,1,7,39,9,45,1,1,1,2,1,2,1,1,8,27,
-5,3,29,11,5,74,4,102,1,8,2,10,1,19,2,1,16,59,2,101,14,54,4,1,5,46,18,28,68,21,46,129,
-2,10,1,19,1,8,2,2,2,22,1,7,1,1,3,4,2,9,2,2,2,4,8,1,4,2,1,5,2,12,15,3,1,6,4,2,2,22,
-1,7,1,2,1,2,1,2,2,1,1,5,4,2,2,3,3,1,7,4,1,1,7,16,11,3,1,9,1,3,1,22,1,7,1,2,1,5,2,10,
-1,3,1,3,2,1,15,4,2,10,9,1,7,3,1,8,2,2,2,22,1,7,1,2,1,5,2,9,2,2,2,3,8,2,4,2,1,5,2,10,
-1,1,16,2,1,6,3,3,1,4,3,2,1,1,1,2,3,2,3,3,3,12,4,5,3,3,1,4,2,1,6,1,14,10,16,4,1,8,1,
-3,1,23,1,16,3,8,1,3,1,4,7,2,1,3,5,4,2,10,17,3,1,8,1,3,1,23,1,10,1,5,2,9,1,3,1,4,7,
-2,7,1,1,4,2,10,1,2,14,3,1,8,1,3,1,41,2,8,1,3,1,5,8,1,7,5,2,10,10,6,2,2,1,18,3,24,1,
-9,1,1,2,7,3,1,4,6,1,1,1,8,6,10,2,2,13,58,5,15,1,10,39,2,1,1,2,2,1,1,2,1,6,4,1,7,1,
-3,1,1,1,1,2,2,1,13,1,3,2,5,1,1,1,6,2,10,2,4,32,1,23,2,6,10,11,1,1,1,1,1,4,10,1,36,
-4,20,1,18,1,36,9,1,57,74,6,78,2,38,1,1,5,1,2,43,1,333,1,4,2,7,1,1,1,4,2,41,1,4,2,33,
-1,4,2,7,1,1,1,4,2,15,1,57,1,4,2,67,2,3,9,9,14,16,16,86,2,6,3,620,2,17,1,26,5,75,3,
-11,7,13,1,7,11,21,11,20,12,13,1,3,1,2,12,84,3,1,4,2,2,10,33,3,2,10,6,88,8,43,5,70,
-10,31,1,12,4,12,10,40,2,5,11,44,4,26,6,11,37,28,4,63,1,29,2,11,6,10,13,1,8,14,66,76,
-4,10,17,9,12,116,12,56,8,10,3,49,82,3,1,35,1,2,6,246,6,282,2,6,2,38,2,6,2,8,1,1,1,
-1,1,1,1,31,2,53,1,7,1,1,3,3,1,7,3,4,2,6,4,13,5,3,1,7,66,2,19,1,28,1,13,1,16,13,51,
-13,4,1,3,12,17,1,4,1,2,10,1,1,2,6,6,1,1,1,1,1,1,16,2,4,5,5,4,1,17,41,2679,47,1,47,
-1,133,6,9,12,38,1,1,5,1,2,56,7,1,15,24,9,7,1,7,1,7,1,7,1,7,1,7,1,7,1,7,1,32,517,3,
-25,15,1,5,2,5,4,86,2,7,1,90,1,4,5,41,3,94,17,27,53,16,512,6582,74,20950,42,1165,67,
-46,2,269,3,28,20,48,4,10,1,115,37,9,2,103,2,35,2,8,63,49,24,52,12,69,11,10,6,24,3,
-1,1,1,2,46,2,36,12,29,3,65,14,11,6,31,1,55,9,14,2,10,6,23,3,73,24,3,2,16,2,5,10,6,
-2,6,2,6,9,7,1,7,1,43,1,10,10,123,1,2,2,10,6,11172,12,23,4,49,8452,366,2,106,38,7,12,
-5,5,12,1,13,1,5,1,1,1,2,1,2,1,108,33,363,18,64,2,54,40,12,4,16,16,16,3,2,24,3,32,5,
-1,135,19,10,7,26,4,1,1,26,11,89,3,6,2,6,2,6,2,3,35,12,1,26,1,19,1,2,1,15,2,14,34,123,
-69,53,136,1,130,29,3,49,15,1,31,32,16,27,5,43,5,30,2,36,4,8,1,5,42,158,2,10,86,40,
-8,52,156,311,9,22,10,8,152,6,2,1,1,44,1,2,3,1,2,23,10,23,9,31,65,19,1,2,10,22,10,26,
-70,56,6,2,64,4,1,2,5,8,1,3,1,27,4,3,4,1,32,29,3,29,35,8,1,30,25,54,10,22,10,19,13,
-18,110,73,55,51,13,51,781,71,31,10,15,60,21,25,7,10,6,53,1,10,16,36,2,1,9,69,5,3,3,
-11,1,1,35,18,1,37,72,7,1,1,1,4,1,15,1,10,7,59,5,10,6,4,1,8,2,2,2,22,1,7,1,2,1,5,2,
-9,2,2,2,3,2,1,6,1,5,7,2,7,3,5,267,70,1,1,8,10,166,54,2,9,23,6,34,65,3,1,11,10,38,56,
-8,10,54,26,3,15,4,10,358,74,21,1,448,57,1287,922,102,111,17,196,2748,1071,4049,583,
-8633,569,7,31,1,10,102,30,2,5,11,55,9,4,12,10,9,21,5,19,880,69,11,47,16,17,16480,2,
-3070,107,5,13,3,9,7,10,3,2,5318,5,3,6,8,8,2,7,30,4,148,3,443,85,1,71,1,2,2,1,2,2,2,
-4,1,12,1,1,1,7,1,65,1,4,2,8,1,7,1,28,1,4,1,5,1,1,3,7,1,340,2,25,1,25,1,31,1,25,1,31,
-1,25,1,31,1,25,1,31,1,25,1,8,2,50,512,55,4,50,8,1,14,1,22,5,1,15,3408,197,11,7,1321,
-4,1,27,1,2,1,1,2,1,1,10,1,4,1,1,1,1,6,1,4,1,1,1,1,1,1,3,1,2,1,1,2,1,1,1,1,1,1,1,1,
-1,1,2,1,1,2,4,1,7,1,4,1,4,1,1,1,10,1,17,5,3,1,5,1,17,4420,42711,41,4149,11,222,2,5762,
-10590,542,722658,240 ]) ) )  ;
-
-function set(bits, i) {
-  bits[i>>D_INTBITLEN] |= ( 1 << ( i & M_INTBITLEN ) );
-
-}
-
-set(IDC_,0x200C);
-set(IDC_,0x200D);
-
-
-;
-
-function char2int(c) { return c.charCodeAt(0); }
-var hexD = [ '1', '2', '3', '4', '5',
-             '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' ];
-hexD = ['0'].concat(hexD);
-
-function hex(number) {
-  var str = "";
-  str = hexD[number&0xf] + str
-  str = hexD[(number>>=4)&0xf] + str ;
-  str = hexD[(number>>=4)&0xf] + str ;
-  str = hexD[(number>>=4)&0xf] + str ;
-  
-  return str;
-}
-
-function fromRunLenCodes(runLenArray, bitm) {
-  bitm = bitm || [];
-  var bit = runLenArray[0];
-  var runLenIdx = 1, bitIdx = 0;
-  var runLen = 0;
-  while (runLenIdx < runLenArray.length) {
-    runLen = runLenArray[runLenIdx];
-    while (runLen--) {
-      while ((INTBITLEN * (bitm.length)) < bitIdx) bitm.push(0);
-      if (bit) bitm[bitIdx >> D_INTBITLEN] |= (1 << (M_INTBITLEN & bitIdx));
-      bitIdx++ ;
-    }
-    runLenIdx++ ;
-    bit ^= 1;
-  }
-  return (bitm);
-}
-
-function arguments_or_eval(l) {
-  switch ( l ) {
-     case 'arguments':
-     case 'eval':
-       return !false;
-  }
-
-  return false;
-};
-
-var has   = Object.prototype.hasOwnProperty;
-
-function fromcode(codePoint )  {
-  if ( codePoint <= 0xFFFF)
-    return String.fromCharCode(codePoint) ;
-
-  return String.fromCharCode(((codePoint-0x10000 )>>10)+0x0D800,
-                             ((codePoint-0x10000 )&(1024-1))+0x0DC00);
-
-}
-
-function core(n) { return n.type === PAREN ? n.expr : n; };
-
-function toNum (n) {
-  return (n >= CHAR_0 && n <= CHAR_9) ? n - CHAR_0 :
-         (n <= CHAR_f && n >= CHAR_a) ? 10 + n - CHAR_a :
-         (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
-};
-
-
-;
-_exports.parse = function(src, isModule ) {
+}]  ],
+null,
+null,
+null,
+null,
+null]);
+this.parse = function(src, isModule ) {
   var newp = new Parser(src, isModule);
   return newp.parseProgram();
 };
 
-_exports.Parser = 
+this.Parser = 
 Parser;  
-;})(this)
+
+;}).call (this)
