@@ -7,3 +7,5 @@ var has = Object.hasOwnProperty;
 
 var VAR_DEF = 1, LET_OR_CONST = 2;
      
+var SCOPE_LOOP = 4;
+

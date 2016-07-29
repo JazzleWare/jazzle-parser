@@ -7,14 +7,15 @@ this.assert = function(cond, message) {
 };
 
 this.reference = function(n, refMode) {
-   this.assert(refMode);
 
-   if ( this.scopeMode === SCOPE_CATCH && this.findInCatchVars(n) ) return;
+   refMode = refMode || REF_D;
+
+   if ( this.isCatch() && this.findInCatchVars(n) ) return;
 
    var ref = this. findDefinitionInScope(n); 
 
-   if ( this.scopeMode === SCOPE_FUNC && ref && ref.scope !== this ) {
-     var synth = ref.synthName = ref.scope.synthNameInSurroundingFuncScope(ref.realName);
+   if ( this.isFunc() && ref && ref.scope !== this ) {
+     var synth = ref.synthName = ref.scope.synthNameInSurroundingFuncScope(ref.realName||'scope');
      this.defined[name(synth)] = ref;
      ref = this.defined[name(n)] = null;
    }
@@ -47,7 +48,7 @@ this.findInCatchVars = function(n) {
 };
 
 this.define = function(n, varDef) {
-    return this.defineByScopeMode[this.scopeMode].call(this, n, varDef);
+    return this.defineByScopeMode[this.scopeMode&(~SCOPE_LOOP)].call(this, n, varDef);
 
 };
 
@@ -111,7 +112,7 @@ this.resolve = function(n, scope) {
 };
 
 this.defineHoisted = function(n) {
-  this.assert(this.scopeMode !== SCOPE_FUNC);
+  this.assert(!this.isFunc() );
   var def = this.findDefinitionInScope(n)  ;
   this.assert ( !def || def.scope === this.surroundingFunc );     
 
@@ -125,8 +126,10 @@ this.synthNameInSurroundingFuncScope = function(n) {
            
       if ( !has.call(this.surroundingFunc.defined, synth) &&
            !has.call(this.surroundingFunc.unresolved, synth) &&
-           !has.call(this.unresolved, synth) &&
-           !(has.call(this.defined, synth) && num) )
+           ( this === this.surroundingFuncScope || (
+              !has.call(this.unresolved, synth) &&
+              !(has.call(this.defined, synth) && num)
+             ) ) )
         break;
 
       num++;
@@ -141,14 +144,48 @@ this.closeScope = function() {
   
     for ( id in this.unresolved ) {
        var unresolved = this.unresolved[ id ];
-       if (!unresoved) continue;
+       if (!unresolved) continue;
        this.parentScope.reference(unresolved.realName, 
-           this.scopeMode === SCOPE_FUNC ? REF_I : unresolved.refMode );
+           this.isFunc() ? REF_I : unresolved.refMode );
     }
  
+/* function l() {
+      {
+        scope;
+        while ( false ) {
+           let e;
+           funtion l() { e; }
+        } 
+      }
+    }
+*/
+
+    var synthScope = null ;
     for ( id in this.defined ) {
-       var synth = this.defined[id].synthName =
+       var ref = this.defined[id];
+       if ( ref.scope === this.surroundingFunc ) continue;
+
+       if ( this.isLoop() && ( ref.refMode & REF_I ) ) {
+         if ( !synthScope ) {
+           var synthScopeName = this.synthNameInSurroundingFuncScope('scope');
+           synthScope = this.surroundingFunc.defined[name(synthScopeName)] =
+               { realName: "", synthName: synthScopeName, scope: this, defined: [] };
+         }
+            
+         synthScope.defined.push(ref);
+         ref.synthScope = synthScope;
+        
+         continue;
+       }
+ 
+       var synth = ref.synthName =
             this.synthNameInSurroundingFuncScope (this.defined[id].realName);
        this.surroundingFunc.defined[name(synth)] = this.defined[id];
     }
 };
+
+this.isLexical = function() { return this.scopeMode & SCOPE_LEXICAL; };
+this.isCatch = function() { return this.scopeMode & SCOPE_CATCH; };
+this.isFunc = function() { return this.scopeMode & SCOPE_FUNC ; };
+this.isLoop = function() { return this.scopeMode & SCOPE_LOOP ; };
+

@@ -1,10 +1,13 @@
   
-function Scope(parentScope, loop, scopeMode, catchVars) {
+function Scope(parentScope, scopeMode, catchVars) {
+   if ( scopeMode & SCOPE_LOOP )
+     this.assert(!(scopeMode & SCOPE_FUNC));
+
    if ( !parentScope )
      this.assert( scopeMode === SCOPE_FUNC );
    
    this.parentScope = parentScope || null;
-   if ( scopeMode === SCOPE_CATCH ) {
+   if ( scopeMode & SCOPE_CATCH ) {
      this.assert( catchVars ); 
      this.catchVars = {};
      var e = 0;
@@ -26,7 +29,6 @@ function Scope(parentScope, loop, scopeMode, catchVars) {
       this.surroundingFunc = this.parentScope.surroundingFunc;
 
    this.scopeMode = scopeMode;
-   this.isInALoop = loop;
 }
 
        
