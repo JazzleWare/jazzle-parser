@@ -11,7 +11,6 @@ this .parseArgs  = function (argLen) {
          elem = this.parseAssig(elem);
          if ( elem.left.type === 'Identifier' ) {
            this.assert( this.argNames[elem.left.name+'%'] === null );
-           this.argNames[elem.left.name+'%'] = elem;
          }
          this.inComplexArgs = !false;
        }
@@ -56,8 +55,6 @@ this .addArg = function(id) {
     this.assert( !this.inComplexArgs );
     if ( this.argNames[name] === null )
       this.argNames[name] = id ; // this will be useful if the body has a strictness directive
-    else
-      this.assert( this.argNames[name].type === 'Identifier' );
   }
   else
      this.argNames[name] = null ;
