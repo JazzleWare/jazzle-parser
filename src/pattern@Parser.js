@@ -51,9 +51,6 @@ this. parseArrayPattern = function() {
       }
   } 
 
-  if ( this.isInArgList )
-       this.inComplexArgs = this.tight;
-
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
 
@@ -113,9 +110,6 @@ this.parseObjectPattern  = function() {
                method: false, shorthand: sh });
 
     } while ( this.lttype === ',' );
-
-    if ( this.isInArgList  )
-         this.inComplexArgs = this.tight; 
 
     var n = { type: 'ObjectPattern',
              loc: { start: startLoc, end: this.loc() },
