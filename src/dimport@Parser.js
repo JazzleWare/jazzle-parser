@@ -28,18 +28,29 @@ this.parseImport = function() {
 
   switch ( this.lttype ) {   
      case 'op':
-       this.assert( this.ltraw === '*' );
-       spStartc = this.c - 1;
-       spStartLoc = this.locOn(1);
-       this.next();
-       this.expectID('as');
-       this.assert(this.lttype === 'Identifier');
-       local = this.validateID(null);
-       list.push({ type: 'ImportNamespaceSpecifier',
-                  start: spStartc,
-                  loc: { start: spStartLoc, end: local.loc.end },
-                   end: local.end,
-                  local: local  }) ;
+       if ( this.ltraw !== '*' &&
+            this['import.namespace.specifier.not.*'](startc, startLoc) )
+         return this.errorHandlerOutput ;
+
+       else {
+         spStartc = this.c - 1;
+         spStartLoc = this.locOn(1);
+         this.next();
+         if ( !this.expectID_soft('as') &&
+               this['import.namespace.specifier.no.as'](startc, startLoc, spStartc, spStartLoc) )
+           return this.errorHandlerOutput;
+
+         if (this.lttype !== 'Identifier' &&
+             this['import.namespace.specifier.local.not.id'](startc,startLoc,spStartc, spStartLoc ) )
+           return this.errorHandlerOutput;
+
+         local = this.validateID(null);
+         list.push({ type: 'ImportNamespaceSpecifier',
+                    start: spStartc,
+                    loc: { start: spStartLoc, end: local.loc.end },
+                     end: local.end,
+                    local: local  }) ;
+       }
        break;
 
     case '{':
@@ -49,9 +60,15 @@ this.parseImport = function() {
           local = this.id();
           var im = local; 
           if ( this.lttype === 'Identifier' ) {
-             this.assert( this.ltval === 'as' );
+             if ( this.ltval !== 'as' && 
+                  this['import.specifier.no.as'](startc,startLoc,local) )
+               return this.errorHandlerOutput ;
+
              this.next();
-             this.assert( this.lttype === 'Identifier' );
+             if ( this.lttype !== 'Identifier' &&
+                  this['import.specifier.local.not.id'](startc,startLoc,local) )
+               return this.errorHandlerOutput ;
+
              local = this.validateID(null);
           }
           else this.validateID(local);
@@ -68,23 +85,35 @@ this.parseImport = function() {
              break ;                                  
        }
 
-       this.expectType('}');
+       if ( !this.expectType_soft('}') && 
+             this['import.specifier.list.unfinished'](startc,startLoc,list) )
+         return this.errorHandlerOutput  ;
+
        break ;
    }
     
-   if ( list.length || hasList )
-     this.expectID('from');
+   if ( list.length || hasList ) {
+      if ( !this.expectID_soft('from') &&
+            this['import.from'](startc,startLoc,list) )
+        return this.errorHandlerOutput;
+   }
 
-   this.assert(this.lttype === 'Literal' &&
-        typeof this.ltval === STRING_TYPE );
+   if ( !(this.lttype === 'Literal' &&
+        typeof this.ltval === STRING_TYPE ) && this['import.source.is.not.str'] )
+     return this.errorHandlerOutput;
 
    var src = this.numstr();
-   var endI = this.semiI() || src.end, endLoc = this.semiLoc() || src.loc.end;
+   var endI = this.semiI() || src.end, 
+       semiLoc = this.semiLoc();
+
+   if ( !semiLoc && !this.newLineBeforeLookAhead &&
+        this['no.semi']('import',{s:startc,l:startLoc,list:list,endI:endI,src:src }) )
+     return this.errorHandlerOutput;
    
    this.foundStatement = !false;
    return { type: 'ImportDeclaration',
            start: startc,
-           loc: { start: startLoc, end: endLoc  },
+           loc: { start: startLoc, end: semiLoc || src.loc.end  },
             end:  endI , specifiers: list,
            source: src };
 }; 

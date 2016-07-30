@@ -1,7 +1,9 @@
 this .parseArgs  = function (argLen) {
   var list = [], elem = null;
 
-  this.expectType('(') ;
+  if ( !this.expectType_soft('(') &&
+        this['func.args.no.opening.paren'](argLen) )
+    return this.errorHandlerOutput  ;
 
   var firstNonSimpArg = null;
   while ( list.length !== argLen ) {
@@ -10,7 +12,8 @@ this .parseArgs  = function (argLen) {
        if ( this.lttype === 'op' && this.ltraw === '=' ) {
          elem = this.parseAssig(elem);
          if ( elem.left.type === 'Identifier' ) {
-           this.assert( this.argNames[elem.left.name+'%'] === null );
+            if ( this.argNames[elem.left.name+'%'] !== null )
+                 this['func.args.has.dup'](elem);
          }
          this.inComplexArgs = !false;
        }
@@ -38,10 +41,15 @@ this .parseArgs  = function (argLen) {
               firstNonSimpArg = elem;
      }
   }
-  else
-     this.assert( list.length === argLen );
+  else {
+     if ( list.length !== argLen &&
+          this['func.args.not.enough'](argLen,list) )
+       return this.errorHandlerOutput;
+  }
 
-  this.expectType(')');
+  if ( ! this.expectType_soft (')') &&
+       this['func.args.no.end.paren'](argLen,list) )
+    return this.errorHandlerOutput ;
 
   if ( firstNonSimpArg )
      this.firstNonSimpArg = firstNonSimpArg ;
@@ -52,7 +60,9 @@ this .parseArgs  = function (argLen) {
 this .addArg = function(id) {
   var name = id.name + '%';
   if ( has.call(this.argNames, name) ) {
-    this.assert( !this.inComplexArgs );
+    if ( this.inComplexArgs )
+       this['func.args.has.dup'](id);
+
     if ( this.argNames[name] === null )
       this.argNames[name] = id ; // this will be useful if the body has a strictness directive
   }
@@ -60,7 +70,6 @@ this .addArg = function(id) {
      this.argNames[name] = null ;
 };
 
-  
 this .parseFunc = function(context, argListMode, argLen ) {
   var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
   var prevLabels = this.labels;
