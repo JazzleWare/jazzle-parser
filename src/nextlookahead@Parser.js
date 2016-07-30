@@ -471,4 +471,21 @@ this.expectID = function (n) {
   this.next();
 };
 
+this.expectType_soft = function (n)  {
+  if (this.lttype === n, 'expected ' + n + '; got ' + this.lttype  ) {
+      this.next();
+      return !false;
+  }
+
+  return false;
+};
+
+this.expectID_soft = function (n) {
+  if (this.lttype === 'Identifier' && this.ltval === n) {
+     this.next();
+     return !false;
+  }
+
+  return false;
+};
 

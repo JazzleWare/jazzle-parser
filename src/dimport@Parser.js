@@ -1,5 +1,7 @@
 this.parseImport = function() {
-  this.assert( this.canBeStatement );
+  if ( !this.canBeStatement && this['not.stmt']('import') )
+    return this.errorHandlerOutput ;
+
   this.canBeStatement = false;
 
   var startc = this.c0, startLoc = this.locBegin();
@@ -16,7 +18,9 @@ this.parseImport = function() {
   }
 
   if ( this.lttype === ',' ) {
-    this.assert(local !== null);
+    if (local === null && this['import.no.elem.yet.comma'](startc,startLoc) )
+      return this.errorHandlerOutput;
+
     this.next();
   }
 

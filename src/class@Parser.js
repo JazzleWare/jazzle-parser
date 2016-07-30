@@ -1,3 +1,11 @@
+this.noNameError = function() { 
+    return this.err('u.token', this.locAndType() );
+};
+
+this.ctorMultiError = function() {
+  return this.err( 'class.ctor.multi' );
+};
+
 this. parseClass = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin();
@@ -6,9 +14,13 @@ this. parseClass = function(context) {
   this.next () ;
 
   if ( canBeStatement && context !== CONTEXT_DEFAULT  ) {
-     this.assert ( this.lttype === 'Identifier' );
+     if ( this.lttype !== 'Identifier' ) {
+       if ( this.noNameError() ) return this.errorHandlerOutput;
+     }
+     else
+       name = this. validateID(null);
+
      this.canBeStatement = false;
-     name = this. validateID(null);
   }
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
      name = this.validateID(null); 
@@ -56,7 +68,8 @@ this. parseClass = function(context) {
                break SWITCH;
 
              case 'constructor':
-                this.assert( !foundConstructor );
+                 if ( foundConstructor && this.ctorMultiError() )
+                   return this.errorHandlerOutput ;
                  
                  if ( !isStatic ) foundConstructor = !false;
                 
@@ -112,15 +125,18 @@ this.parseSuper  = function   () {
    this.next() ;
    switch ( this.lttype ) {
         case '(':
-          this.assert(this.scopeFlags & SCOPE_CONSTRUCTOR);
+          if ( !( this.scopeFlags & SCOPE_CONSTRUCTOR ) &&
+                  this['class.super.call']() ) return this.errorHandlerOutput;
           break ;
         case '.':
         case '[':
-           this.assert( this.scopeFlags & SCOPE_METH );
+           if ( !(this.scopeFlags & SCOPE_METH) &&
+                  this['class.super.mem']() ) return this.errorHandlerOutput ;
            break ;
         
        default:
-          this.assert(false); 
+          if ( this['class.super.lone']() )
+            return this.errorHandlerOutput ; 
    }
 
    if ( !this.firstYS )
