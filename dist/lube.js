@@ -1926,13 +1926,29 @@ this .parseFunc = function(context, argListMode, argLen ) {
           this.next();
      }
      if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
-        this.assert( this.lttype === 'Identifier' ) ;
+        if ( this.lttype !== 'Identifier' &&
+             this['missing.name']('func', 
+                { s: startc, l: startLoc, labels: prevLabels, strict: prevStrict, inArgsList: prevInArgList,
+                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimArg,
+                  args: [context, argListMode, argLen] } ) )
+          return this.errorHandlerOutput ;
+
         currentFuncName = this.validateID(null);
-        this.assert( !( this.tight && arguments_or_eval(currentFuncName.name) ) );
+        if ( this.tight && arguments_or_eval(currentFuncName.name) &&
+             this['binding.to.eval.or.arguments']('func',
+                { s: startc, l: startLoc, labels: prevLabels, stmt: !false, strict: prevStrict, inArgsList: prevInArgList,
+                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimArg,
+                  args: [context, argListMode, argLen] } ) )
+          return this.errorHandlerOutput ;
      }
      else if ( this. lttype === 'Identifier' ) {
         currentFuncName = this.validateID(null);
-        this.assert( !( this.tight && arguments_or_eval(currentFuncName.name) ) );
+        if ( this.tight && arguments_or_eval(currentFuncName.name) &&
+             this['binding.to.eval.or.arguments']('func',
+                { s: startc, l: startLoc, labels: prevLabels, stmt: canBeStatement, strict: prevStrict, inArgsList: prevInArgList,
+                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimArg,
+                  context: [ context, argListMode, argLen] } )   )
+          return this.errorHandlerOutput;
      }
      else
         currentFuncName = null;
@@ -1987,26 +2003,35 @@ this .parseFunc = function(context, argListMode, argLen ) {
 };
 
 this.parseFuncBody = function(context) {
-  if ( this.lttype !== '{' )
-    return this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+  var elem = null;
+  
+  if ( this.lttype !== '{' ) {
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CONTEXT_NULLABLE);
+    if ( elem === null )
+      return this['func.body.is.empty.expr'](context);
+    return elem;
+  }
 
   var startc= this.c - 1, startLoc = this.locOn(1);
-  var list = [], stmt = null;
+  var list = [];
   this.next() ;
-  stmt = this.parseStatement(!false);
+  elem = this.parseStatement(!false);
 
-  if ( !this.tight && this.v > 5 && stmt && 
-       stmt.type === 'ExpressionStatement' && stmt.expression.type === 'Literal' )
-       switch (this.src.slice(stmt.expression.start,stmt.expression.end) )  {
+  if ( !this.tight && this.v > 5 && elem && 
+       elem.type === 'ExpressionStatement' && elem.expression.type === 'Literal' )
+       switch (this.src.slice(elem.expression.start,elem.expression.end) )  {
            case "'use strict'":
            case '"use strict"':
               this.makeStrict();
        }
 
-  while ( stmt ) { list.push(stmt); stmt = this.parseStatement(!false); }
+  while ( elem ) { list.push(elem); elem = this.parseStatement(!false); }
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
            loc: { start: startLoc, end: this.loc() } };
-  this.expectType ( '}' );
+
+  if ( ! this.expectType_soft ( '}' ) &&
+         this['func.body.is.unfinished'](n) )
+    return this.errorHandlerOutput ;
 
   return  n;
 };
