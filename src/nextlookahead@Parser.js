@@ -160,8 +160,11 @@ this.next = function () {
         if (CHAR_BACK_SLASH === peek) {
             mustBeAnID = 1;
             peek = l.charCodeAt(++ this.c);
-            this.assert (peek === CHAR_u);
-            peek = this.peekUSeq();
+            if (peek !== CHAR_u )
+                return this['id.u.not.after.slash']();
+            
+            else
+               peek = this.peekUSeq();
         }
         if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
             mustBeAnID = 2 ;
@@ -169,8 +172,11 @@ this.next = function () {
             r = this.peekTheSecondByte();
         }
         if (mustBeAnID) {
-            this.assert(isIDHead(mustBeAnID === 1 ? peek :
-                  ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ));
+           if (!isIDHead(mustBeAnID === 1 ? peek :
+                  ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
+              if ( mustBeAnID === 1 ) return this['id.esc.must.be.idhead'](peek);
+              else return this['id.multi.must.be.idhead'](peek,r);
+            }
             this.readAnIdentifierToken( mustBeAnID === 2 ?
                 String.fromCharCode( peek, r ) :
                 fromcode( peek )

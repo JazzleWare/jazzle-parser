@@ -209,17 +209,21 @@ this.parseFuncBody = function(context) {
 };
 
 this . makeStrict  = function() {
-   this.assert( !this.firstNonSimpArg )  ; 
+   if ( this.firstNonSimpArg )
+     return this['func.strict.non.simple.param']()  ; 
+
    if ( this.tight ) return;
 
    this.tight = !false;
 
    var argName = null;
    for ( argName in this.argNames ) {
-      this.assert( this.argNames[argName] === null );
-      argName = argName.substring(0,argName.length-1) ;
-      this.assert(!arguments_or_eval(argName));
-      this.validateID(argName);
+        if ( this.argNames[argName] !== null )
+          this['func.args.has.dup'](this.argNames[argName]);
+
+        argName = argName.substring(0,argName.length-1) ;
+        this.assert(!arguments_or_eval(argName));
+        this.validateID(argName);
 
    }
 };

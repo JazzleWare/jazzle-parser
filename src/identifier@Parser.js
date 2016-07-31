@@ -26,17 +26,25 @@ this.readAnIdentifierToken = function (v) {
             v += src.slice(startSlice,c) ; // v = v + those characters
 
          this.c = ++c;
-         this.assert (CHAR_u === src.charCodeAt(c) );
+         if (CHAR_u !== src.charCodeAt(c) &&
+             this['id.slash.no.u'](c,v) )
+           return this.errorHandlerOutput ;
 
          peek = this. peekUSeq() ;
          if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
            this.c++;
            byte2 = this.peekTheSecondByte();
-           this.assert(isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000));
+           if (!isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000) &&
+                this['id.multi.must.be.idbody'](peek,byte2,c,v) )
+             return this.errorHandlerOutput ;
+
            v += String.fromCharCode(peek, byte2);
          }
          else {
-            this.assert(isIDBody(peek));
+            if ( !isIDBody(peek) &&
+                  this['id.esc.must.be.idbody'](peek,c,v) )
+              return this.errorHandlerOutput;
+       
             v += fromcode(peek);
          }
          c = this.c;
@@ -49,7 +57,10 @@ this.readAnIdentifierToken = function (v) {
          c++;
          this.c = c; 
          byte2 = this.peekTheSecondByte() ;
-         this.assert(isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000));
+         if (!isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000) &&
+              this['id.multi.must.be.idbody'](peek,byte2,c,v) )
+           return this.errorHandlerOutput ;
+
          v += String.fromCharCode(peek, byte2);
          c = this.c ;
          c++;

@@ -20,7 +20,9 @@ this.parseProgram = function () {
   var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
            loc: { start: startLoc, end: endLoc } };
 
-  this.expectType('eof');
+  if ( !this.expectType_soft ('eof') &&
+        this['program.unfinished'](n) )
+    return this.errorHandlerOutput ;
 
   return n;
 };

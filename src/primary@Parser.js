@@ -72,7 +72,10 @@ this.parseExprHead = function (context) {
   }
 
   if ( this.firstEA )  switch ( this.lttype )   {
-    case '.': case '(': case '[': case '`': this.assert(false) ;
+    case '.': case '(': case '[': case '`':
+      if ( this['contains.assigned.eval.or.arguments'](
+           head,context,firstUnassignable,firstParen) )
+        return this.errorHandlerOutput ;
   }
      
   inner = core( head ) ;
@@ -95,14 +98,20 @@ this.parseExprHead = function (context) {
             head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                       loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false };
             inner  = head ;
-            this.expectType(']') ;
+            if ( !this.expectType_soft (']') &&
+                  this['mem.unfinished'](head,firstParen,firstUnassignable) )
+              return this.errorHandlerOutput ;
+
             continue;
 
          case '(':
             elem  = this. parseArgList() ;
             head =  { type: 'CallExpression', callee: inner , start: head.start, end: this.c,
                       arguments: elem, loc: { start: head.loc.start, end: this.loc() } };
-            this.expectType(')'   )  ;
+            if ( !this.expectType_soft (')'   ) &&
+                  this['call.args.is.unfinished'](head,firstParen,firstUnassignable) )
+              return this.errorHandlerOutput  ;
+
             inner = head  ;
             continue;
 
@@ -134,7 +143,10 @@ this.parseExprHead = function (context) {
 } ;
 
 this .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
-    this.assert( this.ltval === 'target' );
+    if ( this.ltval !== 'target' &&  
+         this['meta.new.has.unknown.prop'](startc,end,startLoc,endLoc,new_raw) )
+      return this.errorHandlerOutput ;
+
     var prop = this.id();
     return { type: 'MetaProperty',
              meta: { type: 'Identifier', name : 'new', start: startc, end: end, loc: { start : startLoc, end: endLoc }, raw: new_raw  },
@@ -198,6 +210,12 @@ this.parseParen = function () {
 
      if ( !elem ) {
         if ( this.lttype === '...' ) {
+           if ( ! ( context & CONTEXT_PARAM ) &&
+                 this['paren.has.an.spread.elem'](
+                  )
+               ) 
+              return this.errorHandlerOutput  ;
+ 
            elem = this.parseSpreadElement();
            if ( !firstParen && this.firstParen ) firstParen = this.firstParen;
            if ( !firstEA && this.firstEA ) firstEA = this.firstEA;
@@ -224,8 +242,16 @@ this.parseParen = function () {
      if ( !firstYS && this.firstYS ) 
        firstYS = this.firstYS;
 
-     if ( !unsatisfiedArg && this.unsatisfiedAssignment)
+     if ( !unsatisfiedArg && this.unsatisfiedAssignment) {
+           if ( ! context & CONTEXT_PARAM &&
+                this['paren.with.an.unsatisfied.assig'](
+                 { s:startc, l: startLoc, c: context, p: firstPAren, a: unsatisfiedArg,
+                   list: list, ea: firstEA, firstElemWithYS: firstElemWithYS, parenYS: parenYS, ys: firstYS })
+              )
+             return this.errorHandlerOutput ;
+
            unsatisfiedArg =  this.unsatisfiedAssignment;
+     }
 
      if ( this.lttype !== ',' ) break ;
 
@@ -271,11 +297,14 @@ this.parseParen = function () {
 
   this.firstEA = firstEA ;
   this.unsatisfiedAssignment = unsatisfiedAssignment ;
-  this.expectType(')') ;
 
   this.firstElemWithYS = firstElemWithYS;
   this.parenYS = parenYS;
   this.firstYS = firstYS;
+
+  if ( ! this.expectType_soft (')') && this['paren.unfinished'](n) )
+    return this.errorHandlerOutput ;
+
 
   return n;
 };

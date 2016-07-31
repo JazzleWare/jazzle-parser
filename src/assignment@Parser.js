@@ -18,19 +18,30 @@ this.restNotLastError = this.notAssignableError;
 this .ensureSimpAssig = function(head) {
   switch(head.type) {
     case 'Identifier':
-       if ( this.tight && arguments_or_eval(head.name) &&
-            this.notSimpleError(head) )
-          return this.errorHandlerOutput ;
+       if ( this.tight && arguments_or_eval(head.name) )
+         this['assig.to.eval.or.arguments'](head);
 
     case 'MemberExpression':
        return;
 
     default:
-       if ( this.notSimpleError() )
-         return this.errorHandlerOutput;
+       return this['assig.not.simple'](head);
   }
 };
 
+this .ensureSimpAssig_soft = function(head) {
+  switch(head.type) {
+    case 'Identifier':
+       if ( this.tight && arguments_or_eval(head.name) )
+         this['assig.to.eval.or.arguments'](head);
+
+    case 'MemberExpression':
+       return ! false ;
+
+    default:
+       return false ;
+  }
+};
 
 // an arr-pat is always to the left of an assig;
 this .toAssig = function(head) {

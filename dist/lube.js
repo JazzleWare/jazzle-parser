@@ -758,19 +758,30 @@ this.restNotLastError = this.notAssignableError;
 this .ensureSimpAssig = function(head) {
   switch(head.type) {
     case 'Identifier':
-       if ( this.tight && arguments_or_eval(head.name) &&
-            this.notSimpleError(head) )
-          return this.errorHandlerOutput ;
+       if ( this.tight && arguments_or_eval(head.name) )
+         this['assig.to.eval.or.arguments'](head);
 
     case 'MemberExpression':
        return;
 
     default:
-       if ( this.notSimpleError() )
-         return this.errorHandlerOutput;
+       return this['assig.not.simple'](head);
   }
 };
 
+this .ensureSimpAssig_soft = function(head) {
+  switch(head.type) {
+    case 'Identifier':
+       if ( this.tight && arguments_or_eval(head.name) )
+         this['assig.to.eval.or.arguments'](head);
+
+    case 'MemberExpression':
+       return ! false ;
+
+    default:
+       return false ;
+  }
+};
 
 // an arr-pat is always to the left of an assig;
 this .toAssig = function(head) {
@@ -2037,17 +2048,21 @@ this.parseFuncBody = function(context) {
 };
 
 this . makeStrict  = function() {
-   this.assert( !this.firstNonSimpArg )  ; 
+   if ( this.firstNonSimpArg )
+     return this['func.strict.non.simple.param']()  ; 
+
    if ( this.tight ) return;
 
    this.tight = !false;
 
    var argName = null;
    for ( argName in this.argNames ) {
-      this.assert( this.argNames[argName] === null );
-      argName = argName.substring(0,argName.length-1) ;
-      this.assert(!arguments_or_eval(argName));
-      this.validateID(argName);
+        if ( this.argNames[argName] !== null )
+          this['func.args.has.dup'](this.argNames[argName]);
+
+        argName = argName.substring(0,argName.length-1) ;
+        this.assert(!arguments_or_eval(argName));
+        this.validateID(argName);
 
    }
 };
@@ -2092,7 +2107,8 @@ this. parseIdStatementOrId = function ( context ) {
              if ( this.canBeStatement && this.v >= 5 )
                return this.parseLet(CONTEXT_NONE);
 
-             this.assert(!this.tight);
+             if (this.tight ) this['strict.let.is.id'](context);
+
              pendingExprHead = this.id();
              break SWITCH;
 
@@ -2121,8 +2137,11 @@ this. parseIdStatementOrId = function ( context ) {
             pendingExprHead = this.idLit(!false);
             break SWITCH;
         case 'case':
-            if ( this.canBeStatement ) this.canBeStatement = false ;
-            return null;
+            if ( this.canBeStatement ) {
+              this.foundStatement = !false;
+              this.canBeStatement = false ;
+              return null;
+            }
 
         case 'else':
             this.notId();
@@ -2141,7 +2160,7 @@ this. parseIdStatementOrId = function ( context ) {
         case 'catch': this.notId ()  ;
         case 'class': return this.parseClass(CONTEXT_NONE ) ;
         case 'const':
-            this.assert(this.v>=5);
+            if (this.v<5) this['const.not.in.v5'](context) ;
             return this.parseVariableDeclaration(CONTEXT_NONE);
 
         case 'throw': return this.parseThrowStatement();
@@ -2183,11 +2202,15 @@ this. parseIdStatementOrId = function ( context ) {
             return null;
 
         case 'export': 
-            this.assert( !this.isScript );
+            if ( this.isScript && this['export.not.in.module'](context) )
+              return this.errorHandlerOutput;
+
             return this.parseExport() ;
 
         case 'import':
-            this.assert( !this.isScript );
+            if ( this.isScript && this['import.not.in.module'](context) )
+              return this.errorHandlerOutput;
+
             return this.parseImport();
 
         case 'return': return this.parseReturnStatement();
@@ -2294,17 +2317,25 @@ this.readAnIdentifierToken = function (v) {
             v += src.slice(startSlice,c) ; // v = v + those characters
 
          this.c = ++c;
-         this.assert (CHAR_u === src.charCodeAt(c) );
+         if (CHAR_u !== src.charCodeAt(c) &&
+             this['id.slash.no.u'](c,v) )
+           return this.errorHandlerOutput ;
 
          peek = this. peekUSeq() ;
          if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
            this.c++;
            byte2 = this.peekTheSecondByte();
-           this.assert(isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000));
+           if (!isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000) &&
+                this['id.multi.must.be.idbody'](peek,byte2,c,v) )
+             return this.errorHandlerOutput ;
+
            v += String.fromCharCode(peek, byte2);
          }
          else {
-            this.assert(isIDBody(peek));
+            if ( !isIDBody(peek) &&
+                  this['id.esc.must.be.idbody'](peek,c,v) )
+              return this.errorHandlerOutput;
+       
             v += fromcode(peek);
          }
          c = this.c;
@@ -2317,7 +2348,10 @@ this.readAnIdentifierToken = function (v) {
          c++;
          this.c = c; 
          byte2 = this.peekTheSecondByte() ;
-         this.assert(isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000));
+         if (!isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000) &&
+              this['id.multi.must.be.idbody'](peek,byte2,c,v) )
+           return this.errorHandlerOutput ;
+
          v += String.fromCharCode(peek, byte2);
          c = this.c ;
          c++;
@@ -2358,7 +2392,9 @@ this.parseLet = function(context) {
   if ( letDecl )
     return letDecl;
 
-  this.assert(!this.tight);
+  if (this.tight && this['strict.let.is.id']({
+      s: startc,l: startLoc,c: c,li: li,col: col}) )
+    return this.errorHandlerOutput ;
 
   this.canBeStatement = false;
   this.pendingExprHead = {
@@ -2390,9 +2426,14 @@ this .memberExpr = function() {
       startLoc = this.locOn(1);
   this.next() ;
   var e = this.parseExpr(CONTEXT_NONE);
-  this.assert(e);
+  if (!e && this['prop.dyna.no.expr'](startc,startLoc) )
+    return this.errorHandlerOutput ;
+
   var n = { type: PAREN, expr: e, start: startc, end: this.c, loc: { start: startLoc, end: this.loc() } } ;
-  this.expectType (']');
+  if ( !this.expectType_soft (']') &&
+        this['prop.dyna.is.unfinished'](n) )
+    return this.errorHandlerOutput ;
+ 
   return n;
 };
 
@@ -2412,22 +2453,18 @@ this.parseNewHead = function () {
   switch (this  .lttype) {
     case 'Identifier':
        head = this.parseIdStatementOrId (CONTEXT_NONE);
-       this.assert(head);
        break;
 
     case '[':
-       head = this. parseArrayExpression();
-       this.assert(!this.unsatisfiedAssignment);
+       head = this. parseArrayExpression(CONTEXT_UNASSIGNABLE_CONTAINER);
        break ;
 
     case '(':
        head = this. parseParen() ;
-       this.assert(!this.unsatisfiedArg ) ;
        break ;
 
     case '{':
-       head = this. parseObjectExpression() ;
-       this.assert(!this.unsatisfiedAssignment);
+       head = this. parseObjectExpression(CONTEXT_UNASSIGNABLE_CONTAINER) ;
        break ;
 
     case '/':
@@ -2442,7 +2479,13 @@ this.parseNewHead = function () {
        head = this.numstr ();
        break ;
 
-    default: this.assert(false) ;
+    default:
+       head = this['new.head.is.not.valid'](startc, startLoc);
+       if ( head.type === ERR_RESUME ) {
+           head = head.val ;
+           break ;
+       }
+       return head.val;
   }
 
   var inner = core( head ) ;
@@ -2462,14 +2505,29 @@ this.parseNewHead = function () {
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                     loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false };
           inner = head ;
-          this.expectType(']') ;
+          if ( !this.expectType_soft (']') ) {
+            head = this['mem.unfinished'](startc,startLoc,head)  ;
+            if (head .type === ERR_RESUME)
+              head = head.val;
+     
+            else
+              return head.val;
+          }
+ 
           continue;
 
        case '(':
           elem = this. parseArgList();
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
                     loc: { start: startLoc, end: this.loc() }, arguments: elem };
-          this. expectType (')');
+          if ( !this. expectType_soft (')') ) {
+            inner = this['new.args.is.unfinished'](startc,startLoc,inner) ;
+            if ( inner.type === ERR_RESUME )
+              inner = inner.val;
+            else
+              return inner.val;
+          }
+
           return inner;
 
        case '`' :
@@ -2657,8 +2715,11 @@ this.next = function () {
         if (CHAR_BACK_SLASH === peek) {
             mustBeAnID = 1;
             peek = l.charCodeAt(++ this.c);
-            this.assert (peek === CHAR_u);
-            peek = this.peekUSeq();
+            if (peek !== CHAR_u )
+                return this['id.u.not.after.slash']();
+            
+            else
+               peek = this.peekUSeq();
         }
         if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
             mustBeAnID = 2 ;
@@ -2666,8 +2727,11 @@ this.next = function () {
             r = this.peekTheSecondByte();
         }
         if (mustBeAnID) {
-            this.assert(isIDHead(mustBeAnID === 1 ? peek :
-                  ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ));
+           if (!isIDHead(mustBeAnID === 1 ? peek :
+                  ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
+              if ( mustBeAnID === 1 ) return this['id.esc.must.be.idhead'](peek);
+              else return this['id.multi.must.be.idhead'](peek,r);
+            }
             this.readAnIdentifierToken( mustBeAnID === 2 ?
                 String.fromCharCode( peek, r ) :
                 fromcode( peek )
@@ -3012,11 +3076,13 @@ this.parseExpr = function (context) {
 
 this .parseCond = function(cond,context ) {
     this.next();
-    var con = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
-    this.expectType(':');
+    var seq = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
+    if ( !this.expectType_soft (':') && this['cond.colon'](cond,context,seq) )
+      return this.errorHandlerOutput;
+
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
     return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
-             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(con), alternate: core(alt) };
+             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt) };
 };
 
 this .parseUnaryExpression = function(context ) {
@@ -3050,14 +3116,20 @@ this .parseUpdateExpression = function(arg, context) {
        loc = this.locOn(2);
        this.next() ;
        arg = this. parseExprHead(context|CONTEXT_UNASSIGNABLE_CONTAINER );
-       this.assert(arg);
+       this.assert(arg); // TODO: this must have error handling
 
-       this.ensureSimpAssig(core(arg));
+       if ( !this.ensureSimpAssig_soft (core(arg)) &&
+            this['incdec.pre.not.simple.assig'](c,loc,arg) )
+         return this.errorHandlerOutput;
+
        return { type: 'UpdateExpression', argument: core(arg), start: c, operator: u,
                 prefix: !false, end: arg.end, loc: { start: loc, end: arg.loc.end } };
     }
 
-    this.ensureSimpAssig(core(arg));
+    if ( !this.ensureSimpAssig_soft(core(arg)) &&
+          this['incdec.post.not.simple.assig'](arg) )
+      return this.errorHandlerOutput;
+
     c  = this.c;
     loc = { start: arg.loc.start, end: { line: this.li, column: this.col } };
     this.next() ;
@@ -3123,11 +3195,15 @@ this.parseNonSeqExpr = function (prec, context  ) {
               break ;
 
            case 'yield':
-              this.assert(prec === PREC_WITH_NO_OP ) ; // make sure there is no other expression before it
+              if (prec !== PREC_WITH_NO_OP) // make sure there is no other expression before it 
+                return this['yield.as.an.id'](context,prec) ;
+
               return this.parseYield(context); // everything that comes belongs to it
    
            default:
-              this.assert(context & CONTEXT_NULLABLE )  ; 
+              if (!(context & CONTEXT_NULLABLE) )
+                return this['nexpr.null.head'](context,prec);
+               
               return null;
          }
     }
@@ -3140,20 +3216,30 @@ this.parseNonSeqExpr = function (prec, context  ) {
     while ( !false ) {
        op = this. parseO( context );
        if ( op && isAssignment(this.prec) ) {
-         this.assert( prec === PREC_WITH_NO_OP );
          this.firstUnassignable = firstUnassignable;
-         head = this. parseAssignment(head, context );
+         if ( prec === PREC_WITH_NO_OP )
+            head =  this. parseAssignment(head, context );
+         
+         else
+            head = this['assig.not.first'](
+                 { c:context, u:firstUnassignable, h: head, paren: firstParen, prec: prec });
+
          break ;
        }
        else {
-         this.assert( !this.unsatisfiedArg ); 
+         if ( this.unsatisfiedArg && 
+              this['arrow.paren.no.arrow']({c:context, u:firstUnassignable, h: head, p:firstParen, prec: prec}) )
+           return this.errorHandlerOutput; 
 
          if ( this.firstEA )
-            this.assert( (context & CONTEXT_ELEM_OR_PARAM) && !op );
+            if( !(context & CONTEXT_ELEM_OR_PARAM) || op )
+              this['assig.to.eval.or.arguments']();
 
          if ( this.unsatisfiedAssignment ) {
-            this.assert(prec===PREC_WITH_NO_OP && (context & CONTEXT_ELEM_OR_PARAM ) );
-            break ;
+            if ( !(prec===PREC_WITH_NO_OP && (context & CONTEXT_ELEM_OR_PARAM ) ) )
+              this['assignable.unsatisfied']();
+
+            else break ;
          }
          if ( !op ) break;
        }
@@ -3216,9 +3302,11 @@ this.readNumberLiteral = function (peek) {
     switch (b) { // check out what the next is
       case CHAR_X: case CHAR_x:
          c++;
-         this.assert(c < len);
+         if (c >= len && this['num.with.no.digits']('hex', c) )
+           return this.errorHandlerOutput;
          b = src.charCodeAt(c);
-         this.assert( isHex(b) );
+         if ( ! isHex(b) && this['num.with.first.not.valid']('hex', c)  )
+           return this.errorHandlerOutput ;
          c++;
          while ( c < len && isHex( b = src.charCodeAt(c) ) )
              c++ ;
@@ -3228,9 +3316,11 @@ this.readNumberLiteral = function (peek) {
 
       case CHAR_B: case CHAR_b:
         ++c;
-        this.assert(c < len);
+        if (c >= len && this['num.with.no.digits']('bin',c) )
+          return this.errorHandlerOutput ;
         b = src.charCodeAt(c);
-        this.assert( b === CHAR_0 || b === CHAR_1 );
+        if ( b !== CHAR_0 && b !== CHAR_1 && this['num.with.first.not.valid']('bin',c) )
+          return this.errorHandlerOutput ;
         val = b - CHAR_0; 
         ++c;
         while ( c < len &&
@@ -3246,9 +3336,12 @@ this.readNumberLiteral = function (peek) {
 
       case CHAR_O: case CHAR_o:
         ++c;
-        this.assert(c < len) ; 
+        if (c >= len && this['num.with.no.digits']('oct',c) )
+          return this.errorHandlerOutput ; 
         b = src.charCodeAt(c);
-        this.assert( b >= CHAR_0 && b < CHAR_8 );
+        if ( (b < CHAR_0 || b >= CHAR_8) && this['num.with.first.not.valid']('oct',c)  )
+          return this.errorHandlerOutput ;
+
         val = b - CHAR_0 ;
         ++c; 
         while ( c < len &&
@@ -3264,7 +3357,7 @@ this.readNumberLiteral = function (peek) {
 
       default:
         if ( b >= CHAR_0 && b <= CHAR_9 ) {
-          this.assert( !this.tight );
+          if ( this.tight ) this['num.legacy.oct']();
           var base = 8;
           do {
             if ( b >= CHAR_8 && base === 8 ) base = 10 ;
@@ -3306,7 +3399,7 @@ this.readNumberLiteral = function (peek) {
     this.c = c;
   }
   
-  this.assert ( !( c < len && isIDHead(src.charCodeAt(c))) ); // needless
+  if ( ( c < len && isIDHead(src.charCodeAt(c))) ) this['num.idhead.tail']() ; // needless
 };
 
 this . frac = function(n) {
@@ -3375,7 +3468,10 @@ this .parseGen = function(isClass ) {
 
   switch ( this.lttype ) {
      case 'Identifier':
-        this.assert(this.ltval !== 'constructor' ) ;
+        if (isClass && this.ltval === 'constructor' &&
+            this['class.mem.name.is.ctor']('gen',startc,startLoc) )
+          return this.errorHandlerOutput;
+
         name = this.memberID();
         break ;
 
@@ -3384,12 +3480,14 @@ this .parseGen = function(isClass ) {
         break ;
 
      case 'Literal' :
-        this.assert(this.ltval !== 'constructor' ) ;
+        if ( isClass && this.ltval === 'constructor' &&
+             this['class.mem.name.is.ctor']('gen',startc,startLc) )
+          return this.errorHandlerOutput ;
         name = this.numstr();
         break ;
 
      default:
-        this.assert(false);
+        return this['class.or.obj.mem.name'](isClass,startc,startLoc);
   }
 
   var val = null;
@@ -3423,14 +3521,14 @@ this . parseSetGet= function(isClass) {
 
   switch ( this.lttype ) {
       case 'Identifier':
-         if (!!isClass) strName = this.ltval;
+         if (isClass) strName = this.ltval;
          name = this.memberID();
          break;
       case '[':
          name = this.memberExpr();
          break;
       case 'Literal':
-         if (!!isClass) strName = this.ltval;
+         if (isClass) strName = this.ltval;
          name = this.numstr();
          break ;
       default:  
@@ -3449,8 +3547,11 @@ this . parseSetGet= function(isClass) {
              shorthand: false, value : val };
   }
   
+  if ( strName === 'constructor' &&
+       this['class.mem.name.is.ctor'](kind, startc, startLoc) )
+    return this.errorHandlerOutput ;
+
   val = this.parseFunc ( CONTEXT_NONE , ARGLIST_AND_BODY|METH_FUNCTION, kind === 'set' ? 1 : 0 )
-  this.assert ( strName !== 'constructor' );
 
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: kind, computed: name.type === PAREN,
@@ -3507,7 +3608,7 @@ this.parseObjectExpression = function (context) {
      if ( elem ) {
        list.push(elem);
        if (!unsatisfiedAssignment && this.unsatisfiedAssignment ) {
-           this.assert( context & CONTEXT_ELEM );
+           if (!( context & CONTEXT_ELEM)  ) this['assig.unsatisfied']() ;
            unsatisfiedAssignment =  this.unsatisfiedAssignment ;
        }
        
@@ -3529,7 +3630,10 @@ this.parseObjectExpression = function (context) {
   elem = { properties: list, type: 'ObjectExpression', start: startc,
      end: this.c , loc: { start: startLoc, end: this.loc() }};
 
-  this.expectType('}');
+  if ( ! this.expectType_soft ('}') && this['obj.unfinished']({
+    obj: elem, asig: firstUnassignable, ea: firstEA,
+    firstElemWithYS: firstElemWithYS, u: unsatisfiedAssignment, ys: firstYS }) )
+    return this.errorHandlerOutput;
 
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
   if ( firstParen ) this.firstParen = firstParen;
@@ -3589,7 +3693,7 @@ this.parseProperty = function (name, context) {
 
   switch (this.lttype) {
       case ':':
-         this.assert( !( __proto__ && first__proto__ ) ) ;
+         if ( __proto__ && first__proto__ ) this['obj.proto.has.dup']() ;
 
          this.next();
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
@@ -3605,10 +3709,16 @@ this.parseProperty = function (name, context) {
          return this.parseMeth(name, OBJ_MEM);
 
       default:
-          this.assert(name.type === 'Identifier' ) ;
+          if (name.type !== 'Identifier' && this['obj.prop.assig.not.id'](name,context) )
+            return this.errorHandlerOutput ;
+
           if ( this.lttype === 'op' ) {
-             this.assert(this.ltraw === '=' );
-             this.assert(context & CONTEXT_ELEM );
+             if (this.ltraw !== '=' && this['obj.prop.assig.not.assigop'](name,context) )
+               return this.errorHandlerOutput  ;
+
+             if (!(context & CONTEXT_ELEM) && this['obj.prop.assig.not.allowed'](name,context) )
+               return this.errorHandlerOutput ;
+
              val = this.parseAssig(name);
              this.unsatisfiedAssignment = val;
           }
@@ -3683,7 +3793,9 @@ this. parseArrayPattern = function() {
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
 
-  this. expectType ( ']' ) ;
+  if ( !this. expectType_soft ( ']' ) &&
+        this['pat.array.is.unfinished'](elem) )
+    return this.errorHandlerOutput ;
 
   return elem;
 };
@@ -3746,7 +3858,8 @@ this.parseObjectPattern  = function() {
               end: this.c,
               properties: list };
 
-    this.expectType('}');
+    if ( ! this.expectType_soft ('}') && this['pat.obj.is.unfinished'](n) )
+      return this.errorHandlerOutput ;
 
     return n;
 };
@@ -3765,7 +3878,8 @@ this.parseRestElement = function() {
 
    this.next ();
    var e = this.parsePattern();
-   this.assert(e);
+   if (!e && this['rest.has.no.arg'](starc, startLoc) )
+     return this.errorHandlerOutput ;
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
 };
@@ -3848,7 +3962,10 @@ this.parseExprHead = function (context) {
   }
 
   if ( this.firstEA )  switch ( this.lttype )   {
-    case '.': case '(': case '[': case '`': this.assert(false) ;
+    case '.': case '(': case '[': case '`':
+      if ( this['contains.assigned.eval.or.arguments'](
+           head,context,firstUnassignable,firstParen) )
+        return this.errorHandlerOutput ;
   }
      
   inner = core( head ) ;
@@ -3871,14 +3988,20 @@ this.parseExprHead = function (context) {
             head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                       loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false };
             inner  = head ;
-            this.expectType(']') ;
+            if ( !this.expectType_soft (']') &&
+                  this['mem.unfinished'](head,firstParen,firstUnassignable) )
+              return this.errorHandlerOutput ;
+
             continue;
 
          case '(':
             elem  = this. parseArgList() ;
             head =  { type: 'CallExpression', callee: inner , start: head.start, end: this.c,
                       arguments: elem, loc: { start: head.loc.start, end: this.loc() } };
-            this.expectType(')'   )  ;
+            if ( !this.expectType_soft (')'   ) &&
+                  this['call.args.is.unfinished'](head,firstParen,firstUnassignable) )
+              return this.errorHandlerOutput  ;
+
             inner = head  ;
             continue;
 
@@ -3910,7 +4033,10 @@ this.parseExprHead = function (context) {
 } ;
 
 this .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
-    this.assert( this.ltval === 'target' );
+    if ( this.ltval !== 'target' &&  
+         this['meta.new.has.unknown.prop'](startc,end,startLoc,endLoc,new_raw) )
+      return this.errorHandlerOutput ;
+
     var prop = this.id();
     return { type: 'MetaProperty',
              meta: { type: 'Identifier', name : 'new', start: startc, end: end, loc: { start : startLoc, end: endLoc }, raw: new_raw  },
@@ -3974,6 +4100,12 @@ this.parseParen = function () {
 
      if ( !elem ) {
         if ( this.lttype === '...' ) {
+           if ( ! ( context & CONTEXT_PARAM ) &&
+                 this['paren.has.an.spread.elem'](
+                  )
+               ) 
+              return this.errorHandlerOutput  ;
+ 
            elem = this.parseSpreadElement();
            if ( !firstParen && this.firstParen ) firstParen = this.firstParen;
            if ( !firstEA && this.firstEA ) firstEA = this.firstEA;
@@ -4000,8 +4132,16 @@ this.parseParen = function () {
      if ( !firstYS && this.firstYS ) 
        firstYS = this.firstYS;
 
-     if ( !unsatisfiedArg && this.unsatisfiedAssignment)
+     if ( !unsatisfiedArg && this.unsatisfiedAssignment) {
+           if ( ! context & CONTEXT_PARAM &&
+                this['paren.with.an.unsatisfied.assig'](
+                 { s:startc, l: startLoc, c: context, p: firstPAren, a: unsatisfiedArg,
+                   list: list, ea: firstEA, firstElemWithYS: firstElemWithYS, parenYS: parenYS, ys: firstYS })
+              )
+             return this.errorHandlerOutput ;
+
            unsatisfiedArg =  this.unsatisfiedAssignment;
+     }
 
      if ( this.lttype !== ',' ) break ;
 
@@ -4047,11 +4187,14 @@ this.parseParen = function () {
 
   this.firstEA = firstEA ;
   this.unsatisfiedAssignment = unsatisfiedAssignment ;
-  this.expectType(')') ;
 
   this.firstElemWithYS = firstElemWithYS;
   this.parenYS = parenYS;
   this.firstYS = firstYS;
+
+  if ( ! this.expectType_soft (')') && this['paren.unfinished'](n) )
+    return this.errorHandlerOutput ;
+
 
   return n;
 };
@@ -4112,7 +4255,9 @@ this.parseProgram = function () {
   var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
            loc: { start: startLoc, end: endLoc } };
 
-  this.expectType('eof');
+  if ( !this.expectType_soft ('eof') &&
+        this['program.unfinished'](n) )
+    return this.errorHandlerOutput ;
 
   return n;
 };
