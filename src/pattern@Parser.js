@@ -54,7 +54,9 @@ this. parseArrayPattern = function() {
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
 
-  this. expectType ( ']' ) ;
+  if ( !this. expectType_soft ( ']' ) &&
+        this['pat.array.is.unfinished'](elem) )
+    return this.errorHandlerOutput ;
 
   return elem;
 };
@@ -117,7 +119,8 @@ this.parseObjectPattern  = function() {
               end: this.c,
               properties: list };
 
-    this.expectType('}');
+    if ( ! this.expectType_soft ('}') && this['pat.obj.is.unfinished'](n) )
+      return this.errorHandlerOutput ;
 
     return n;
 };
@@ -136,7 +139,8 @@ this.parseRestElement = function() {
 
    this.next ();
    var e = this.parsePattern();
-   this.assert(e);
+   if (!e && this['rest.has.no.arg'](starc, startLoc) )
+     return this.errorHandlerOutput ;
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
 };

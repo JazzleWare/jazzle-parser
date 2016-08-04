@@ -1,5 +1,8 @@
 this . parseVariableDeclaration = function(context) {
-     this.assert ( this.canBeStatement );
+     if ( ! this.canBeStatement &&
+            this['not.stmt']('var',context) )
+       return this.errorHandlerOutput;
+
      this.canBeStatement = false;
 
      var startc = this.c0, startLoc = this.locBegin(), kind = this.ltval;
@@ -8,7 +11,10 @@ this . parseVariableDeclaration = function(context) {
      this.next () ;
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
-       this.assert(kind === 'let');
+       if (kind !== 'let' && 
+           this['var.has.no.declarators'](startc,startLoc,kind,elem,context  ) )
+         return this.errorHandlerOutput;
+
        return null; 
      }
 
@@ -17,7 +23,10 @@ this . parseVariableDeclaration = function(context) {
           while ( this.lttype === ',' ) {
             this.next();     
             elem = this.parseVariableDeclarator(context);
-            this.assert(elem);
+            if (!elem &&
+                 this['var.has.an.empty.declarator'](startc,startLoc,kind,list,context ) )
+              return this.erroHandlerOutput ;
+
             list.push(elem);
           }
 
@@ -26,7 +35,12 @@ this . parseVariableDeclaration = function(context) {
 
      if ( !(context & CONTEXT_FOR) ) {
        endI = this.semiI() || lastItem.end;
-       endLoc = this.semiLoc() || lastItem.loc.end; 
+       endLoc = this.semiLoc();
+       if (  !endLoc ) {
+          if ( this.newLineBeforeLookAhead ) endLoc =  lastItem.loc.end; 
+          else if ( this['no.semi']('var', [startc,startLoc,kind,list,endI] ) )
+             return this.errorHandlerOutput;
+       }
      }
      else {
        endI = lastItem.end;
@@ -53,7 +67,9 @@ this . parseVariableDeclarator = function(context) {
        init = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
   }
   else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
-       this.assert ( context & CONTEXT_FOR );  // bail out in case it is not a 'for' loop's init
+       if (!( context & CONTEXT_FOR) )  // bail out in case it is not a 'for' loop's init
+         this['var.decl.neither.of.in'](head,init,context) ;
+
        if( !this.unsatisfiedAssignment )
          this.unsatisfiedAssignment  =  head;     // an 'in' or 'of' will satisfy it
   }

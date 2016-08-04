@@ -1,9 +1,32 @@
+
+this.parenParamError = function() {
+  return this.err('err.arrow.arg', this.firstParen);
+};
+
+this.restError = function(r) {
+  return this.err('err.arrow.arg', r);
+};
+
+this.containsYieldOrSuperError = function() {
+  return this.err('err.arrow.arg', this.firstElemWithYS );
+};
+ 
+this.notBindableError = function(l) {
+  return this.err('err.arrow.arg', l) ;
+};
+
+this.notParamList = function(l) {
+  return this.err('err.arrow.arg', l);
+};
+
 this .asArrowFuncArgList = function(head) {
    if ( head === null )
      return;
 
    if ( head.type === 'SequenceExpression' ) {
-         this.assert(head !== this.firstParen );
+         if ( head === this.firstParen && this.parenParamError() )
+           return this.errorHandlerOutput ;
+
          var i = 0, list = head.expressions;
          while ( i < list.length ) {
            this.asArrowFuncArg(list[i]);
@@ -19,11 +42,15 @@ this. asArrowFuncArg = function(arg  ) {
 
     switch  ( arg.type ) {
         case 'Identifier':
-           this.assert(arg !== this.firstParen )  ;
+           if ( arg === this.firstParen && this.parenParamError() )
+              return this.errorHandlerOutput ;
+
            return this.addArg(arg);
 
         case 'ArrayExpression':
-           this.assert(arg !== this.firstParen )  ;
+           if ( arg === this.firstParen && this.parenParamError() ) 
+             return errorHandlerOutput ;
+
            list = arg.elements;
            while ( i < list.length ) {
               if ( list[i] ) {
@@ -35,21 +62,30 @@ this. asArrowFuncArg = function(arg  ) {
               }
               i++;
            }
-           this.assert( i === list.length );
+           if ( i !== list.length && this.restError() )
+             return this.errorHandlerOutput;
+
            arg.type = 'ArrayPattern';
            return;
 
         case 'AssignmentExpression':
-           this.assert(arg !== this.firstParen );
-           this.assert(arg.operator === '=' ) ;
+           if (arg === this.firstParen && this.parenParamError() )
+             return this.errorHandlerOutput;
+
+           if (arg.operator !== '=' && this.notBindableError(arg) )
+             return this.errorHandlerOutput ;
+
            this.asArrowFuncArg(arg.left);
-           this.assert( arg !== this.firstElemWithYS );
+           if ( arg === this.firstElemWithYS && this.containsYieldOrSuperError() )
+             return this.errorHandlerOutput;
+
            arg.type = 'AssignmentPattern';
            delete arg.operator ;
            return;
 
         case 'ObjectExpression':
-           this.assert(arg !== this.firstParen    );
+           if (arg === this.firstParen && this.parenParamError() )
+             return this.errorHandlerOutput ;
            list = arg.properties;
            while ( i < list.length )
               this.asArrowFuncArg(list[i++].value );
@@ -58,8 +94,12 @@ this. asArrowFuncArg = function(arg  ) {
            return;
 
         case 'AssignmentPattern':
-           this.assert(arg !== this.firstParen );
-           this.assert( arg !== this.firstElemWithYS );
+           if (arg === this.firstParen && this.parenParamError() )
+             return this.errorHandlerOutput ;
+
+           if ( arg === this.firstElemWithYS && this.containsYieldOrSuper() )
+             return this.errorHandlerOutput;
+
            this.asArrowFuncArg(arg.left) ;
            return;
 
@@ -87,9 +127,11 @@ this. asArrowFuncArg = function(arg  ) {
             return;
 
         default:
-           this.assert(false ) ;
+           if ( this.notBindableError(arg) )
+             return this.errorHandlerOutput;
     }
 };
+
 
 this . parseArrowFunctionExpression = function(arg,context)   {
 
@@ -111,7 +153,8 @@ this . parseArrowFunctionExpression = function(arg,context)   {
        break ;
 
     default:
-       this.assert(false);
+       if ( this.notParamList(arg) )
+         return this.errorHandlerOutput ;
   }
 
   if ( this.firstEA )
@@ -121,8 +164,6 @@ this . parseArrowFunctionExpression = function(arg,context)   {
 
   var scopeFlags = this.scopeFlags;
   this.scopeFlags &= ( SCOPE_FUNCTION|SCOPE_METH|SCOPE_CONSTRUCTOR) ;
-
-  
 
   var isExpr = !false, nbody = null;
 

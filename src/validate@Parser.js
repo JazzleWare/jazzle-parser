@@ -9,20 +9,21 @@ this .validateID  = function (e) {
          case 'do':
          case 'if':
          case 'in':
-            return this.errorReservedID();
+            
+            return this.errorReservedID(e);
          default: break SWITCH;
      }
      case 3: switch (n) {
          case 'int' :
             if ( this.v > 5 )
                 break SWITCH;
-          return  this. errorReservedID();
+          return  this. errorReservedID(e);
 
          case 'let' :
             if ( this.v <= 5 || !this.tight )
               break SWITCH;
          case 'for' : case 'try' : case 'var' : case 'new' :
-             return this.errorReservedID();
+             return this.errorReservedID(e);
 
          default: break SWITCH;
      }
@@ -31,7 +32,7 @@ this .validateID  = function (e) {
             if ( this. v > 5 ) break SWITCH;
          case 'case': case 'else': case 'this': case 'void':
          case 'with': case 'enum':
-            return this.errorReservedID();
+            return this.errorReservedID(e);
 
          default:
             break SWITCH;
@@ -43,7 +44,7 @@ this .validateID  = function (e) {
          case 'float':
          case 'short':
             if ( this. v > 5 ) break SWITCH;
-            return this.errorReservedID();
+            return this.errorReservedID(e);
     
          case 'yield': 
             if ( !( this.tight || ( this.scopeFlags & SCOPE_YIELD ) ) )
@@ -51,7 +52,7 @@ this .validateID  = function (e) {
 
          case 'break': case 'catch': case 'class': case 'const':
          case 'super': case 'throw': case 'while': 
-            return this.errorReservedID();
+            return this.errorReservedID(e);
 
          default: break SWITCH;
      }
@@ -59,25 +60,25 @@ this .validateID  = function (e) {
          case 'double': case 'native': case 'throws':
              if ( this. v > 5 )
                 break SWITCH;
-             return this.errorReservedID(); 
+             return this.errorReservedID(e); 
          case 'public':
          case 'static':
              if ( this.v > 5 && !this.tight )
                break SWITCH;
          case 'delete': case 'export': case 'import': case 'return':
          case 'switch': case 'typeof':
-            return this.errorReservedID() ;
+            return this.errorReservedID(e) ;
 
          default: break SWITCH;
      }
      case 7:  switch (n) {
          case 'package':
          case 'private':
-            if ( this.tight ) return this.errorReservedID();
+            if ( this.tight ) return this.errorReservedID(e);
          case 'boolean':
             if ( this.v > 5 ) break;
          case 'default': case 'extends': case 'finally':
-             return this.errorReservedID();
+             return this.errorReservedID(e);
 
          default: break SWITCH;
      }
@@ -85,16 +86,17 @@ this .validateID  = function (e) {
          case 'abstract': case 'volatile':
             if ( this.v > 5 ) break;
          case 'continue': case 'debugger': case 'function':
-            return this.errorReservedID () ;
+            return this.errorReservedID (e) ;
 
          default: break SWITCH;
      }
      case 9: switch (n) {
          case 'interface':
-            if ( this.tight ) this.resv();
+            if ( this.tight )
+              return this.errorReservedID (e);
          case 'protected': case 'transient':
             if ( this.v <= 5 )
-               this.errorReservedID() ;
+              return this.errorReservedID(e) ;
 
          default: break SWITCH;
      }
@@ -102,13 +104,14 @@ this .validateID  = function (e) {
          case 'implements':
             if ( this.v > 5 && !this.tight ) break ;
          case 'instanceof':
-            this.errorReservedID() ;
+            return this.errorReservedID(e) ;
 
          default: break SWITCH;
     }
     case 12: switch (n) {
       case 'synchronized':
-         if ( this. v <= 5 ) this.errorReservedID() ;
+         if ( this. v <= 5 )
+           return this.errorReservedID(e) ;
 
       default: break SWITCH;
     }
@@ -117,12 +120,12 @@ this .validateID  = function (e) {
   return e ? null : this.id();
 };
 
-this.errorReservedID = function() {
+this.errorReservedID = function(id) {
     if ( !this.throwReserved ) {
        this.throwReserved = !false;
        return null;
     }
-    this.err ( this. ltraw + ' is not an identifier '   )  ;
+    if ( this['reserved.id'](id) ) return this.errorHandlerOutput;
 }
 
 

@@ -39,7 +39,10 @@ this .parseGen = function(isClass ) {
 
   switch ( this.lttype ) {
      case 'Identifier':
-        this.assert(this.ltval !== 'constructor' ) ;
+        if (isClass && this.ltval === 'constructor' &&
+            this['class.mem.name.is.ctor']('gen',startc,startLoc) )
+          return this.errorHandlerOutput;
+
         name = this.memberID();
         break ;
 
@@ -48,12 +51,14 @@ this .parseGen = function(isClass ) {
         break ;
 
      case 'Literal' :
-        this.assert(this.ltval !== 'constructor' ) ;
+        if ( isClass && this.ltval === 'constructor' &&
+             this['class.mem.name.is.ctor']('gen',startc,startLc) )
+          return this.errorHandlerOutput ;
         name = this.numstr();
         break ;
 
      default:
-        this.assert(false);
+        return this['class.or.obj.mem.name'](isClass,startc,startLoc);
   }
 
   var val = null;
@@ -87,14 +92,14 @@ this . parseSetGet= function(isClass) {
 
   switch ( this.lttype ) {
       case 'Identifier':
-         if (!!isClass) strName = this.ltval;
+         if (isClass) strName = this.ltval;
          name = this.memberID();
          break;
       case '[':
          name = this.memberExpr();
          break;
       case 'Literal':
-         if (!!isClass) strName = this.ltval;
+         if (isClass) strName = this.ltval;
          name = this.numstr();
          break ;
       default:  
@@ -113,8 +118,11 @@ this . parseSetGet= function(isClass) {
              shorthand: false, value : val };
   }
   
+  if ( strName === 'constructor' &&
+       this['class.mem.name.is.ctor'](kind, startc, startLoc) )
+    return this.errorHandlerOutput ;
+
   val = this.parseFunc ( CONTEXT_NONE , ARGLIST_AND_BODY|METH_FUNCTION, kind === 'set' ? 1 : 0 )
-  this.assert ( strName !== 'constructor' );
 
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: kind, computed: name.type === PAREN,
