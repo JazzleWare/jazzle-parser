@@ -26,13 +26,17 @@ this.readStrLiteral = function (start) {
      case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CHAR_LINE_FEED ) c++ ;
      case CHAR_LINE_FEED :
      case 0x2028 :
-     case 0x2029 : this.err( 'a newline can not appear in a str literal' ) ;
+     case 0x2029 :
+           if ( this['str.newline'](c,startC,v,v_start) )
+             return this.errorHandlerOutput ;
     }
     c++;
   }
 
   if ( v_start !== c ) { v += l.slice(v_start,c ) ; }
-  if (!(c < e && (l.charCodeAt(c)) === start)) { this.err('s lit open'); }
+  if (!(c < e && (l.charCodeAt(c)) === start) &&
+       this['str.unfinished'](c,v) ) return this.errorHandlerOutput;
+
   this.c = c + 1 ;
   this.col += (this. c - startC   )  ;
   this.lttype = 'Literal'  ;
