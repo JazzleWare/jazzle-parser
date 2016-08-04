@@ -1940,7 +1940,7 @@ this .parseFunc = function(context, argListMode, argLen ) {
         if ( this.lttype !== 'Identifier' &&
              this['missing.name']('func', 
                 { s: startc, l: startLoc, labels: prevLabels, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimArg,
+                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
                   args: [context, argListMode, argLen] } ) )
           return this.errorHandlerOutput ;
 
@@ -1948,7 +1948,7 @@ this .parseFunc = function(context, argListMode, argLen ) {
         if ( this.tight && arguments_or_eval(currentFuncName.name) &&
              this['binding.to.eval.or.arguments']('func',
                 { s: startc, l: startLoc, labels: prevLabels, stmt: !false, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimArg,
+                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
                   args: [context, argListMode, argLen] } ) )
           return this.errorHandlerOutput ;
      }
