@@ -7,4 +7,5 @@ this.Parser =
 Parser;  
 
 this.Scope = Scope;
+this.Emitter = Emitter;
 
