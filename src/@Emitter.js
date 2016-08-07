@@ -8,6 +8,9 @@ function Emitter(indenter) {
    this.indentStrCache = [""];
    this.currentLineLengthIncludingIndentation = 0;
    this.maxLineLength = 0;
+   this.emitContext = EMIT_CONTEXT_NONE;
+   this.prec = PREC_WITH_NO_OP;
+   this.isLeft = false;
 
 }
 

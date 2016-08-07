@@ -116,4 +116,9 @@ var CLASS_MEM = 1;
 var STATIC_MEM =  5;
 
 var STRING_TYPE = typeof "string";
+var NUMBER_TYPE = typeof 0;
+
+var EMIT_CONTEXT_NEW = 1,
+    EMIT_CONTEXT_STATEMENT = 2,
+    EMIT_CONTEXT_NONE = 0;
 

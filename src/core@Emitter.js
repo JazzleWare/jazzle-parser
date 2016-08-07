@@ -1,33 +1,3 @@
-this.writeLine = function() {
-   this.code += this.currentIndentStr;
-   var len = arguments.length, a = 0;
-   while ( a < len )
-      this.write(arguments[a++]);
-
-   this.code += '\n';
-   this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
-};
-
-this.writeLineIn = function() {
-   this.code += this.currentIndentStr;
-   var len = arguments.length, a = 0;
-   while ( a < len )
-      this.write(arguments[a++]);
-
-   this.code += '\n';
-   this.indent();
-};
-
-this.writeLineOut = function() {
-   this.code += this.currentIndentStr;
-   var len = arguments.length, a = 0;
-   while ( a < len )
-      this.write(arguments[a++]);
-
-   this.code += '\n';
-   this.unindent();
-};
-
 this.write = function(line) {
    var lineLengthIncludingIndentation = 
       this.currentLineLengthIncludingIndentation +
@@ -66,6 +36,17 @@ this.unindent = function() {
    this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
 };
 
+this.newlineNoIndent = function() {
+  this.code += '\n';
+  this.currentLineLengthIcludingIndentation = 0;
+};
+
+this.newlineIndent = function() {
+  this.code += '\n' + this.currentIndentStr;
+
+  this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
+};
+
 this.indentForWrap = function() {
    if ( this.currentLineLengthIncludingIndentation === 
         this.currentIndentStr.length )
@@ -85,6 +66,9 @@ this.assert = function(cond, mesage) {
 var has = Object.hasOwnProperty;
 
 this.emit = function(n) {
+  if ( !n )
+    return;
+
   this.assert(has.call(this.emitters, n.type), 'No emitter for ' + n.type );
   var emitter = this.emitters[n.type];
   return emitter.call(this, n);
