@@ -20,6 +20,8 @@ this.parseArrayExpression = function (context ) {
       unsatisfiedAssignment = null,
       firstYS = this.firstYS;
 
+  var hasSpread = false;
+
   do {
      this.firstUnassignable =
      this.firstParen = 
@@ -28,9 +30,10 @@ this.parseArrayExpression = function (context ) {
      this.firstElemWithYS = null;
 
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
-     if ( !elem && this.lttype === '...' )
+     if ( !elem && this.lttype === '...' ) {
          elem = this.parseSpreadElement();
-
+         hasSpread = !false;
+     }
      if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
            if ( !(context & CONTEXT_ELEM) && 
                 this.err('err.prop.init', this.unsatisfiedAssignment) )
@@ -78,7 +81,7 @@ this.parseArrayExpression = function (context ) {
   this.firstYS = firstYS;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list};
+           start: startc, end: this.c, elements : list, spread: hasSpread  };
 
   this. expectType ( ']' ) ;
 

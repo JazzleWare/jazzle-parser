@@ -11,3 +11,5 @@ function Emitter(indenter) {
 
 }
 
+Emitter.prototype.emitters = {};
+

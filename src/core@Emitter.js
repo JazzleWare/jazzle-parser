@@ -82,3 +82,11 @@ this.assert = function(cond, mesage) {
 
 };
 
+var has = Object.hasOwnProperty;
+
+this.emit = function(n) {
+  this.assert(has.call(this.emitters, n.type), 'No emitter for ' + n.type );
+  var emitter = this.emitters[n.type];
+  return emitter.call(this, n);
+};
+

@@ -258,6 +258,8 @@
   
     }
 
+    if ( _exports.has(actual, 'spread' ) ) delete actual.spread; 
+
     var comp = null, item;
     for ( item in expected ) {
         if ( !_exports.has(expected, item) ) continue;
