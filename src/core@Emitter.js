@@ -1,14 +1,18 @@
 this.write = function(line) {
-   var lineLengthIncludingIndentation = 
-      this.currentLineLengthIncludingIndentation +
-      line.length;
-   
-   if ( this.maxLineLength &&
-        lineLengthIncludingIndentation > this.maxLineLength )
-     this.indentForWrap();
+   if ( this.wrap ) {
+       var lineLengthIncludingIndentation = 
+          this.currentLineLengthIncludingIndentation +
+          line.length;
+       
+       if ( this.maxLineLength &&
+            lineLengthIncludingIndentation > this.maxLineLength )
+         this.indentForWrap();
+
+       this.currentLineLengthIncludingIndentation += line.length; 
+   } 
 
    this.code += line;
-   this.currentLineLengthIncludingIndentation += line.length; 
+
 };
 
 this.enterSynth = function() {
@@ -58,7 +62,7 @@ this.indentForWrap = function() {
 
 };
 
-this.assert = function(cond, mesage) {
+this.assert = function(cond, message) {
   if (!cond) throw new Error(message);
 
 };
@@ -69,8 +73,30 @@ this.emit = function(n) {
   if ( !n )
     return;
 
-  this.assert(has.call(this.emitters, n.type), 'No emitter for ' + n.type );
+  this.assert(has.call(this.emitters, n.type),
+      'No emitter for ' + n.type );
   var emitter = this.emitters[n.type];
   return emitter.call(this, n);
+};
+
+this.startCode = function() {
+  this.codeStack.push(this.code);
+  this.code = "";
+};
+
+this.endCode = function() {
+  var c = this.code;
+  this.code = this.codeStack.pop();
+  return c;
+};
+
+this.disallowWrap = function() {
+   this.wrapStack.push(this.wrap);
+   this.wrap = false;
+};
+
+this.restoreWrap = function() {
+   this.wrap = this.wrapStack.pop();
+
 };
 

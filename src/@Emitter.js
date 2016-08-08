@@ -11,6 +11,9 @@ function Emitter(indenter) {
    this.emitContext = EMIT_CONTEXT_NONE;
    this.prec = PREC_WITH_NO_OP;
    this.isLeft = false;
+   this.wrapStack = [];
+   this.codeStack = [];
+   this.wrap = !false;
 
 }
 

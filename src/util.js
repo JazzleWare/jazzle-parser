@@ -14,6 +14,14 @@ function hex(number) {
   return str;
 }
 
+function hex2(number) {
+  var str = "";
+  str = hexD[number&0xf] + str
+  str = hexD[(number>>=4)&0xf] + str ;
+  
+  return str;
+}
+
 function fromRunLenCodes(runLenArray, bitm) {
   bitm = bitm || [];
   var bit = runLenArray[0];
