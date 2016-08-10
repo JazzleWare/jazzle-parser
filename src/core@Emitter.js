@@ -100,3 +100,9 @@ this.restoreWrap = function() {
 
 };
 
+this.writeMulti = function() {
+  var e = 0;
+  while (e < arguments.length) 
+    this.write(arguments[e++]);
+};
+

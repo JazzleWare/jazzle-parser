@@ -27,6 +27,8 @@ function Scope(parentScope, scopeMode, catchVars) {
    
    else
       this.surroundingFunc = this.parentScope.surroundingFunc;
+ 
+   this.tempReleased = scopeMode === SCOPE_FUNC ? [] : null;
 
    this.scopeMode = scopeMode;
 }

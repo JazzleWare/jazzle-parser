@@ -17,6 +17,7 @@ function Emitter(indenter) {
    this.wrapStack = [];
    this.codeStack = [];
    this.wrap = !false;
+   this.scope = new Scope(null, SCOPE_FUNC);
 
 }
 
@@ -114,6 +115,8 @@ function Scope(parentScope, scopeMode, catchVars) {
    
    else
       this.surroundingFunc = this.parentScope.surroundingFunc;
+ 
+   this.tempReleased = scopeMode === SCOPE_FUNC ? [] : null;
 
    this.scopeMode = scopeMode;
 }
@@ -790,8 +793,12 @@ this._emitString = function(str) {
   this.write(quoteStr);
 };
              
+var ASSIGN_STATEMENT = !false;
 this.emitters['ExpressionStatement'] = function(n) {
    this.emitContext = EMIT_CONTEXT_STATEMENT;
+   if (n.expression.type === 'AssignmentExpression' )
+     return this._emitAssignment(n.expression, ASSIGN_STATEMENT);
+
    this.emit(n.expression);
    this.code += ';';
 };
@@ -876,13 +883,15 @@ this.emitters['BinaryExpression'] = function(n) {
 
 };
 
-this.emitters['AssignmentExpression'] = function(n) {
-   var hasParen = false ;
-   hasParen = this.prec !== PREC_SIMP_ASSIG;
-   if ( n.op !== '=' )
-     hasParen = hasParen && this.prec !== PREC_OP_ASSIG;
+this._emitAssignment = function(assig, isStatement) {
+  return this.assigEmitters[assig.left.type].call(
+           this, assig, isStatement );
 
-   return this.assignEmitters[n.left.type].call(n, hasParen);
+};
+   
+this.emitters['AssignmentExpression'] = function(n) {
+   return this._emitAssignment(n, !ASSIGN_STATEMENT);
+
 };
 
 this.emitters['Program'] = function(n) {
@@ -1011,6 +1020,145 @@ this.emitters['UnaryExpression'] = function(n) {
     if (hasParen) this.write(')');
 };
  
+this.emitters['WithStatement'] = function(n) {
+  this.write('with (');
+  this._emitExpr(n.object);
+  this.write(') ');
+  this._emitBody(n.body);
+
+};
+
+this.emitters['ConditionalExpression'] = function(n) {
+   var hasParen = this.prec !== PREC_WITH_NO_OP &&
+                  this.prec < PREC_COND;
+
+   if (hasParen) this.write('(');
+
+   this._emitNonSeqExpr(n.test);
+   this.write('?');
+   this._emitNonSeqExpr(n.consequent);
+   this.write(':');
+   this._emitNonSeqExpr(n.alternate);
+   
+   if (hasParen) this.write(')');
+};
+  
+this.emitters['ThisExpression'] = function(n) {
+    if ( this.scopeFlags & EMITTER_SCOPE_FLAG_ARROW )
+      return this._emitArrowSpecial('this');
+
+    this.write('this');
+};
+
+this._emitSimpAssig = function(assig, isStatement) {
+  var hasParen = this.prec !== PREC_WITH_NO_OP;
+  
+  if (hasParen) this.write('(');
+  this.emit(assig.left);
+  this.write(assig.operator);
+
+  var prevPrec = this.prec;
+  this.prec = PREC_WITH_NO_OP;
+  this.emit(assig.right);
+
+  if (hasParen) this.write(')');
+  this.ea(isStatement); // end assignment with either a ',' or a ';'
+  this.prec = prevPrec;
+};
+
+function isSimpAssigHead(head) {
+  switch (head.type) {
+    case 'Identifier':
+    case 'MemberExpression':
+       return !false;
+   
+    default:
+       return false;
+  }
+}
+
+this._emitAssignment = function(assig, isStatement) {
+    if (isSimpAssigHead(assig.left))
+      return this._emitSimpAssig(assig, isStatement);
+
+    var temp = this.scope.allocateTemp();
+
+    this.write(temp);
+    this.write('=');
+    this._emitNonSeqExpr(assig.right, PREC_WITH_NO_OP);
+    this.ea(isStatement);
+
+    this.assigEmitters[assig.left.type].call(
+       this, assig.left, temp, isStatement);
+
+    if (!isStatement)
+      this.write(temp);
+
+    this.scope.releaseTemp(temp);
+};
+
+this.assigEmitters = {};
+
+this.assigEmitters['ArrayPattern'] = function(head, name, isStatement) {
+   var list = head.elements;
+   if (list.length===0)
+     return;
+
+   var e = 0;
+   while (e < list.length) {
+      this._emitArrayAssigElem(list[e], e, name, isStatement);
+      e++ ;
+   }
+};
+
+this._emitArrayAssigElem = function(elem, idx, name, isStatement) {
+   var left = elem, right = null;
+   if (elem.type === 'AssignmentPattern') {
+     left = elem.left;
+     right = elem.right;
+   }
+
+   var simp = isSimpAssigHead(left);
+   var temp = "";   
+
+   if (simp)
+     this.emit(left);
+   else {
+     temp = this.scope.allocateTemp();
+     this.write(temp);
+   }
+   this.write('=');
+   this.writeMulti(name, '.length>', idx+"", ' ? ', name, '[', idx+"", '] : ');
+   this._emitNonSeqExprOrVoid0(right);
+
+   this.ea(isStatement);
+
+   if (simp)
+     return;
+
+   this.assigEmitters[left.type].call(this, left, temp, isStatement);
+
+   this.scope.releaseTemp(temp);
+};
+
+this._emitNonSeqExprOrVoid0 = function(n, prec) {
+   if (n === null)
+     return this.write('void 0');
+
+   return this._emitNonSeqExpr(n, prec);
+};
+
+this.ea = function(isStatement) {
+  if (!isStatement)
+    return this.write(',');
+
+  this.write(';');
+  this.newlineIndent();
+  
+
+};
+  
+         
 
 },
 function(){
@@ -1114,6 +1262,12 @@ this.disallowWrap = function() {
 this.restoreWrap = function() {
    this.wrap = this.wrapStack.pop();
 
+};
+
+this.writeMulti = function() {
+  var e = 0;
+  while (e < arguments.length) 
+    this.write(arguments[e++]);
 };
 
 
@@ -6242,9 +6396,12 @@ this.reference = function(n, refMode) {
    var ref = this. findDefinitionInScope(n); 
 
    if ( this.isFunc() && ref && ref.scope !== this ) {
-     var synth = ref.synthName = ref.scope.synthNameInSurroundingFuncScope(ref.realName||'scope');
-     this.defined[name(synth)] = ref;
-     ref = this.defined[name(n)] = null;
+     // the function has referenced a variable that actually
+     // exists in its var-list, but is synthesized.
+     // if it is the case, the synthesized name should change
+     var synth = ref.synthName = ref.scope.synthNameInSurroundingFuncScope(ref.realName||'scope'); // change synthesized name
+     this.defined[name(synth)] = ref; // update the var-list
+     ref = this.defined[name(n)] = null; // also, the synthesized name must no longer be in the function-scope's var-list
    }
 
    if ( !ref )
@@ -6416,6 +6573,32 @@ this.isCatch = function() { return this.scopeMode & SCOPE_CATCH; };
 this.isFunc = function() { return this.scopeMode & SCOPE_FUNC ; };
 this.isLoop = function() { return this.scopeMode & SCOPE_LOOP ; };
 
+this.allocateTemp = function() {
+   var mainScope = this.surroundingFunc, temp = null;
+   if (mainScope.tempReleased.length) {
+     temp = mainScope.tempReleased.pop();
+     temp.occupied = !false;
+   }
+   else {
+     var synthName = this.synthNameInSurroundingFuncScope('temp');
+     temp = mainScope.defined[name(synthName)] = {
+        type: 'temp', occupied: !false, synthName: synthName };
+   }
+   
+   return temp.synthName;
+};
+
+this.releaseTemp = function(t) {
+
+   var mainScope = this.surroundingFunc;
+   var temp = mainScope.defined[name(t)];
+   temp.occupied = false;
+   mainScope.tempReleased.push(temp);
+
+};
+
+  
+  
 
 }]  ],
 null,

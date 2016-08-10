@@ -15,9 +15,12 @@ this.reference = function(n, refMode) {
    var ref = this. findDefinitionInScope(n); 
 
    if ( this.isFunc() && ref && ref.scope !== this ) {
-     var synth = ref.synthName = ref.scope.synthNameInSurroundingFuncScope(ref.realName||'scope');
-     this.defined[name(synth)] = ref;
-     ref = this.defined[name(n)] = null;
+     // the function has referenced a variable that actually
+     // exists in its var-list, but is synthesized.
+     // if it is the case, the synthesized name should change
+     var synth = ref.synthName = ref.scope.synthNameInSurroundingFuncScope(ref.realName||'scope'); // change synthesized name
+     this.defined[name(synth)] = ref; // update the var-list
+     ref = this.defined[name(n)] = null; // also, the synthesized name must no longer be in the function-scope's var-list
    }
 
    if ( !ref )
@@ -189,3 +192,29 @@ this.isCatch = function() { return this.scopeMode & SCOPE_CATCH; };
 this.isFunc = function() { return this.scopeMode & SCOPE_FUNC ; };
 this.isLoop = function() { return this.scopeMode & SCOPE_LOOP ; };
 
+this.allocateTemp = function() {
+   var mainScope = this.surroundingFunc, temp = null;
+   if (mainScope.tempReleased.length) {
+     temp = mainScope.tempReleased.pop();
+     temp.occupied = !false;
+   }
+   else {
+     var synthName = this.synthNameInSurroundingFuncScope('temp');
+     temp = mainScope.defined[name(synthName)] = {
+        type: 'temp', occupied: !false, synthName: synthName };
+   }
+   
+   return temp.synthName;
+};
+
+this.releaseTemp = function(t) {
+
+   var mainScope = this.surroundingFunc;
+   var temp = mainScope.defined[name(t)];
+   temp.occupied = false;
+   mainScope.tempReleased.push(temp);
+
+};
+
+  
+  

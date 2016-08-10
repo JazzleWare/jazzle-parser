@@ -1,22 +1,22 @@
-'ArrayExpression' *
+************'ArrayExpression' 
 'ArrayPattern'
 'ArrowFunctionExpression'
-'AssignmentExpression' 
+************'AssignmentExpression'  
 'AssignmentPattern'
 'AssignmentProperty'
-'BinaryExpression' *
-'BlockStatement' *
-'BreakStatement' *
-'CallExpression' *
+************'BinaryExpression' 
+************'BlockStatement' 
+************'BreakStatement' 
+************'CallExpression' 
 'CatchClause'
 'ClassBody'
 'ClassDeclaration'
 'ClassExpression'
-'ConditionalExpression'
-'ContinueStatement' *
+************'ConditionalExpression' 
+************'ContinueStatement' 
 'DebuggerStatement'
-'DoWhileStatement' *
-'EmptyStatement' *
+************'DoWhileStatement' 
+************'EmptyStatement' 
 'ExportAllDeclaration'
 'ExportDefaultDeclaration'
 'ExportNamedDeclaration'
@@ -24,43 +24,43 @@
 'ExpressionStatement'
 'ForInStatement'
 'ForOfStatement'
-'ForStatement' *
+************'ForStatement' 
 'FunctionDeclaration'
 'FunctionExpression'
-'Identifier' *
-'IfStatement' *
+************'Identifier' 
+************'IfStatement' 
 'ImportDeclaration'
 'ImportDefaultSpecifier'
 'ImportNamespaceSpecifier'
 'ImportSpecifier'
-'LabeledStatement' *
-'Literal' *
-'LogicalExpression' *
-'MemberExpression' *
+************'LabeledStatement' 
+************'Literal' 
+************'LogicalExpression' 
+************'MemberExpression' 
 'MetaProperty'
 'MethodDefinition'
-'NewExpression' *
+************'NewExpression' 
 'ObjectExpression'
 'ObjectPattern'
-'Program' *
+************'Program' 
 'Property'
 'RestElement'
-'ReturnStatement'
-'SequenceExpression'
+************'ReturnStatement' 
+************'SequenceExpression' 
 'SpreadElement'
 'Super'
-'SwitchCase'
-'SwitchStatement'
+************'SwitchCase' 
+************'SwitchStatement' 
 'TaggedTemplateExpression'
 'TemplateElement'
 'TemplateLiteral'
-'ThisExpression'
-'ThrowStatement' *
+************'ThisExpression' 
+************'ThrowStatement' 
 'TryStatement'
-'UnaryExpression' *
-'UpdateExpression' *
+************'UnaryExpression' 
+************'UpdateExpression' 
 'VariableDeclaration'
 'VariableDeclarator'
-'WhileStatement' *
-'WithStatement'
+************'WhileStatement' 
+************'WithStatement' 
 'YieldExpression'
