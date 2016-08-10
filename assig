@@ -1,0 +1,194 @@
+[ l, e = 12 ] = 120
+_tmp=120,
+ l=_tmp.length>0?_tmp[0]:_undef,
+ e=_tmp.length>1?_tmp[1]:12),
+_tmp;
+
+[l, [e, n] = 12] = 120
+_tmp = 120,
+l = _tmp.length>0 ?_tmp[0] : _undef ,
+(
+  _tmp2 = tmp.length>1?_tmp[1]:12,
+  e = _tmp2.length>0?_tmp[0]:_undef,
+  n = _tmp2.length>1?_tmp[1]:_undef
+);
+
+[l, [e,n] ] = 120
+_tmp = 120,
+l = _tmp.length>0?_tmp[0]:_undef,
+_tmp.length>1?
+  (_tmp2=_tmp[1],
+   e=_tmp2.length>0?_tmp2[0]:_undef,
+   n=_tmp2.length>1?_tmp2[1]:_undef
+  ):
+  (
+   e = n = _undef
+  ),
+_tmp;
+
+[l, [e, [n, r]] ] = 120
+_lenr = 120,
+l = _lenr.len>0 ? _lenr[0] : _undef,
+(_lenr.len > 1 ?
+   (_enr = _lenr[1],
+    e = __enr.len>0 ? _enr[0] : _undef ,
+    (_enr.len > 1 ?
+        (_nr = _enr[1],
+         n = _nr.length > 0 ? _nr[0] : _undef,
+         r = _nr.length > 1 ? _nr[1] : _undef
+        ) :
+        ( n = _undef,
+          r = _undef )
+    )
+
+[l , [e , [n , r] ] ] = 120
+lenr = 120,
+l = lenr.len>0 ? lenr[0] : _undef,
+(enr = lenr.len>1 ? lenr[1] : _undef,
+ e = (enr && enr.len>0) ? enr[0] : _undef,
+ (nr = (enr && enr.len>1) ? enr[1] : _undef,
+  n = (nr && nr.len>0) ? nr[0] : _undef,
+  r = (nr && nr.len>1) ? nr[1] : _undef
+ )
+),
+lenr;
+
+lenr = 120,                             // lenr = 120;
+l = lenr.len>0 ? lenr[0] : _undef,      // l = lenr.len>0 ? lenr[0] : _undef;
+enr = lenr.len>1 ? lenr[1] : _undef,    // enr = lenr.len>1 ? lenr[1] : _undef;
+enr ? (                                 // if (enr) {
+    e = enr.len>0 ? enr[0] : _undef,    //   e = enr.len>0 ? enr[0]: _undef;
+    nr = enr.len>1 ? enr[1] : _undef )  //   nr = enr.len>1 ? enr[1] : _undef; }
+    : (                                 // else {
+    e = nr = _undef ),                  //   e = nr = _undef; }
+nr ? (                                  // if (nr) {
+   n = nr.len>0 ? nr[0] : _undef,       //   n = nr.len>0 ? nr[0] : _undef;
+   r = nr.len>1 ? nr[0] : _undef)       //   r = nr.len>1 ? nr[1] : _undef; }
+   : (                                  // else {
+    n = r = _undef ),                   //   n = r = _undef; }
+lenr;
+
+[l , [e, [n=12, r] = 120] ] = 120;
+lenr = 120,                             // lenr = 120;
+l = lenr.len>0 ? lenr[0] : _undef,      // l = lenr.len>0 ? lenr[0] : _undef;
+enr = lenr.len>1 ? lenr[1] : _undef,    // enr = lenr.len>1 ? lenr[1] : _undef;
+enr ? (                                 // if (enr) {
+   e = enr.len>0 ? enr[0] : _undef,     //   e = enr.len>0 ? enr[0] : _undef;     
+   nr = enr.len>1 : enr[1] : 120        //   nr = enr.len>1 ? enr[1] : 120; }
+) : (                                   // else {
+  e = _undef,                           //   e = _undef;
+  nr = 120                              //   nr = 120;
+),                                      // }
+nr ? (                                  // if (nr) {
+  n = nr.len>0 ? nr[0] : 12,            //   n = nr.len>0 ? nr[0] : 12;
+  r = nr.len>1 ? nr[1] : _undef,        //   e = nr.len>1 ? nr[1] : _undef; }
+) : (                                   // else {
+  n = 12,                               //   n = 12;                           
+  r = _undef                            //   r = _undef;
+),                                      // }
+lenr;
+
+[l , [e, [n, r]=12]=120]=12 
+lenr = 12, // soe.startAssig('lenr');
+l = lenr.len>0 > lenr[0] : _undef, // soe.assigExpr('l', 'lenr', 0); 
+enr = lenr.len>1 ? lenr[1] : 120, // soe
+(e = (enr && enr.len>0) ? enr[0] : _undef,
+ nr = (enr && enr.len>1) ? enr[1] : 12,
+ (n = (nr && nr.len>0) ? nr[0] : _undef,
+  r = (nr && nr.len>0) ? nr[1] : _undef)
+),
+lenr;
+
+[ // left: [l,[e,[n,r]=12]=120], right: 12, name: "", idx: -1
+  l, // left: l, right: null, name: "lenr", idx: 0
+  [ // left: [e,[n,r]=12], right: 120, name: "lenr", idx: 1
+    e, // left: e, right: null, name: "enr", idx: 0
+    [ // left: [n ,r], right: 12, name: "enr", idx: 1  
+      n, // left: n, right: null, name: "nr", idx: 0
+      r // left: n, right: null, name: "nr", idx: 1
+    ] = 12
+  ] = 120
+] = 12
+
+([l,[e,[n,r]=12]=120], 12, "", -1) = {
+   arg['idx'] == -1 &&                                             <<: lenr = 120 :>>
+   (l, null, "lenr", 0) =                                          <<: l = lenr.len>0 ? lenr[0] : void 0 :>>
+   ([e,[n,r]=12], 120, "lenr", 1) = {
+                                                                   <<: enr = lenr.len>1 ? lenr[1] : 120 :>>
+       (e, null, "enr", 0) =                                          <<: e = enr.len>0 ? enr[0] : void 0 :>>
+       ([n,r], 12, "enr", 1) = {
+                                                                      <<: nr = enr.len>1 ? enr[1] : 12 :>>
+           (n, null, "nr", 0) =                                           <<: n = nr.len>0 ? nr[0] : void 0 :>>
+           (r, null, "nr", 1) =                                           <<: n = nr.len>1 ? nr[1] : void 0 :>>
+       }
+   }
+   arg['idx'] == -1 && :isStatement &&                             <<: lenr :>>
+            
+emitAssigExpr(n, isStatement) {
+   switch (n.left.type) {
+     case 'Identifier':
+       return this._emitIDAssig(n);
+   
+     case 'ArrayPattern':
+       return this._emitArrayAssig(n.left, n.right, "", -1, isStatement);
+
+     case 'ObjectPattern':
+       return this._emitObjectPattern(n, null, "", null, isStatement);
+
+}
+
+_emitArrayAssig(assig, idx, varName, defaultVal, isStatement) {
+   var list = assig.elements;
+   if ( list.length === 0 ) return;
+
+   var temp = this.scope.surroundingFuncScope.allocateTemp();
+   if (idx !== -1) {
+     this.writeMulti(temp, ' = ', varName, '.length>',idx,' ? ',
+                     varName,'[', idx, ']', ' : void 0');
+   }
+   else {
+     this.writeMulti(temp, ' = ');
+     this.emitNonSeqExpr(assig.right, PREC_WITH_NO_OP);
+   }
+       
+   if (!isStatement)
+      this.write(', (');
+
+   this.newlineIndent();
+   
+   var e = 0;
+   while (e < list.length) {
+      this._emitArrayAssigElem(list[e], e, temp, isStatement);  
+    
+     
+
+
+
+
+     
+  
+emitAssigElem(elem, idx, val) {
+  var defaultElemVal = null;
+  if (elem.type === 'AssignmentPattern') {
+    defaultElemVal = elem.right;
+    elem = elem.left;
+  }
+  if (elem.type === 'Identifier')
+    return this.writeAssig(elem.name, val, idx, defaultElemVal); 
+  
+  var temp = this.scope.surroundingFuncScope.allocateTemp();
+  this.writeAssig(temp, val, idx, defaultElemVal);
+  this.write(', ');
+  this.write('(');
+  this.emitAssigElem(
+[l, [e, [n, r] = 12] = 120] = 12
+lenr = toArr(12, 2),
+l = lenr[0], 
+enr = toArr(lenr[1] || 120,2),
+( e = enr[0],
+  nr = toArr(enr[1] || 12, 2),
+  (n = nr[0],
+   r = nr[1])
+),
+lenr;
+

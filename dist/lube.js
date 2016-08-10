@@ -596,10 +596,25 @@ this._emitExpr = function(n, prec) { // TODO: prec is not necessary
 
 };
 
+function isImplicitSeq(n) {
+   if ( n.type === 'AssignmentExpression' ) {
+     n = n.left;
+     switch (n.type) {
+        case 'ArrayPattern':
+           return n.elements.length !== 0;
+  
+        case 'ObjectPattern':
+           return n. properties.length !== 0;
+     }
+   }
+
+   return false;
+}
+
 this._emitNonSeqExpr = function(n, prec) {
   var currentPrec = this.prec;
   this.prec = prec;
-  if ( n.type === 'SequenceExpression' )
+  if ( n.type === 'SequenceExpression' || isImplicitSeq(n) )
     this._paren(n);
   else
     this.emit(n);
@@ -976,7 +991,7 @@ this.emitters['SequenceExpression'] = function(n) {
 
   while ( e < list.length ) {
      if (e) this.write(', ');
-     this._emitNonSeqExpr(list[e]);
+     this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP);
      e++ ;
   }
 
@@ -1029,17 +1044,19 @@ this.emitters['WithStatement'] = function(n) {
 };
 
 this.emitters['ConditionalExpression'] = function(n) {
-   var hasParen = this.prec !== PREC_WITH_NO_OP &&
-                  this.prec < PREC_COND;
+   var hasParen = (this.prec !== PREC_WITH_NO_OP)
 
    if (hasParen) this.write('(');
 
+   var prevPrec = this.prec;
+   this.prec = PREC_COND;
    this._emitNonSeqExpr(n.test);
    this.write('?');
-   this._emitNonSeqExpr(n.consequent);
+   this._emitNonSeqExpr(n.consequent, PREC_WITH_NO_OP);
    this.write(':');
-   this._emitNonSeqExpr(n.alternate);
-   
+   this._emitNonSeqExpr(n.alternate, PREC_WITH_NO_OP);
+   this.prec = prevPrec;
+
    if (hasParen) this.write(')');
 };
   
@@ -1057,13 +1074,10 @@ this._emitSimpAssig = function(assig, isStatement) {
   this.emit(assig.left);
   this.write(assig.operator);
 
-  var prevPrec = this.prec;
-  this.prec = PREC_WITH_NO_OP;
-  this.emit(assig.right);
+  this._emitNonSeqExpr(assig.right, PREC_WITH_NO_OP);
 
   if (hasParen) this.write(')');
-  this.ea(isStatement); // end assignment with either a ',' or a ';'
-  this.prec = prevPrec;
+  if (isStatement) this.code += ';';
 };
 
 function isSimpAssigHead(head) {
@@ -1077,24 +1091,53 @@ function isSimpAssigHead(head) {
   }
 }
 
+function containerLen(container) {
+
+   switch (container.type) { 
+     case 'ArrayPattern':
+        return container.elements.length;
+   
+     case 'ObjectPattern':
+        return container.properties.length;
+  
+     default:
+        return -1;
+
+   }
+}
+         
 this._emitAssignment = function(assig, isStatement) {
     if (isSimpAssigHead(assig.left))
       return this._emitSimpAssig(assig, isStatement);
 
-    var temp = this.scope.allocateTemp();
+    var hasParen = false;
+    var len = containerLen(assig.left);
+    
+    if (len > 0) {
+      hasParen = !isStatement && this.prec !== PREC_WITH_NO_OP;
+      if (hasParen) this.write('(');
+      var temp = this.scope.allocateTemp();
 
-    this.write(temp);
-    this.write('=');
-    this._emitNonSeqExpr(assig.right, PREC_WITH_NO_OP);
-    this.ea(isStatement);
-
-    this.assigEmitters[assig.left.type].call(
-       this, assig.left, temp, isStatement);
-
-    if (!isStatement)
       this.write(temp);
+      this.write('=');
+    }
+    this._emitNonSeqExpr(assig.right, PREC_WITH_NO_OP);
+    if (isStatement)
+      this.write(';');
 
-    this.scope.releaseTemp(temp);
+    if (len > 0) {
+      if (!isStatement)
+        this.write(',');
+      this.assigEmitters[assig.left.type].call(
+         this, assig.left, temp, isStatement);
+
+      if (!isStatement)
+        this.write(temp);
+
+      this.scope.releaseTemp(temp);
+    }
+
+    if (hasParen) this.write(')');
 };
 
 this.assigEmitters = {};
@@ -1120,6 +1163,9 @@ this._emitArrayAssigElem = function(elem, idx, name, isStatement) {
 
    var simp = isSimpAssigHead(left);
    var temp = "";   
+
+   if ( isStatement)
+     this.newlineIndent();
 
    if (simp)
      this.emit(left);
@@ -1153,9 +1199,6 @@ this.ea = function(isStatement) {
     return this.write(',');
 
   this.write(';');
-  this.newlineIndent();
-  
-
 };
   
          
