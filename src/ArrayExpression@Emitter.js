@@ -673,4 +673,94 @@ this.ea = function(isStatement) {
   this.write(';');
 };
   
-         
+this.assigEmitters['ObjectPattern'] = function(head, name, isStatement) {
+  var list = head.properties;
+  if (list.length === 0)
+    return;
+
+  var e = 0;
+  while (e < list.length) {
+    this._emitObjAssigElem(list[e], name, isStatement);
+    e++ ;
+  }
+};
+
+this._emitObjAssigElem = function(prop, name, isStatement) {
+   var v = prop.value, k = prop.key;             
+   var left = v, right = null;
+
+   if (v.type === 'AssignmentPattern') {
+     left = v.left;
+     right = v.right;
+   }
+
+   if (isStatement)
+     this.newlineIndent();
+
+   var propTemp = "";
+
+   if (prop.computed) {
+     propTemp = this.scope.allocateTemp();
+     this.write(propTemp);
+     this.write('=');
+     this._emitNonSeqExpr(k, PREC_WITH_NO_OP);
+     this.ea(isStatement);
+   }
+
+   var simp = isSimpAssigHead(left);
+   var temp = "";
+
+   if (simp)
+     this.emit(left);
+   else {
+     temp = this.scope.allocateTemp();
+     this.write(temp);
+   }
+
+   this.write('=');
+   if (prop.computed) {
+     this.write(propTemp);
+     this.write('+""');
+   }
+   else switch(k.type) {
+      case 'Identifier':
+         this._emitString(k.name);
+         break;
+      case 'Literal':
+         this._emitString(k.value+"");
+   }
+
+   this.writeMulti(' in ', name);
+
+   this.write('?');
+   this.write(name);
+   this.write('[');
+   
+   if (prop.computed) {
+     this.write(propTemp);
+     this.write('+""');
+   }
+   else switch(k.type) {
+      case 'Identifier':
+         this._emitString(k.name);
+         break;
+      case 'Literal':
+         this._emitString(k.value+"");
+   }
+
+   this.write('] :' );
+
+   this._emitNonSeqExprOrVoid0(right, PREC_WITH_NO_OP );
+   this.ea(isStatement);
+
+   if (simp)
+     return;
+
+   this.assigEmitters[left.type].call(this, left, temp, isStatement);
+
+   if (prop.computed)
+     this.scope.releaseTemp(propTemp);
+
+   this.scope.releaseTemp(temp);
+};
+   
