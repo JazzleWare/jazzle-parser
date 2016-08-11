@@ -11,7 +11,7 @@ this . parseVariableDeclaration = function(context) {
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
        if (kind !== 'let' ) 
-         this['var.has.no.declarators'](startc,startLoc);
+         this['var.has.no.declarators'](startc,startLoc,kind);
 
        return null; 
      }
@@ -22,8 +22,22 @@ this . parseVariableDeclaration = function(context) {
             this.next();     
             elem = this.parseVariableDeclarator(context);
             if (!elem )
-              this['var.has.an.empty.declarator'](startc,startLoc);
+              this['var.has.an.empty.declarator'](startc,startLoc,kind);
+
+            list.push(elem);
+          }
+
+     var lastItem = list[list.length-1];
+     var endI = 0, endLoc = null;
+
+     if ( !(context & CONTEXT_FOR) ) {
+       endI = this.semiI() || lastItem.end;
+       endLoc = this.semiLoc();
+       if (  !endLoc ) {
+          if ( this.newLineBeforeLookAhead ) endLoc =  lastItem.loc.end; 
+          else  this['no.semi']('var',startc,startLoc,kind );
        }
+     }
      else {
        endI = lastItem.end;
        endLoc = lastItem.loc.end;
@@ -48,7 +62,7 @@ this . parseVariableDeclarator = function(context) {
        this.next();
        init = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
   }
-  else if ( head.type !== 'Identifier' ) { // no init found; our pattern is an arr or an obj?
+  else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
        if (!( context & CONTEXT_FOR) )  // bail out in case it is not a 'for' loop's init
          this['var.decl.neither.of.in'](head) ;
 

@@ -23,8 +23,6 @@ this.parseProgram = function () {
   if ( !this.expectType_soft ('eof') )
     this['program.unfinished'](n);
 
-    return this.errorHandlerOutput ;
-
   return n;
 };
 
