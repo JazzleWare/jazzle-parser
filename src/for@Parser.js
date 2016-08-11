@@ -7,9 +7,8 @@ this . parseFor = function() {
       startLoc = this.locBegin();
 
   this.next () ;
-  if ( !this.expectType_soft ('(' ) &&
-        this['for.with.no.opening.paren'](startc, startLoc) )
-    return this.errorHandlerOutput ;
+  if ( !this.expectType_soft ('(' ) )
+     this['for.with.no.opening.paren'](startc, startLoc);
 
   var head = null;
   var headIsExpr = false;
@@ -32,8 +31,8 @@ this . parseFor = function() {
 
      case 'const' :
 
-        if ( this.v < 5 && this['const.not.in.v5'](startc, startLoc) )
-          return this.errorHandlerOutput ;
+        if ( this.v < 5 )
+          this['const.not.in.v5'](startc, startLoc);
 
         this.canBeStatement = !false;
         head = this. parseVariableDeclaration(CONTEXT_FOR);
@@ -60,9 +59,8 @@ this . parseFor = function() {
           kind = 'ForInStatement';
 
        case 'of':
-          if (!headIsExpr && head.declarations.length !== 1 &&
-               this['for.in.or.of.multi'](startc, startLoc,head) )
-            return this.errorHandlerOutput   ;
+          if (!headIsExpr && head.declarations.length !== 1 )
+            this['for.in.or.of.multi'](startc, startLoc,head);
 
           if ( this.unsatisfiedAssignment )
             this.unsatisfiedAssignment = null;
@@ -71,15 +69,12 @@ this . parseFor = function() {
 
           this.next();
           afterHead = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE) ;
-          if ( ! this.expectType_soft (')') &&
-                 this['for.iter.no.end.paren'](start,startLoc,head,afterHead) )
-            return this.errorHandlerOutput ;
+          if ( ! this.expectType_soft (')') )
+              this['for.iter.no.end.paren'](start,startLoc);
 
           this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
           nbody = this.parseStatement(!false);
-          if ( !nbody && this['null.stmt']('for.iter',
-               { s:startc, l:startLoc, h: head, iter: afterHead, scopeFlags: scopeFlags }) )
-            return this.errorHandlerOutput;
+          if ( !nbody ) this['null.stmt']('for.iter',startc,startLoc);
 
           this.scopeFlags = scopeFlags;
 
@@ -88,13 +83,12 @@ this . parseFor = function() {
             start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
 
        default:
-          return this['for.iter.not.of.in'](startc, startLoc,head);
+          return this['for.iter.not.of.in'](startc, startLoc);
     }
   }
 
-  if ( this.unsatisfiedAssignment &&
-       this['for.simple.head.is.unsatisfied'](startc,startLoc,head) )
-    return this.errorHandlerOutput ;
+  if ( this.unsatisfiedAssignment )
+    this['for.simple.head.is.unsatisfied'](startc,startLoc);
 
 /*
   if ( head && !headIsExpr ) {
@@ -102,26 +96,22 @@ this . parseFor = function() {
     head.loc.end = { line: head.loc.end.line, column: this.col };
   }
 */
-  if ( ! this.expectType_soft (';') &&
-         this['for.simple.no.init.comma'](startc,startLoc,head) )
-    return this.errorHandlerOutput ;
+  if ( !this.expectType_soft (';') )
+      this['for.simple.no.init.comma'](startc,startLoc);
 
   afterHead = this.parseExpr(CONTEXT_NULLABLE );
-  if ( ! this.expectType_soft (';') &&
-         this['for.simple.no.test.comma'](startc,startLoc,head,afterHead) )
-    return this.errorHandlerOutput ;
+  if ( ! this.expectType_soft (';') )
+      this['for.simple.no.test.comma'](startc,startLoc);
 
   var tail = this.parseExpr(CONTEXT_NULLABLE );
 
-  if ( ! this.expectType_soft (')') &&
-         this['for.simple.no.end.paren'](startc,startLoc,head,afterHead,tail) )
-    return this.errorHandlerOutput ;
+  if ( ! this.expectType_soft (')') )
+      this['for.simple.no.end.paren'](startc,startLoc);
 
   this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
   nbody = this.parseStatement(! false);
-  if ( !nbody && this['null.stmt']('for.simple',
-      { s:startc, l:startc, h: head, t: afterHead, u: tail, scopeFlags: scopeFlags } ) )
-    return this.errorhandlerOutput;  
+  if ( !nbody )
+    this['null.stmt']('for.simple', startc, startLoc);  
 
   this.scopeFlags = scopeFlags;
 

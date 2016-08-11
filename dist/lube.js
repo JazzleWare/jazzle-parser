@@ -2109,8 +2109,7 @@ this.readMultiComment = function () {
 //          default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
         }
 
-   if ( this[ 'comment.multi.unfinished' ]() )
-     return this.errorHandlerOutput ;
+   this[ 'comment.multi.unfinished' ]();
 };
 
 this.readLineComment = function() {
@@ -2140,8 +2139,8 @@ this.readLineComment = function() {
 },
 function(){
 this.parseExport = function() {
-   if ( !this.canBeStatement && this['not.stmt']['export'].call(this) )
-     return this.errorHandlerOutput ;
+   if (!this.canBeStatement)
+     this['not.stmt']('export');
 
    this.canBeStatement = false;
 
@@ -2155,28 +2154,24 @@ this.parseExport = function() {
    var semiLoc = null;
    switch ( this.lttype ) {
       case 'op':
-         if (this.ltraw !== '*' &&
-             this['export.all.not.*'](startc,startLoc) )
-           return this.errorHandlerOutput;
+         if (this.ltraw !== '*')
+           this['export.all.not.*'](startc,startLoc);
  
          this.next();
-         if ( !this.expectID_soft('from') &&
-               this['export.all.no.from'](startc, startLoc) )
-           return this.errorHandlerOutput;
+         if (!this.expectID_soft('from'))
+            this['export.all.no.from'](startc, startLoc);
 
          if (!(this.lttype === 'Literal' &&
-              typeof this.ltval === STRING_TYPE ) && 
-              this['export.all.source.not.str'](startc,startLoc) )
-           return this.errorHandlerOutput;
+              typeof this.ltval === STRING_TYPE )) 
+              this['export.all.source.not.str'](startc,startLoc);
 
          src = this.numstr();
          
          endI = this.semiI();
          semiLoc = this.semiLoc_soft();
-         if ( !semiLoc && !this.hasNewlineBeforeLookAhead &&
-              this['no.semi']( 'export.all',
-              { s:startc, l:startLoc, src: src, endI: endI } ) )
-           return this.errorHandlerOutput;
+         if ( !semiLoc && !this.hasNewlineBeforeLookAhead)
+           this['no.semi']( 'export.all',
+              { s:startc, l:startLoc, src: src, endI: endI } );
 
          this.foundStatement = !false;
          
@@ -2202,16 +2197,14 @@ this.parseExport = function() {
             }
             ex = local;
             if ( this.lttype === 'Identifier' ) {
-              if ( this.ltval !== 'as' && 
-                   this['export.specifier.not.as'](
-                     { s: startc, l: startLoc, list: list, local, ex: ex }) )
-                return this.errorHandlerOutput ;
+              if ( this.ltval !== 'as') 
+                this['export.specifier.not.as'](
+                     { s: startc, l: startLoc, list: list, local, ex: ex });
 
               this.next();
               if ( this.lttype !== 'Identifier' ) { 
-                 if (  this['export.specifier.after.as.id'](
-                       { s:startc, l:startLoc, list:list, ex:ex }) )
-                return this.errorHandlerOutput;
+                 this['export.specifier.after.as.id'](
+                       { s:startc, l:startLoc, list:list, ex:ex });
               }
               else
                  ex = this.id();
@@ -2231,24 +2224,19 @@ this.parseExport = function() {
          endI = this.c;
          var li = this.li, col = this.col;
    
-         if ( !this.expectType_soft('}') && 
-               this['export.named.list.not.finished'](
-                  {s: startc,l: loc, list:list}) )
-           return this.errorHandlerOutput  ;
+         if ( !this.expectType_soft('}') )
+            this['export.named.list.not.finished'](
+                  {s: startc,l: loc, list:list});
 
          if ( this.lttype === 'Identifier' ) {
-           if ( this.ltval !== 'from' &&
-                this['export.named.not.id.from'](
-                    {s: startc, l:startLoc, list:list, end: [endI, li, col]}
-              ) )
-              return this.errorHandlerOutput;
+           if ( this.ltval !== 'from' )
+             this['export.named.not.id.from'](startc,startLoc);
 
            else this.next();
            if ( !( this.lttype === 'Literal' &&
-                  typeof this.ltval ===  STRING_TYPE) &&
-                this['export.named.source.not.str'](
-                   { s:startc,l:startLoc,list:list,end:[endI,li,col] }) )
-             return this.errorHandlerOutput ;
+                  typeof this.ltval ===  STRING_TYPE) )
+             this['export.named.source.not.str'](
+                   { s:startc,l:startLoc,list:list,end:[endI,li,col] });
 
            else {
               src = this.numstr();
@@ -2256,16 +2244,13 @@ this.parseExport = function() {
            }
          }
          else
-            if (firstReserved && this['export.named.has.reserved'](
-               { s:startc, l:startLoc, list:list, end:[endI,li,col], resv: firstReserved}) )
-              return this.errorHandlerOutput ;
+            if (firstReserved)
+              this['export.named.has.reserved'](startc,startLoc,resv);
 
          endI = this.semiI() || endI;
          semiLoc = this.semiLoc_soft();
-         if ( !semiLoc && !this.newLineBeforeLookAhead &&
-              this['no.semi']('export.named',
-                  { s:startc, l:startLoc, list: list, end: [endI,li,col], src: src } ))
-           return this.errorHandlerOutput; 
+         if ( !semiLoc && !this.newLineBeforeLookAhead )
+           this['no.semi']('export.named', startc, startLoc); 
 
          this.foundStatement = !false;
          return { type: 'ExportNamedDeclaration',
@@ -2287,9 +2272,8 @@ this.parseExport = function() {
        switch ( this.ltval ) {
           case 'let':
           case 'const':
-             if (context === CONTEXT_DEFAULT && 
-                 this['export.default.const.let'](startc,startLoc) )
-               return this.errorHandlerOutput;
+             if (context === CONTEXT_DEFAULT ) 
+              this['export.default.const.let'](startc,startLoc);
                  
              this.canBeStatement = !false;
              ex = this.parseVariableDeclaration(CONTEXT_NONE);
@@ -2314,8 +2298,7 @@ this.parseExport = function() {
 
    if ( context !== CONTEXT_DEFAULT ) {
 
-     if (!ex && this['export.named.no.exports'](startc, startLoc) )
-       return this.errorHandlerOutput ;
+     if (!ex) this['export.named.no.exports'](startc, startLoc);
      
      this.foundStatement = !false;
      return { type: 'ExportNamedDeclaration',
@@ -2331,10 +2314,8 @@ this.parseExport = function() {
         ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE );
         endI = this.semiI();
         endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
-        if ( !endLoc && !this.newLineBeforeLookAhead &&
-             this['no.semi']( 'export.named', 
-                 { s: startc, l:startLoc, e: ex } ) )
-          return this.errorHandlerOutput;
+        if ( !endLoc && !this.newLineBeforeLookAhead )
+          this['no.semi']( 'export.named', startc,startLoc);
    }
 
    this.foundStatement = !false;
@@ -2347,8 +2328,8 @@ this.parseExport = function() {
 },
 function(){
 this.parseImport = function() {
-  if ( !this.canBeStatement && this['not.stmt']('import') )
-    return this.errorHandlerOutput ;
+  if ( !this.canBeStatement)
+     this['not.stmt']('import');
 
   this.canBeStatement = false;
 
@@ -2366,8 +2347,8 @@ this.parseImport = function() {
   }
 
   if ( this.lttype === ',' ) {
-    if (local === null && this['import.no.elem.yet.comma'](startc,startLoc) )
-      return this.errorHandlerOutput;
+    if (local === null)
+        this['import.no.elem.yet.comma'](startc,startLoc);
 
     this.next();
   }
@@ -2376,21 +2357,18 @@ this.parseImport = function() {
 
   switch ( this.lttype ) {   
      case 'op':
-       if ( this.ltraw !== '*' &&
-            this['import.namespace.specifier.not.*'](startc, startLoc) )
-         return this.errorHandlerOutput ;
+       if ( this.ltraw !== '*' )
+         this['import.namespace.specifier.not.*'](startc, startLoc);
 
        else {
          spStartc = this.c - 1;
          spStartLoc = this.locOn(1);
          this.next();
-         if ( !this.expectID_soft('as') &&
-               this['import.namespace.specifier.no.as'](startc, startLoc, spStartc, spStartLoc) )
-           return this.errorHandlerOutput;
+         if ( !this.expectID_soft('as') )
+            this['import.namespace.specifier.no.as'](startc, startLoc);
 
-         if (this.lttype !== 'Identifier' &&
-             this['import.namespace.specifier.local.not.id'](startc,startLoc,spStartc, spStartLoc ) )
-           return this.errorHandlerOutput;
+         if (this.lttype !== 'Identifier' )
+          this['import.namespace.specifier.local.not.id'](startc,startLoc);
 
          local = this.validateID(null);
          list.push({ type: 'ImportNamespaceSpecifier',
@@ -2408,14 +2386,12 @@ this.parseImport = function() {
           local = this.id();
           var im = local; 
           if ( this.lttype === 'Identifier' ) {
-             if ( this.ltval !== 'as' && 
-                  this['import.specifier.no.as'](startc,startLoc,local) )
-               return this.errorHandlerOutput ;
+             if ( this.ltval !== 'as' ) 
+               this['import.specifier.no.as'](startc,startLoc);
 
              this.next();
-             if ( this.lttype !== 'Identifier' &&
-                  this['import.specifier.local.not.id'](startc,startLoc,local) )
-               return this.errorHandlerOutput ;
+             if ( this.lttype !== 'Identifier' )
+               this['import.specifier.local.not.id'](startc,startLoc);
 
              local = this.validateID(null);
           }
@@ -2433,30 +2409,27 @@ this.parseImport = function() {
              break ;                                  
        }
 
-       if ( !this.expectType_soft('}') && 
-             this['import.specifier.list.unfinished'](startc,startLoc,list) )
-         return this.errorHandlerOutput  ;
+       if ( !this.expectType_soft('}') ) 
+          this['import.specifier.list.unfinished'](startc,startLoc);
 
        break ;
    }
     
    if ( list.length || hasList ) {
-      if ( !this.expectID_soft('from') &&
-            this['import.from'](startc,startLoc,list) )
-        return this.errorHandlerOutput;
+      if ( !this.expectID_soft('from') )
+         this['import.from'](startc,startLoc);
    }
 
    if ( !(this.lttype === 'Literal' &&
-        typeof this.ltval === STRING_TYPE ) && this['import.source.is.not.str'] )
-     return this.errorHandlerOutput;
+        typeof this.ltval === STRING_TYPE ))
+      this['import.source.is.not.str'](startc, startLoc);
 
    var src = this.numstr();
    var endI = this.semiI() || src.end, 
        semiLoc = this.semiLoc();
 
-   if ( !semiLoc && !this.newLineBeforeLookAhead &&
-        this['no.semi']('import',{s:startc,l:startLoc,list:list,endI:endI,src:src }) )
-     return this.errorHandlerOutput;
+   if ( !semiLoc && !this.newLineBeforeLookAhead )
+     this['no.semi']('import',startc,startLoc);
    
    this.foundStatement = !false;
    return { type: 'ImportDeclaration',
@@ -2535,11 +2508,9 @@ this.readEsc = function ()  {
 
    case CHAR_x :
       b0 = toNum(this.src.charCodeAt(++this.c));
-      if ( b0 === -1 && this['hex.esc.byte.not.hex']() )
-        return this.errorHandlerOutput;
+      if ( b0 === -1) this['hex.esc.byte.not.hex']();
       b = toNum(this.src.charCodeAt(++this.c));
-      if ( b0 === -1 && this['hex.esc.byte.not.hex']() )
-        return this.errorHandlerOutput;
+      if ( b0 === -1) this['hex.esc.byte.not.hex']();
       return String.fromCharCode((b0<<4)|b);
 
    case CHAR_0: case CHAR_1: case CHAR_2:
@@ -2551,8 +2522,7 @@ this.readEsc = function ()  {
                if ( b0 < CHAR_0 || b0 >= CHAR_8 )
                  return '\0';
           }
-          if ( this['strict.oct.str.esc']() )
-            return this.errorHandlerOutput
+          this['strict.oct.str.esc']();
        }
 
        b = b0 - CHAR_0;
@@ -2571,8 +2541,7 @@ this.readEsc = function ()  {
        return String.fromCharCode(b)  ;
 
     case CHAR_4: case CHAR_5: case CHAR_6: case CHAR_7:
-       if (this.tight && this['strict.oct.str.esc']() )
-         return this.errorHandlerOutput  ;
+       if (this.tight) this['strict.oct.str.esc']();
 
        b0 = src.charCodeAt(this.c);
        b  = b0 - CHAR_0;
@@ -2586,9 +2555,8 @@ this.readEsc = function ()  {
 
    case CHAR_8:
    case CHAR_9:
-       if ( this['esc.8.or.9'] ) 
-         return this.errorHandlerOutput ;
-       return '';
+       this['esc.8.or.9']();
+       return;
 
    case CHAR_CARRIAGE_RETURN:
       if ( src.charCodeAt(this.c + 1) === CHAR_LINE_FEED ) this.c++;
@@ -2612,15 +2580,14 @@ function(){
 this.peekTheSecondByte = function () {
   var e = this.src.charCodeAt(this.c);
   if (CHAR_BACK_SLASH === e) {
-    if (CHAR_u !== this.src.charCodeAt(++this.c) &&
-        this['u.second.esc.not.u']() )
-      return this.errorHandlerOutput ;
+    if (CHAR_u !== this.src.charCodeAt(++this.c) )
+      this['u.second.esc.not.u']();
 
     e = (this.peekUSeq());
   }
 //  else this.col--;
-  if ( (e < 0x0DC00 || e > 0x0DFFF) && this['u.second.not.in.range'](e) )
-    return this.errorHandlerOutput;
+  if ( (e < 0x0DC00 || e > 0x0DFFF) )
+    this['u.second.not.in.range'](e);
 
   return e;
 };
@@ -2634,42 +2601,35 @@ this.peekUSeq = function () {
     n = l.charCodeAt(c);
     do {
       n = toNum(n);
-      if ( n === - 1 && this['u.esc.hex']('curly',c,byteVal) )
-        return this.errorHandlerOutput ;
+      if ( n === - 1 ) this['u.esc.hex']('curly');
 
       byteVal <<= 4;
       byteVal += n;
-      if (byteVal > 0x010FFFF && this['u.curly.not.in.range'](c,byteVal) )
-        return this.errorHandler ;
+      if (byteVal > 0x010FFFF) this['u.curly.not.in.range'](c,byteVal);
 
       n = l.charCodeAt( ++ c);
     } while (c < e && n !== CHAR_RCURLY);
 
-    if ( n !== CHAR_RCURLY && this['u.curly.is.unfinished'](c,byteVal) ) 
-      return this.errorHandlerOutput ;
+    if ( n !== CHAR_RCURLY) this['u.curly.is.unfinished'](c);
 
     this.c = c;
     return byteVal;
   }
  
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this['u.esc.hex']('u',c,byteVal) )
-    return this.errorHandlerOutput;
+  if ( n === -1 ) this['u.esc.hex']('u',c);
   byteVal = n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this['u.esc.hex']('u',c,byteVal) )
-    return this.errorHandlerOutput;
+  if ( n === -1 ) this['u.esc.hex']('u',c);
   byteVal <<= 4; byteVal += n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this['u.esc.hex']('u',c,byteVal) )
-    return this.errorHandlerOutput;
+  if ( n === -1 ) this['u.esc.hex']('u',c);
   byteVal <<= 4; byteVal += n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this['u.esc.hex']('u',c,byteVal) )
-    return this.errorHandlerOutput;
+  if ( n === -1 ) this['u.esc.hex']('u',c);
   byteVal <<= 4; byteVal += n;
 
   this.c = c;
@@ -2690,9 +2650,8 @@ this . parseFor = function() {
       startLoc = this.locBegin();
 
   this.next () ;
-  if ( !this.expectType_soft ('(' ) &&
-        this['for.with.no.opening.paren'](startc, startLoc) )
-    return this.errorHandlerOutput ;
+  if ( !this.expectType_soft ('(' ) )
+     this['for.with.no.opening.paren'](startc, startLoc);
 
   var head = null;
   var headIsExpr = false;
@@ -2715,8 +2674,8 @@ this . parseFor = function() {
 
      case 'const' :
 
-        if ( this.v < 5 && this['const.not.in.v5'](startc, startLoc) )
-          return this.errorHandlerOutput ;
+        if ( this.v < 5 )
+          this['const.not.in.v5'](startc, startLoc);
 
         this.canBeStatement = !false;
         head = this. parseVariableDeclaration(CONTEXT_FOR);
@@ -2743,9 +2702,8 @@ this . parseFor = function() {
           kind = 'ForInStatement';
 
        case 'of':
-          if (!headIsExpr && head.declarations.length !== 1 &&
-               this['for.in.or.of.multi'](startc, startLoc,head) )
-            return this.errorHandlerOutput   ;
+          if (!headIsExpr && head.declarations.length !== 1 )
+            this['for.in.or.of.multi'](startc, startLoc,head);
 
           if ( this.unsatisfiedAssignment )
             this.unsatisfiedAssignment = null;
@@ -2754,15 +2712,12 @@ this . parseFor = function() {
 
           this.next();
           afterHead = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE) ;
-          if ( ! this.expectType_soft (')') &&
-                 this['for.iter.no.end.paren'](start,startLoc,head,afterHead) )
-            return this.errorHandlerOutput ;
+          if ( ! this.expectType_soft (')') )
+              this['for.iter.no.end.paren'](start,startLoc);
 
           this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
           nbody = this.parseStatement(!false);
-          if ( !nbody && this['null.stmt']('for.iter',
-               { s:startc, l:startLoc, h: head, iter: afterHead, scopeFlags: scopeFlags }) )
-            return this.errorHandlerOutput;
+          if ( !nbody ) this['null.stmt']('for.iter',startc,startLoc);
 
           this.scopeFlags = scopeFlags;
 
@@ -2771,13 +2726,12 @@ this . parseFor = function() {
             start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
 
        default:
-          return this['for.iter.not.of.in'](startc, startLoc,head);
+          return this['for.iter.not.of.in'](startc, startLoc);
     }
   }
 
-  if ( this.unsatisfiedAssignment &&
-       this['for.simple.head.is.unsatisfied'](startc,startLoc,head) )
-    return this.errorHandlerOutput ;
+  if ( this.unsatisfiedAssignment )
+    this['for.simple.head.is.unsatisfied'](startc,startLoc);
 
 /*
   if ( head && !headIsExpr ) {
@@ -2785,26 +2739,22 @@ this . parseFor = function() {
     head.loc.end = { line: head.loc.end.line, column: this.col };
   }
 */
-  if ( ! this.expectType_soft (';') &&
-         this['for.simple.no.init.comma'](startc,startLoc,head) )
-    return this.errorHandlerOutput ;
+  if ( !this.expectType_soft (';') )
+      this['for.simple.no.init.comma'](startc,startLoc);
 
   afterHead = this.parseExpr(CONTEXT_NULLABLE );
-  if ( ! this.expectType_soft (';') &&
-         this['for.simple.no.test.comma'](startc,startLoc,head,afterHead) )
-    return this.errorHandlerOutput ;
+  if ( ! this.expectType_soft (';') )
+      this['for.simple.no.test.comma'](startc,startLoc);
 
   var tail = this.parseExpr(CONTEXT_NULLABLE );
 
-  if ( ! this.expectType_soft (')') &&
-         this['for.simple.no.end.paren'](startc,startLoc,head,afterHead,tail) )
-    return this.errorHandlerOutput ;
+  if ( ! this.expectType_soft (')') )
+      this['for.simple.no.end.paren'](startc,startLoc);
 
   this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
   nbody = this.parseStatement(! false);
-  if ( !nbody && this['null.stmt']('for.simple',
-      { s:startc, l:startc, h: head, t: afterHead, u: tail, scopeFlags: scopeFlags } ) )
-    return this.errorhandlerOutput;  
+  if ( !nbody )
+    this['null.stmt']('for.simple', startc, startLoc);  
 
   this.scopeFlags = scopeFlags;
 
@@ -2823,9 +2773,8 @@ function(){
 this .parseArgs  = function (argLen) {
   var list = [], elem = null;
 
-  if ( !this.expectType_soft('(') &&
-        this['func.args.no.opening.paren'](argLen) )
-    return this.errorHandlerOutput  ;
+  if ( !this.expectType_soft('(') )
+     this['func.args.no.opening.paren']();
 
   var firstNonSimpArg = null;
   while ( list.length !== argLen ) {
@@ -2835,7 +2784,7 @@ this .parseArgs  = function (argLen) {
          elem = this.parseAssig(elem);
          if ( elem.left.type === 'Identifier' ) {
             if ( this.argNames[elem.left.name+'%'] !== null )
-                 this['func.args.has.dup'](elem);
+              this['func.args.has.dup'](elem);
          }
          this.inComplexArgs = !false;
        }
@@ -2864,14 +2813,12 @@ this .parseArgs  = function (argLen) {
      }
   }
   else {
-     if ( list.length !== argLen &&
-          this['func.args.not.enough'](argLen,list) )
-       return this.errorHandlerOutput;
+     if ( list.length !== argLen )
+       this['func.args.not.enough'](argLen);
   }
 
-  if ( ! this.expectType_soft (')') &&
-       this['func.args.no.end.paren'](argLen,list) )
-    return this.errorHandlerOutput ;
+  if ( ! this.expectType_soft (')') )
+    this['func.args.no.end.paren'](argLen);
 
   if ( firstNonSimpArg )
      this.firstNonSimpArg = firstNonSimpArg ;
@@ -2920,29 +2867,17 @@ this .parseFunc = function(context, argListMode, argLen ) {
           this.next();
      }
      if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
-        if ( this.lttype !== 'Identifier' &&
-             this['missing.name']('func', 
-                { s: startc, l: startLoc, labels: prevLabels, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
-                  args: [context, argListMode, argLen] } ) )
-          return this.errorHandlerOutput ;
+        if ( this.lttype !== 'Identifier' )
+          this['missing.name']('func', startc, startLoc);
 
         currentFuncName = this.validateID(null);
-        if ( this.tight && arguments_or_eval(currentFuncName.name) &&
-             this['binding.to.eval.or.arguments']('func',
-                { s: startc, l: startLoc, labels: prevLabels, stmt: !false, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
-                  args: [context, argListMode, argLen] } ) )
-          return this.errorHandlerOutput ;
+        if ( this.tight && arguments_or_eval(currentFuncName.name) )
+          this['binding.to.eval.or.arguments']('func', startc, startLoc);
      }
      else if ( this. lttype === 'Identifier' ) {
         currentFuncName = this.validateID(null);
-        if ( this.tight && arguments_or_eval(currentFuncName.name) &&
-             this['binding.to.eval.or.arguments']('func',
-                { s: startc, l: startLoc, labels: prevLabels, stmt: canBeStatement, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimArg,
-                  context: [ context, argListMode, argLen] } )   )
-          return this.errorHandlerOutput;
+        if ( this.tight && arguments_or_eval(currentFuncName.name) )
+          this['binding.to.eval.or.arguments']('func', startc, startLoc);
      }
      else
         currentFuncName = null;
@@ -3003,6 +2938,7 @@ this.parseFuncBody = function(context) {
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CONTEXT_NULLABLE);
     if ( elem === null )
       return this['func.body.is.empty.expr'](context);
+
     return elem;
   }
 
@@ -3023,9 +2959,8 @@ this.parseFuncBody = function(context) {
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
            loc: { start: startLoc, end: this.loc() } };
 
-  if ( ! this.expectType_soft ( '}' ) &&
-         this['func.body.is.unfinished'](n) )
-    return this.errorHandlerOutput ;
+  if ( ! this.expectType_soft ( '}' ) )
+      this['func.body.is.unfinished'](n);
 
   return  n;
 };
@@ -3090,7 +3025,7 @@ this. parseIdStatementOrId = function ( context ) {
              if ( this.canBeStatement && this.v >= 5 )
                return this.parseLet(CONTEXT_NONE);
 
-             if (this.tight ) this['strict.let.is.id'](context);
+             if (this.tight ) this['strict.let.is.id']();
 
              pendingExprHead = this.id();
              break SWITCH;
@@ -3143,7 +3078,7 @@ this. parseIdStatementOrId = function ( context ) {
         case 'catch': this.notId ()  ;
         case 'class': return this.parseClass(CONTEXT_NONE ) ;
         case 'const':
-            if (this.v<5) this['const.not.in.v5'](context) ;
+            if (this.v<5) this['const.not.in.v5']() ;
             return this.parseVariableDeclaration(CONTEXT_NONE);
 
         case 'throw': return this.parseThrowStatement();
@@ -3185,14 +3120,12 @@ this. parseIdStatementOrId = function ( context ) {
             return null;
 
         case 'export': 
-            if ( this.isScript && this['export.not.in.module'](context) )
-              return this.errorHandlerOutput;
+            if ( this.isScript ) this['export.not.in.module']();
 
             return this.parseExport() ;
 
         case 'import':
-            if ( this.isScript && this['import.not.in.module'](context) )
-              return this.errorHandlerOutput;
+            if ( this.isScript ) this['import.not.in.module'](context);
 
             return this.parseImport();
 
@@ -3300,24 +3233,21 @@ this.readAnIdentifierToken = function (v) {
             v += src.slice(startSlice,c) ; // v = v + those characters
 
          this.c = ++c;
-         if (CHAR_u !== src.charCodeAt(c) &&
-             this['id.slash.no.u'](c,v) )
-           return this.errorHandlerOutput ;
+         if (CHAR_u !== src.charCodeAt(c) )
+           this['id.slash.no.u'](c);
 
          peek = this. peekUSeq() ;
          if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
            this.c++;
            byte2 = this.peekTheSecondByte();
-           if (!isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000) &&
-                this['id.multi.must.be.idbody'](peek,byte2,c,v) )
-             return this.errorHandlerOutput ;
+           if (!isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000) )
+             this['id.multi.must.be.idbody'](peek,byte2,c);
 
            v += String.fromCharCode(peek, byte2);
          }
          else {
-            if ( !isIDBody(peek) &&
-                  this['id.esc.must.be.idbody'](peek,c,v) )
-              return this.errorHandlerOutput;
+            if ( !isIDBody(peek) )
+               this['id.esc.must.be.idbody'](peek,c);
        
             v += fromcode(peek);
          }
@@ -3331,9 +3261,8 @@ this.readAnIdentifierToken = function (v) {
          c++;
          this.c = c; 
          byte2 = this.peekTheSecondByte() ;
-         if (!isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000) &&
-              this['id.multi.must.be.idbody'](peek,byte2,c,v) )
-           return this.errorHandlerOutput ;
+         if (!isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000) )
+           this['id.multi.must.be.idbody'](peek,byte2,c);
 
          v += String.fromCharCode(peek, byte2);
          c = this.c ;
@@ -3375,9 +3304,8 @@ this.parseLet = function(context) {
   if ( letDecl )
     return letDecl;
 
-  if (this.tight && this['strict.let.is.id']({
-      s: startc,l: startLoc,c: c,li: li,col: col}) )
-    return this.errorHandlerOutput ;
+  if (this.tight)
+    this['strict.let.is.id'](startc,startLoc);
 
   this.canBeStatement = false;
   this.pendingExprHead = {
@@ -3409,13 +3337,11 @@ this .memberExpr = function() {
       startLoc = this.locOn(1);
   this.next() ;
   var e = this.parseExpr(CONTEXT_NONE);
-  if (!e && this['prop.dyna.no.expr'](startc,startLoc) )
-    return this.errorHandlerOutput ;
+  if (!e) this['prop.dyna.no.expr'](startc,startLoc);
 
   var n = { type: PAREN, expr: e, start: startc, end: this.c, loc: { start: startLoc, end: this.loc() } } ;
-  if ( !this.expectType_soft (']') &&
-        this['prop.dyna.is.unfinished'](n) )
-    return this.errorHandlerOutput ;
+  if ( !this.expectType_soft (']') )
+        this['prop.dyna.is.unfinished'](n);
  
   return n;
 };
@@ -3463,12 +3389,8 @@ this.parseNewHead = function () {
        break ;
 
     default:
-       head = this['new.head.is.not.valid'](startc, startLoc);
-       if ( head.type === ERR_RESUME ) {
-           head = head.val ;
-           break ;
-       }
-       return head.val;
+       this['new.head.is.not.valid'](startc, startLoc);
+
   }
 
   var inner = core( head ) ;
@@ -3488,14 +3410,8 @@ this.parseNewHead = function () {
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                     loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false };
           inner = head ;
-          if ( !this.expectType_soft (']') ) {
-            head = this['mem.unfinished'](startc,startLoc,head)  ;
-            if (head .type === ERR_RESUME)
-              head = head.val;
-     
-            else
-              return head.val;
-          }
+          if ( !this.expectType_soft (']') )
+            this['mem.unfinished'](startc,startLoc);
  
           continue;
 
@@ -3503,13 +3419,8 @@ this.parseNewHead = function () {
           elem = this. parseArgList();
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
                     loc: { start: startLoc, end: this.loc() }, arguments: elem };
-          if ( !this. expectType_soft (')') ) {
-            inner = this['new.args.is.unfinished'](startc,startLoc,inner) ;
-            if ( inner.type === ERR_RESUME )
-              inner = inner.val;
-            else
-              return inner.val;
-          }
+          if ( !this. expectType_soft (')') )
+            this['new.args.is.unfinished'](startc,startLoc);
 
           return inner;
 
@@ -3699,7 +3610,7 @@ this.next = function () {
             mustBeAnID = 1;
             peek = l.charCodeAt(++ this.c);
             if (peek !== CHAR_u )
-                return this['id.u.not.after.slash']();
+               return this['id.u.not.after.slash']();
             
             else
                peek = this.peekUSeq();
@@ -4060,8 +3971,8 @@ this.parseExpr = function (context) {
 this .parseCond = function(cond,context ) {
     this.next();
     var seq = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
-    if ( !this.expectType_soft (':') && this['cond.colon'](cond,context,seq) )
-      return this.errorHandlerOutput;
+    if ( !this.expectType_soft (':') )
+      this['cond.colon']();
 
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
     return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
@@ -4101,17 +4012,15 @@ this .parseUpdateExpression = function(arg, context) {
        arg = this. parseExprHead(context|CONTEXT_UNASSIGNABLE_CONTAINER );
        this.assert(arg); // TODO: this must have error handling
 
-       if ( !this.ensureSimpAssig_soft (core(arg)) &&
-            this['incdec.pre.not.simple.assig'](c,loc,arg) )
-         return this.errorHandlerOutput;
+       if ( !this.ensureSimpAssig_soft (core(arg)) )
+         this['incdec.pre.not.simple.assig'](c,loc,arg);
 
        return { type: 'UpdateExpression', argument: core(arg), start: c, operator: u,
                 prefix: !false, end: arg.end, loc: { start: loc, end: arg.loc.end } };
     }
 
-    if ( !this.ensureSimpAssig_soft(core(arg)) &&
-          this['incdec.post.not.simple.assig'](arg) )
-      return this.errorHandlerOutput;
+    if ( !this.ensureSimpAssig_soft(core(arg)) )
+       this['incdec.post.not.simple.assig'](arg);
 
     c  = this.c;
     loc = { start: arg.loc.start, end: { line: this.li, column: this.col } };
@@ -4179,13 +4088,13 @@ this.parseNonSeqExpr = function (prec, context  ) {
 
            case 'yield':
               if (prec !== PREC_WITH_NO_OP) // make sure there is no other expression before it 
-                return this['yield.as.an.id'](context,prec) ;
+                return this['yield.as.an.id']();
 
               return this.parseYield(context); // everything that comes belongs to it
    
            default:
               if (!(context & CONTEXT_NULLABLE) )
-                return this['nexpr.null.head'](context,prec);
+                return this['nexpr.null.head']();
                
               return null;
          }
@@ -4204,15 +4113,13 @@ this.parseNonSeqExpr = function (prec, context  ) {
             head =  this. parseAssignment(head, context );
          
          else
-            head = this['assig.not.first'](
-                 { c:context, u:firstUnassignable, h: head, paren: firstParen, prec: prec });
+            this['assig.not.first']();
 
          break ;
        }
        else {
-         if ( this.unsatisfiedArg && 
-              this['arrow.paren.no.arrow']({c:context, u:firstUnassignable, h: head, p:firstParen, prec: prec}) )
-           return this.errorHandlerOutput; 
+         if ( this.unsatisfiedArg ) 
+           this['arrow.paren.no.arrow'](); 
 
          if ( this.firstEA )
             if( !(context & CONTEXT_ELEM_OR_PARAM) || op )
@@ -4285,11 +4192,9 @@ this.readNumberLiteral = function (peek) {
     switch (b) { // check out what the next is
       case CHAR_X: case CHAR_x:
          c++;
-         if (c >= len && this['num.with.no.digits']('hex', c) )
-           return this.errorHandlerOutput;
+         if (c >= len) this['num.with.no.digits']('hex', c);
          b = src.charCodeAt(c);
-         if ( ! isHex(b) && this['num.with.first.not.valid']('hex', c)  )
-           return this.errorHandlerOutput ;
+         if ( ! isHex(b)) this['num.with.first.not.valid']('hex', c);
          c++;
          while ( c < len && isHex( b = src.charCodeAt(c) ) )
              c++ ;
@@ -4299,11 +4204,9 @@ this.readNumberLiteral = function (peek) {
 
       case CHAR_B: case CHAR_b:
         ++c;
-        if (c >= len && this['num.with.no.digits']('bin',c) )
-          return this.errorHandlerOutput ;
+        if (c >= len ) this['num.with.no.digits']('bin',c);
         b = src.charCodeAt(c);
-        if ( b !== CHAR_0 && b !== CHAR_1 && this['num.with.first.not.valid']('bin',c) )
-          return this.errorHandlerOutput ;
+        if ( b !== CHAR_0 && b !== CHAR_1) this['num.with.first.not.valid']('bin',c);
         val = b - CHAR_0; 
         ++c;
         while ( c < len &&
@@ -4319,11 +4222,9 @@ this.readNumberLiteral = function (peek) {
 
       case CHAR_O: case CHAR_o:
         ++c;
-        if (c >= len && this['num.with.no.digits']('oct',c) )
-          return this.errorHandlerOutput ; 
+        if (c >= len ) this['num.with.no.digits']('oct',c); 
         b = src.charCodeAt(c);
-        if ( (b < CHAR_0 || b >= CHAR_8) && this['num.with.first.not.valid']('oct',c)  )
-          return this.errorHandlerOutput ;
+        if ( (b < CHAR_0 || b >= CHAR_8) ) this['num.with.first.not.valid']('oct',c) ;
 
         val = b - CHAR_0 ;
         ++c; 
@@ -4451,9 +4352,8 @@ this .parseGen = function(isClass ) {
 
   switch ( this.lttype ) {
      case 'Identifier':
-        if (isClass && this.ltval === 'constructor' &&
-            this['class.mem.name.is.ctor']('gen',startc,startLoc) )
-          return this.errorHandlerOutput;
+        if (isClass && this.ltval === 'constructor' )
+         this['class.mem.name.is.ctor']('gen',startc,startLoc);
 
         name = this.memberID();
         break ;
@@ -4463,9 +4363,8 @@ this .parseGen = function(isClass ) {
         break ;
 
      case 'Literal' :
-        if ( isClass && this.ltval === 'constructor' &&
-             this['class.mem.name.is.ctor']('gen',startc,startLc) )
-          return this.errorHandlerOutput ;
+        if ( isClass && this.ltval === 'constructor' )
+          this['class.mem.name.is.ctor']('gen',startc,startLc);
         name = this.numstr();
         break ;
 
@@ -4530,9 +4429,8 @@ this . parseSetGet= function(isClass) {
              shorthand: false, value : val };
   }
   
-  if ( strName === 'constructor' &&
-       this['class.mem.name.is.ctor'](kind, startc, startLoc) )
-    return this.errorHandlerOutput ;
+  if ( strName === 'constructor' )
+    this['class.mem.name.is.ctor'](kind, startc, startLoc);
 
   val = this.parseFunc ( CONTEXT_NONE , ARGLIST_AND_BODY|METH_FUNCTION, kind === 'set' ? 1 : 0 )
 
@@ -4613,10 +4511,8 @@ this.parseObjectExpression = function (context) {
   elem = { properties: list, type: 'ObjectExpression', start: startc,
      end: this.c , loc: { start: startLoc, end: this.loc() }};
 
-  if ( ! this.expectType_soft ('}') && this['obj.unfinished']({
-    obj: elem, asig: firstUnassignable, ea: firstEA,
-    firstElemWithYS: firstElemWithYS, u: unsatisfiedAssignment, ys: firstYS }) )
-    return this.errorHandlerOutput;
+  if ( ! this.expectType_soft ('}') )
+    this['obj.unfinished'](elem);
 
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
   if ( firstParen ) this.firstParen = firstParen;
@@ -4676,7 +4572,7 @@ this.parseProperty = function (name, context) {
 
   switch (this.lttype) {
       case ':':
-         if ( __proto__ && first__proto__ ) this['obj.proto.has.dup']() ;
+         if ( __proto__ && first__proto__ ) this['obj.proto.has.dup'](name, first__proto__ ) ;
 
          this.next();
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
@@ -4692,15 +4588,11 @@ this.parseProperty = function (name, context) {
          return this.parseMeth(name, OBJ_MEM);
 
       default:
-          if (name.type !== 'Identifier' && this['obj.prop.assig.not.id'](name,context) )
-            return this.errorHandlerOutput ;
+          if (name.type !== 'Identifier' ) this['obj.prop.assig.not.id'](name);
 
           if ( this.lttype === 'op' ) {
-             if (this.ltraw !== '=' && this['obj.prop.assig.not.assigop'](name,context) )
-               return this.errorHandlerOutput  ;
-
-             if (!(context & CONTEXT_ELEM) && this['obj.prop.assig.not.allowed'](name,context) )
-               return this.errorHandlerOutput ;
+             if (this.ltraw !== '=' ) this['obj.prop.assig.not.assigop'](name);
+             if (!(context & CONTEXT_ELEM) ) this['obj.prop.assig.not.allowed'](name);
 
              val = this.parseAssig(name);
              this.unsatisfiedAssignment = val;
@@ -4776,9 +4668,8 @@ this. parseArrayPattern = function() {
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
 
-  if ( !this. expectType_soft ( ']' ) &&
-        this['pat.array.is.unfinished'](elem) )
-    return this.errorHandlerOutput ;
+  if ( !this. expectType_soft ( ']' ) )
+     this['pat.array.is.unfinished'](elem);
 
   return elem;
 };
@@ -4841,8 +4732,7 @@ this.parseObjectPattern  = function() {
               end: this.c,
               properties: list };
 
-    if ( ! this.expectType_soft ('}') && this['pat.obj.is.unfinished'](n) )
-      return this.errorHandlerOutput ;
+    if ( ! this.expectType_soft ('}') ) this['pat.obj.is.unfinished'](n);
 
     return n;
 };
@@ -4861,8 +4751,7 @@ this.parseRestElement = function() {
 
    this.next ();
    var e = this.parsePattern();
-   if (!e && this['rest.has.no.arg'](starc, startLoc) )
-     return this.errorHandlerOutput ;
+   if (!e ) this['rest.has.no.arg'](starc, startLoc);
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
 };
@@ -4946,9 +4835,7 @@ this.parseExprHead = function (context) {
 
   if ( this.firstEA )  switch ( this.lttype )   {
     case '.': case '(': case '[': case '`':
-      if ( this['contains.assigned.eval.or.arguments'](
-           head,context,firstUnassignable,firstParen) )
-        return this.errorHandlerOutput ;
+       this['contains.assigned.eval.or.arguments']();
   }
      
   inner = core( head ) ;
@@ -4971,9 +4858,8 @@ this.parseExprHead = function (context) {
             head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                       loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false };
             inner  = head ;
-            if ( !this.expectType_soft (']') &&
-                  this['mem.unfinished'](head,firstParen,firstUnassignable) )
-              return this.errorHandlerOutput ;
+            if ( !this.expectType_soft (']') )
+               this['mem.unfinished'](head);
 
             continue;
 
@@ -4981,9 +4867,8 @@ this.parseExprHead = function (context) {
             elem  = this. parseArgList() ;
             head =  { type: 'CallExpression', callee: inner , start: head.start, end: this.c,
                       arguments: elem, loc: { start: head.loc.start, end: this.loc() } };
-            if ( !this.expectType_soft (')'   ) &&
-                  this['call.args.is.unfinished'](head,firstParen,firstUnassignable) )
-              return this.errorHandlerOutput  ;
+            if ( !this.expectType_soft (')'   ) )
+               this['call.args.is.unfinished'](head);
 
             inner = head  ;
             continue;
@@ -5016,9 +4901,8 @@ this.parseExprHead = function (context) {
 } ;
 
 this .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
-    if ( this.ltval !== 'target' &&  
-         this['meta.new.has.unknown.prop'](startc,end,startLoc,endLoc,new_raw) )
-      return this.errorHandlerOutput ;
+    if ( this.ltval !== 'target' )  
+      this['meta.new.has.unknown.prop'](startc,startLoc);
 
     var prop = this.id();
     return { type: 'MetaProperty',
@@ -5083,11 +4967,8 @@ this.parseParen = function () {
 
      if ( !elem ) {
         if ( this.lttype === '...' ) {
-           if ( ! ( context & CONTEXT_PARAM ) &&
-                 this['paren.has.an.spread.elem'](
-                  )
-               ) 
-              return this.errorHandlerOutput  ;
+           if ( ! ( context & CONTEXT_PARAM ) )
+              this['paren.has.an.spread.elem']();
  
            elem = this.parseSpreadElement();
            if ( !firstParen && this.firstParen ) firstParen = this.firstParen;
@@ -5116,12 +4997,8 @@ this.parseParen = function () {
        firstYS = this.firstYS;
 
      if ( !unsatisfiedArg && this.unsatisfiedAssignment) {
-           if ( ! context & CONTEXT_PARAM &&
-                this['paren.with.an.unsatisfied.assig'](
-                 { s:startc, l: startLoc, c: context, p: firstPAren, a: unsatisfiedArg,
-                   list: list, ea: firstEA, firstElemWithYS: firstElemWithYS, parenYS: parenYS, ys: firstYS })
-              )
-             return this.errorHandlerOutput ;
+           if ( ! (context & CONTEXT_PARAM) )
+             this['paren.with.an.unsatisfied.assig'](startc, startLoc);
 
            unsatisfiedArg =  this.unsatisfiedAssignment;
      }
@@ -5175,9 +5052,7 @@ this.parseParen = function () {
   this.parenYS = parenYS;
   this.firstYS = firstYS;
 
-  if ( ! this.expectType_soft (')') && this['paren.unfinished'](n) )
-    return this.errorHandlerOutput ;
-
+  if ( ! this.expectType_soft (')') ) this['paren.unfinished'](n);
 
   return n;
 };
@@ -5238,8 +5113,9 @@ this.parseProgram = function () {
   var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
            loc: { start: startLoc, end: endLoc } };
 
-  if ( !this.expectType_soft ('eof') &&
-        this['program.unfinished'](n) )
+  if ( !this.expectType_soft ('eof') )
+    this['program.unfinished'](n);
+
     return this.errorHandlerOutput ;
 
   return n;
@@ -5338,9 +5214,8 @@ this.parseRegExpLiteral = function() {
        c++ ;
      }
 
-     if ( src.charCodeAt(c) !== CHAR_DIV && 
-          this['regex.unfinished'](startc,startLoc,c) )
-       return this.errorHandlerOutput ;
+     if ( src.charCodeAt(c) !== CHAR_DIV ) 
+       this['regex.unfinished'](startc,startLoc,c);
 
      var flags = 0;
      var flagCount = 0;
@@ -5398,9 +5273,8 @@ this.parseRegExpLiteral = function() {
      else
         val = verifyRegex( patternString, flagsString ) ;
 
-     if ( !val &&
-        this['regex.not.valid'](startc,startLoc,flagsString,patternString) )
-       return this.errorHandlerOutput;
+     if ( !val )
+       this['regex.not.valid'](startc,startLoc,flagsString,patternString);
 
      this.col += (c-this.c);
      var regex = { type: 'Literal', regex: { pattern: patternString, flags: flagsString },
@@ -5477,8 +5351,7 @@ this.parseStatement = function ( allowNull ) {
        break ;
 
     case 'eof':
-      if (!allowNull && this['stmt.null']() )
-        return this.errorHandlerOutput ;
+      if (!allowNull) this['stmt.null']();
 
       return null;
   }
@@ -5486,8 +5359,7 @@ this.parseStatement = function ( allowNull ) {
   this.assert(head === null) ;
   head = this.parseExpr(CONTEXT_NULLABLE) ;
   if ( !head ) {
-    if ( !allowNull && this['stmt.null']() )
-      this.errorHandlerOutput;
+    if ( !allowNull ) this['stmt.null']();
 
     return null;
   }
@@ -5498,9 +5370,8 @@ this.parseStatement = function ( allowNull ) {
   this.fixupLabels(false) ;
   e  = this.semiI() || head.end;
   l = this.semiLoc_soft ();
-  if ( !l && !this.newLineBeforeLookAhead &&
-       this['no.semi']('expr',{head:head,e:e}) )
-    return this.errorHandlerOutput;
+  if ( !l && !this.newLineBeforeLookAhead )
+    this['no.semi']('expr', head);
  
   return {
     type : 'ExpressionStatement',
@@ -5520,8 +5391,7 @@ this .parseLabeledStatement = function(label, allowNull) {
    this.next();
    var l = label.name;
    l += '%';
-   if ( this.findLabel(l) && this['label.is.a.dup'](label,allowNull) )
-     return this.errorHandlerOutput ;
+   if ( this.findLabel(l)) this['label.is.a.dup'](label);
 
    this.labels[l] =
         this.unsatisfiedLabel ?
@@ -5565,22 +5435,19 @@ this .parseEmptyStatement = function() {
 };
 
 this.parseIfStatement = function () {
-  if ( !this.ensureStmt_soft () && this['not.stmt']('if') )
-    return this.errorHandlerOutput;
+  if ( !this.ensureStmt_soft () ) this['not.stmt']('if');
 
   this.fixupLabels(false);
 
   var startc = this.c0,
       startLoc  = this.locBegin();
   this.next () ;
-  if ( !this.expectType_soft('(') &&
-        this['if.has.no.opening.paren'](startc,startLoc) )
-    return this.errorHanlerOutput;
+  if ( !this.expectType_soft('(') )
+     this['if.has.no.opening.paren'](startc,startLoc);
 
   var cond = core( this.parseExpr(CONTEXT_NONE) );
-  if ( !this.expectType_soft (')' ) &&
-        this['if.has.no.closing.paren'](startc,startLoc) )
-    return this.errorHandlerOutput ;
+  if ( !this.expectType_soft (')' ) )
+     this['if.has.no.closing.paren'](startc,startLoc);
 
   var scopeFlags = this.scopeFlags ;
   this.scopeFlags |= SCOPE_BREAK; 
@@ -5598,23 +5465,20 @@ this.parseIfStatement = function () {
 };
 
 this.parseWhileStatement = function () {
-   if ( ! this.ensureStmt_soft () &&
-          this['not.stmt']('while') )
-     return this.errorHandlerOutput;
+   if ( ! this.ensureStmt_soft () )
+       this['not.stmt']('while');
 
    this.fixupLabels(!false);
 
    var startc = this.c0,
        startLoc = this.locBegin();
    this.next();
-   if ( !this.expectType_soft ('(') &&
-         this['while.has.no.opening.paren'](startc,startLoc) )
-     return this.errorHandlerOutput;
+   if ( !this.expectType_soft ('(') )
+      this['while.has.no.opening.paren'](startc,startLoc);
  
    var cond = core( this.parseExpr(CONTEXT_NONE) );
-   if ( !this.expectType_soft (')') &&
-         this['while.has.no.closing.paren' ](startc,startLoc) )
-     return this.errorHandlerOutput;
+   if ( !this.expectType_soft (')') )
+      this['while.has.no.closing.paren' ](startc,startLoc);
 
    var scopeFlags = this.scopeFlags;
    this.scopeFlags |= (SCOPE_CONTINUE|SCOPE_BREAK );
@@ -5634,17 +5498,15 @@ this.parseBlckStatement = function () {
   var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() } };
 
-  if ( !this.expectType_soft ('}' ) &&
-        this['block.unfinished'](n) )
-    return this.errorHandlerOutput ;
+  if ( !this.expectType_soft ('}' ) )
+     this['block.unfinished'](n);
 
   return n;
 };
 
 this.parseDoWhileStatement = function () {
-  if ( !this.ensureStmt_soft () &&
-        this['not.stmt']('do-while') )
-    return this.errorHandlerOutput ;
+  if ( !this.ensureStmt_soft () )
+     this['not.stmt']('do-while');
 
   this.fixupLabels(!false);
 
@@ -5655,19 +5517,16 @@ this.parseDoWhileStatement = function () {
   this.scopeFlags |= (SCOPE_BREAK| SCOPE_CONTINUE);
   var nbody = this.parseStatement (!false) ;
   this.scopeFlags = scopeFlags;
-  if ( !this.expectID_soft('while') &&
-        this['do.has.no.while'](startc,startLoc,scopeFlags,nbody) )
-    return this.errorHandlerOutput;
+  if ( !this.expectID_soft('while') )
+     this['do.has.no.while'](startc,startLoc);
 
-  if ( !this.expectType_soft('(') &&
-        this['do.has.no.opening.paren'](startc,startLoc,scopeFlags,nbody) )
-    return this.errorHandlerOutput;
+  if ( !this.expectType_soft('(') )
+     this['do.has.no.opening.paren'](startc,startLoc);
 
   var cond = core(this.parseExpr(CONTEXT_NONE));
   var c = this.c, li = this.li, col = this.col;
-  if ( !this.expectType_soft (')') &&
-        this['do.has.no.closing.paren'](startc,startLoc,scopeFlags,nbody,c,li,col,cond) )
-    return this.errorHandlerOutput;
+  if ( !this.expectType_soft (')') )
+     this['do.has.no.closing.paren'](startc,startLoc);
 
   if (this.lttype === ';' ) {
      c = this.c;
@@ -5682,14 +5541,12 @@ this.parseDoWhileStatement = function () {
 };
 
 this.parseContinueStatement = function () {
-   if ( ! this.ensureStmt_soft   () &&
-          this['not.stmt']('continue') )
-     return this.errorHandlerOutput ;
+   if ( ! this.ensureStmt_soft   () )
+       this['not.stmt']('continue');
 
    this.fixupLabels(false);
-   if (!(this.scopeFlags & SCOPE_CONTINUE) &&
-         this['continue.not.in.loop']() )
-     return this.errorHandlerOutput  ;
+   if (!(this.scopeFlags & SCOPE_CONTINUE) )
+      this['continue.not.in.loop']();
 
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;
@@ -5708,9 +5565,8 @@ this.parseContinueStatement = function () {
 
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
-       if ( !semiLoc && !this.newLineBeforeLookAhead &&
-             this['no.semi']('continue',startc,startLoc,c,li,col,semi,label) )
-         return this.errorHandlerOutput;
+       if ( !semiLoc && !this.newLineBeforeLookAhead )
+          this['no.semi']('continue',startc,startLoc);
 
        this.foundStatement = !false;
        return { type: 'ContinueStatement', label: label, start: startc, end: semi || label.end,
@@ -5718,9 +5574,8 @@ this.parseContinueStatement = function () {
    }
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
-   if ( !semiLoc && !this.newLineBeforeLookAhead &&
-         this['no.semi']('continue',startc,startLoc,c,li,col,semi,label) )
-     return this.errorHandlerOutput;
+   if ( !semiLoc && !this.newLineBeforeLookAhead )
+      this['no.semi']('continue',startc,startLoc);
 
    this.foundStatement = !false;
    return { type: 'ContinueStatement', label: null, start: startc, end: semi || c,
@@ -5728,14 +5583,12 @@ this.parseContinueStatement = function () {
 };
 
 this.parseBreakStatement = function () {
-   if (! this.ensureStmt_soft   () &&
-         this['not.stmt']('break') )
-     return this.errorHandlerOutput ;
+   if (! this.ensureStmt_soft() )
+      this['not.stmt']('break');
 
    this.fixupLabels(false);
-   if (!(this.scopeFlags & SCOPE_BREAK) &&
-         this['break.not.in.breakable']() )
-     return this.errorHandlerOutput ;
+   if (!(this.scopeFlags & SCOPE_BREAK) )
+      this['break.not.in.breakable']();
 
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;
@@ -5752,9 +5605,8 @@ this.parseBreakStatement = function () {
        if (!name) this['break.no.such.label'](label);
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
-       if ( !semiLoc && !this.newLineBeforeLookAhead &&
-            this['no.semi'](startc,startLoc,c,li,col,semi,label) )
-         return this.errorHandlerOutput;
+       if ( !semiLoc && !this.newLineBeforeLookAhead )
+         this['no.semi'](startc,startLoc);
 
        this.foundStatement = !false;
        return { type: 'BreakStatement', label: label, start: startc, end: semi || label.end,
@@ -5762,9 +5614,8 @@ this.parseBreakStatement = function () {
    }
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
-   if ( !semiLoc && !this.newLineBeforeLookAhead &&
-        this['no.semi'](startc,startLoc,c,li,col,semi,label) )
-     return this.errorHandlerOutput;
+   if ( !semiLoc && !this.newLineBeforeLookAhead )
+     this['no.semi'](startc,startLoc,c,li,col,semi,label);
 
    this.foundStatement = !false;
    return { type: 'BreakStatement', label: null, start: startc, end: semi || c,
@@ -5772,9 +5623,8 @@ this.parseBreakStatement = function () {
 };
 
 this.parseSwitchStatement = function () {
-  if ( ! this.ensureStmt_soft () &&
-         this['not.stmt']('switch') )
-    return this.errorHandlerOutput ;
+  if ( ! this.ensureStmt_soft () )
+      this['not.stmt']('switch');
 
   this.fixupLabels(false) ;
 
@@ -5786,23 +5636,20 @@ this.parseSwitchStatement = function () {
       elem = null;
 
   this.next() ;
-  if ( !this.expectType_soft ('(') &&
-       this['switch.has.no.opening.paren'](startc,startLoc) )
-    return this.errorHandlerOutput;
+  if ( !this.expectType_soft ('(') )
+    this['switch.has.no.opening.paren'](startc,startLoc);
 
   var switchExpr = core(this.parseExpr(CONTEXT_NONE));
-  if ( !this.expectType_soft (')') &&
-        this['switch.has.no.closing.paren'](startc,startLoc) )
-    return this.errorHandlerOutput ;
+  if ( !this.expectType_soft (')') )
+     this['switch.has.no.closing.paren'](startc,startLoc);
 
-  if ( !this.expectType_soft ('{') &&
-        this['switch.has.no.opening.curly'](startc,stratLoc) )
-    return this.errorHandlerOutput ;
+  if ( !this.expectType_soft ('{') )
+     this['switch.has.no.opening.curly'](startc,stratLoc);
 
   this.scopeFlags |=  SCOPE_BREAK;
   while ( elem = this.parseSwitchCase()) {
     if (elem.test === null) {
-       if (hasDefault ) this['switch.has.a.dup.default'](elem );
+       if (hasDefault ) this['switch.has.a.dup.default'](elem);
        hasDefault = !false ;
     }
     cases.push(elem);
@@ -5812,9 +5659,8 @@ this.parseSwitchStatement = function () {
   this.foundStatement = !false;
   var n = { type: 'SwitchStatement', cases: cases, start: startc, discriminant: switchExpr,
             end: this.c, loc: { start: startLoc, end: this.loc() } };
-  if ( !this.expectType_soft ('}' ) &&
-        this['switch.unfinished'](n) )
-    return this.errorHandlerOutput ;
+  if ( !this.expectType_soft ('}' ) )
+     this['switch.unfinished'](n);
 
   return n;
 };
@@ -5846,9 +5692,8 @@ this.parseSwitchCase = function () {
      return null;
 
   var c = this.c, li = this.li, col = this.col;
-  if ( ! this.expectType_soft (':') &&
-       this['switch.case.has.no.colon'](startc,startLoc,c,li,cond,col) )
-    return this.errorHandlerOutput;
+  if ( ! this.expectType_soft (':') )
+    this['switch.case.has.no.colon'](startc,startLoc);
 
   nbody = this.blck();
   var last = nbody.length ? nbody[nbody.length-1] : null;
@@ -5857,15 +5702,13 @@ this.parseSwitchCase = function () {
 };
 
 this.parseReturnStatement = function () {
-  if (! this.ensureStmt_soft () &&
-       this['not.stmt']('return') )
-    return this.errorHandlerOutput ;
+  if (! this.ensureStmt_soft () )
+    this['not.stmt']('return');
 
   this.fixupLabels(false ) ;
 
-  if ( !( this.scopeFlags & SCOPE_FUNCTION ) &&
-          this['return.not.in.a.function']() )
-    return this.errorHandlerOutput ;
+  if ( !( this.scopeFlags & SCOPE_FUNCTION ) )
+       this['return.not.in.a.function']();
 
   var startc = this.c0,
       startLoc = this.locBegin(),
@@ -5883,9 +5726,8 @@ this.parseReturnStatement = function () {
 
   semi = this.semiI();
   semiLoc = this.semiLoc();
-  if ( !semiLoc && !this.newLineBeforeLookAhead &&
-       this['no.semi']('return', [startc,startLoc,c,li,col,semi,retVal] ) )
-    return this.errorHandlerOutput;
+  if ( !semiLoc && !this.newLineBeforeLookAhead )
+    this['no.semi']('return', startc,startLoc);
 
   if ( retVal ) {
      this.foundStatement = !false;
@@ -5899,9 +5741,8 @@ this.parseReturnStatement = function () {
 };
 
 this.parseThrowStatement = function () {
-  if ( ! this.ensureStmt_soft () &&
-         this['not.stmt']('throw') )
-    return this.errorHandlerOutput ;
+  if ( ! this.ensureStmt_soft () )
+      this['not.stmt']('throw');
 
   this.fixupLabels(false ) ;
 
@@ -5915,17 +5756,15 @@ this.parseThrowStatement = function () {
   this.next();
 
   var semi = 0 , semiLoc = null ;
-  if ( this.newLineBeforeLookAhead &&
-       this['throw.has.newline'](startc,startLoc,c,li,col) )
-    return this.errorHandlerOutput;
+  if ( this.newLineBeforeLookAhead )
+    this['throw.has.newline'](startc,startLoc);
 
   retVal = this.parseExpr(CONTEXT_NULLABLE );
 
   semi = this.semiI();
   semiLoc = this.semiLoc();
-  if ( !semiLoc && !this.newLineBeforeLookAhead &&
-        this['no.semi']('throw',[startc,startLoc,c,li,col,semi,retVal] ) )
-    return this.errorHandlerOutput;
+  if ( !semiLoc && !this.newLineBeforeLookAhead )
+     this['no.semi']('throw',startc,startLoc);
 
   if ( retVal ) {
      this.foundStatement = !false;
@@ -5941,23 +5780,20 @@ this.parseThrowStatement = function () {
 this. parseBlockStatement_dependent = function() {
     var startc = this.c - 1,
         startLoc = this.locOn(1);
-    if ( !this.expectType_soft ('{') &&
-         this['block.dependent.no.opening.curly' ]() )
-      return this.errorHandlerOutput;
+    if ( !this.expectType_soft ('{') )
+      this['block.dependent.no.opening.curly' ]();
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() } };
-    if ( ! this.expectType_soft ('}') &&
-         this['block.dependent.is.unfinished' ]( n)  )
-      return this.errorHandlerOutput;
+    if ( ! this.expectType_soft ('}') )
+      this['block.dependent.is.unfinished' ]( n);
 
     return n;
 };
 
 this.parseTryStatement = function () {
-  if ( ! this.ensureStmt_soft () &&
-         this['not.stmt' ]('try' ) )
-    return this.errorHandlerOutput ;
+  if ( ! this.ensureStmt_soft () )
+      this['not.stmt' ]('try' );
 
   this.fixupLabels(false);
   var startc = this.c0,
@@ -5975,9 +5811,8 @@ this.parseTryStatement = function () {
   }
 
   var finOrCat = finBlock || catBlock;
-  if ( ! finOrCat &&
-       this['try.has.no.tail'](startc,startLoc,tryBlock)  )
-    return this.errorHandlerOutput ;
+  if ( ! finOrCat )
+    this['try.has.no.tail'](startc,startLoc);
 
   this.foundStatement = !false;
   return  { type: 'TryStatement', block: tryBlock, start: startc, end: finOrCat.end,
@@ -5989,14 +5824,12 @@ this. parseCatchClause = function () {
        startLoc = this.locBegin();
 
    this.next();
-   if ( !this.expectType_soft ('(') &&
-        this['catch.has.no.opening.paren'](startc,startLoc) )
-     return this.errorHandlerOutput ;
+   if ( !this.expectType_soft ('(') )
+     this['catch.has.no.opening.paren'](startc,startLoc);
 
    var catParam = this.parsePattern();
-   if ( !this.expectType_soft (')') &&
-         this['catch.has.no.end.paren' ] (startc,startLoc,catParam)  )
-     return this.errorHandlerOutput    ;
+   if ( !this.expectType_soft (')') )
+      this['catch.has.no.end.paren' ] (startc,startLoc);
 
    var catBlock = this.parseBlockStatement_dependent();
    return {
@@ -6010,25 +5843,22 @@ this. parseCatchClause = function () {
 };
 
 this . parseWithStatement = function() {
-   if ( !this.ensureStmt_soft () &&
-         this['not.stmt']('with' ) )
-     return this.errorHandlerOutput ;
+   if ( !this.ensureStmt_soft () )
+      this['not.stmt']('with' );
 
-   if ( this.tight) this['with.strict' ]   ()  ;
+   if ( this.tight) this['with.strict' ]();
    this.fixupLabels(false);
 
    var startc = this.c0,
        startLoc = this.locBegin();
 
    this.next();
-   if (! this.expectType_soft ('(') &&
-         this['with.has.no.opening.paren'] (startc, startLoc) )
-     return this.errorHandlerOutput ;
+   if (! this.expectType_soft ('(') )
+      this['with.has.no.opening.paren'] (startc, startLoc);
 
    var obj = this.parseExpr(CONTEXT_NONE);
-   if (! this.expectType_soft (')' ) &&
-         this['with.has.no.end.paren'](startc,startLoc,obj ) )
-     return this.errorHandlerOutput ;
+   if (! this.expectType_soft (')') )
+      this['with.has.no.end.paren'](startc,startLoc,obj );
 
    var nbody = this.parseStatement(!false);
 
@@ -6043,9 +5873,8 @@ this . parseWithStatement = function() {
 };
 
 this . prseDbg = function () {
-  if (! this.ensureStmt_soft () &&
-        this['not.stmt']('debugger') )
-    return this.errorHandlerOutput ;
+  if (! this.ensureStmt_soft () )
+     this['not.stmt']('debugger');
 
   this.fixupLabels(false);
 
@@ -6060,9 +5889,8 @@ this . prseDbg = function () {
     col = this.col;
     this.next();
   } 
-  else if ( !this.newLineBeforeLookAhead &&
-     this['no.semi']('debugger', [startc,startLoc,c,li,col] ) )
-     return this.errorHandlerOutput;
+  else if ( !this.newLineBeforeLookAhead )
+     this['no.semi']('debugger', startc,startLoc);
 
   this.foundStatement = !false;
   return {
@@ -6112,15 +5940,14 @@ this.readStrLiteral = function (start) {
      case CHAR_LINE_FEED :
      case 0x2028 :
      case 0x2029 :
-           if ( this['str.newline'](c,startC,v,v_start) )
-             return this.errorHandlerOutput ;
+            this['str.newline'](c);
     }
     c++;
   }
 
   if ( v_start !== c ) { v += l.slice(v_start,c ) ; }
-  if (!(c < e && (l.charCodeAt(c)) === start) &&
-       this['str.unfinished'](c,v) ) return this.errorHandlerOutput;
+  if (!(c < e && (l.charCodeAt(c)) === start) )
+    this['str.unfinished'](c);
 
   this.c = c + 1 ;
   this.col += (this. c - startC   )  ;
@@ -6381,7 +6208,7 @@ this.errorReservedID = function(id) {
        this.throwReserved = !false;
        return null;
     }
-    if ( this['reserved.id'](id) ) return this.errorHandlerOutput;
+    this['reserved.id'](id); 
 }
 
 
@@ -6389,9 +6216,8 @@ this.errorReservedID = function(id) {
 },
 function(){
 this . parseVariableDeclaration = function(context) {
-     if ( ! this.canBeStatement &&
-            this['not.stmt']('var',context) )
-       return this.errorHandlerOutput;
+     if ( ! this.canBeStatement )
+         this['not.stmt']('var');
 
      this.canBeStatement = false;
 
@@ -6401,9 +6227,8 @@ this . parseVariableDeclaration = function(context) {
      this.next () ;
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
-       if (kind !== 'let' && 
-           this['var.has.no.declarators'](startc,startLoc,kind,elem,context  ) )
-         return this.errorHandlerOutput;
+       if (kind !== 'let' ) 
+         this['var.has.no.declarators'](startc,startLoc);
 
        return null; 
      }
@@ -6413,23 +6238,8 @@ this . parseVariableDeclaration = function(context) {
           while ( this.lttype === ',' ) {
             this.next();     
             elem = this.parseVariableDeclarator(context);
-            if (!elem &&
-                 this['var.has.an.empty.declarator'](startc,startLoc,kind,list,context ) )
-              return this.erroHandlerOutput ;
-
-            list.push(elem);
-          }
-
-     var lastItem = list[list.length-1];
-     var endI = 0, endLoc = null;
-
-     if ( !(context & CONTEXT_FOR) ) {
-       endI = this.semiI() || lastItem.end;
-       endLoc = this.semiLoc();
-       if (  !endLoc ) {
-          if ( this.newLineBeforeLookAhead ) endLoc =  lastItem.loc.end; 
-          else if ( this['no.semi']('var', [startc,startLoc,kind,list,endI] ) )
-             return this.errorHandlerOutput;
+            if (!elem )
+              this['var.has.an.empty.declarator'](startc,startLoc);
        }
      }
      else {
@@ -6456,9 +6266,9 @@ this . parseVariableDeclarator = function(context) {
        this.next();
        init = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
   }
-  else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
+  else if ( head.type !== 'Identifier' ) { // no init found; our pattern is an arr or an obj?
        if (!( context & CONTEXT_FOR) )  // bail out in case it is not a 'for' loop's init
-         this['var.decl.neither.of.in'](head,init,context) ;
+         this['var.decl.neither.of.in'](head) ;
 
        if( !this.unsatisfiedAssignment )
          this.unsatisfiedAssignment  =  head;     // an 'in' or 'of' will satisfy it
@@ -6486,9 +6296,8 @@ this.parseYield = function(context) {
             deleg = !false;
             this.next();
             arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CONTEXT_FOR );
-            if (!arg &&
-                 this['yield.has.no.expr.deleg'](startc,startLoc,c,li,col,context) )
-              return this.errorHandlerOutput ;
+            if (!arg )
+              this['yield.has.no.expr.deleg'](startc,startLoc);
      }
      else
         arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CONTEXT_FOR)|CONTEXT_NULLABLE );

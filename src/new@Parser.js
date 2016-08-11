@@ -37,12 +37,8 @@ this.parseNewHead = function () {
        break ;
 
     default:
-       head = this['new.head.is.not.valid'](startc, startLoc);
-       if ( head.type === ERR_RESUME ) {
-           head = head.val ;
-           break ;
-       }
-       return head.val;
+       this['new.head.is.not.valid'](startc, startLoc);
+
   }
 
   var inner = core( head ) ;
@@ -62,14 +58,8 @@ this.parseNewHead = function () {
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                     loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false };
           inner = head ;
-          if ( !this.expectType_soft (']') ) {
-            head = this['mem.unfinished'](startc,startLoc,head)  ;
-            if (head .type === ERR_RESUME)
-              head = head.val;
-     
-            else
-              return head.val;
-          }
+          if ( !this.expectType_soft (']') )
+            this['mem.unfinished'](startc,startLoc);
  
           continue;
 
@@ -77,13 +67,8 @@ this.parseNewHead = function () {
           elem = this. parseArgList();
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
                     loc: { start: startLoc, end: this.loc() }, arguments: elem };
-          if ( !this. expectType_soft (')') ) {
-            inner = this['new.args.is.unfinished'](startc,startLoc,inner) ;
-            if ( inner.type === ERR_RESUME )
-              inner = inner.val;
-            else
-              return inner.val;
-          }
+          if ( !this. expectType_soft (')') )
+            this['new.args.is.unfinished'](startc,startLoc);
 
           return inner;
 

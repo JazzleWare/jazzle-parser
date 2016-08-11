@@ -12,9 +12,8 @@ this.parseYield = function(context) {
             deleg = !false;
             this.next();
             arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CONTEXT_FOR );
-            if (!arg &&
-                 this['yield.has.no.expr.deleg'](startc,startLoc,c,li,col,context) )
-              return this.errorHandlerOutput ;
+            if (!arg )
+              this['yield.has.no.expr.deleg'](startc,startLoc);
      }
      else
         arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CONTEXT_FOR)|CONTEXT_NULLABLE );

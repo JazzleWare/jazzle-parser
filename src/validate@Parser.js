@@ -125,7 +125,7 @@ this.errorReservedID = function(id) {
        this.throwReserved = !false;
        return null;
     }
-    if ( this['reserved.id'](id) ) return this.errorHandlerOutput;
+    this['reserved.id'](id); 
 }
 
 

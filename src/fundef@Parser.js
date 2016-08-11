@@ -1,9 +1,8 @@
 this .parseArgs  = function (argLen) {
   var list = [], elem = null;
 
-  if ( !this.expectType_soft('(') &&
-        this['func.args.no.opening.paren'](argLen) )
-    return this.errorHandlerOutput  ;
+  if ( !this.expectType_soft('(') )
+     this['func.args.no.opening.paren']();
 
   var firstNonSimpArg = null;
   while ( list.length !== argLen ) {
@@ -13,7 +12,7 @@ this .parseArgs  = function (argLen) {
          elem = this.parseAssig(elem);
          if ( elem.left.type === 'Identifier' ) {
             if ( this.argNames[elem.left.name+'%'] !== null )
-                 this['func.args.has.dup'](elem);
+              this['func.args.has.dup'](elem);
          }
          this.inComplexArgs = !false;
        }
@@ -42,14 +41,12 @@ this .parseArgs  = function (argLen) {
      }
   }
   else {
-     if ( list.length !== argLen &&
-          this['func.args.not.enough'](argLen,list) )
-       return this.errorHandlerOutput;
+     if ( list.length !== argLen )
+       this['func.args.not.enough'](argLen);
   }
 
-  if ( ! this.expectType_soft (')') &&
-       this['func.args.no.end.paren'](argLen,list) )
-    return this.errorHandlerOutput ;
+  if ( ! this.expectType_soft (')') )
+    this['func.args.no.end.paren'](argLen);
 
   if ( firstNonSimpArg )
      this.firstNonSimpArg = firstNonSimpArg ;
@@ -98,29 +95,17 @@ this .parseFunc = function(context, argListMode, argLen ) {
           this.next();
      }
      if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
-        if ( this.lttype !== 'Identifier' &&
-             this['missing.name']('func', 
-                { s: startc, l: startLoc, labels: prevLabels, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
-                  args: [context, argListMode, argLen] } ) )
-          return this.errorHandlerOutput ;
+        if ( this.lttype !== 'Identifier' )
+          this['missing.name']('func', startc, startLoc);
 
         currentFuncName = this.validateID(null);
-        if ( this.tight && arguments_or_eval(currentFuncName.name) &&
-             this['binding.to.eval.or.arguments']('func',
-                { s: startc, l: startLoc, labels: prevLabels, stmt: !false, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
-                  args: [context, argListMode, argLen] } ) )
-          return this.errorHandlerOutput ;
+        if ( this.tight && arguments_or_eval(currentFuncName.name) )
+          this['binding.to.eval.or.arguments']('func', startc, startLoc);
      }
      else if ( this. lttype === 'Identifier' ) {
         currentFuncName = this.validateID(null);
-        if ( this.tight && arguments_or_eval(currentFuncName.name) &&
-             this['binding.to.eval.or.arguments']('func',
-                { s: startc, l: startLoc, labels: prevLabels, stmt: canBeStatement, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimArg,
-                  context: [ context, argListMode, argLen] } )   )
-          return this.errorHandlerOutput;
+        if ( this.tight && arguments_or_eval(currentFuncName.name) )
+          this['binding.to.eval.or.arguments']('func', startc, startLoc);
      }
      else
         currentFuncName = null;
@@ -181,6 +166,7 @@ this.parseFuncBody = function(context) {
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CONTEXT_NULLABLE);
     if ( elem === null )
       return this['func.body.is.empty.expr'](context);
+
     return elem;
   }
 
@@ -201,9 +187,8 @@ this.parseFuncBody = function(context) {
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
            loc: { start: startLoc, end: this.loc() } };
 
-  if ( ! this.expectType_soft ( '}' ) &&
-         this['func.body.is.unfinished'](n) )
-    return this.errorHandlerOutput ;
+  if ( ! this.expectType_soft ( '}' ) )
+      this['func.body.is.unfinished'](n);
 
   return  n;
 };

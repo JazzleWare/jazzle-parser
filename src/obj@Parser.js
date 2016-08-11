@@ -66,10 +66,8 @@ this.parseObjectExpression = function (context) {
   elem = { properties: list, type: 'ObjectExpression', start: startc,
      end: this.c , loc: { start: startLoc, end: this.loc() }};
 
-  if ( ! this.expectType_soft ('}') && this['obj.unfinished']({
-    obj: elem, asig: firstUnassignable, ea: firstEA,
-    firstElemWithYS: firstElemWithYS, u: unsatisfiedAssignment, ys: firstYS }) )
-    return this.errorHandlerOutput;
+  if ( ! this.expectType_soft ('}') )
+    this['obj.unfinished'](elem);
 
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
   if ( firstParen ) this.firstParen = firstParen;
@@ -129,7 +127,7 @@ this.parseProperty = function (name, context) {
 
   switch (this.lttype) {
       case ':':
-         if ( __proto__ && first__proto__ ) this['obj.proto.has.dup']() ;
+         if ( __proto__ && first__proto__ ) this['obj.proto.has.dup'](name, first__proto__ ) ;
 
          this.next();
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
@@ -145,15 +143,11 @@ this.parseProperty = function (name, context) {
          return this.parseMeth(name, OBJ_MEM);
 
       default:
-          if (name.type !== 'Identifier' && this['obj.prop.assig.not.id'](name,context) )
-            return this.errorHandlerOutput ;
+          if (name.type !== 'Identifier' ) this['obj.prop.assig.not.id'](name);
 
           if ( this.lttype === 'op' ) {
-             if (this.ltraw !== '=' && this['obj.prop.assig.not.assigop'](name,context) )
-               return this.errorHandlerOutput  ;
-
-             if (!(context & CONTEXT_ELEM) && this['obj.prop.assig.not.allowed'](name,context) )
-               return this.errorHandlerOutput ;
+             if (this.ltraw !== '=' ) this['obj.prop.assig.not.assigop'](name);
+             if (!(context & CONTEXT_ELEM) ) this['obj.prop.assig.not.allowed'](name);
 
              val = this.parseAssig(name);
              this.unsatisfiedAssignment = val;

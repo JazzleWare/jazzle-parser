@@ -22,8 +22,8 @@ this.parseExpr = function (context) {
 this .parseCond = function(cond,context ) {
     this.next();
     var seq = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
-    if ( !this.expectType_soft (':') && this['cond.colon'](cond,context,seq) )
-      return this.errorHandlerOutput;
+    if ( !this.expectType_soft (':') )
+      this['cond.colon']();
 
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
     return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
@@ -63,17 +63,15 @@ this .parseUpdateExpression = function(arg, context) {
        arg = this. parseExprHead(context|CONTEXT_UNASSIGNABLE_CONTAINER );
        this.assert(arg); // TODO: this must have error handling
 
-       if ( !this.ensureSimpAssig_soft (core(arg)) &&
-            this['incdec.pre.not.simple.assig'](c,loc,arg) )
-         return this.errorHandlerOutput;
+       if ( !this.ensureSimpAssig_soft (core(arg)) )
+         this['incdec.pre.not.simple.assig'](c,loc,arg);
 
        return { type: 'UpdateExpression', argument: core(arg), start: c, operator: u,
                 prefix: !false, end: arg.end, loc: { start: loc, end: arg.loc.end } };
     }
 
-    if ( !this.ensureSimpAssig_soft(core(arg)) &&
-          this['incdec.post.not.simple.assig'](arg) )
-      return this.errorHandlerOutput;
+    if ( !this.ensureSimpAssig_soft(core(arg)) )
+       this['incdec.post.not.simple.assig'](arg);
 
     c  = this.c;
     loc = { start: arg.loc.start, end: { line: this.li, column: this.col } };
@@ -141,13 +139,13 @@ this.parseNonSeqExpr = function (prec, context  ) {
 
            case 'yield':
               if (prec !== PREC_WITH_NO_OP) // make sure there is no other expression before it 
-                return this['yield.as.an.id'](context,prec) ;
+                return this['yield.as.an.id']();
 
               return this.parseYield(context); // everything that comes belongs to it
    
            default:
               if (!(context & CONTEXT_NULLABLE) )
-                return this['nexpr.null.head'](context,prec);
+                return this['nexpr.null.head']();
                
               return null;
          }
@@ -166,15 +164,13 @@ this.parseNonSeqExpr = function (prec, context  ) {
             head =  this. parseAssignment(head, context );
          
          else
-            head = this['assig.not.first'](
-                 { c:context, u:firstUnassignable, h: head, paren: firstParen, prec: prec });
+            this['assig.not.first']();
 
          break ;
        }
        else {
-         if ( this.unsatisfiedArg && 
-              this['arrow.paren.no.arrow']({c:context, u:firstUnassignable, h: head, p:firstParen, prec: prec}) )
-           return this.errorHandlerOutput; 
+         if ( this.unsatisfiedArg ) 
+           this['arrow.paren.no.arrow'](); 
 
          if ( this.firstEA )
             if( !(context & CONTEXT_ELEM_OR_PARAM) || op )
