@@ -526,6 +526,117 @@ function toNum (n) {
        }
      }).call([
 [Emitter.prototype, [function(){
+this.write = function(line) {
+   if ( this.wrap ) {
+       var lineLengthIncludingIndentation = 
+          this.currentLineLengthIncludingIndentation +
+          line.length;
+       
+       if ( this.maxLineLength &&
+            lineLengthIncludingIndentation > this.maxLineLength )
+         this.indentForWrap();
+
+       this.currentLineLengthIncludingIndentation += line.length; 
+   } 
+
+   this.code += line;
+
+};
+
+this.enterSynth = function() {
+   this.synthStack.push(this.synth);
+   this.synth = !false;
+};
+
+this.exitSynth = function() {
+   this.assert(this.synthStack.length>=1);
+   this.synth = this.pop(); 
+};
+
+this.indent = function() {
+   this.currentIndentLevel++;
+   if ( this.currentIndentLevel >= this.indentStrCache.length )
+     this.indentStrCache.push(this.currentIndentStr + this.indenter);
+
+   this.currentIndentStr = this.indentStrCache[this.currentIndentLevel];
+   this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
+};
+
+this.unindent = function() {
+   this.assert(this.currentIndentLevel > 0);
+   this.currentIndentStr = this.indentStrCache[--this.currentIndentLevel];
+   this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
+};
+
+this.newlineNoIndent = function() {
+  this.code += '\n';
+  this.currentLineLengthIcludingIndentation = 0;
+};
+
+this.newlineIndent = function() {
+  this.code += '\n' + this.currentIndentStr;
+
+  this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
+};
+
+this.indentForWrap = function() {
+   if ( this.currentLineLengthIncludingIndentation === 
+        this.currentIndentStr.length )
+     return;
+
+   var wrapIndenter = this.currentIndentStr + " ";
+   this.currentLineLengthIncludingIndentation = wrapIndenter.length ;
+   this.code += '\n' + wrapIndenter ;
+
+};
+
+this.assert = function(cond, message) {
+  if (!cond) throw new Error(message);
+
+};
+
+var has = Object.hasOwnProperty;
+
+this.emit = function(n) {
+  if ( !n )
+    return;
+
+  this.assert(has.call(this.emitters, n.type),
+      'No emitter for ' + n.type );
+  var emitter = this.emitters[n.type];
+  return emitter.call(this, n);
+};
+
+this.startCode = function() {
+  this.codeStack.push(this.code);
+  this.code = "";
+};
+
+this.endCode = function() {
+  var c = this.code;
+  this.code = this.codeStack.pop();
+  return c;
+};
+
+this.disallowWrap = function() {
+   this.wrapStack.push(this.wrap);
+   this.wrap = false;
+};
+
+this.restoreWrap = function() {
+   this.wrap = this.wrapStack.pop();
+
+};
+
+this.writeMulti = function() {
+  var e = 0;
+  while (e < arguments.length) 
+    this.write(arguments[e++]);
+};
+
+
+},
+function(){
 this._emitBlock = function(list) {
    var e = 0 ;
    while ( e < list.length ) {
@@ -1295,114 +1406,154 @@ this._emitObjAssigElem = function(prop, name, isStatement) {
 
 },
 function(){
-this.write = function(line) {
-   if ( this.wrap ) {
-       var lineLengthIncludingIndentation = 
-          this.currentLineLengthIncludingIndentation +
-          line.length;
-       
-       if ( this.maxLineLength &&
-            lineLengthIncludingIndentation > this.maxLineLength )
-         this.indentForWrap();
+function synth_id_node(name) {
+   return { type: 'Identifier', name: '%' + name };
+}
 
-       this.currentLineLengthIncludingIndentation += line.length; 
-   } 
+function synth_expr_node(str) {
+   return { type: 'SynthesizedExpr', contents: str };
+}
 
-   this.code += line;
+function synth_expr_set_node(arr, isStatement ) {
+   if (isStatement)
+     return { type: 'SynthesizedExprSet', expressions: arr };
 
+   return { type: 'SequenceExpression', expressions: arr };
+}
+
+function assig_node(left, right) {
+   return { type: 'AssignmentExpression', right: right, left: left };
+}
+
+function cond_node(e, c, a) {
+   return { type: 'ConditionalExpression', 
+            test: e,
+            consequent: c,
+            alternate: a };
+}
+
+function findYield(n) {
+   var type = n.type;
+   if (type === 'YieldExpression')
+     return n;
+
+   this.assert(has.call(yieldFinders, type),
+               'no yield finder: ' + type );
+ 
+   if (n.yieldLocation)
+     return n.yieldLocation;
+
+   return yieldFinders[type].call(n);
+}
+
+var yieldFinders = {};
+var y = yieldFinders;
+
+var BINARY_EXPR_NAMES = ['left', 'right'];
+y['LogicalExpression'] = 
+y['AssignmentExpression'] = 
+y['BinaryExpression'] =
+y['AssignmentPattern'] = function() {
+   return findYieldInNames(this, BINARY_EXPR_NAMES);
 };
 
-this.enterSynth = function() {
-   this.synthStack.push(this.synth);
-   this.synth = !false;
+y['ArrayPattern'] = 
+y['ArrayExpression'] = function() { 
+   return findYieldInList(this, this.elements, 0);
 };
 
-this.exitSynth = function() {
-   this.assert(this.synthStack.length>=1);
-   this.synth = this.pop(); 
+function findYieldInList(n, list, idx) {
+   var e = idx, yieldExpr = null;
+   while (e < list.length) {
+      yieldExpr = findYield(list[e]);
+      if (yieldExpr) {
+        n.yieldLocation = { loc: e, expr: yieldExpr };
+        return yieldExpr;
+      }
+      e++ ;
+   }
+  
+   return null;
+}
+
+y['ObjectExpression'] =
+y['ObjectPattern'] = function() {
+   return findYieldInList(this, this.properties);
 };
 
-this.indent = function() {
-   this.currentIndentLevel++;
-   if ( this.currentIndentLevel >= this.indentStrCache.length )
-     this.indentStrCache.push(this.currentIndentStr + this.indenter);
-
-   this.currentIndentStr = this.indentStrCache[this.currentIndentLevel];
-   this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
+y['SequenceExpression'] = function() {
+   return findYieldInList(this, this.expression);
 };
 
-this.unindent = function() {
-   this.assert(this.currentIndentLevel > 0);
-   this.currentIndentStr = this.indentStrCache[--this.currentIndentLevel];
-   this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
+var CONDITIONAL_EXPR_NAMES = ['test', 'consequent', 'alternate'];
+y['ConditionalExpression'] = function() {
+   return findYieldInNames(this, CONDITIONAL_EXPR_NAMES); 
 };
 
-this.newlineNoIndent = function() {
-  this.code += '\n';
-  this.currentLineLengthIcludingIndentation = 0;
+y['Property'] = function() {
+   var yieldExpr = null;
+   if (this.computed) {
+     if (yieldExpr = findYield(this.key)) {
+       this.yieldLocation = { loc: 'k', expr: yieldExpr };
+       return yieldExpr;
+     }
+  }
+
+  if (yieldExpr = findYield(this.value)) {
+    this.yieldLocation = { loc: 'v', expr: yieldExpr };
+    return yieldExpr;
+  }
+
+  return null;
 };
 
-this.newlineIndent = function() {
-  this.code += '\n' + this.currentIndentStr;
+y['MethodDefinition'] = y['Property'];
+     
+var VOID_0 = synth_expr_node('void 0');     
+   
+y['Identifier'] =
+y['ThisExpression'] = 
+y['Literal'] = function() { return null; };
 
-  this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
+y['MemberExpression'] = function() {
+  var yieldExpr = findYield(this.object);
+  if (yieldExpr) {
+    this.yieldLocation = { loc: 'object', expr: yieldExpr };
+  }
+  
+  else if (this.computed) {
+    if (yieldExpr = findYield(this.property))
+      this.yieldLocation = { loc: 'property', expr: yieldExpr };
+  }
+
+  return yieldExpr;
 };
 
-this.indentForWrap = function() {
-   if ( this.currentLineLengthIncludingIndentation === 
-        this.currentIndentStr.length )
-     return;
-
-   var wrapIndenter = this.currentIndentStr + " ";
-   this.currentLineLengthIncludingIndentation = wrapIndenter.length ;
-   this.code += '\n' + wrapIndenter ;
-
+y['CallExpression'] = function() {
+   var yieldExpr = findYield(this.callee);                         
+   if (yieldExpr) {                                                
+     this.yieldLocation = { loc: callee, expr: yieldExpr };        
+     return yieldExpr;                                             
+   }                                                               
+                                                                   
+   return findYieldInList(this, this.arguments);                   
 };
 
-this.assert = function(cond, message) {
-  if (!cond) throw new Error(message);
+y[ 'ClassExpression'] =
+y[ 'ClassDeclaration'] = function() {
+   var yieldExpr = findYield(this.superClass);
+   if (yieldExpr) {
+     this.yieldLocation = { loc: 'superClass', expr: yieldExpr };
+     return yieldExpr;
+   }
 
-};
+   return findYieldInList(this, this.body.body );
+};   
 
-var has = Object.hasOwnProperty;
-
-this.emit = function(n) {
-  if ( !n )
-    return;
-
-  this.assert(has.call(this.emitters, n.type),
-      'No emitter for ' + n.type );
-  var emitter = this.emitters[n.type];
-  return emitter.call(this, n);
-};
-
-this.startCode = function() {
-  this.codeStack.push(this.code);
-  this.code = "";
-};
-
-this.endCode = function() {
-  var c = this.code;
-  this.code = this.codeStack.pop();
-  return c;
-};
-
-this.disallowWrap = function() {
-   this.wrapStack.push(this.wrap);
-   this.wrap = false;
-};
-
-this.restoreWrap = function() {
-   this.wrap = this.wrapStack.pop();
-
-};
-
-this.writeMulti = function() {
-  var e = 0;
-  while (e < arguments.length) 
-    this.write(arguments[e++]);
-};
-
+function id_is_synth(n) {
+   this.assert(id.type === 'Identifier');
+   return n.name.charCodeAt() === CHAR_MODULO;
+}
 
 }]  ],
 [Parser.prototype, [function(){
