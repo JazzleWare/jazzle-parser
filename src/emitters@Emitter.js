@@ -138,7 +138,7 @@ function isSimpleCh(ch) {
    return (ch >= CHAR_A && ch <= CHAR_Z) ||
           (ch >= CHAR_a && ch <= CHAR_z) ||
           (ch === CHAR_UNDERLINE)        ||
-          (ch <= CHAR_0 && ch >= CHAR_9) ||
+          (ch <= CHAR_9 && ch >= CHAR_0) ||
           (ch === CHAR_$);
 }
    
@@ -209,8 +209,11 @@ this.emitters['Identifier'] = function(n) {
    this.emitContext = EMIT_CONTEXT_NONE;
    var name = n.name;
    var e = 0;
+   if ( name.length && name.charCodeAt(0) === CHAR_MODULO )
+     e++ ;
+     
    var nameString = "";
-   var simplePortionStart = 0;
+   var simplePortionStart = e;
    while ( e < name.length ) {
       var ch = name.charCodeAt(e);
       if ( isSimpleCh(ch) ) e++; 

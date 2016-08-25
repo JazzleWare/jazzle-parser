@@ -1,0 +1,335 @@
+l() * l() * 120 * (yield)
+_tmp = l() * l() * 120
+yield
+_tmp * sent
+
+l() * (yield) * l() * (yield) _t: _tmp, b: []
+_tmp = l() // _tmp * (yield) * l() * (yield)
+yield      // _tmp * sent * l() * (yield)
+_tmp = _tmp * sent * l()
+yield
+_tmp * sent
+
+t(e, temp, b) {
+  var root = false
+  if temp == "" {
+     root = !false
+  }
+  
+  var y = findYield(e)
+  if e.yieldLocation == 'right' {
+     var left = e.left
+     temp = `scope.tmp()
+     b.push(assig_node(temp, left))
+     e.left=temp@synth_id_node()
+  }
+}
+
+(yield) * (yield) * (yield)
+yield
+_temp = sent
+yield
+_temp = _temp * sent
+yield
+_temp = _temp * sent
+
+(yield) - (yield) * (yield)
+yield
+_temp = sent // _temp - (yield) * (yield)
+yield
+_temp1 = sent // _temp - _temp1 * (yield)
+yield
+_temp = _temp - _temp1 * sent // _temp - _temp1 * sent
+
+(yield) - (yield) * (yield) - (yield) * (yield)
+yield
+a = sent
+yield
+b = sent
+yield
+b = b * sent
+yield
+a = a - b
+yield
+b = sent
+yield
+b = b * sent
+a = a - b
+
+<null>:[
+  a:[ 
+    a:yield,
+    -, 
+    b:[ 
+      b:yield, 
+      *, 
+      %sent:yield
+    ]
+  ],
+  -,
+  b:[ 
+    b:yield,
+    *,
+    %sent:yield
+  ]
+]
+
+l() * (yield) - l() * (yield)
+<null>:[
+  a:[
+    a:l(), // a = l()
+    *,
+    %sent:yield
+  ], // a = a * sent
+  -,
+  b:[ 
+    b:l(),
+    *,
+    %sent:yield
+  ]
+]
+a = l()
+yield
+a = a * sent
+b = l()
+yield
+b = b * sent
+a - b
+
+(l() - (yield)) * (yield) - l()
+<null>:[
+   a:[
+     a:[
+       a:l(),
+       -,
+       %sent:yield
+     ],
+     *,
+     %sent:yield
+   ],
+   -,
+   l()
+]
+
+a = l()
+yield
+a = a - sent
+yield
+a = a * sent - l()
+
+(l() - (yield)) * (yield) - l()
+  [a = l()]
+->  (a - (yield)) * (yield) - l()
+  [a = l(); yield; a = a - sent]
+->  (a) * (yield) - l()
+  [a = l(); yield; a = a - sent; yield]
+->  a * sent * l()
+
+[]
+#[
+   [ 
+     a:[
+      a:l(), // a = l()
+      -,
+      %sent:yield // yield
+     ], // a = a - sent
+     *,
+     %sent:yield // yield
+   ],
+   -,
+   l()
+] // a * sent - l()
+
+[a = l()]
+#[
+   [
+     [
+       a,
+       -
+       yield
+     ],
+     *,
+     yield
+   ],
+   -,
+   l()
+]
+
+[a = l(); yield; a = a - sent]
+#[
+   [
+     a,
+     *,
+     yield
+   ],
+   -,
+   l()
+]
+
+[a = l(); yield; a = a-sent; yield]
+#[
+   [
+     a,
+     *,
+     sent
+   ],
+   -,
+   l()
+]
+ 
+a = l()
+yield
+a = a - sent
+yield
+a * sent - l() 
+
+(yield) * (yield)[yield] 
+yield
+a = sent
+yield
+b = sent
+yield
+a * b[sent]
+
+[]
+#[
+   yield,
+   *,
+   [
+      yield,
+      @,
+      yield
+   ]
+]
+
+[ yield; a = sent]
+#[
+   a,
+   *,
+   [
+     yield,
+     @,
+     yield
+   ]
+]
+
+[ yield; a = sent; yield; b = sent ]
+#[
+   a,
+   *,
+   [
+     b,
+     @,
+     yield
+   ]
+]
+
+[ yield; a = sent; yield; b = sent; yield ]
+#[
+   a,
+   *,
+   [
+     b,
+     @,
+     sent
+   ]
+]
+
+(yield)(yield)(yield)(yield)(yield) * (yield)(yield)
+
+[]
+#[
+  [
+    [
+      [
+        [yield, (), [yield]],
+        (),
+        [yield]
+      ],
+      (),
+      [yield]
+     ],
+     (),
+     [ yield]
+  ],
+  *,
+  [ yield, (), yield ]
+]
+
+yield
+a = sent
+yield
+a = a(sent)
+yield
+a = a(sent)
+yield
+a = a(sent)
+yield
+a = a(sent)
+yield
+b = b(sent)
+yield
+a - b(sent)
+
+(yield)(yield, yield)(yield, yield)
+yield
+a = sent
+yield
+b1 = sent
+yield
+b2 = sent
+a = a(b1,b2)
+yield
+b1 = sent
+yield
+a(b1, sent)
+
+(yield yield)[yield yield, l(), yield]
+yield; a = sent
+yield a; a = sent
+yield; b = sent
+yield b
+l()
+yield
+a[sent]
+
+(yield l()) * (l(), yield, l(), (yield)(l(), yield))
+yield l()
+a = sent
+l()
+yield
+l()
+yield
+b = sent
+c1 = l()
+yield
+a * b(c1, sent)
+
+if (state==a) {
+  state = -b; _r = l()
+  state = b; y = 1
+  return _r
+}
+if (state==b) {
+  state=-c
+  a = sent
+  l()
+  state=c;y=1
+  return
+}
+if (state==c) {
+  state=-e;
+  l()
+  state=e;y=1
+  return
+}
+if (state==e) {
+  state=-l
+  b=sent
+  c1=l()
+  state=l;y=1
+  return
+}
+a * b(c1, sent)
+
+  

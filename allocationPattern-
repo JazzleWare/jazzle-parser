@@ -1,0 +1,127 @@
+( ( (yield) * (yield) ) - (yield) ) - (yield)
+yield
+a = sent
+yield
+a = a * sent
+yield
+a = a - sent
+yield
+a - sent
+
+( l() * (yield) ) * (yield)
+a = l()
+yield
+a = a * sent
+yield
+a = a * sent
+
+( l() * (yield) ) * ( yield ) ->(a=l()) =
+( a * (yield) ) * (yield) ->(yield)
+
+var left = e.left
+var right = e.right
+
+var temp = ""
+if right@findYield() {
+  temp = `scope.allocTemp()
+  `transformLeft(e, temp, b)
+}
+
+l() * ( l() - (yield) )
+a = l()
+b = l()
+yield
+a * (b - sent)
+
+( l() * ( l() - (yield) ) ) * (l() - (yield) )
+a = l()
+b = l()
+yield
+a = a * (b-sent)
+b = l()
+yield
+a = a * (b-sent)
+
+-(l()*(l()-(yield)))*(l()-(yield))
+---l()*(l()-(yield))
+-----l() // a = l()
+-----l()-(yield)
+-------l() // b = l()
+-------yield // yield
+---l()-(yield)
+-----l()
+-----yield
+
+
+( ( l() - (yield) ) * l() ) * (l() - (yield) )
+a = l()
+yield
+a = (a-sent) * l()
+b = l()
+yield
+a = a * (b-sent)
+
+( ( l() - (yield) ) * (yield) ) * ( l() - (yield) )
+a = l()
+yield
+a = a - sent
+yield
+a = a * sent
+b = l()
+yield
+a = a * (b-sent)
+
+( ( l() - (yield) ) * l() ) * ( l() * 120 )
+a = l()
+yield
+( ( a - sent ) * l() ) * ( l() * 120 )
+
+( ( l() - (yield) ) * l() ) * ( l() * (yield) )
+a = l()
+yield
+a = ( (a - sent) * l() )
+b = l()
+yield
+a * (b - sent)
+
+var leftTemp = e.left@transformYields(b)
+if e.right@findYield() {
+   b.push( (leftTemp@synth_id, e.left)@assig_node )
+   e.left = leftTemp@synth_id
+}
+
+e.right@transformYields(b)	
+
+[]
+#[ [[l(),-,yield],*,yield],*,[l(),-,yeild] ]
+
+[a = l()]
+#[[ [a,-,yield],*,yield],*,[l(),-,yield] ]
+
+[a = l(); yield]
+#[[[a,-,sent],*,yield],*,[l(),-,yield]]
+
+[a = l(); yield; a = a - sent]
+#[[a,*,yield],*,[l(),-,yield]]
+
+[a = l(); yield; a = a - sent; yield]
+#[[a,*,sent],*,[l(),-,yield]]
+
+[a = l(); yield; a = a - sent; yield; a = a * sent]
+#[a,*,[l(),-,yield]]
+
+[a = l(); yield; a = a - sent; yield; a = a * sent; b = l()]
+#[a,*,[b,-,yield]]
+
+[a = l(); yield; a = a - sent; yield; a = a * sent; b = l(); yield]
+#[a,*,[b,-,sent]] == a * (b-sent)
+
+a = l()
+yield
+a = a - sent
+yield
+a = a * sent
+b = l()
+yield
+a * (b-sent)
+

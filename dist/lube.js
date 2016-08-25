@@ -777,7 +777,7 @@ function isSimpleCh(ch) {
    return (ch >= CHAR_A && ch <= CHAR_Z) ||
           (ch >= CHAR_a && ch <= CHAR_z) ||
           (ch === CHAR_UNDERLINE)        ||
-          (ch <= CHAR_0 && ch >= CHAR_9) ||
+          (ch <= CHAR_9 && ch >= CHAR_0) ||
           (ch === CHAR_$);
 }
    
@@ -848,8 +848,11 @@ this.emitters['Identifier'] = function(n) {
    this.emitContext = EMIT_CONTEXT_NONE;
    var name = n.name;
    var e = 0;
+   if ( name.length && name.charCodeAt(0) === CHAR_MODULO )
+     e++ ;
+     
    var nameString = "";
-   var simplePortionStart = 0;
+   var simplePortionStart = e;
    while ( e < name.length ) {
       var ch = name.charCodeAt(e);
       if ( isSimpleCh(ch) ) e++; 
@@ -1422,7 +1425,7 @@ function synth_expr_set_node(arr, isStatement ) {
 }
 
 function assig_node(left, right) {
-   return { type: 'AssignmentExpression', right: right, left: left };
+   return { type: 'AssignmentExpression',  operator: '=', right: right, left: left };
 }
 
 function cond_node(e, c, a) {
@@ -1437,11 +1440,11 @@ function findYield(n) {
    if (type === 'YieldExpression')
      return n;
 
-   this.assert(has.call(yieldFinders, type),
+   Emitter.prototype.assert(has.call(yieldFinders, type),
                'no yield finder: ' + type );
  
-   if (n.yieldLocation)
-     return n.yieldLocation;
+/* if (n.yieldLocation)
+     return n.yieldLocation; */
 
    return yieldFinders[type].call(n);
 }
@@ -1554,6 +1557,60 @@ function id_is_synth(n) {
    this.assert(id.type === 'Identifier');
    return n.name.charCodeAt() === CHAR_MODULO;
 }
+
+function findYieldInNames(n, list) {
+   var y = null;
+   var e = 0;
+   while (e < list.length) {
+      if (y=findYield(n[list[e]])) {
+        n.yieldLocation = list[e];
+        break;
+      }
+
+      e++ ;
+   }
+
+   return y;
+}
+
+this.transformBinaryExpression = function(n, b) {
+   var left = n.left;
+   var leftTemp = "";
+
+   if (left.type === 'YieldExpression') {
+     b.push(left);
+     n.left = synth_id_node('sent');
+   }
+   else if (left.type === 'BinaryExpression')
+     leftTemp = this.transformBinaryExpression(left, b);
+
+   if ( findYield(n.right) ) {
+     if ( leftTemp === "" )
+       leftTemp = this.scope.allocateTemp();
+
+     var id = synth_id_node(leftTemp);
+     b.push( assig_node( id, n.left) );
+     n.left = id;
+   }
+
+   var right = n.right;
+   var rightTemp = "";
+
+   if (right.type === 'YieldExpression') {
+     b.push(right);
+     n.right = synth_id_node('sent');
+   }
+   else if (right.type === 'BinaryExpression')
+     rightTemp = this.transformBinaryExpression(right, b);
+
+   if ( leftTemp !== "" && rightTemp !== "" )
+     this.scope.releaseTemp(rightTemp);
+
+   return leftTemp;
+};
+
+   
+          
 
 }]  ],
 [Parser.prototype, [function(){
