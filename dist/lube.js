@@ -4133,7 +4133,7 @@ this.expectID = function (n) {
 };
 
 this.expectType_soft = function (n)  {
-  if (this.lttype === n, 'expected ' + n + '; got ' + this.lttype  ) {
+  if (this.lttype === n ) {
       this.next();
       return !false;
   }
