@@ -1582,11 +1582,10 @@ this.transformBinaryExpression = function(n, b) {
      n.left = synth_id_node('sent');
    }
    else if (left.type === 'BinaryExpression')
-     leftTemp = this.transformBinaryExpression(left, b);
+     n.left = this.transformBinaryExpression(left, b);
 
    if ( findYield(n.right) ) {
-     if ( leftTemp === "" )
-       leftTemp = this.scope.allocateTemp();
+     leftTemp = this.scope.allocateTemp();
 
      var id = synth_id_node(leftTemp);
      b.push( assig_node( id, n.left) );
@@ -1594,19 +1593,18 @@ this.transformBinaryExpression = function(n, b) {
    }
 
    var right = n.right;
-   var rightTemp = "";
 
    if (right.type === 'YieldExpression') {
      b.push(right);
      n.right = synth_id_node('sent');
    }
    else if (right.type === 'BinaryExpression')
-     rightTemp = this.transformBinaryExpression(right, b);
+     n.right = this.transformBinaryExpression(right, b);
 
-   if ( leftTemp !== "" && rightTemp !== "" )
-     this.scope.releaseTemp(rightTemp);
+   if ( leftTemp !== "" )
+     this.scope.releaseTemp(leftTemp);
 
-   return leftTemp;
+   return n;
 };
 
    
