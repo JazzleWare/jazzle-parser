@@ -688,6 +688,16 @@ this.assigEmitters['ObjectPattern'] = function(head, name, isStatement) {
   }
 };
 
+this.emitters['YieldExpression'] = function(n) {
+  this.write('yield');
+  if (n.argument !== null) {
+    this.disallowWrap();
+    this.write(' '); 
+    this.emit(n.arguemnt);
+    this.restoreWrap()
+  }
+}; 
+      
 this._emitObjAssigElem = function(prop, name, isStatement) {
    var v = prop.value, k = prop.key;             
    var left = v, right = null;
@@ -767,3 +777,5 @@ this._emitObjAssigElem = function(prop, name, isStatement) {
    this.scope.releaseTemp(temp);
 };
    
+this.emitters['NoExpression'] = function(n) { return; };
+

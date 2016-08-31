@@ -332,4 +332,21 @@ if (state==e) {
 }
 a * b(c1, sent)
 
-  
+(yield && yield) && yield
+yield
+if(a=sent) {
+  yield
+  a = sent
+}
+if (a) {
+  yield
+}
+
+(yield && yield) && l()
+yield
+if(a=sent) {
+  yield
+  a = sent
+}
+a && l()
+ 

@@ -1,5 +1,5 @@
 function synth_id_node(name) {
-   return { type: 'Identifier', name: '%' + name };
+   return { type: 'Identifier', synth: !false, name: name };
 }
 
 function synth_expr_node(str) {
@@ -162,16 +162,34 @@ function findYieldInNames(n, list) {
    return y;
 }
 
-this.transformBinaryExpression = function(n, b) {
-   var left = n.left;
+var has = {}.hasOwnProperty;
+var transformerList = {};
+
+this.transformYield = function(n, b, isVal) {
+  if ( has.call(transformerList, n.type) )
+    return transformerList[n.type].call(this, n, b, isVal);
+  
+  return n;
+};
+
+function synth_not_node(n) {
+  return { type: 'UnaryExpression', operator: '!', argument: n};
+
+}
+
+function synth_if_node(cond, body, alternate) {
+  if (body.length > 1 || body[0].type === 'IfStatement' )
+    body = { type: 'BlockStatement', body : body };
+  else
+    body = body[0];
+
+  return { type: 'IfStatement', alternate: alternate || null, consequent: body, test: cond };
+}
+ 
+transformerList['BinaryExpression'] = function(n, b, isVal) {
    var leftTemp = "";
 
-   if (left.type === 'YieldExpression') {
-     b.push(left);
-     n.left = synth_id_node('sent');
-   }
-   else if (left.type === 'BinaryExpression')
-     n.left = this.transformBinaryExpression(left, b);
+   n.left = this.transformYield(n.left, b, !false);
 
    if ( findYield(n.right) ) {
      leftTemp = this.scope.allocateTemp();
@@ -181,14 +199,7 @@ this.transformBinaryExpression = function(n, b) {
      n.left = id;
    }
 
-   var right = n.right;
-
-   if (right.type === 'YieldExpression') {
-     b.push(right);
-     n.right = synth_id_node('sent');
-   }
-   else if (right.type === 'BinaryExpression')
-     n.right = this.transformBinaryExpression(right, b);
+   n.right = this.transformYield(n.right, b, !false );
 
    if ( leftTemp !== "" )
      this.scope.releaseTemp(leftTemp);
@@ -196,5 +207,49 @@ this.transformBinaryExpression = function(n, b) {
    return n;
 };
 
+var NOEXPRESSION = { type: 'NoExpression' };
+  
+transformerList['LogicalExpression'] = function(n, b, isVal) {
+   var temp = "";
+   n.left = this.transformYield (n.left, b, !false);
    
+   var id = null;
+
+   if (findYield(n.right)) {
+     if (isVal) {
+       temp = this.scope.allocateTemp();
+       if ( n.left.type !== 'Identifier' || n.left.name !== temp)
+         n.left = assig_node(synth_id_node(temp), n.left);
+
+       this.scope.releaseTemp(temp);
+     }
+
+     if (n.operator === '||')
+       n.left = synth_not_node(n.left);
+
+     var ifBody = [];
+     n.right = this.transformYield (n.right, ifBody, isVal);
+     if (isVal) {
+       temp = this.scope.allocateTemp();
+       if ( n.right.type !== 'Identifier' || n.right.name !== temp )
+         ifBody.push( assig_node(synth_id_node(temp), n.right));
+
+       this.scope.releaseTemp(temp);
+     }
+     else if (n.right.type !== 'Identifier' || n.right.name !== 'sent')
+       ifBody.push(n.right);
+
+     b. push( synth_if_node(n.left, ifBody) );       
+     return isVal ? synth_id_node(temp) : NOEXPRESSION ;
+   }
+
+   n.right = this.transformYield (n.right, b, isVal);
+   return n;
+};          
+     
+transformerList['YieldExpression'] = function(n, b, isVal) {
+   b. push(n);
+   return synth_id_node('sent');
+};
           
+        
