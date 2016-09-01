@@ -14,6 +14,10 @@ function synth_expr_set_node(arr, isStatement ) {
 }
 
 function assig_node(left, right) {
+   if (left.type === 'Identifier' && right.type === 'Identifier')
+     if (left.synth && left.name === right.name )
+       return left;
+  
    return { type: 'AssignmentExpression',  operator: '=', right: right, left: left };
 }
 
@@ -195,7 +199,9 @@ transformerList['BinaryExpression'] = function(n, b, isVal) {
      leftTemp = this.scope.allocateTemp();
 
      var id = synth_id_node(leftTemp);
-     b.push( assig_node( id, n.left) );
+     var assig = assig_node( id, n.left);
+     if (assig.type !== 'Identifier' || !assig.synth)
+        b.push( assig );
      n.left = id;
    }
 
@@ -236,7 +242,7 @@ transformerList['LogicalExpression'] = function(n, b, isVal) {
 
        this.scope.releaseTemp(temp);
      }
-     else if (n.right.type !== 'Identifier' || n.right.name !== 'sent')
+     else if (n.right.type !== 'Identifier' || !n.right.synth )
        ifBody.push(n.right);
 
      b. push( synth_if_node(n.left, ifBody) );       
