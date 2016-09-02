@@ -133,6 +133,7 @@ this .parseAssignment = function(head, context ) {
     var o = this.ltraw;
     var firstEA = null ;
 
+    var y = this.y;
     if ( o === '=' ) {
        if ( this.firstEA ) {
             this.defaultEA = this.firstEA;
@@ -173,10 +174,14 @@ this .parseAssignment = function(head, context ) {
       var parenYS = this.parenYS;
     }
 
+    this.y = 0;
     var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR ) ;
+    y += this.y;
+
     this.firstEA = firstEA;
     var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
-             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }};
+             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }, y: y };
+    this.y = y;
 
     if ( this.firstYS ) { // if there was a YS in the right hand side; for example [ e = yield ] = -->yield 12<--is yield!
        if ( context & CONTEXT_PARAM ) { 

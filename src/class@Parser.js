@@ -25,10 +25,13 @@ this. parseClass = function(context) {
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
      name = this.validateID(null); 
 
+  var y = this.y = 0;
+
   var classExtends = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
      this.next();
      classExtends = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE);
+     y += this.y;
   }
 
   var list = [];
@@ -77,7 +80,12 @@ this. parseClass = function(context) {
                elem = this.parseMeth(this.id(), CLASS_MEM);
                break SWITCH;
           }
-          case '[': elem = this.parseMeth(this.memberExpr(), CLASS_MEM); break;
+          case '[':
+              this.y = 0;
+              elem = this.memberExpr();
+              y += this.y;
+              elem = this.parseMeth(elem, CLASS_MEM);
+              break;
           case 'Literal': elem = this.parseMeth(this.numstr(), CLASS_MEM); break ;
 
           case ';': this.next(); continue;
@@ -112,11 +120,12 @@ this. parseClass = function(context) {
                    loc: { start: nbodyStartLoc, end: endLoc },
                    start: nbodyStartc,
                     end: this.c,
-                    body: list } };
+                    body: list }, y: y };
 
   this.expectType('}');
   if ( canBeStatement ) { this.foundStatement = !false; }
-
+  
+  this.y = y;
   return n;
 };
 

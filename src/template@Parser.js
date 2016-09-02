@@ -9,6 +9,7 @@ this . parseTemplateLiteral = function() {
       startColIndex = c ,
       ch = 0;
  
+  var y = 0;
   while ( c < len ) {
     ch = src.charCodeAt(c);
     if ( ch === CHAR_BACKTICK ) break; 
@@ -28,7 +29,10 @@ this . parseTemplateLiteral = function() {
               this.col += 2; // ${
              
               this.next(); // this must be done manually because we must have a lookahead before starting to parse an actual expression
+              this.y = 0;
               templExpressions.push( this.parseExpr(CONTEXT_NONE) );
+              y += this.y;
+
               if ( this. lttype !== '}')
                 this['templ.expr.is.unfinished']() ;
 

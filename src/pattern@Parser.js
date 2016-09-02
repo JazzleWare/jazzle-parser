@@ -28,15 +28,25 @@ this. parseArrayPattern = function() {
      this.inComplexArgs = !false;
   }
 
+  var y = 0;
+
   this.next();
   while ( !false ) {
+      this.y = 0;
       elem = this.parsePattern();
       if ( elem ) {
-         if ( this.lttype === 'op' && this.ltraw === '=' ) elem = this.parseAssig(elem);
+         y += this.y;
+         if ( this.lttype === 'op' && this.ltraw === '=' ) {
+           this.y = 0;  
+           elem = this.parseAssig(elem);
+           y += this.y; 
+         }
       }
       else {
          if ( this.lttype === '...' ) {
+           this.y = 0;
            list.push(this.parseRestElement());
+           y += this.y;
            break ;
          }  
       }
@@ -52,7 +62,9 @@ this. parseArrayPattern = function() {
   } 
 
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list};
+           start: startc, end: this.c, elements : list, y: y };
+
+  this.y = y;
 
   if ( !this. expectType_soft ( ']' ) )
      this['pat.array.is.unfinished'](elem);
@@ -69,6 +81,7 @@ this.parseObjectPattern  = function() {
     var val = null;
     var name = null;
 
+    var yObj = 0, yProp = 0;
     if ( this.isInArgList ) {
          this.inComplexArgs = !false;
     }
@@ -76,6 +89,7 @@ this.parseObjectPattern  = function() {
     LOOP:
     do {
       sh = false;
+      yProp = 0;
       this.next ()   ;
       switch ( this.lttype ) {
          case 'Identifier':
@@ -88,7 +102,9 @@ this.parseObjectPattern  = function() {
             break ;
 
          case '[':
+            this.y = 0;
             name = this.memberExpr();
+            yProp += this.y;
             this.expectType(':');
             val = this.parsePattern();
             break ;
@@ -102,13 +118,17 @@ this.parseObjectPattern  = function() {
          default:
             break LOOP;
       }
-      if ( this.lttype === 'op' && this.ltraw === '=' )
+      if ( this.lttype === 'op' && this.ltraw === '=' ) {
+        this.y = 0;
         val = this.parseAssig(val);
+        yProp += this.y;
+      }
 
+      yObj += yProp;
       list.push({ type: 'Property', start: name.start, key: core(name), end: val.end,
                   loc: { start: name.loc.start, end: val.loc.end },
                  kind: 'init', computed: name.type === PAREN, value: val,
-               method: false, shorthand: sh });
+               method: false, shorthand: sh, y: yProp });
 
     } while ( this.lttype === ',' );
 
@@ -116,8 +136,9 @@ this.parseObjectPattern  = function() {
              loc: { start: startLoc, end: this.loc() },
              start: startc,
               end: this.c,
-              properties: list };
+              properties: list, y: yObj };
 
+    this.y = yObj;
     if ( ! this.expectType_soft ('}') ) this['pat.obj.is.unfinished'](n);
 
     return n;
@@ -125,9 +146,11 @@ this.parseObjectPattern  = function() {
 
 this .parseAssig = function (head) {
     this.next() ;
+    var y = this.y;
+    this.y = 0;
     var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
     return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
-           right: core(e), loc: { start: head.loc.start, end: e.loc.end } };
+           right: core(e), loc: { start: head.loc.start, end: e.loc.end }, y: y + this.y };
 };
 
 
@@ -136,10 +159,11 @@ this.parseRestElement = function() {
        startLoc = this.locOn(1+2);
 
    this.next ();
+   this.y = 0;
    var e = this.parsePattern();
    if (!e ) this['rest.has.no.arg'](starc, startLoc);
 
-   return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
+   return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e, y: this.y };
 };
 
 

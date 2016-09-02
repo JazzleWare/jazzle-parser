@@ -29,17 +29,17 @@ function cond_node(e, c, a) {
 }
 
 function findYield(n) {
-   var type = n.type;
-   if (type === 'YieldExpression')
-     return n;
+  switch (n.type) {
+    case 'Identifier':
+    case 'Literal':
+       return 0;
 
-   Emitter.prototype.assert(has.call(yieldFinders, type),
-               'no yield finder: ' + type );
- 
-/* if (n.yieldLocation)
-     return n.yieldLocation; */
+    default:
+       if (n.y > 0)
+         return n.y--;
 
-   return yieldFinders[type].call(n);
+       return 0;
+  }  
 }
 
 var yieldFinders = {};

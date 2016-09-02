@@ -7,6 +7,7 @@ this.parseNewHead = function () {
   }
 
   var head, elem, inner;
+  var y = this.y = 0;
   switch (this  .lttype) {
     case 'Identifier':
        head = this.parseIdStatementOrId (CONTEXT_NONE);
@@ -41,6 +42,8 @@ this.parseNewHead = function () {
 
   }
 
+  y += this.y;
+
   var inner = core( head ) ;
   while ( !false ) {
     switch (this. lttype) {
@@ -48,15 +51,17 @@ this.parseNewHead = function () {
           this.next();
           elem = this.memberID();
           head =   {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };
+                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false, y: y };
           inner = head;
           continue;
 
        case '[':
           this.next() ;
+          this.y = 0;
           elem = this.parseExpr(CONTEXT_NONE) ;
+          y += this.y;
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false };
+                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false, y: y };
           inner = head ;
           if ( !this.expectType_soft (']') )
             this['mem.unfinished'](startc,startLoc);
@@ -65,28 +70,35 @@ this.parseNewHead = function () {
 
        case '(':
           elem = this. parseArgList();
+          y += this.y;
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
-                    loc: { start: startLoc, end: this.loc() }, arguments: elem };
+                    loc: { start: startLoc, end: this.loc() }, arguments: elem, y: y };
           if ( !this. expectType_soft (')') )
             this['new.args.is.unfinished'](startc,startLoc);
 
+          this.y = y;
           return inner;
 
        case '`' :
+           this.y = 0;
            elem = this.parseTemplateLiteral () ;
+           y += this.y;
            head = {
                 type : 'TaggedTemplateExpression' ,
                 quasi :elem ,
                 start: head.start,
                  end: elem.end,
                 loc : { start: head.loc.start, end: elem.loc.end },
-                tag : inner
+                tag : inner,
+                y: y
             };
             inner = head;
             continue ;
 
-        default: return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
-                 loc: { start: startLoc, end: head.loc.end }, arguments : [] };
+        default:
+            this.y = y;
+            return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
+                 loc: { start: startLoc, end: head.loc.end }, arguments : [], y: y };
 
      }
   }

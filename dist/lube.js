@@ -83,6 +83,7 @@ var Parser = function (src, isModule) {
   this.inComplexArgs = false;
 
   this.first__proto__ = false;
+  this.y = 0;
 };
 
 ;
@@ -1452,17 +1453,17 @@ function cond_node(e, c, a) {
 }
 
 function findYield(n) {
-   var type = n.type;
-   if (type === 'YieldExpression')
-     return n;
+  switch (n.type) {
+    case 'Identifier':
+    case 'Literal':
+       return 0;
 
-   Emitter.prototype.assert(has.call(yieldFinders, type),
-               'no yield finder: ' + type );
- 
-/* if (n.yieldLocation)
-     return n.yieldLocation; */
+    default:
+       if (n.y > 0)
+         return n.y--;
 
-   return yieldFinders[type].call(n);
+       return 0;
+  }  
 }
 
 var yieldFinders = {};
@@ -1708,19 +1709,20 @@ this.parseArrayExpression = function (context ) {
       firstYS = this.firstYS;
 
   var hasSpread = false;
-
+  var y = 0;
   do {
      this.firstUnassignable =
      this.firstParen = 
      this.unsatisfiedAssignment = 
      this.firstEA = 
      this.firstElemWithYS = null;
-
+     this.y = 0;
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
      if ( !elem && this.lttype === '...' ) {
          elem = this.parseSpreadElement();
          hasSpread = !false;
      }
+     y += this.y;
      if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
            if ( !(context & CONTEXT_ELEM) && 
                 this.err('err.prop.init', this.unsatisfiedAssignment) )
@@ -1768,8 +1770,8 @@ this.parseArrayExpression = function (context ) {
   this.firstYS = firstYS;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list, spread: hasSpread  };
-
+           start: startc, end: this.c, elements : list, spread: hasSpread, y: y  };
+  this.y = y;
   this. expectType ( ']' ) ;
 
   return elem;
@@ -2135,6 +2137,7 @@ this .parseAssignment = function(head, context ) {
     var o = this.ltraw;
     var firstEA = null ;
 
+    var y = this.y;
     if ( o === '=' ) {
        if ( this.firstEA ) {
             this.defaultEA = this.firstEA;
@@ -2175,10 +2178,14 @@ this .parseAssignment = function(head, context ) {
       var parenYS = this.parenYS;
     }
 
+    this.y = 0;
     var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR ) ;
+    y += this.y;
+
     this.firstEA = firstEA;
     var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
-             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }};
+             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }, y: y };
+    this.y = y;
 
     if ( this.firstYS ) { // if there was a YS in the right hand side; for example [ e = yield ] = -->yield 12<--is yield!
        if ( context & CONTEXT_PARAM ) { 
@@ -2231,10 +2238,13 @@ this. parseClass = function(context) {
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
      name = this.validateID(null); 
 
+  var y = this.y = 0;
+
   var classExtends = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
      this.next();
      classExtends = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE);
+     y += this.y;
   }
 
   var list = [];
@@ -2283,7 +2293,12 @@ this. parseClass = function(context) {
                elem = this.parseMeth(this.id(), CLASS_MEM);
                break SWITCH;
           }
-          case '[': elem = this.parseMeth(this.memberExpr(), CLASS_MEM); break;
+          case '[':
+              this.y = 0;
+              elem = this.memberExpr();
+              y += this.y;
+              elem = this.parseMeth(elem, CLASS_MEM);
+              break;
           case 'Literal': elem = this.parseMeth(this.numstr(), CLASS_MEM); break ;
 
           case ';': this.next(); continue;
@@ -2318,11 +2333,12 @@ this. parseClass = function(context) {
                    loc: { start: nbodyStartLoc, end: endLoc },
                    start: nbodyStartc,
                     end: this.c,
-                    body: list } };
+                    body: list }, y: y };
 
   this.expectType('}');
   if ( canBeStatement ) { this.foundStatement = !false; }
-
+  
+  this.y = y;
   return n;
 };
 
@@ -3615,6 +3631,7 @@ this .memberExpr = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next() ;
+  this.y = 0;
   var e = this.parseExpr(CONTEXT_NONE);
   if (!e) this['prop.dyna.no.expr'](startc,startLoc);
 
@@ -3638,6 +3655,7 @@ this.parseNewHead = function () {
   }
 
   var head, elem, inner;
+  var y = this.y = 0;
   switch (this  .lttype) {
     case 'Identifier':
        head = this.parseIdStatementOrId (CONTEXT_NONE);
@@ -3672,6 +3690,8 @@ this.parseNewHead = function () {
 
   }
 
+  y += this.y;
+
   var inner = core( head ) ;
   while ( !false ) {
     switch (this. lttype) {
@@ -3679,15 +3699,17 @@ this.parseNewHead = function () {
           this.next();
           elem = this.memberID();
           head =   {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };
+                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false, y: y };
           inner = head;
           continue;
 
        case '[':
           this.next() ;
+          this.y = 0;
           elem = this.parseExpr(CONTEXT_NONE) ;
+          y += this.y;
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false };
+                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false, y: y };
           inner = head ;
           if ( !this.expectType_soft (']') )
             this['mem.unfinished'](startc,startLoc);
@@ -3696,28 +3718,35 @@ this.parseNewHead = function () {
 
        case '(':
           elem = this. parseArgList();
+          y += this.y;
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
-                    loc: { start: startLoc, end: this.loc() }, arguments: elem };
+                    loc: { start: startLoc, end: this.loc() }, arguments: elem, y: y };
           if ( !this. expectType_soft (')') )
             this['new.args.is.unfinished'](startc,startLoc);
 
+          this.y = y;
           return inner;
 
        case '`' :
+           this.y = 0;
            elem = this.parseTemplateLiteral () ;
+           y += this.y;
            head = {
                 type : 'TaggedTemplateExpression' ,
                 quasi :elem ,
                 start: head.start,
                  end: elem.end,
                 loc : { start: head.loc.start, end: elem.loc.end },
-                tag : inner
+                tag : inner,
+                y: y
             };
             inner = head;
             continue ;
 
-        default: return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
-                 loc: { start: startLoc, end: head.loc.end }, arguments : [] };
+        default:
+            this.y = y;
+            return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
+                 loc: { start: startLoc, end: head.loc.end }, arguments : [], y: y };
 
      }
   }
@@ -4227,35 +4256,45 @@ this.expectID_soft = function (n) {
 },
 function(){
 this.parseExpr = function (context) {
+  this.y = 0;
   var head = this.parseNonSeqExpr(PREC_WITH_NO_OP,context );
 
   var lastExpr;
   if ( this.lttype === ',' ) {
     context &= CONTEXT_FOR;
-
+    var y = 0;
     var e = [core(head)] ;
     do {
       this.next() ;
+      this.y = 0;
       lastExpr = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
+      y += this.y;
       e.push(core(lastExpr));
     } while (this.lttype === ',' ) ;
 
+    this.y = y;
     return  { type: 'SequenceExpression', expressions: e, start: head.start, end: lastExpr.end,
-              loc: { start : head.loc.start, end : lastExpr.loc.end} };
+              loc: { start : head.loc.start, end : lastExpr.loc.end}, y: y };
   }
 
   return head ;
 };
 
 this .parseCond = function(cond,context ) {
+    var y = this.y;
     this.next();
+    this.y = 0;
     var seq = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
+    y += this.y;
     if ( !this.expectType_soft (':') )
       this['cond.colon']();
 
+    this.y = 0;
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
+    y += this.y;
+    this.y = y;
     return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
-             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt) };
+             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt), y: y };
 };
 
 this .parseUnaryExpression = function(context ) {
@@ -4273,10 +4312,11 @@ this .parseUnaryExpression = function(context ) {
   }
 
   this.next();
+  this.y = 0;
   var arg = this. parseNonSeqExpr(PREC_U,context|CONTEXT_UNASSIGNABLE_CONTAINER );
 
   return { type: 'UnaryExpression', operator: u, start: startc, end: arg.end,
-           loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg) };
+           loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg), y: this.y };
 };
 
 this .parseUpdateExpression = function(arg, context) {
@@ -4288,6 +4328,7 @@ this .parseUpdateExpression = function(arg, context) {
        c  = this.c-2;
        loc = this.locOn(2);
        this.next() ;
+       this.y = 0;
        arg = this. parseExprHead(context|CONTEXT_UNASSIGNABLE_CONTAINER );
        this.assert(arg); // TODO: this must have error handling
 
@@ -4295,7 +4336,7 @@ this .parseUpdateExpression = function(arg, context) {
          this['incdec.pre.not.simple.assig'](c,loc,arg);
 
        return { type: 'UpdateExpression', argument: core(arg), start: c, operator: u,
-                prefix: !false, end: arg.end, loc: { start: loc, end: arg.loc.end } };
+                prefix: !false, end: arg.end, loc: { start: loc, end: arg.loc.end }, y: this.y };
     }
 
     if ( !this.ensureSimpAssig_soft(core(arg)) )
@@ -4305,7 +4346,7 @@ this .parseUpdateExpression = function(arg, context) {
     loc = { start: arg.loc.start, end: { line: this.li, column: this.col } };
     this.next() ;
     return { type: 'UpdateExpression', argument: core(arg), start: arg.start, operator: u,
-             prefix: false, end: c, loc: loc };
+             prefix: false, end: c, loc: loc, y: this.y };
 
 };
 
@@ -4352,17 +4393,21 @@ this .parseO = function(context ) {
 this.parseNonSeqExpr = function (prec, context  ) {
     var firstUnassignable = null, firstParen = null;
 
+    this.y = 0;
     var head = this. parseExprHead(context);
+    var y = this.y;
 
     if ( head === null ) {
          switch ( this.lttype ) {
            case 'u':
            case '-':
               head = this. parseUnaryExpression(context & CONTEXT_FOR );
+              y += this.y;
               break ;
 
            case '--':
               head = this. parseUpdateExpression(null, context&CONTEXT_FOR );
+              y += this.y;
               break ;
 
            case 'yield':
@@ -4432,7 +4477,9 @@ this.parseNonSeqExpr = function (prec, context  ) {
        var o = this.ltraw;
        var currentPrec = this. prec;
        this.next();
+       this.y = 0;
        var right = this.parseNonSeqExpr(currentPrec, (context & CONTEXT_FOR)|CONTEXT_UNASSIGNABLE_CONTAINER );
+       y += this.y;
        head = { type: !isBin(currentPrec )  ? 'LogicalExpression' :   'BinaryExpression',
                 operator: o,
                 start: head.start,
@@ -4442,7 +4489,8 @@ this.parseNonSeqExpr = function (prec, context  ) {
                    end: right.loc.end
                 },
                 left: core(head),
-                right: core(right)
+                right: core(right),
+                y: y
               };
     }
   
@@ -4451,6 +4499,7 @@ this.parseNonSeqExpr = function (prec, context  ) {
       this.firstUnassignable = firstUnassignable;
     }
 
+    this.y = y;
     return head;
 };
 
@@ -4593,13 +4642,14 @@ function(){
 
 this .parseMeth = function(name, isClass) {
    var val = null; 
+   var y = this.y;
 
    if ( !isClass ) {
      val = this.parseFunc(CONTEXT_NONE,ARGLIST_AND_BODY,ANY_ARG_LEN );
      return { type: 'Property', key: core(name), start: name.start, end: val.end,
               kind: 'init', computed: name.type === PAREN,
               loc: { start: name.loc.start, end : val.loc.end },
-              method: !false, shorthand: false, value : val };
+              method: !false, shorthand: false, value : val, y: y };
    }
 
    var kind = 'method' ;
@@ -4620,7 +4670,7 @@ this .parseMeth = function(name, isClass) {
    return { type: 'MethodDefinition', key: core(name), start: name.start, end: val.end,
             kind: kind, computed: name.type === PAREN,
             loc: { start: name.loc.start, end: val.loc.end },
-            value: val,    'static': false };
+            value: val,    'static': false, y: y };
 };
 
 this .parseGen = function(isClass ) {
@@ -4628,6 +4678,7 @@ this .parseGen = function(isClass ) {
       startLoc = this.locOn(1);
   this.next();
   var name = null;
+  var y = 0;
 
   switch ( this.lttype ) {
      case 'Identifier':
@@ -4638,7 +4689,9 @@ this .parseGen = function(isClass ) {
         break ;
 
      case '[':
+        this.y = 0;
         name = this.memberExpr();
+        y = this.y;
         break ;
 
      case 'Literal' :
@@ -4659,13 +4712,15 @@ this .parseGen = function(isClass ) {
      return { type: 'Property', key: core(name), start: startc, end: val.end,
               kind: 'init', computed: name.type === PAREN,
               loc: { start: startLoc , end : val.loc.end },
-              method: !false, shorthand: false, value : val };
+              method: !false, shorthand: false, value : val, y: y };
   }
 
-  val = this.parseFunc(  CONTEXT_NONE , ARGLIST_AND_BODY_GEN|METH_FUNCTION, ANY_ARG_LEN )
+  val = this.parseFunc(  CONTEXT_NONE , ARGLIST_AND_BODY_GEN|METH_FUNCTION, ANY_ARG_LEN );
+
+  this.y = y;
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: 'method', computed: name.type === PAREN,
-           loc : { start: startLoc, end: val.loc.end },    'static': false, value: val };
+           loc : { start: startLoc, end: val.loc.end },    'static': false, value: val, y: y };
 };
 
 this . parseSetGet= function(isClass) {
@@ -4680,13 +4735,16 @@ this . parseSetGet= function(isClass) {
   var strName = null;
   var name = null;
 
+  var y = 0;
   switch ( this.lttype ) {
       case 'Identifier':
          if (isClass) strName = this.ltval;
          name = this.memberID();
          break;
       case '[':
+         this.y = 0;
          name = this.memberExpr();
+         y = this.y;
          break;
       case 'Literal':
          if (isClass) strName = this.ltval;
@@ -4702,10 +4760,11 @@ this . parseSetGet= function(isClass) {
   var val = null;
   if ( !isClass ) {
        val = this.parseFunc ( CONTEXT_NONE, ARGLIST_AND_BODY, kind === 'set' ? 1 : 0 ); 
+       this.y = y;
        return { type: 'Property', key: core(name), start: startc, end: val.end,
              kind: kind, computed: name.type === PAREN,
              loc: { start: startLoc, end: val.loc.end }, method: false,
-             shorthand: false, value : val };
+             shorthand: false, value : val, y: y };
   }
   
   if ( strName === 'constructor' )
@@ -4713,9 +4772,10 @@ this . parseSetGet= function(isClass) {
 
   val = this.parseFunc ( CONTEXT_NONE , ARGLIST_AND_BODY|METH_FUNCTION, kind === 'set' ? 1 : 0 )
 
+  this.y = y;
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: kind, computed: name.type === PAREN,
-           loc : { start: startLoc, end: val.loc.end }, 'static': false, value: val };
+           loc : { start: startLoc, end: val.loc.end }, 'static': false, value: val, y: y };
 };
 
 
@@ -4745,6 +4805,8 @@ this.parseObjectExpression = function (context) {
   else
     context = context & CONTEXT_PARAM|CONTEXT_ELEM;
 
+  var y = 0;
+
   do {
      this.next();
      this.unsatisfiedAssignment = null;
@@ -4754,6 +4816,7 @@ this.parseObjectExpression = function (context) {
      this.firstElemWithYS = null;
 
      elem = this.parseProperty(null,context);
+
      if ( !first__proto__ && this.first__proto__ )
           first__proto__ =  this.first__proto__ ;
 
@@ -4767,6 +4830,8 @@ this.parseObjectExpression = function (context) {
 
      if ( elem ) {
        list.push(elem);
+       y += this.y;
+
        if (!unsatisfiedAssignment && this.unsatisfiedAssignment ) {
            if (!( context & CONTEXT_ELEM)  ) this['assig.unsatisfied']() ;
            unsatisfiedAssignment =  this.unsatisfiedAssignment ;
@@ -4787,8 +4852,9 @@ this.parseObjectExpression = function (context) {
 
   } while ( this.lttype === ',' );
 
+  this.y = y;
   elem = { properties: list, type: 'ObjectExpression', start: startc,
-     end: this.c , loc: { start: startLoc, end: this.loc() }};
+     end: this.c , loc: { start: startLoc, end: this.loc() }, y: y };
 
   if ( ! this.expectType_soft ('}') )
     this['obj.unfinished'](elem);
@@ -4814,7 +4880,7 @@ this.parseProperty = function (name, context) {
   var __proto__ = false, first__proto__ = this.first__proto__ ;
   var val = null;
   
-
+  var y = 0;
   SWITCH:
   if ( name === null ) switch ( this.lttype  ) {
       case 'op':
@@ -4841,7 +4907,9 @@ this.parseProperty = function (name, context) {
             break SWITCH;
 
       case '[':
+            this.y = 0;
             name = this.memberExpr();
+            y += this.y;
             break SWITCH;
 
       default: return null;
@@ -4854,13 +4922,16 @@ this.parseProperty = function (name, context) {
          if ( __proto__ && first__proto__ ) this['obj.proto.has.dup'](name, first__proto__ ) ;
 
          this.next();
+         this.y = 0;
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
+         y += this.y;
          val = { type: 'Property', start: name.start, key: core(name), end: val.end,
                   kind: 'init', loc: { start: name.loc.start, end: val.loc.end }, computed: name.type === PAREN ,
-                  method: false, shorthand: false, value: core(val) };
+                  method: false, shorthand: false, value: core(val), y: y };
          if ( __proto__ )
             this.first__proto__ = val;
 
+         this.y = y;
          return val;
 
       case '(':
@@ -4881,7 +4952,7 @@ this.parseProperty = function (name, context) {
 
           return { type: 'Property', key: name, start: val.start, end: val.end,
                     loc: val.loc, kind: 'init',  shorthand: !false, method: false,
-                   value: val, computed: false };
+                   value: val, computed: false, y: 0 };
   }
 
        return n   ;
@@ -4921,15 +4992,25 @@ this. parseArrayPattern = function() {
      this.inComplexArgs = !false;
   }
 
+  var y = 0;
+
   this.next();
   while ( !false ) {
+      this.y = 0;
       elem = this.parsePattern();
       if ( elem ) {
-         if ( this.lttype === 'op' && this.ltraw === '=' ) elem = this.parseAssig(elem);
+         y += this.y;
+         if ( this.lttype === 'op' && this.ltraw === '=' ) {
+           this.y = 0;  
+           elem = this.parseAssig(elem);
+           y += this.y; 
+         }
       }
       else {
          if ( this.lttype === '...' ) {
+           this.y = 0;
            list.push(this.parseRestElement());
+           y += this.y;
            break ;
          }  
       }
@@ -4945,7 +5026,9 @@ this. parseArrayPattern = function() {
   } 
 
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list};
+           start: startc, end: this.c, elements : list, y: y };
+
+  this.y = y;
 
   if ( !this. expectType_soft ( ']' ) )
      this['pat.array.is.unfinished'](elem);
@@ -4962,6 +5045,7 @@ this.parseObjectPattern  = function() {
     var val = null;
     var name = null;
 
+    var yObj = 0, yProp = 0;
     if ( this.isInArgList ) {
          this.inComplexArgs = !false;
     }
@@ -4969,6 +5053,7 @@ this.parseObjectPattern  = function() {
     LOOP:
     do {
       sh = false;
+      yProp = 0;
       this.next ()   ;
       switch ( this.lttype ) {
          case 'Identifier':
@@ -4981,7 +5066,9 @@ this.parseObjectPattern  = function() {
             break ;
 
          case '[':
+            this.y = 0;
             name = this.memberExpr();
+            yProp += this.y;
             this.expectType(':');
             val = this.parsePattern();
             break ;
@@ -4995,13 +5082,17 @@ this.parseObjectPattern  = function() {
          default:
             break LOOP;
       }
-      if ( this.lttype === 'op' && this.ltraw === '=' )
+      if ( this.lttype === 'op' && this.ltraw === '=' ) {
+        this.y = 0;
         val = this.parseAssig(val);
+        yProp += this.y;
+      }
 
+      yObj += yProp;
       list.push({ type: 'Property', start: name.start, key: core(name), end: val.end,
                   loc: { start: name.loc.start, end: val.loc.end },
                  kind: 'init', computed: name.type === PAREN, value: val,
-               method: false, shorthand: sh });
+               method: false, shorthand: sh, y: yProp });
 
     } while ( this.lttype === ',' );
 
@@ -5009,8 +5100,9 @@ this.parseObjectPattern  = function() {
              loc: { start: startLoc, end: this.loc() },
              start: startc,
               end: this.c,
-              properties: list };
+              properties: list, y: yObj };
 
+    this.y = yObj;
     if ( ! this.expectType_soft ('}') ) this['pat.obj.is.unfinished'](n);
 
     return n;
@@ -5018,9 +5110,11 @@ this.parseObjectPattern  = function() {
 
 this .parseAssig = function (head) {
     this.next() ;
+    var y = this.y;
+    this.y = 0;
     var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
     return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
-           right: core(e), loc: { start: head.loc.start, end: e.loc.end } };
+           right: core(e), loc: { start: head.loc.start, end: e.loc.end }, y: y + this.y };
 };
 
 
@@ -5029,10 +5123,11 @@ this.parseRestElement = function() {
        startLoc = this.locOn(1+2);
 
    this.next ();
+   this.y = 0;
    var e = this.parsePattern();
    if (!e ) this['rest.has.no.arg'](starc, startLoc);
 
-   return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
+   return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e, y: this.y };
 };
 
 
@@ -5046,6 +5141,8 @@ this.parseExprHead = function (context) {
   var head = null;
   var inner = null;
   var elem = null;
+
+  var y = 0;
 
   if ( this. pendingExprHead ) {
       head = this. pendingExprHead;
@@ -5063,6 +5160,7 @@ this.parseExprHead = function (context) {
 
             head = this. parseArrayExpression(
               context & (CONTEXT_UNASSIGNABLE_CONTAINER|CONTEXT_PARAM) );
+            y += this.y;
             if ( this. unsatisfiedAssignment )
                return head ;
 
@@ -5073,7 +5171,9 @@ this.parseExprHead = function (context) {
 
         case '(' :
             this.arrowParen = !false;
+            this.y = 0;
             head = this. parseParen() ;
+            y += this.y;
             if ( this.unsatisfiedArg )
                return head ;
 
@@ -5084,6 +5184,7 @@ this.parseExprHead = function (context) {
 
             head = this. parseObjectExpression(
               context & (CONTEXT_UNASSIGNABLE_CONTAINER|CONTEXT_PARAM) ) ;
+            y += this.y;
             if ( this.unsatisfiedAssignment )
               return head;
 
@@ -5098,6 +5199,7 @@ this.parseExprHead = function (context) {
 
         case '`' :
             head = this. parseTemplateLiteral () ;
+            y += head.y;
             break ;
 
         case 'Literal':
@@ -5127,15 +5229,17 @@ this.parseExprHead = function (context) {
             elem  = this.memberID();
             this.assert(elem);
             head = {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };
+                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false, y: y };
             inner =  head ;
             continue;
 
          case '[':
             this.next() ;
+            this.y = 0;
             elem   = this. parseExpr(PREC_WITH_NO_OP,CONTEXT_NONE ) ;
+            y += this.y;
             head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                      loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false };
+                      loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false, y: y };
             inner  = head ;
             if ( !this.expectType_soft (']') )
                this['mem.unfinished'](head);
@@ -5144,8 +5248,9 @@ this.parseExprHead = function (context) {
 
          case '(':
             elem  = this. parseArgList() ;
+            y += this.y;
             head =  { type: 'CallExpression', callee: inner , start: head.start, end: this.c,
-                      arguments: elem, loc: { start: head.loc.start, end: this.loc() } };
+                      arguments: elem, loc: { start: head.loc.start, end: this.loc() }, y: y };
             if ( !this.expectType_soft (')'   ) )
                this['call.args.is.unfinished'](head);
 
@@ -5154,13 +5259,15 @@ this.parseExprHead = function (context) {
 
           case '`' :
             elem = this. parseTemplateLiteral();
+            y += elem.y;
             head = {
                   type : 'TaggedTemplateExpression',
                   quasi : elem,
                   start: head.start,
                    end: elem.end,
                   loc : { start: head.loc.start, end: elem.loc.end },
-                  tag : inner
+                  tag : inner,
+                  y: y
              };
  
              inner = head;
@@ -5235,12 +5342,14 @@ this.parseParen = function () {
        
   var firstEA = null;
 
+  var y = 0;
   while ( !false ) {
      this.firstParen = null;
      this.next() ;
      this.unsatisfiedAssignment = null;
      this.firstEA = null;
      this.firstElemWithYS = null;
+     this.y = 0;
      elem =   // unsatisfiedArg ? this.parsePattern() :
             this.parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
 
@@ -5261,6 +5370,7 @@ this.parseParen = function () {
         break;
      }
 
+     y += this.y;
      if ( !firstParen && this.firstParen )
            firstParen =  this.firstParen ;
 
@@ -5298,7 +5408,7 @@ this.parseParen = function () {
   // if we have a list, the expression in parens is a seq
   if ( list )
        elem = { type: 'SequenceExpression', expressions: list, start: firstElem .start , end: elem.end,
-               loc: { start:  firstElem .loc.start , end: elem.loc.end } };
+               loc: { start:  firstElem .loc.start , end: elem.loc.end }, y: y };
   // otherwise update the expression's paren depth if it's needed
   if ( elem ) {
     elem = core(elem); 
@@ -5333,6 +5443,7 @@ this.parseParen = function () {
 
   if ( ! this.expectType_soft (')') ) this['paren.unfinished'](n);
 
+  this.y = y;
   return n;
 };
 
@@ -5352,17 +5463,24 @@ this.parseArgList = function () {
     var elem = null;
     var list = [];
 
+    var y = 0;
     do { 
        this.next();
+       this.y = 0;
        elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CONTEXT_NULLABLE ); 
-       if ( elem )
+       if ( elem ) {
+         y += this.y;
          list.push (core(elem));
-       else if ( this.lttype === '...' )
+       }
+       else if ( this.lttype === '...' ) {
          list.push(this.parseSpreadElement());
+         y += this.y;
+       }
        else
          break ;
     } while ( this.lttype === ',' );
 
+    this.y = y;
     return list ;
 };
 
@@ -6248,6 +6366,7 @@ this . parseTemplateLiteral = function() {
       startColIndex = c ,
       ch = 0;
  
+  var y = 0;
   while ( c < len ) {
     ch = src.charCodeAt(c);
     if ( ch === CHAR_BACKTICK ) break; 
@@ -6267,7 +6386,10 @@ this . parseTemplateLiteral = function() {
               this.col += 2; // ${
              
               this.next(); // this must be done manually because we must have a lookahead before starting to parse an actual expression
+              this.y = 0;
               templExpressions.push( this.parseExpr(CONTEXT_NONE) );
+              y += this.y;
+
               if ( this. lttype !== '}')
                 this['templ.expr.is.unfinished']() ;
 
@@ -6580,17 +6702,23 @@ this.parseYield = function(context) {
   var c = this.c, li = this.li, col = this.col;
   var startc = this.c0, startLoc = this.locBegin();
 
+  var y = 1;
   this.next();
   if (  !this.newLineBeforeLookAhead  ) {
      if ( this.lttype === 'op' && this.ltraw === '*' ) {
             deleg = !false;
             this.next();
+            this.y = 0;
             arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CONTEXT_FOR );
+            y += this.y;
             if (!arg )
               this['yield.has.no.expr.deleg'](startc,startLoc);
      }
-     else
+     else {
+        this.y = 0;
         arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CONTEXT_FOR)|CONTEXT_NULLABLE );
+        y += this.y;
+     }
   }
 
   var endI, endLoc;
@@ -6599,11 +6727,12 @@ this.parseYield = function(context) {
   else { endI = c; endLoc = { line: li, column: col }; }  
 
   var n = { type: 'YieldExpression', argument: arg && core(arg), start: startc, delegate: deleg,
-           end: endI, loc: { start : startLoc, end: endLoc } }
+           end: endI, loc: { start : startLoc, end: endLoc }, y: y }
 
   if ( !this.firstYS )
         this.firstYS = n;
  
+  this.y = y;
   return n;
 };
 
