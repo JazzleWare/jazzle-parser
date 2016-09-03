@@ -205,12 +205,14 @@ this.parseNonSeqExpr = function (prec, context  ) {
          if ( this. newLineBeforeLookAhead )
            break ;
          head = this. parseUpdateExpression(head, context & CONTEXT_FOR ) ;
+         y = this.y;
          continue;
        }
        if ( isQuestion(this.prec) ) {
           if ( prec === PREC_WITH_NO_OP ) {
             head = this. parseCond(head, context&CONTEXT_FOR );
           }
+          y = this.y;
           break ;
        }
 
@@ -235,6 +237,7 @@ this.parseNonSeqExpr = function (prec, context  ) {
                 right: core(right),
                 y: y
               };
+       this.y = y;
     }
   
     if ( prec === PREC_WITH_NO_OP ) {

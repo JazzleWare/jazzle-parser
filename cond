@@ -1,0 +1,91 @@
+(yield) ? (yield) : (yield)
+yield
+if(sent){
+  yield
+}
+else {
+  yield
+}
+
+(yield) ? l() : (yield)
+yield
+if(sent) l()
+else yield
+
+((yield) ? l() : (yield)) * ((yield) ? e() : l())
+yield
+if(sent)a=l()
+else {
+  yield
+  a=sent
+}
+yield
+a * (sent ? e() : l())
+
+((yield) ? (yield) : (yield)) * ((yield) ? (yield) : e())
+yield
+if (sent) {
+  yield
+  a= sent
+}
+else {
+  yield
+  a= sent
+}
+yield
+if (sent) {
+  yield
+  b=sent
+}
+else {
+  b=e()
+}
+
+(l() ? e() ? yield : 12 : yield) * 120      l() ? e() ? yield : l : yield
+if(l()) {                                   if (l()) {
+  if (e()) {                                   if (e())
+    yield                                        yield
+    a= sent
+  }
+  else                                         else
+    a= 12                                         l
+}                                           }
+else {                                      else {
+  yield                                       yield
+  a= sent                                  
+}                                           }
+a * 120
+
+n.test = this.transform(n.test, b, IS_VAL);
+if(y(n.consequent) || y(n.alternate)) {
+  var ifB = [];
+  var temp = "";
+  var assig = null
+  n.consequent = this.transform(n.consequent, ifB, vMode ); 
+  if (vMode == IS_VAL) {
+    temp = `scope.allocateTemp()
+    assig = assig_node(temp#synth_id, n.consequent)
+    if (assig)
+      ifB.push(assig)
+    `scope.releaseTemp(temp)
+  }
+  var elseB = []
+  n.alternate = this.transform(n.alternate, elseB, vMode );
+  if (vMode == IS_VAL) {
+    temp = `scope.allocateTemp()
+    assig = assig_node(temp#synth_id, n.alternate)
+    if assig: elseB.push(assig)
+    `scope.releaseTemp(temp)
+  }
+  b.push(synth_if(n.test, ifB, elseB))
+  return vMode == IS_VAL ? temp#synth_id : NOEXPRESSION
+}
+n.consequent = `transform(n.consequent, b, vMode)
+n.alternate = `transform(n.alternate, b, vMode)
+return n
+    
+        
+    
+    
+        
+  
