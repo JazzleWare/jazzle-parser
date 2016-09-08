@@ -1,0 +1,98 @@
+(yield)[l()] = l()
+yield
+sent[l()] = l()
+
+e[yield] = l()
+a = e
+yield
+a[sent] = l()
+
+e[yield] = yield
+a = e
+yield
+b = sent
+yield
+a[b] = sent
+
+(yield)[l()](l())
+yield
+sent[l()](l())
+
+e[yield](l())
+a = e
+yield
+a[sent](l())
+
+e[yield](yield)
+a = e
+yield
+b = a[sent]
+yield
+_call.call(b, a, sent)
+
+e.l(yield)
+a = e
+b = a.l
+yield 
+_call.call(b, a, sent)
+
+e[(yield) * (yield)](l())
+a = e
+yield
+b = sent
+yield
+b = b * sent
+a[b](l())
+
+e[yield](yield)
+a = e
+yield
+b = a[sent]
+yield
+_call.call(b, a, sent)
+
+(yield)[l()](l())
+yield
+sent[l()](l())
+
+(yield)[yield](l())
+yield
+a = sent
+yield
+a[sent](l())
+
+(l())[yield]
+
+if !y(n) { return n }
+var callee = n.callee
+if callee.type == 'Identifier' {
+  `transformCallArgs(n)
+  return n
+}
+  
+var yProp = callee.property.computed && y(callee.property),
+    yArg = y(n) - yProp - y(object) 
+
+callee.object = `transform(callee.object, b, IS_VAL)
+
+var objTemp = ""
+if yProp || yArg {
+   objTemp = `scope.allocateTemp()
+   b#append_assig(objTemp, callee.object)
+   callee.object = objTemp#synth_id
+}
+
+if yProp: callee.property = `transform(callee.property)
+var propTemp = ""
+if yArg {
+   propTemp = `scope.allocateTemp()
+   b#append_assig(propTemp, callee.property)
+   callee.property = propTemp#synth_id
+   return `call_call(objTemp, propTemp, n.arguments)
+}  
+
+if objTemp != "": `scope.releaseTemp(objTemp) 
+return n
+
+  
+  

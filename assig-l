@@ -1,0 +1,359 @@
+(yield)[yield] = yield
+yield
+a = sent
+yield
+b = sent
+yield
+a[b] = sent
+
+[ (yield)[yield] ] = yield
+yield
+a = sent
+yield
+b = sent
+yield
+[ a[b] ] = sent
+
+[ (yield)[yield] = yield ] = l() * yield
+yield
+a = sent
+yield
+b = sent
+yield
+
+[a,b] = e
+_temp = arrDec(e)
+a = _temp.get()
+b = _temp.get()
+
+{a: _a, b: _b} = e
+_temp = objDec(e)
+_a = _temp.get('a')
+_b = _temp.get('b')
+
+[(yield)[yield], (yield)[yield], (yield)[yield], (yield)[yield]] = yield
+yield
+a1 = sent
+yield
+b1 = sent
+
+yield
+a2 = sent
+yield
+b2 = sent
+
+yield
+an = sent
+yield
+bn = sent
+
+yield
+a_ = sent
+yield
+b_ = sent
+
+yield
+
+sent = arrIter(sent)
+
+a1[b1] = sent.get()
+a2[b2] = sent.get()
+an[bn] = sent.get()
+a_[b_] = sent.get()
+
+sent.val
+
+[(yield)[yield]=yield]=l()
+yield
+a= sent
+yield
+b= sent
+e = arrIter(l())
+_temp = e.get()
+if (_u(_temp)) {
+  yield
+  _temp = sent
+}
+a[b] = _temp
+
+a = yield // `assig::Identifier(a = yield)
+[a] = yield // `assig::ArrayPattern([a] = yield)
+
+[a] = yield
+yield
+_temp = arrIter(sent)
+a = _temp.get()
+
+[a=yield] = yield
+yield
+_temp = arrIter(sent)
+if unORnull(a1 = _temp.get()) {
+  yield
+  a1 = sent
+}
+a = a1
+  
+transformElem(left, defaultVal, right, b) {
+   if (defaultVal == null) {
+     b. push(assig_node(left, right))
+     return
+   }
+
+   var temp = `scope.allocateTemp()@synth_id
+   var cond = synth_call( UNORNULL, [synth_assig(id, right)] ),
+       ifBody = []
+   right = id
+   `scope.releaseTemp(temp.name)
+   defaultVal = `transform(defaultVal, isBody, IS_VAL)
+   
+   temp = `scope.allocateTemp()@synth_id
+   append_assig(temp, defaultVal)
+   defaultVal = temp
+   `scope.releaseTemp(temp.name)
+
+   b. push(ifSynth(cond, ifBody))
+   b. appendAssig(left, defaultVal)
+       
+       
+   
+   
+}  
+
+[a = (yield) && (yield)] = yield
+yield
+_temp = arrIter(sent)
+if unORnull (a1 = _temp.get()) {
+  yield
+  if ( a1 = sent ) {
+    yield
+    a1 = sent
+  }
+}
+a = a1
+
+[[a[b]], c[l] ] = yield
+a1 = a
+b1 = b
+a2 = c
+b2 = l
+yield
+_temp = arrIter(sent)
+elem([a1[b1]], #(_temp.get())) = {
+  _temp1 = arrIter(_temp.get());
+  elem(a1[b1], #(_temp1.get())) = {
+    a1[b1] = _temp1.get()
+  }
+}
+elem(a2[b2], #(_temp.get())) = {
+  a2[b2]=_temp.get()
+}
+
+a1 = a
+b1 = b
+a2 = c
+b2 = l
+yield
+_temp = arrIter(sent)
+_temp1 = arrIter(_temp.get())
+a1[b1] = _temp1.get()
+a2[b2] = _temp.get()
+
+({[a]: b[c], [l]: (yield)[yield]} = l() )
+n1 = a
+b1 = b
+e1 = c
+n2 = l
+yield
+a2 = sent
+yield 
+_temp = objIter(l())
+elem(b1[e1], #(_temp.get(n1))) = {
+  b1[e1] = _temp.get(n1)
+}
+
+elem(a2[sent], #(_temp.get(n2))) = {
+  a2[sent] = _temp.get(n2)
+}
+
+n1 = a
+b1 = b
+e1 = c
+n2 = l
+yield
+a2 = sent
+yield
+_temp = objIter(l())
+b1[e1] = _temp.get(n1)
+a2[sent] = _temp.get(n2)
+
+tempList = [];
+`addElemEval(n.left, b, temp, y(n))
+
+[a[yield]] = 12
+a1 = a
+yield
+_temp = arrIter(12)
+a1[sent] = _temp.get()
+
+[a[yield]=yield] = 12
+a1 = a
+yield
+b1 = sent
+_temp = arrIter(12)
+if unORnull(_temp1 = _temp.get()) {
+  yield
+  _temp1 = sent
+}
+a1[b1] = _temp1
+
+( { [l()]: a[yield] } = l() )
+n1 = l()
+a1 = a
+yield
+_temp = arrIter(sent)
+a1[sent] = _temp.get()
+
+( { [yield]: a } ) = l()
+yield
+( { [sent]: a } = l() )
+
+( { [l()]: (yield)[e()] } = l() )
+n1 = l()
+yield
+( { [n1]: sent[e()] } = l() // NO - n1 
+
+ 
+( { [l()]: a[e] } = yield } )
+
+  
+[ // _temp; _temp = arrIter(sent) 
+  l()[0], a1[b1] = _temp.get()
+  [ a1; a1 = arrIter(_temp.get())
+      l()[0], a2[b2] = a1.get()
+      [ a2; a2 = arrIter(a1.get())
+           l()[0], // an[b] = a2.get()
+           [ an; an = arrIter(a2.get())
+               l()[0], // al[bl] = an.get()
+               [ // al; al = arrIter(an.get())
+                 l()[0] // a_[b_] = al.get()
+               ]
+           ]
+      ]
+  ]
+] = l(yield)
+
+a1 = l()
+b1 = 0
+a2 = l()
+b2 = 0
+an = l()
+bn = 0
+al = l()
+bl = 0
+a_ = l()
+b_ 0
+e = l
+yield
+_temp = arrIter(e(sent))
+a1[b1] = _temp.get()
+a1 = arrIter(_temp.get())
+a2[b2] = a1.get()
+a2 = arrIter(a1.get())
+an[bn] = a2.get()
+an = a2.get()
+al[bl] = an.get()
+al = an.get()
+a_[b_] = al.get()
+
+[ a[b], [ c[yield] ] ] = l()
+a1 = a
+b1 = b
+a2 = c
+yield
+_temp = arrIter(l())
+
+assigElem(left, right, b) {
+   var defaultVal = null
+   if left.type === 'AssignmentExpression' {
+     var n = left
+     defaultVal = n.right
+     left = n.left
+   }
+
+   var defaultTemp = ""
+   if (defaultVal !== null) {
+      defaultTemp = this.scope.allocateTemp()
+      append_assig(b, defaultTemp, right)
+      this.scope.releaseTemp(defaultTemp)
+      var ifBody = []
+      defaultVal = this.transform(defaultVal, isBody, IS_VAL)
+      defaultTemp = this.scope.allocateTemp()
+      append_assig(b, defaultTem, defaultVal)
+      right = synth_id_node(defaultTemp)
+      this.scope.releaseTemp(defaulteTemp)
+      b. push(ifSynth(right, ifBody))
+   }
+           
+   return transformAssig[left.type].call(this, left, right, b)
+}
+
+transformAssig['ArrayPattern'] = function(left, right, b) {
+   var tempIter = `scope.allocateTemp()
+   append_assig(b, tempIter, synth_call_node(ARR_ITER, [synth_id_node(tempIter)]))
+   var next = (tempIter#synth_id, GET)#synth_mem#synth_call()
+   
+   var list = left.elements, e = 0
+   for e in 0..<list.length:
+      `assigElem(list[e], next, b)
+   
+   `scope.releaseTemp(tempIter)
+}
+
+transformAssig['Identifier'] = function(left, right, b) {
+   b. push(assig_node(left, right))
+}
+
+transformAssig['ObjectPattern'] = function(left, right, b) {
+   var tempIter = `scope.allocateTemp()
+   append_assig(b, tempIter, synth_call(OBJ_ITER, [tempIter#id]))
+
+   var e = 0, list = left.properties
+   for e in 0..<list.length { 
+      var elem = lits[e]
+      var next = (tempIter#id, GET)#synth_mem#synth_call([elem.computed ? elem.key :
+          elem.key.type === 'Identifier' ? elem.key.name#synth_str : elem.key])
+      if elem.computed && elem.key.type === 'Identifier' && elem.key.synth:
+        this.scope.releaseTemp(elem.key.name)
+      `assigElem(elem.value, next, b)
+   }        
+
+   `scope.releaseTemp(tempIter)
+}
+
+transformAssig['MemberExpression'] = function(left, right, b) {
+  b. push((left, right)#assig_node)
+  var e = left.object
+  if e.type === 'Identifier' && e.synth { `scope.releaseTemp(e.name) }
+  if !e.computed: return 
+  e = left.property
+  if e.type === 'Identifier' && e.synth { `scope.releaseTemp(e.name) }
+}
+
+[a] = yield
+yield
+_temp = arrIter(sent)
+a = _temp.get()
+
+([a] = yield) && l()
+yield
+_temp = arrIter(sent)
+a = _temp.get()
+_temp.val && l()
+
+e = ([a] = l()) && (yield)
+if ( _temp = ([a] = l())) {
+  yield
+  _temp = sent
+}
+e = _temp
+
