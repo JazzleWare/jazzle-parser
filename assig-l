@@ -357,3 +357,237 @@ if ( _temp = ([a] = l())) {
 }
 e = _temp
 
+[ l = { [yield]: e } = yield, e ] = 12;
+_temp = arrIter(12)
+_temp1 = _temp.get()
+if unORnull(_temp1) {
+   yield
+   _temp1 = sent
+   yield
+   _temp2 = objIter(sent)
+   e = _temp2.get(_temp1)
+   _temp1 = _temp2.val
+}
+
+l = { [yield 12]: e1 } = yield
+yield 12
+<alloc>=a
+a =sent
+yield
+<alloc>=b
+b= objIter(sent)
+
+l = { [yield 12]: e1 } = { [yield 120]: e2 } = yield
+yield 12
+_temp = sent
+yield 120
+_temp1 = sent
+yield
+_temp2 = objIter(sent)
+e2 = _temp2.get(_temp1)
+_temp2 = objIter(_temp2.val)
+
+// TEMP ALLOCATION MUST BE LIFO, that is, the latest must be released first 
+[l = {[yield 12]: e1} = yield] = yield
+yield
+_temp = arrIter(sent)
+_temp1 = _temp.get()
+if unORnull(_temp1) {
+  // release _temp1 (this is the first scenario)
+  // {[yield 12]: e1} = yield
+  yield 12
+  _temp1 = sent
+  yield
+  _temp2 = objIter(sent)
+  e1 = _temp2.get(_temp1)
+
+
+[l = {[yield 12]: e1} = yield ] = yield 120
+yield 120
+<alloc>=_temp // [] -> _temp
+_temp = arrIter(sent)
+<alloc>=_temp1 // [_temp] -> _temp _temp1
+_temp1=_temp.get()
+if unORnull(_temp1) {
+   <free(_temp1)> // _temp _temp1 - _temp1 -> _temp
+   // { [yield 12]: e1 } = yield
+   yield 12
+   <alloc>=_temp1 // [_temp] -> _temp _temp1
+   _temp1 = sent
+   yield
+   <alloc>=_temp2 // [_temp _temp1] -> _temp _temp1 _temp2
+   _temp2 = objIter(sent)
+   e1 = _temp2.get(_temp1)
+   // this is the location where the temp release order matters
+
+   
+[a = {[yield 12]: e1, [yield 120]: l = (yield) * (yield) } = yield] = yield l
+                                                                      
+yield l                                                             yield l
+<alloc>=_temp                                                       _temp {
+_temp = arrIter(sent)                                                  _temp = arrIter(
+<alloc>=_temp1                                                         _temp1 {
+_temp1 = _temp.get()                                                      _temp1 = _temp.get()
+if unORnull(_temp1) {                                                  }; if unORnull(_temp1) {
+  <free(_temp1)>                                                          yield 12
+  // {[yield 12]:e1, [yield 120]: l = (yield) * (yield)} = yield          _temp1 {
+  yield 12                                                                   _temp1 = sent
+  <alloc>=_temp1                                                             
+  _temp1 = sent
+  yield 120
+  <alloc>=_temp2
+  _temp2 = sent
+  yield
+  <alloc>=_tempE
+  _tempE = objIter(sent)
+
+  // [yield 12]: e1
+  e1 = _tempE.get(_temp1)
+  <free(_temp1)>
+
+  // [ yield 120]: l = (yield) * (yield)
+  <alloc>=_temp1
+  _temp1 = _tempE.get(temp2)
+  <free(_temp2)>
+  if unORnull(_temp1) {
+     <free(_temp1)>
+     yield
+     <alloc>=_temp1
+     _temp1 = sent
+     <free (_temp1)>
+     yield
+     <alloc>=_temp1
+     _temp1 = _temp1 * sent
+     <free(_temp1)>
+  }
+  l = _temp1
+  <free(_temp(E)>
+
+  <alloc>=_temp1 
+  _temp1 = _tempE.val
+}
+a = _temp1
+
+[ a = {[yield 12]: e1} = yield ] = yield
+yield
+<alloc>=_temp
+_temp = arrIter(sent)
+<alloc>=_temp1
+_temp1 = _temp.get()
+<free(_temp1)>
+(!unORnull(_temp1) && _temp1) || ({[yield 12]: e1} = yield})    
+<alloc>=_temp1
+_temp1 = !unORnull(_temp1) && _temp1
+<free(_temp1)>
+if !_temp1 {
+  yield 12
+  <alloc>=_temp1
+  _temp1 = sent
+  yield
+  <alloc>=_temp2
+  _temp2 = objIter(sent)
+  e1 = _temp2.get()
+  <free(_temp1)>
+  <free(_temp2)>   <--------------------------<-------------------<----<----<--------<---<------|
+                                                                                                |
+  <alloc>=_temp1 // but currently it returns _temp2, because it is the latest name released-----|
+  _temp1 = _temp2.val
+  <free(_temp1)>
+}
+a = _temp1
+
+{ [l()]: a = yield } = 12
+a1 = l()
+_temp = objIter(12)
+_temp1 = _temp.get()
+if unORnull(_temp1) {
+  yield
+  _temp1 = sent
+}
+a = _temp1
+
+       {[yield]: 12, [yield]: 12} = yield
+          a             b             c
+alloc-order: a -> b -> c
+release-oredr: a -> b -> c
+
+(yield) * ((yield) * ((yield)*(yield)))
+  a          b           c     <sent>
+alloc-order: a -> b -> c
+release-order: c -> b -> a
+
+{[yield mem]: (yield obj)[yield name] = (yield dl)*(yield dr)} = (yield al)*(yield ar)
+    a             b            c              e                       d 
+
+alloc-model: >a >b >c >d >e <a <e <b <c <d 
+
+yield mem
+<alloc>=a
+a = sent // yield mem
+yield obj
+<alloc>=b
+b = sent // yield obj
+yield name
+<alloc>=c
+c = sent // yield name
+yield al
+<alloc>=d
+d = sent // yield al
+<free(d)>
+yield ar
+<alloc>=d
+d = objIter(d * sent) // (yield al) * (yield ar)
+<alloc>=e
+e = d.get(a)
+<free(a)>
+if unORnull(e) {
+  <free(e)>
+  yield dl
+  <alloc>=e
+  e = sent
+  <free(e)>
+  yield dr
+  <alloc>=e
+  e = e * sent
+  <free(e)>
+}
+b[c] = e
+<free(b)>
+<free(c)>
+d.val
+<free(d)>
+
+
+{[yield mem]: (yield obj)[yield name] = (yield dl) * (yield dr)} = (yield al)*((yield ar1)*(yield ar2))
+       d             c          b                                         a
+>a >b >c >d
+yield mem
+d = sent
+yield obj
+c = sent
+yield name
+b = sent
+yield al
+a = sent
+yield ar1
+<alloc>=e
+e = sent
+<free(e)>
+yield ar2
+a = arrIter(a * (e * sent))
+<free(d)>
+<alloc>=d
+d = a.get(d)
+<free(d)>
+if unORnull(d) {
+   yield dl
+   <alloc>=d
+   d = sent
+   yield dr
+   <free(d)>
+   d = (d) -> #null
+}
+c[b] = 
+
+   
+   d = d * sent

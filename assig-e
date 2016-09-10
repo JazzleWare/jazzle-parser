@@ -262,3 +262,45 @@ transform_an_assignment_whose_left_is['ArrayPattern'] = function(n, b, vMode) {
     var hasDefaultYield = `prepareLeft(n.left, b, tempList)
     
                   
+n = transformAssig[n.left.type].call(this, n, b)
+if n.type === 'AssignmentExpression': return n
+return vMode ? n#memS(VAL) : NOEXPRESSION
+
+[(yield)[(yield) * ((yield) * (yield))] = (yield)[yield]
+    c            b                               a
+
+<alloc>=a
+<alloc>=b
+<alloc>=c
+<free(c)>
+yield
+<alloc>=c
+c = sent
+<free(b)>
+yield
+<alloc>=b
+b = sent
+yield
+<alloc>=d
+d = sent
+yield
+<free(d)>
+<free(b)>
+<alloc>=b
+b = b * (d * sent )
+<free(a)>
+yield
+<alloc>=a
+a = sent
+yield
+<free(a)>
+<alloc>=a
+a = arrIter(a[sent])
+c[b] = a.get()
+<free(c)>
+<free(b)>
+<free(a)>
+
+
+
+

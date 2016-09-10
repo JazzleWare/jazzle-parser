@@ -294,7 +294,7 @@ this.evaluateAssignee = function( assignee, b, yc ) {
 
         if (yc) {
           var t = this.scope.allocateTemp();
-          append_assig(t, assignee.key);
+          append_assig(b, t, assignee.key);
           assignee.key = synth_id_node(t);
         }
       }
@@ -373,9 +373,9 @@ this.assigElement = function(left, right, b) {
          ifBody = [];
 
      defaultVal = this.transformYield(defaultVal, ifBody, IS_VAL);
-     defTemp = this.scope.allocateTemp(); // lolhehe
+//   defTemp = this.scope.allocateTemp(); // lolhehe
      append_assig(ifBody, defTemp, defaultVal);
-     this.scope.releaseTemp(defTemp);
+//   this.scope.releaseTemp(defTemp);
      right = synth_id_node(defTemp);
      b. push( synth_if_node(cond, ifBody ) ); 
    }
@@ -387,6 +387,8 @@ transformAssig['Identifier'] = function(n, b) {
   return n;
 };
 
+var VAL = synth_id_node('val');
+var ARR_ITER = synth_id_node('arrIter');
 transformAssig['ArrayPattern'] = function(n, b) {
 
   var right = n.right,
@@ -394,7 +396,7 @@ transformAssig['ArrayPattern'] = function(n, b) {
       list = n.left.elements,
       temp = this.scope.allocateTemp();
 
-  n.right = this.transformYield(n.right, b, IS_VAL);
+  right = synth_call_node(ARR_ITER, [n.right]);
   append_assig(b, temp, right);
   var next = synth_call_node(
               synth_mem_node(synth_id_node(temp),
@@ -407,20 +409,22 @@ transformAssig['ArrayPattern'] = function(n, b) {
 
   this.scope.releaseTemp(temp);
 
-  return synth_id_node(temp);
+  return synth_mem_node( synth_id_node(temp), VAL );
 };
 
+var OBJ_ITER = synth_id_node('objIter');
 transformAssig['ObjectPattern'] = function(n, b) {
    var temp = this.scope.allocateTemp(), e = 0, list = n.left.properties; 
 
-   append_assig(b, temp, n.right);
+   var right = synth_call_node(OBJ_ITER, [n.right]);
+   append_assig(b, temp, right);
    
    while (e < list.length) {
       var prop = list[e];
-      var k = prop.key;
+      var k = prop.key, releaseName = "";
       if (k.type === 'Identifier') {
          if (prop.computed) {
-           if (k.synth) this.scope.releaseTemp(k.name);
+           if (k.synth) releaseName = k.name;
          }
          else
            k = synth_literal_node(k.name);
@@ -430,13 +434,16 @@ transformAssig['ObjectPattern'] = function(n, b) {
                    [k]
                  );
       var assig = this.assigElement(list[e].value, next, b);
+      if ( releaseName !== "" )
+        this.scope.releaseTemp(releaseName);
+
       if (assig.type === 'AssignmentExpression') b. push(assig);
       e++ ;
    } 
 
    this.scope.releaseTemp(temp);
    
-   return synth_id_node(temp);
+   return synth_mem_node( synth_id_node(temp), VAL ) ;
 };
  
 transformAssig['MemberExpression'] = function(n, b) {
