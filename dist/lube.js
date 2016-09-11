@@ -1695,7 +1695,9 @@ transformAssig = {};
 
 transformerList['AssignmentExpression'] = function(n, b, vMode) {
    var lefttype = n.left.type;
+   var temp = this.scope.allocateTemp();
    this.evaluateAssignee(n.left, b, y(n));
+   this.scope.releaseTemp(temp);
 
    n.right = this.transformYield(n.right, b, IS_VAL);
    var assigValue = transformAssig[lefttype].call(this, n, b);
@@ -1722,6 +1724,8 @@ this.evaluateAssignee = function( assignee, b, yc ) {
           assignee.key = synth_id_node(t);
         }
       }
+
+      assignee = assignee.value;
     }
             
     if (assignee.type === 'AssignmentPattern' )
@@ -1797,9 +1801,9 @@ this.assigElement = function(left, right, b) {
          ifBody = [];
 
      defaultVal = this.transformYield(defaultVal, ifBody, IS_VAL);
-//   defTemp = this.scope.allocateTemp(); // lolhehe
+     defTemp = this.scope.allocateTemp(); // lolhehe
      append_assig(ifBody, defTemp, defaultVal);
-//   this.scope.releaseTemp(defTemp);
+     this.scope.releaseTemp(defTemp);
      right = synth_id_node(defTemp);
      b. push( synth_if_node(cond, ifBody ) ); 
    }
@@ -1845,10 +1849,10 @@ transformAssig['ObjectPattern'] = function(n, b) {
    
    while (e < list.length) {
       var prop = list[e];
-      var k = prop.key, releaseName = "";
+      var k = prop.key;
       if (k.type === 'Identifier') {
          if (prop.computed) {
-           if (k.synth) releaseName = k.name;
+           if (k.synth) this.scope.releaseTemp( k.name );
          }
          else
            k = synth_literal_node(k.name);
@@ -1858,8 +1862,6 @@ transformAssig['ObjectPattern'] = function(n, b) {
                    [k]
                  );
       var assig = this.assigElement(list[e].value, next, b);
-      if ( releaseName !== "" )
-        this.scope.releaseTemp(releaseName);
 
       if (assig.type === 'AssignmentExpression') b. push(assig);
       e++ ;

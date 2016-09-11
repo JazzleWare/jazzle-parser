@@ -301,6 +301,32 @@ c[b] = a.get()
 <free(b)>
 <free(a)>
 
-
-
+{ [yield]: (yield)[yield] = l(yield) } = yield
+<alloc>=temp
+yield
+<alloc>=temp1
+temp1 = sent
+yield
+<alloc>=temp2
+temp2 = sent
+yield
+<alloc>=tempn
+tempn = sent
+<free(temp)>
+yield
+<alloc>=temp
+temp = objIter(sent)
+<free(temp1)>
+<alloc>=temp1
+temp1 = objIter.get(temp1)
+<free(temp1)>
+if unORnull(temp1) {
+  <alloc>=temp1
+  temp1 = l
+  yield
+  <free(temp1)>
+  <alloc>=temp1
+  temp1 = temp1(sent)  
+}
+temp2[tempn] = temp1
 
