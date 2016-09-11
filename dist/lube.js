@@ -1714,7 +1714,7 @@ transformerList['AssignmentExpression'] = function(n, b, vMode) {
 
 this.evaluateAssignee = function( assignee, b, yc ) {
     if (assignee.type === 'Property' || assignee.type === 'AssignmentProperty' ) {
-      if (assignee.computed && y(assignee.key) ) {
+      if (assignee.computed && yc ) {
         yc -= y(assignee.key);
         assignee.key = this.transformYield(assignee.key, b, IS_VAL);
 
@@ -1787,6 +1787,8 @@ function synth_literal_node(value) {
    return { type: 'Literal', value: value };
 }
 
+var UNORNULL = synth_id_node('unORnull');
+
 this.assigElement = function(left, right, b) {
    var defaultVal = null;
 
@@ -1795,10 +1797,10 @@ this.assigElement = function(left, right, b) {
      defaultVal = n.right;
      left = n.left;
      var defTemp = this.scope.allocateTemp();
-     append_assig(b, defTemp, right);
+     var cond =  assig_node(synth_id_node( defTemp), right);
+     cond = synth_call_node(UNORNULL, [cond]);
      this.scope.releaseTemp(defTemp);
-     var cond = synth_id_node(defTemp),
-         ifBody = [];
+     var ifBody = [];
 
      defaultVal = this.transformYield(defaultVal, ifBody, IS_VAL);
      defTemp = this.scope.allocateTemp(); // lolhehe

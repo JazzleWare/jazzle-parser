@@ -330,3 +330,21 @@ if unORnull(temp1) {
 }
 temp2[tempn] = temp1
 
+[a = {[yield]: e = l()} = yield] = yield
+yield
+temp = arrIter(sent)
+temp1 = temp.get()
+if unORnull(temp1) {
+  yield
+  temp2 = sent
+  yield
+  temp1 = objIter(sent)
+  temp2 = temp1.get(temp2)
+  if unORnull(temp2):
+     temp2 = l()
+  e = temp2
+  temp1 = temp1.val
+}
+a = temp1
+
+
