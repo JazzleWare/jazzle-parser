@@ -50,7 +50,7 @@ var has = {}.hasOwnProperty;
 var transformerList = {};
 
 this.transformYield = function(n, b, isVal) {
-  if ( has.call(transformerList, n.type) )
+  if ( y(n) && has.call(transformerList, n.type) )
     return transformerList[n.type].call(this, n, b, isVal);
   
   return n;
@@ -365,6 +365,8 @@ function synth_literal_node(value) {
 
 var UNORNULL = synth_id_node('unORnull');
 
+this.is_sent_var = function(id) { return id.name === 'sent'; };
+
 this.assigElement = function(left, right, b) {
    var defaultVal = null;
 
@@ -430,7 +432,7 @@ transformAssig['ObjectPattern'] = function(n, b) {
       var k = prop.key;
       if (k.type === 'Identifier') {
          if (prop.computed) {
-           if (k.synth) this.scope.releaseTemp( k.name );
+           if (k.synth && !this.is_sent_var(k)) this.scope.releaseTemp( k.name );
          }
          else
            k = synth_literal_node(k.name);
