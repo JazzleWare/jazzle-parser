@@ -67,7 +67,12 @@ function synth_if_node(cond, body, alternate) {
   else
     body = body[0];
 
-  return { type: 'IfStatement', alternate: alternate || null, consequent: body, test: cond };
+  if(alternate)
+    alternate = alternate.length > 1 ? { type: 'BlockStatement', body: alternate } : alternate[0];
+  else
+    alternate = null;
+
+  return { type: 'IfStatement', alternate: alternate, consequent: body, test: cond };
 }
 
 var IS_REF = 1,
@@ -84,6 +89,12 @@ function append_assig(b, left, right) {
   if ( assig ) b.push(assig);
 }
    
+function append_non_synth(b, nexpr) {
+  if (nexpr.type !== 'Identifier' || !nexpr.synth )
+    b. push(nexpr);
+
+}
+
 transformerList['BinaryExpression'] = function(n, b, vMode) {
    var leftTemp = "";
 
@@ -206,12 +217,12 @@ function synth_call_node(callee, argList) {
 
 }
 
-var FUNC_PROTO_CALL_VAR_NAME = synth_id_node('_call'), FUNC_PROTO_CALL = synth_id_node('call');
+var FUNC_PROTO_CALL = synth_id_node('call');
 
 function call_call(thisObj, callee, argList) {
    return synth_call_node(
-      synth_mem_node(FUNC_PROTO_CALL_VAR_NAME, FUNC_PROTO_CALL, false),
-      [synth_id_node(callee), synth_id_node(thisObj)].concat(argList)
+      synth_mem_node(synth_id_node(callee), FUNC_PROTO_CALL, false),
+      [synth_id_node(thisObj)].concat(argList)
    );
 }
    
@@ -331,10 +342,9 @@ this.evaluateAssignee = function( assignee, b, yc ) {
           var objTemp = "";
           var propTemp = "";
           var objY = y(assignee.object);
-          var propY = assignee.property.computed ? y(assignee.property) : 0;
+          var propY = assignee.computed ? y(assignee.property) : 0;
 
           assignee.object = this.transformYield(assignee.object, b, IS_VAL);
-          yc -= objY;
           if (yc) {
             objTemp = this.scope.allocateTemp();
             append_assig( b, objTemp, assignee.object);
@@ -343,7 +353,6 @@ this.evaluateAssignee = function( assignee, b, yc ) {
         
           if (assignee.computed) {
             assignee.property = this.transformYield(assignee.property, b, IS_VAL);
-            yc -= propY;
             if (yc) {
               propTemp = this.scope.allocateTemp();
               append_assig(b, propTemp, assignee.property );
@@ -366,6 +375,11 @@ function synth_literal_node(value) {
 var UNORNULL = synth_id_node('unORnull');
 
 this.is_sent_var = function(id) { return id.name === 'sent'; };
+
+this.release_if_synth = function(nexpr) {
+  if ( nexpr.type === 'Identifier' && !this.is_sent_var(nexpr) && nexpr.synth )
+    this.scope.releaseTemp(nexpr.name);
+};
 
 this.assigElement = function(left, right, b) {
    var defaultVal = null;
@@ -455,12 +469,45 @@ transformAssig['ObjectPattern'] = function(n, b) {
 transformAssig['MemberExpression'] = function(n, b) {
    var left = n.left;
    if (left.object.type === 'Identifier' && left.object.synth)
-     this.scope.releaseTemp(left.object.name);
+     this.release_if_synth(left.object);
 
    if (left.property.type === 'Identifier' && left. property.synth)
-     this.scope.releaseTemp(left.property.name);
+     this.release_if_synth(left.property);
 
    return n;
 };
 
-   
+transformerList['ConditionalExpression'] = function( n, b, vMode ) {
+  var yAll = y(n), yTest = y(n.test) ;
+  n.test = this.transformYield(n.test, b, IS_VAL);
+  yAll -= yTest;
+  if (!yAll)
+    return n;
+  
+  var ifB = [];
+
+  n.consequent = this.transformYield(n.consequent, ifB, vMode);
+  var temp = "";
+  if (vMode) {
+    temp = this.scope.allocateTemp();
+    append_assig(ifB, temp, n.consequent);
+    this.scope.releaseTemp(temp);
+  }
+  else
+    append_non_synth(ifB, n.consequent);
+
+  var elseB = [];
+
+  n.alternate = this.transformYield(n.alternate, elseB, vMode);
+  if (vMode) {
+    temp = this.scope.allocateTemp();
+    append_assig(elseB, temp, n.alternate);
+    this.scope.releaseTemp(temp);
+  }
+  else
+    append_non_synth(elseB, n.alternate);
+
+  b. push(synth_if_node(n.test, ifB, elseB));
+  return vMode ? synth_id_node(temp) : NOEXPRESSION;
+};
+  

@@ -1,0 +1,42 @@
+yield ? l() : yield
+
+yield
+if sent { l() }
+else { yield }
+
+( yield ? l() : yield ) * ( l() ? yield : l() )
+yield
+if sent { a = l() }
+else { 
+  yield 
+  a =  sent
+}
+
+if l() {
+  yield
+  b = sent
+}
+else { b = l() }
+a * b
+
+ yield ? ( yield ? ( yield ? yield : l() ) : l() ) : l()
+ yield 
+ if sent {
+    yield
+    if sent {
+       yield
+       if sent {
+          yield
+          a = sent
+       }
+       else 
+          a = l()
+    }
+    else
+       a = l()
+ }
+ else
+    a = l()
+
+       
+

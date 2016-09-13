@@ -104,6 +104,7 @@ this.parseExprHead = function (context) {
             y += this.y;
             head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                       loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false, y: y };
+            this.y = y;
             inner  = head ;
             if ( !this.expectType_soft (']') )
                this['mem.unfinished'](head);
