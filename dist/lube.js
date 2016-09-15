@@ -688,13 +688,18 @@ this._writeArray = function(list, start) {
    this.write('[');
    var e = start;
    while ( e < list.length ) {
-      if ( list[e].type === 'SpreadElement' )
+      if ( list[e] !== null && list[e].type === 'SpreadElement' )
         break;
 
       if ( e !== start )
         this.write(', ');
+
+      if ( list[e] === null )
+        this.write('null');
  
-      this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP );
+      else
+        this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP );
+ 
       e++;
    }
    this.write(']');
@@ -1935,6 +1940,33 @@ transformerList['ConditionalExpression'] = function( n, b, vMode ) {
   return vMode ? synth_id_node(temp) : NOEXPRESSION;
 };
   
+transformerList['ArrayExpression'] = function(n, b, vMode) {
+   var list = n.elements, e = 0, yc = y(n), elem = null;
+
+   while (yc) {
+     if (e > 0 && elem !== null ) {
+       var temp = this.scope.allocateTemp();
+       append_assig(b, temp, list[e-1]);
+       list[e-1] = synth_id_node(temp);
+     }
+     elem = list[e];
+     if (elem) {
+       list[e] = this.transformYield(list[e], b, vMode);
+       yc -= y(elem);
+     }
+     e++;
+   } 
+
+   e = list.length - 1;
+   while (e >= 0) {
+     if ( list[e] !== null )
+       this.release_if_synth(list[e]);
+     e--;
+   }
+
+   return n;
+};
+
 
 }]  ],
 [Parser.prototype, [function(){

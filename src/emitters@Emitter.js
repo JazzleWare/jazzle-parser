@@ -48,13 +48,18 @@ this._writeArray = function(list, start) {
    this.write('[');
    var e = start;
    while ( e < list.length ) {
-      if ( list[e].type === 'SpreadElement' )
+      if ( list[e] !== null && list[e].type === 'SpreadElement' )
         break;
 
       if ( e !== start )
         this.write(', ');
+
+      if ( list[e] === null )
+        this.write('null');
  
-      this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP );
+      else
+        this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP );
+ 
       e++;
    }
    this.write(']');
