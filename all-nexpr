@@ -1,24 +1,26 @@
-'ArrayExpression' 
-'ArrowFunctionExpression'
-'AssignmentExpression'  
-'AssignmentPattern'
-'AssignmentProperty'
-'BinaryExpression' 
-'CallExpression' 
-'ClassBody'
-'ClassExpression'
-'ConditionalExpression' 
-'FunctionExpression'
-'Identifier' 
-'Literal' 
-'LogicalExpression' 
-'MemberExpression' 
-'MetaProperty'
+                                
+'ArrayExpression'            yield                                   emitter
+'ArrowFunctionExpression'    not-needed                                        
+'AssignmentExpression'       yield                                   emitter
+'AssignmentPattern'          yield (with AssignmentExpression)       emitter                                   
+'AssignmentProperty'         yield (with AssignmentExpression)       emitter                                        
+'BinaryExpression'           yield                                   emitter
+'CallExpression'             yield                                   emitter 
+'ClassBody'                                                          
+'ClassExpression'                                                    
+'ConditionalExpression'      yield                                   emitter                                              
+'FunctionExpression'         not-needed                                         
+'Identifier'                 not-needed                              emitter
+'Literal'                    not-needed                              emitter
+'LogicalExpression'          yield                                   emitter 
+'MemberExpression' val       yield                                   emitter          
+'MemberExpression' ref       yield                                   emitter (same as val)          
+'MetaProperty'                
 'MethodDefinition'
 'NewExpression' 
 'ObjectExpression'
-'ArrayPattern'
-'ObjectPattern'
+'ArrayPattern'               yield (with AssignmentExpression)       emitter
+'ObjectPattern'              yield (with AssignmentExpression)
 'Property'
 'RestElement'
 'SequenceExpression' 
@@ -27,7 +29,7 @@
 'TaggedTemplateExpression'
 'TemplateElement'
 'TemplateLiteral'
-'ThisExpression' 
+'ThisExpression'             not-needed 
 'UnaryExpression' 
 'UpdateExpression' 
 'YieldExpression'

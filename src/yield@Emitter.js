@@ -538,3 +538,41 @@ transformerList['ArrayExpression'] = function(n, b, vMode) {
    return n;
 };
 
+transformerList['ObjectExpression'] = function(n, b, vMode) {
+   var e = 0,
+       list = n.properties,
+       yc = y(n),
+       temp = this.scope.allocateTemp(),
+       currentY = 0;
+
+   var nameTemp = "", valTemp = "";
+
+   var objID = synth_id_node(temp);
+
+   while (e < list.length) {
+      var elem = list[e], val = elem.value, name = elem.key;
+      name = this.transformYield(name, b, IS_VAL);
+      if (y(val)) {
+          nameTemp = this.scope.allocateTemp();
+          append_assig(b, nameTemp, name);
+          name = synth_id_node(nameTemp);
+      }     
+      val = this.transformYield(val, b, IS_VAL);
+      b. push(
+         assig_node(
+           synth_mem_node(objID, name, !false),
+           val 
+         ) 
+      );
+
+      if (valTemp !== "" ) this.scope.releaseTemp(valTemp);
+      if (nameTemp !== "") this.scope.releaseTemp(nameTemp);
+
+      e++ ;
+   }
+ 
+   this.scope.releaseTemp(temp);
+
+   return vMode ? objID : NOEXPRESSION;
+};
+        
