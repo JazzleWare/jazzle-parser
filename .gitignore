@@ -10,6 +10,8 @@ bench/
 cond
 allocation*
 all-*
+pfodder.js
 call
 *-
+testEmitter.js
 
