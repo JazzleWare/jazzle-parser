@@ -11,6 +11,7 @@ cond
 allocation*
 all-*
 pfodder.js
+early-*
 call
 *-
 testEmitter.js
