@@ -2,8 +2,8 @@ lube.html
 node_modules
 npm-debug.log
 .sw[a-z]
-assig-
-assig
+assig-*
+assig*
 wiki/
 bench/
 

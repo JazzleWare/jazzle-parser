@@ -1207,7 +1207,7 @@ function isSimpAssigHead(head) {
        return !false;
    
     default:
-       return false;
+       return head.type === 'SynthesizedExpr' ;
   }
 }
 
@@ -1338,7 +1338,7 @@ this.emitters['YieldExpression'] = function(n) {
   if (n.argument !== null) {
     this.disallowWrap();
     this.write(' '); 
-    this.emit(n.arguemnt);
+    this.emit(n.argument);
     this.restoreWrap()
   }
 }; 
@@ -1423,6 +1423,7 @@ this._emitObjAssigElem = function(prop, name, isStatement) {
 };
    
 this.emitters['NoExpression'] = function(n) { return; };
+this.emitters['SynthesizedExpr'] = function(n) { this.write(n.contents); };
 
 
 },
@@ -1463,6 +1464,7 @@ function y(n) {
     case 'Literal':
     case 'FunctionExpression':
     case 'Identifier':
+    case 'SynthesizedExpr':
        return 0;
 
     default:
@@ -1586,6 +1588,9 @@ transformerList['LogicalExpression'] = function(n, b, vMode) {
 };          
      
 transformerList['YieldExpression'] = function(n, b, vMode) {
+   if (n.argument)
+     n.argument = this.transformYield(n.argument,b, IS_VAL);
+
    b. push(n);
    return synth_id_node('sent');
 };
@@ -1596,16 +1601,18 @@ transformerList['UpdateExpression'] = function(n, b, vMode) {
 };
 
 transformerList['MemberExpression'] = function(n, b, vMode) {
-   n.object = this.transformYield(n.object, b, vMode);
+   n.object = this.transformYield(n.object, b, IS_VAL);
    var objTemp = "";
    if (y(n.property)) {
      objTemp = this.scope.allocateTemp();
-     n.object = synth_id_node(objTemp);
      append_assig(b, objTemp, n.object);
-     this.scope.releaseTemp(objTemp);
+     n.object = synth_id_node(objTemp);
    }
    if (n.computed)
      n. property = this.transformYield(n.property, b, vMode);
+
+   if (objTemp !== "") 
+     this.scope.releaseTemp(objTemp);
 
    return n;
 } 
@@ -1943,28 +1950,18 @@ transformerList['ConditionalExpression'] = function( n, b, vMode ) {
 transformerList['ArrayExpression'] = function(n, b, vMode) {
    var list = n.elements, e = 0, yc = y(n), elem = null;
 
-   while (yc) {
-     if (e > 0 && elem !== null ) {
-       var temp = this.scope.allocateTemp();
-       append_assig(b, temp, list[e-1]);
-       list[e-1] = synth_id_node(temp);
-     }
-     elem = list[e];
-     if (elem) {
-       list[e] = this.transformYield(list[e], b, vMode);
-       yc -= y(elem);
-     }
-     e++;
-   } 
+   var temp = this.scope.allocateTemp();
+   append_assig(b, temp, synth_expr_node('[]'));
 
-   e = list.length - 1;
-   while (e >= 0) {
-     if ( list[e] !== null )
-       this.release_if_synth(list[e]);
-     e--;
+   var arrayID = synth_id_node(temp);
+   while (e < list.length) {
+      elem = this.transformYield(list[e], b, IS_VAL);
+      b. push( assig_node( synth_expr_node(temp+'['+e+']'), elem) );
+      e++ ;
    }
 
-   return n;
+   this.scope.releaseTemp(temp);
+   return vMode ? arrayID : NOEXPRESSION; 
 };
 
 transformerList['ObjectExpression'] = function(n, b, vMode) {
@@ -2004,7 +2001,8 @@ transformerList['ObjectExpression'] = function(n, b, vMode) {
 
    return vMode ? objID : NOEXPRESSION;
 };
-        
+
+
 
 }]  ],
 [Parser.prototype, [function(){

@@ -347,4 +347,22 @@ if unORnull(temp1) {
 }
 a = temp1
 
+[a, ...b] = yield
+yield
+temp = arrIter(sent)
+a = temp.get()
+b = temp.rest()
+
+[a, ...[b]] = yield
+yield
+temp = arrIter(sent)
+a = temp.get()
+b = temp.get()
+
+[a, ...{5: e}] = yield
+yield
+temp = arrIter(sent)
+a = temp.get()
+temp1 = objIter(temp.rest())
+e = temp1.get(5)
 

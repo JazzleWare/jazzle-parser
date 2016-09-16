@@ -21,7 +21,7 @@
 'ObjectExpression'
 'ArrayPattern'               yield (with AssignmentExpression)       emitter
 'ObjectPattern'              yield (with AssignmentExpression)
-'Property'
+'Property'                   yield (with ObjectExpression)
 'RestElement'
 'SequenceExpression' 
 'SpreadElement'

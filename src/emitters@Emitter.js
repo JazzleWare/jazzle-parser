@@ -567,7 +567,7 @@ function isSimpAssigHead(head) {
        return !false;
    
     default:
-       return false;
+       return head.type === 'SynthesizedExpr' ;
   }
 }
 
@@ -698,7 +698,7 @@ this.emitters['YieldExpression'] = function(n) {
   if (n.argument !== null) {
     this.disallowWrap();
     this.write(' '); 
-    this.emit(n.arguemnt);
+    this.emit(n.argument);
     this.restoreWrap()
   }
 }; 
@@ -783,4 +783,5 @@ this._emitObjAssigElem = function(prop, name, isStatement) {
 };
    
 this.emitters['NoExpression'] = function(n) { return; };
+this.emitters['SynthesizedExpr'] = function(n) { this.write(n.contents); };
 
