@@ -1,15 +1,13 @@
 this.parseExpr = function (context) {
-  this.y = 0;
   var head = this.parseNonSeqExpr(PREC_WITH_NO_OP,context );
 
   var lastExpr;
   if ( this.lttype === ',' ) {
     context &= CONTEXT_FOR;
-    var y = 0;
+    var y = this.y;
     var e = [core(head)] ;
     do {
       this.next() ;
-      this.y = 0;
       lastExpr = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
       y += this.y;
       e.push(core(lastExpr));
@@ -26,13 +24,11 @@ this.parseExpr = function (context) {
 this .parseCond = function(cond,context ) {
     var y = this.y;
     this.next();
-    this.y = 0;
     var seq = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
     y += this.y;
     if ( !this.expectType_soft (':') )
       this['cond.colon']();
 
-    this.y = 0;
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
     y += this.y;
     this.y = y;
@@ -55,7 +51,6 @@ this .parseUnaryExpression = function(context ) {
   }
 
   this.next();
-  this.y = 0;
   var arg = this. parseNonSeqExpr(PREC_U,context|CONTEXT_UNASSIGNABLE_CONTAINER );
 
   return { type: 'UnaryExpression', operator: u, start: startc, end: arg.end,
@@ -71,7 +66,6 @@ this .parseUpdateExpression = function(arg, context) {
        c  = this.c-2;
        loc = this.locOn(2);
        this.next() ;
-       this.y = 0;
        arg = this. parseExprHead(context|CONTEXT_UNASSIGNABLE_CONTAINER );
        this.assert(arg); // TODO: this must have error handling
 
@@ -205,7 +199,6 @@ this.parseNonSeqExpr = function (prec, context  ) {
          if ( this. newLineBeforeLookAhead )
            break ;
          head = this. parseUpdateExpression(head, context & CONTEXT_FOR ) ;
-         y = this.y;
          continue;
        }
        if ( isQuestion(this.prec) ) {
@@ -222,7 +215,6 @@ this.parseNonSeqExpr = function (prec, context  ) {
        var o = this.ltraw;
        var currentPrec = this. prec;
        this.next();
-       this.y = 0;
        var right = this.parseNonSeqExpr(currentPrec, (context & CONTEXT_FOR)|CONTEXT_UNASSIGNABLE_CONTAINER );
        y += this.y;
        head = { type: !isBin(currentPrec )  ? 'LogicalExpression' :   'BinaryExpression',
@@ -237,7 +229,6 @@ this.parseNonSeqExpr = function (prec, context  ) {
                 right: core(right),
                 y: y
               };
-       this.y = y;
     }
   
     if ( prec === PREC_WITH_NO_OP ) {

@@ -2002,6 +2002,47 @@ transformerList['ObjectExpression'] = function(n, b, vMode) {
    return vMode ? objID : NOEXPRESSION;
 };
 
+transformerList['SequenceExpression'] = function(n, b, vMode) {
+  var list = n.expressions, e = 0, yc = y(n);
+  while (yc > 0 && e < list.length - 1 ) {
+    var elem = list[e], currentY = y(elem);
+    elem = this.transformYield(elem, b, NOT_VAL);
+    if (elem !== 'NoExpression' && (elem.type !== 'Identifier' || !elem.synth) )
+      b. push(elem);
+
+    yc -= currentY; 
+    e++;
+  }
+  if (e === list.length-1)
+    return this.transformYield(list[e], b, vMode);
+
+  n.expressions = [];
+  while (e < list.length) n.expressions.push(list[e++]);
+
+  return n;
+};
+
+transformerList['UpdateExpression'] = function(n, b, vMode) {
+   var a = n.argument;
+   if ( a.type === 'Identifier')
+     return n;
+
+   a.object = this.transformYield(a.object, b, IS_VAL);
+   if ( a.computed && y(a.property) ) {
+     var temp = this.scope.allocateTemp();
+     append_assig(b, temp, a.object);
+     a.object = synth_id_node(temp);
+     a.property = this.transformYield(a.property, b, IS_VAL);
+     this.scope.releaseTemp(temp);
+   }
+
+   return n;
+};
+
+transformerList['UnaryExpression'] = function(n, b, vMode) {
+  n.argument = this.transformYield(n.argument, b, IS_VAL);
+  return n;
+};
 
 
 }]  ],
