@@ -156,6 +156,7 @@ this .parseFunc = function(context, argListMode, argLen ) {
   this.firstNonSimpArg = prevNonSimpArg;
   this.inComplexArgs = prevComplexArgs;
 
+  this.y = 0;
   return  n  ;
 };
 

@@ -1,0 +1,252 @@
+function* l() {
+   yield;
+   yield l();
+   yield l()
+   (yield) * (yield)
+   if (yield) {
+     a = 12
+     while (a--) {
+       l()
+       yield
+     }
+     yield
+   }
+}
+
+<enter-container>
+  <yield> -> a
+  <yield l()> -> b
+  <yield l()> -> c
+  yield -> d
+  temp = sent -> <e>
+  yield -> </e>
+  temp * sent -> <f>
+  yield -> </f>
+  <enter-container>
+  if (sent) {
+    a = 12 -> g
+    <enter-container>
+    while (!false) {
+      <cond>[a--] -> h
+      l() -> <i>
+      yield -> </i>  
+    }
+    yield -> j
+  }
+ 
+var yp = new Partitioner()
+for stmt in.list gen.body: yp. push(stmt)
+
+list['ExpressionStatement'] = function(stmt) {
+  stmt = `transformer.transformYield(stmt.expression, this, NOT_VAL);
+  if stmt !== NOEXPRESSION:
+    `push(stmt)
+};
+
+list['WhileStatement'] = function(stmt) {
+  `flush()
+  `enterContainer(CONTAINER_WHILE, stmt)
+  for var s in.list stmt.body:
+    `push(s)
+  `exitContainer()
+};
+
+l()
+yield
+l = 12
+while l-- {
+  e = l * n
+  l()
+  while e--:
+    yield
+}
+
+<container::main>
+  l() -> <a>
+  yield -> </a>
+  l = 12 -> b
+  <container::while>
+       <cond>[l--] -> c
+       e = l * n -> <d>
+       l() -> </d>
+       <container::while>
+             <cond>[e--] -> e
+             yield -> f
+       </container>
+  </container>
+</container>
+
+container[type=main] {
+  seg[a] {
+     l()
+    yield
+  }
+  seg[b] {
+     l = 12
+  }
+  container[type=while] {
+     seg[c] { cond { l-- } }
+     seg[d] {
+       e = l * n
+       l()
+     }
+     container[type=while] {
+        seg[e] { cond { e-- } }
+        seg[f] { yield }
+     } // range == (e,f)
+  } // range == (c,f)
+} // range == (a,f)
+
+if state == a { state = -b; l(); state = b; return }
+if state == b { state = -c; l = 12; state = c; }
+if state <= f {
+ while !false {
+   if state == c {
+      state = -d
+      if l-- { state = d }
+      else { state = g; break }
+   }
+   if state == d {
+      state = -e
+      e = l * n
+      l()
+      state = state::e
+   }
+   if state <= f {
+     while !false {
+      if state == e {
+        state = -f 
+        if e-- { state = f }
+        else { state = c; break }
+      }
+      if state == f { state = e; return }
+     }
+   }
+ }
+}
+
+l()
+while (yield) * (yield) {
+  l()
+  yield
+}
+
+seg[a] { l() }
+container::while {
+
+  seg[b] { yield }
+  seg[c] {
+     temp = sent
+     yield
+  }
+  seg[d] {
+    cond { temp * sent }
+  }
+  seg[e] {
+    l()
+    yield
+  }
+}
+
+if state == a { state = b; l() }
+if state <= e {
+  while !false {
+     if state == b { state = c; yield }
+     if state == c { state = d; temp = sent; yield } 
+     if state == d {
+       state = -e;
+       if temp * sent { state = e }
+       else { state = f; break }
+     }
+     if state == e {
+        l()
+        state = b
+        yield
+     }
+  }
+}
+
+for ( head(); mid(); tail() ) break;
+head()
+runUpdate = false
+while (runUpdate ? tail() : runUpdate = !false,
+       mid()) break;
+
+do {
+  yield
+} while (yield);
+
+do {
+  if state == a { state = b; return }
+  if state == b { state = c; return }
+  if state == c {
+    state = -a
+    if sent: state = a
+    else { state = d; break }
+  }
+}
+
+const Yield = class {
+
+  pushStmt(stmt) {
+    pushList[stmt.type]`(stmt)
+  }
+
+  namespace pushList {
+    'ExpressionStatement'(stmt) {
+       `currentContainer.add_to_current_partition(stmt)
+       if stmt.type == 'YieldExpression':
+         `currentContainer.flush()
+    }
+
+    'WhileStatement'(stmt) {
+       `enterContainer(stmt)
+       if stmt.type == 'BlockExpression':
+         for var e in.list stmt.body.body:
+           `push(e)
+       else
+         `push(stmt.body)
+       `exitContainer()
+    }
+  }
+
+  enterContainer(containerStmt) {
+    var container_ = new Partition(PARTITION_CONTAINER, containerStmt);
+    `currentContainer.flush()
+    `currentContainer.add_to_current_partition(container_)
+    `currentContainer = container_
+  }
+
+}
+
+l()
+if l():
+  while (yield) * (yield):
+      break
+
+enterContainer::main {
+  seg { l() }
+  enterContainer::if {
+    seg { cond { l() } }
+    enterContainer::while {
+       seg { return }
+       seg { temp = sent; return }
+       seg { cond { temp * sent } }
+       seg { break }
+    }
+  }
+}
+
+do {
+  l()
+  break
+} while (yield)
+
+enterContainer::main {
+  enterContainer::do {
+     seg { l(); break }
+     seg { return }
+     seg { cond { sent } }
+  }
+}
+ while (!false)

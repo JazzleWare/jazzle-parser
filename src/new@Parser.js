@@ -7,7 +7,8 @@ this.parseNewHead = function () {
   }
 
   var head, elem, inner;
-  var y = this.y = 0;
+  var y = 0; // newHead is itself an exprHead; an exprHead is always called at the start of a nonSeqExpr,
+             // where this.y is set 0
   switch (this  .lttype) {
     case 'Identifier':
        head = this.parseIdStatementOrId (CONTEXT_NONE);
@@ -42,7 +43,7 @@ this.parseNewHead = function () {
 
   }
 
-  y += this.y;
+  y = this.y;
 
   var inner = core( head ) ;
   while ( !false ) {
@@ -57,7 +58,6 @@ this.parseNewHead = function () {
 
        case '[':
           this.next() ;
-          this.y = 0;
           elem = this.parseExpr(CONTEXT_NONE) ;
           y += this.y;
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,

@@ -3,7 +3,6 @@ this .memberExpr = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next() ;
-  this.y = 0;
   var e = this.parseExpr(CONTEXT_NONE);
   if (!e) this['prop.dyna.no.expr'](startc,startLoc);
 

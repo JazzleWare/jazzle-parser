@@ -13,6 +13,7 @@ this . parseFor = function() {
   var head = null;
   var headIsExpr = false;
 
+  var y = 0;
   var scopeFlags = this.scopeFlags;
 
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
@@ -46,6 +47,8 @@ this . parseFor = function() {
   else 
      this.foundStatement = false;
 
+  y += this.y;
+
   var kind = 'ForOfStatement';
   var nbody = null;
   var afterHead = null;
@@ -69,18 +72,22 @@ this . parseFor = function() {
 
           this.next();
           afterHead = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE) ;
+          y += this.y;
           if ( ! this.expectType_soft (')') )
               this['for.iter.no.end.paren'](start,startLoc);
 
           this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
           nbody = this.parseStatement(!false);
+          y += this.y;
           if ( !nbody ) this['null.stmt']('for.iter',startc,startLoc);
 
           this.scopeFlags = scopeFlags;
 
           this.foundStatement = !false;
+ 
+          this.y = y;
           return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
-            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
+            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody, y: y };
 
        default:
           return this['for.iter.not.of.in'](startc, startLoc);
@@ -100,10 +107,12 @@ this . parseFor = function() {
       this['for.simple.no.init.comma'](startc,startLoc);
 
   afterHead = this.parseExpr(CONTEXT_NULLABLE );
+  y += this.y;
   if ( ! this.expectType_soft (';') )
       this['for.simple.no.test.comma'](startc,startLoc);
 
   var tail = this.parseExpr(CONTEXT_NULLABLE );
+  y += this.y;
 
   if ( ! this.expectType_soft (')') )
       this['for.simple.no.end.paren'](startc,startLoc);
@@ -113,14 +122,17 @@ this . parseFor = function() {
   if ( !nbody )
     this['null.stmt']('for.simple', startc, startLoc);  
 
+  y += this.y;
   this.scopeFlags = scopeFlags;
+
+  this.y = y;
 
   this.foundStatement = !false;
   return { type: 'ForStatement', init: head && core(head), start : startc, end: nbody.end,
          test: afterHead && core(afterHead),
          loc: { start: startLoc, end: nbody.loc.end },
           update: tail && core(tail),
-         body: nbody };
+         body: nbody, y: y };
 };
 
 

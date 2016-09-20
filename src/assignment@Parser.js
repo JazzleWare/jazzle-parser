@@ -174,7 +174,6 @@ this .parseAssignment = function(head, context ) {
       var parenYS = this.parenYS;
     }
 
-    this.y = 0;
     var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR ) ;
     y += this.y;
 

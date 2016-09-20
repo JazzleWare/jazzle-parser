@@ -25,8 +25,10 @@ this.parseExprHead = function (context) {
             head = this. parseArrayExpression(
               context & (CONTEXT_UNASSIGNABLE_CONTAINER|CONTEXT_PARAM) );
             y += this.y;
-            if ( this. unsatisfiedAssignment )
+            if ( this. unsatisfiedAssignment ) {
+               this.y = y;
                return head ;
+            }
 
             firstUnassignable = this.firstUnassignable;
             firstParen = this.firstParen;
@@ -35,11 +37,12 @@ this.parseExprHead = function (context) {
 
         case '(' :
             this.arrowParen = !false;
-            this.y = 0;
             head = this. parseParen() ;
             y += this.y;
-            if ( this.unsatisfiedArg )
+            if ( this.unsatisfiedArg ) {
+               this.y = y;
                return head ;
+            }
 
             break ;
 
@@ -49,8 +52,10 @@ this.parseExprHead = function (context) {
             head = this. parseObjectExpression(
               context & (CONTEXT_UNASSIGNABLE_CONTAINER|CONTEXT_PARAM) ) ;
             y += this.y;
-            if ( this.unsatisfiedAssignment )
+            if ( this.unsatisfiedAssignment ) {
+              this.y = y;
               return head;
+            }
 
             firstUnassignable = this.firstUnassignable;
             firstParen = this.firstParen;
@@ -99,12 +104,10 @@ this.parseExprHead = function (context) {
 
          case '[':
             this.next() ;
-            this.y = 0;
             elem   = this. parseExpr(PREC_WITH_NO_OP,CONTEXT_NONE ) ;
             y += this.y;
             head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                       loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false, y: y };
-            this.y = y;
             inner  = head ;
             if ( !this.expectType_soft (']') )
                this['mem.unfinished'](head);
@@ -148,6 +151,7 @@ this.parseExprHead = function (context) {
      this.firstParen = firstParen;
   }
 
+  this.y = y;
   return head ;
 } ;
 
@@ -331,7 +335,6 @@ this.parseArgList = function () {
     var y = 0;
     do { 
        this.next();
-       this.y = 0;
        elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CONTEXT_NULLABLE ); 
        if ( elem ) {
          y += this.y;

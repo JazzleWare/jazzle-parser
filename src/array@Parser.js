@@ -28,7 +28,6 @@ this.parseArrayExpression = function (context ) {
      this.unsatisfiedAssignment = 
      this.firstEA = 
      this.firstElemWithYS = null;
-     this.y = 0;
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
      if ( !elem && this.lttype === '...' ) {
          elem = this.parseSpreadElement();

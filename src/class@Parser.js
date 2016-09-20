@@ -25,13 +25,13 @@ this. parseClass = function(context) {
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
      name = this.validateID(null); 
 
-  var y = this.y = 0;
+  var y = 0;
 
   var classExtends = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
      this.next();
      classExtends = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE);
-     y += this.y;
+     y = this.y;
   }
 
   var list = [];
@@ -81,7 +81,6 @@ this. parseClass = function(context) {
                break SWITCH;
           }
           case '[':
-              this.y = 0;
               elem = this.memberExpr();
               y += this.y;
               elem = this.parseMeth(elem, CLASS_MEM);

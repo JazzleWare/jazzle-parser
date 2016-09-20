@@ -29,7 +29,6 @@ this . parseTemplateLiteral = function() {
               this.col += 2; // ${
              
               this.next(); // this must be done manually because we must have a lookahead before starting to parse an actual expression
-              this.y = 0;
               templExpressions.push( this.parseExpr(CONTEXT_NONE) );
               y += this.y;
 
@@ -112,11 +111,12 @@ this . parseTemplateLiteral = function() {
   this.col ++ ;
 
   var n = { type: 'TemplateLiteral', start: startc, quasis: templStr, end: c,
-       expressions: templExpressions , loc: { start: startLoc, end : this.loc() } };
+       expressions: templExpressions , loc: { start: startLoc, end : this.loc() }, y: y };
 
+  this.y = y;
   this.c = c;
   this.next(); // prepare the next token  
 
-  return n
+  return n;
 };
 

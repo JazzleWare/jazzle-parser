@@ -12,14 +12,12 @@ this.parseYield = function(context) {
      if ( this.lttype === 'op' && this.ltraw === '*' ) {
             deleg = !false;
             this.next();
-            this.y = 0;
             arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CONTEXT_FOR );
             y += this.y;
             if (!arg )
               this['yield.has.no.expr.deleg'](startc,startLoc);
      }
      else {
-        this.y = 0;
         arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CONTEXT_FOR)|CONTEXT_NULLABLE );
         y += this.y;
      }

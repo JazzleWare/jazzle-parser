@@ -5,6 +5,7 @@ this .parseMeth = function(name, isClass) {
 
    if ( !isClass ) {
      val = this.parseFunc(CONTEXT_NONE,ARGLIST_AND_BODY,ANY_ARG_LEN );
+     this.y = y;
      return { type: 'Property', key: core(name), start: name.start, end: val.end,
               kind: 'init', computed: name.type === PAREN,
               loc: { start: name.loc.start, end : val.loc.end },
@@ -26,6 +27,7 @@ this .parseMeth = function(name, isClass) {
    val = this.parseFunc(CONTEXT_NONE ,
       ARGLIST_AND_BODY|(kind !== 'constructor' ? METH_FUNCTION : CONSTRUCTOR_FUNCTION), ANY_ARG_LEN ); 
 
+   this.y = y;
    return { type: 'MethodDefinition', key: core(name), start: name.start, end: val.end,
             kind: kind, computed: name.type === PAREN,
             loc: { start: name.loc.start, end: val.loc.end },
@@ -68,6 +70,7 @@ this .parseGen = function(isClass ) {
   if ( !isClass ) {
      val  =  this.parseFunc ( CONTEXT_NONE, ARGLIST_AND_BODY_GEN, ANY_ARG_LEN );
 
+     this.y = y;
      return { type: 'Property', key: core(name), start: startc, end: val.end,
               kind: 'init', computed: name.type === PAREN,
               loc: { start: startLoc , end : val.loc.end },
@@ -101,7 +104,6 @@ this . parseSetGet= function(isClass) {
          name = this.memberID();
          break;
       case '[':
-         this.y = 0;
          name = this.memberExpr();
          y = this.y;
          break;
@@ -109,10 +111,11 @@ this . parseSetGet= function(isClass) {
          if (isClass) strName = this.ltval;
          name = this.numstr();
          break ;
-      default:  
+      default: // get or set represent actual names 
            name = { type: 'Identifier', name: this.ltval, start: startc,  end: c,
                    loc: { start: startLoc, end: { line: li, column: col } } };
 
+           this.y = 0;
            return !isClass ? this.parseProperty(name) : this.parseMeth(name, !isClass) ;
   }
 

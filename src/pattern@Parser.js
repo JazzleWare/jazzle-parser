@@ -1,5 +1,6 @@
 
 this.parsePattern = function() {
+  this.y = 0; 
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
@@ -32,19 +33,16 @@ this. parseArrayPattern = function() {
 
   this.next();
   while ( !false ) {
-      this.y = 0;
       elem = this.parsePattern();
       if ( elem ) {
          y += this.y;
          if ( this.lttype === 'op' && this.ltraw === '=' ) {
-           this.y = 0;  
            elem = this.parseAssig(elem);
            y += this.y; 
          }
       }
       else {
          if ( this.lttype === '...' ) {
-           this.y = 0;
            list.push(this.parseRestElement());
            y += this.y;
            break ;
@@ -97,29 +95,30 @@ this.parseObjectPattern  = function() {
             if ( this.lttype === ':' ) {
               this.next();
               val = this.parsePattern()
+              yProp += this.y;
             }
             else { sh = !false; val = name; }
             break ;
 
          case '[':
-            this.y = 0;
             name = this.memberExpr();
-            yProp += this.y;
+            yProp = this.y;
             this.expectType(':');
             val = this.parsePattern();
+            yProp += this.y;
             break ;
 
          case 'Literal':
             name = this.numstr();
             this.expectType(':');
             val = this.parsePattern();
+            yProp += this.y;
             break ;
 
          default:
             break LOOP;
       }
       if ( this.lttype === 'op' && this.ltraw === '=' ) {
-        this.y = 0;
         val = this.parseAssig(val);
         yProp += this.y;
       }
@@ -147,7 +146,6 @@ this.parseObjectPattern  = function() {
 this .parseAssig = function (head) {
     this.next() ;
     var y = this.y;
-    this.y = 0;
     var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
     return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
            right: core(e), loc: { start: head.loc.start, end: e.loc.end }, y: y + this.y };
@@ -159,7 +157,6 @@ this.parseRestElement = function() {
        startLoc = this.locOn(1+2);
 
    this.next ();
-   this.y = 0;
    var e = this.parsePattern();
    if (!e ) this['rest.has.no.arg'](starc, startLoc);
 

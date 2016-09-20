@@ -8,7 +8,10 @@ this . parseVariableDeclaration = function(context) {
      var elem = null;
 
      this.next () ;
+
      elem = this.parseVariableDeclarator(context);
+     var y = this.y;
+   
      if ( elem === null ) {
        if (kind !== 'let' ) 
          this['var.has.no.declarators'](startc,startLoc,kind);
@@ -24,6 +27,7 @@ this . parseVariableDeclaration = function(context) {
             if (!elem )
               this['var.has.an.empty.declarator'](startc,startLoc,kind);
 
+            y += this.y;
             list.push(elem);
           }
 
@@ -45,8 +49,9 @@ this . parseVariableDeclaration = function(context) {
 
      this.foundStatement  = !false ;
 
+     this.y = y;
      return { declarations: list, type: 'VariableDeclaration', start: startc, end: endI,
-              loc: { start: startLoc, end: endLoc }, kind: kind };
+              loc: { start: startLoc, end: endLoc }, kind: kind, y: y };
 };
 
 this . parseVariableDeclarator = function(context) {
@@ -57,10 +62,13 @@ this . parseVariableDeclarator = function(context) {
 
   var head = this.parsePattern(), init = null;
   if ( !head ) return null;
+  
+  var y = this.y;
 
   if ( this.lttype === 'op' && this.ltraw === '=' )  {
        this.next();
        init = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
+       y += this.y;
   }
   else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
        if (!( context & CONTEXT_FOR) )  // bail out in case it is not a 'for' loop's init
@@ -71,7 +79,9 @@ this . parseVariableDeclarator = function(context) {
   }
 
   var initOrHead = init || head;
+
+  this.y = y;
   return { type: 'VariableDeclarator', id: head, start: head.start, end: initOrHead.end,
-           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init) };
+           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init), y: y };
 };
 
