@@ -1510,14 +1510,14 @@ function synth_id_node(name) {
 }
 
 function synth_expr_node(str) {
-   return { type: 'SynthesizedExpr', contents: str };
+   return { type: 'SynthesizedExpr', contents: str, y: 0 };
 }
 
 function synth_expr_set_node(arr, isStatement ) {
    if (isStatement)
-     return { type: 'SynthesizedExprSet', expressions: arr };
+     return { type: 'SynthesizedExprSet', expressions: arr, y: 0 };
 
-   return { type: 'SequenceExpression', expressions: arr };
+   return { type: 'SequenceExpression', expressions: arr, y: 0 };
 }
 
 function assig_node(left, right) {
@@ -1525,14 +1525,15 @@ function assig_node(left, right) {
      if (left.synth && left.name === right.name )
        return left;
   
-   return { type: 'AssignmentExpression',  operator: '=', right: right, left: left };
+   return { type: 'AssignmentExpression',  operator: '=', right: right, left: left, y: 0 };
 }
 
 function cond_node(e, c, a) {
    return { type: 'ConditionalExpression', 
             test: e,
             consequent: c,
-            alternate: a };
+            alternate: a,
+            y: 0 };
 }
 
 function id_is_synth(n) {
@@ -1551,22 +1552,25 @@ this.transformYield = function(n, b, isVal) {
 };
 
 function synth_not_node(n) {
-  return { type: 'UnaryExpression', operator: '!', argument: n};
+  return { type: 'UnaryExpression', operator: '!', argument: n, y: 0 };
 
 }
 
-function synth_if_node(cond, body, alternate) {
+function synth_if_node(cond, body, alternate, yBody, yElse) {
+  yBody = yBody || 0;
+  yElse = yElse || 0;
+
   if (body.length > 1 || body[0].type === 'IfStatement' )
-    body = { type: 'BlockStatement', body : body };
+    body = { type: 'BlockStatement', body : body, y: yBody };
   else
     body = body[0];
 
   if(alternate)
-    alternate = alternate.length > 1 ? { type: 'BlockStatement', body: alternate } : alternate[0];
+    alternate = alternate.length > 1 ? { type: 'BlockStatement', body: alternate, y: yElse } : alternate[0];
   else
     alternate = null;
 
-  return { type: 'IfStatement', alternate: alternate, consequent: body, test: cond };
+  return { type: 'IfStatement', alternate: alternate, consequent: body, test: cond, y: yBody + yElse };
 }
 
 function append_assig(b, left, right) {
@@ -1624,7 +1628,7 @@ transformerList['LogicalExpression'] = function(n, b, vMode) {
      if (n.operator === '||')
        n.left = synth_not_node(n.left);
 
-     var ifBody = [];
+     var ifBody = [], yBody = y(n.right);
      n.right = this.transformYield (n.right, ifBody, vMode);
      if (vMode) {
        temp = this.scope.allocateTemp();
@@ -1636,7 +1640,7 @@ transformerList['LogicalExpression'] = function(n, b, vMode) {
      else if (n.right.type !== 'Identifier' || !n.right.synth )
        ifBody.push(n.right);
 
-     b. push( synth_if_node(n.left, ifBody) );       
+     b. push( synth_if_node(n.left, ifBody, null, yBody ) );       
      return vMode ? synth_id_node(temp) : NOEXPRESSION ;
    }
 
@@ -1701,12 +1705,13 @@ function synth_mem_node(obj, prop, c) {
   return { type: 'MemberExpression',
            computed: c,
            object: obj,
-           property: (prop) };
+           property: (prop),  
+           y: 0 };
 
 }
 
 function synth_call_node(callee, argList) {
-   return { type: 'CallExpression', arguments: argList, callee: callee, synth: !false };
+   return { type: 'CallExpression', arguments: argList, callee: callee, synth: !false, y: 0 };
 
 }
 
@@ -1885,14 +1890,14 @@ this.assigElement = function(left, right, b) {
      var cond =  assig_node(synth_id_node( defTemp), right);
      cond = synth_call_node(UNORNULL, [cond]);
      this.scope.releaseTemp(defTemp);
-     var ifBody = [];
+     var ifBody = [], yBody = y( defaultVal) ;
 
      defaultVal = this.transformYield(defaultVal, ifBody, IS_VAL);
      defTemp = this.scope.allocateTemp(); // lolhehe
      append_assig(ifBody, defTemp, defaultVal);
      this.scope.releaseTemp(defTemp);
      right = synth_id_node(defTemp);
-     b. push( synth_if_node(cond, ifBody ) ); 
+     b. push( synth_if_node(cond, ifBody, null, yBody ) ); 
    }
    
    return transformAssig[left.type].call(this, assig_node(left, right), b); // TODO: eliminate need for assig_node
@@ -1977,7 +1982,7 @@ transformerList['ConditionalExpression'] = function( n, b, vMode ) {
   if (!yAll)
     return n;
   
-  var ifB = [];
+  var ifB = [], yBody = y(n.consequent) ;
 
   n.consequent = this.transformYield(n.consequent, ifB, vMode);
   var temp = "";
@@ -1989,7 +1994,7 @@ transformerList['ConditionalExpression'] = function( n, b, vMode ) {
   else
     append_non_synth(ifB, n.consequent);
 
-  var elseB = [];
+  var elseB = [], yElse = y(n.alternate) ;
 
   n.alternate = this.transformYield(n.alternate, elseB, vMode);
   if (vMode) {
@@ -2000,7 +2005,7 @@ transformerList['ConditionalExpression'] = function( n, b, vMode ) {
   else
     append_non_synth(elseB, n.alternate);
 
-  b. push(synth_if_node(n.test, ifB, elseB));
+  b. push(synth_if_node(n.test, ifB, elseB, yBody, yElse ));
   return vMode ? synth_id_node(temp) : NOEXPRESSION;
 };
   
@@ -7234,14 +7239,14 @@ this.parseYield = function(context) {
 this.push = function(stmt) {
    ASSERT.call(this, this.type === CONTAINER_PARTITION);
 
-   var yStmt = y(stmt), p = this.current();
+   var yStmt = y(stmt);
 
    if (stmt.type === 'YieldExpression') {
-      p.statements.push(stmt);
+      this.current().statements.push(stmt);
       return this.close_current_active_partition();
    }     
    if (yStmt === 0)
-     return p.statements.push(stmt);
+     return this.current().statements.push(stmt);
 
    if (stmt.type !== 'ExpressionStatement') {
      ASSERT.call(this, HAS.call(pushList, stmt.type));
@@ -7258,7 +7263,12 @@ this.push = function(stmt) {
 
 this.close_current_active_partition = function() {
    ASSERT.call(this, this.type === CONTAINER_PARTITION);
-   this.currentPartition = null;
+   if ( this.currentPartition === null )
+     return;
+
+   ASSERT.call(this, this.currentPartition.type === SIMPLE_PARTITION);
+   if (this.currentPartition.statements.length !== 0)
+     this.currentPartition = null;
 };
 
 this.current = function() {
@@ -7285,7 +7295,7 @@ pushList['WhileStatement'] = function(stmt) {
    var test = this.emitter.transformYield(stmt.test, this, IS_VAL);
    this.close_current_active_partition();
    var current = this.current();
-   current.push(test);
+   current.statements.push(test);
    this.test = current;
    this.close_current_active_partition();
    var b = stmt.body;
@@ -7296,6 +7306,41 @@ pushList['WhileStatement'] = function(stmt) {
    while (e < b.length) this.push(b[e++]);
 };
 
+this.prettyString = function(emitter) {
+   if (!emitter) emitter = new Emitter();
+   var list = null, e = 0;
+   if (this.type === CONTAINER_PARTITION) {
+     list = this.partitions;
+     emitter.newlineIndent();
+     emitter.write('<container:'+(this.details?this.details.type:'main')+'>');
+     emitter.indent();
+     while (e < list.length) {
+        list[e].prettyString(emitter);
+        e++ ;
+     }
+     emitter.unindent();
+     emitter.newlineIndent();
+     emitter.write('</container>');
+   }
+   else {
+     list = this.statements;
+     emitter.newlineIndent();
+     emitter.write('<seg'+(this === this.owner.test ? ':test>' : '>'));
+     emitter.indent();     
+     while (e < list.length) {
+       emitter.newlineIndent();
+       emitter.emit(list[e]);
+       e++ ;
+     }
+     emitter.unindent();
+     emitter.newlineIndent();
+     emitter.write('</seg>');
+   }
+
+   return emitter.code;
+};
+     
+   
 
 }]  ],
 [Scope.prototype, [function(){
