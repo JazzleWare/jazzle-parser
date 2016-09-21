@@ -3,9 +3,8 @@ this.parse = function(src, isModule ) {
   return newp.parseProgram();
 };
 
-this.Parser = 
-Parser;  
-
-this.Scope = Scope;
-this.Emitter = Emitter;
+; this.Parser = Parser;  
+; this.Scope = Scope;
+; this.Emitter = Emitter;
+; this.Partitioner = Partitioner;
 

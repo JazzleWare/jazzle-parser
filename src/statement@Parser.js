@@ -532,6 +532,11 @@ this. parseCatchClause = function () {
    var catParam = this.parsePattern();
    var y = this.y;
 
+   if (this.lttype=='op' && this.ltval=='=') {
+     catParam = this.parseAssig(catParam);
+     y += this.y;
+   }
+
    if ( !this.expectType_soft (')') )
       this['catch.has.no.end.paren' ] (startc,startLoc);
 

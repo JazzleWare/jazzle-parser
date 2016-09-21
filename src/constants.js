@@ -122,3 +122,34 @@ var EMIT_CONTEXT_NEW = 1,
     EMIT_CONTEXT_STATEMENT = 2,
     EMIT_CONTEXT_NONE = 0;
 
+var IS_REF = 1,
+    IS_VAL = 2,
+    NOT_VAL = 0;
+
+var NOEXPRESSION = { type: 'NoExpression' };
+
+
+function ASSERT(cond, message) {
+  if (!cond) throw new Error(message);
+
+}
+
+var SIMPLE_PARTITION = 0;
+var CONTAINER_PARTITION = 1;
+
+function y(n) {
+  switch (n.type) {
+    case 'ThisExpression':
+    case 'Literal':
+    case 'FunctionExpression':
+    case 'Identifier':
+    case 'SynthesizedExpr':
+       return 0;
+
+    default:
+       return n.y;
+  }  
+}
+
+var HAS = {}.hasOwnProperty;
+

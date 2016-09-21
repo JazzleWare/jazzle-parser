@@ -28,20 +28,6 @@ function cond_node(e, c, a) {
             alternate: a };
 }
 
-function y(n) {
-  switch (n.type) {
-    case 'ThisExpression':
-    case 'Literal':
-    case 'FunctionExpression':
-    case 'Identifier':
-    case 'SynthesizedExpr':
-       return 0;
-
-    default:
-       return n.y;
-  }  
-}
-
 function id_is_synth(n) {
    this.assert(id.type === 'Identifier');
    return n.name.charCodeAt() === CHAR_MODULO;
@@ -75,12 +61,6 @@ function synth_if_node(cond, body, alternate) {
 
   return { type: 'IfStatement', alternate: alternate, consequent: body, test: cond };
 }
-
-var IS_REF = 1,
-    IS_VAL = 2,
-    NOT_VAL = 0;
-
-var NOEXPRESSION = { type: 'NoExpression' };
 
 function append_assig(b, left, right) {
   var assig = null;

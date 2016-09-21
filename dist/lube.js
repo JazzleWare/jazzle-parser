@@ -87,6 +87,52 @@ var Parser = function (src, isModule) {
 };
 
 ;
+function Partitioner(owner, details) {
+
+   this.owner = owner;
+
+   if (this.owner === null) {
+     this.emitter = details;
+     this.details = null;
+   }
+   else {
+     this.emitter = this.owner.emitter;
+     this.details = details;
+   }
+     
+   if (owner !== null && details === null) {
+     this.partitions = null;
+     this.type = SIMPLE_PARTITION;
+     this.statements = [];
+   }
+   else if (owner === null) {
+     this.partitions = [];
+     this.statements = null;
+     this.type = CONTAINER_PARTITION;
+   }
+   else switch (details.type) {
+     case 'BlockStatement':
+     case 'WhileStatement':
+     case 'SwitchStatement':
+     case 'DoWhileStatement':
+     case 'ForOfStatement':
+     case 'ForInStatement':
+     case 'TryStatement':
+     case 'ForStatement':
+     case 'IfStatement':
+        this.partitions = [];
+        this.statements = null;
+        this.type = CONTAINER_PARTITION;
+        break;
+
+     default:
+        ASSERT.call(this, false, "not a container partition: " + details.type);
+   }
+
+   this.currentPartition = null;
+}
+
+;
   
 function Scope(parentScope, scopeMode, catchVars) {
    if ( scopeMode & SCOPE_LOOP )
@@ -247,6 +293,37 @@ var NUMBER_TYPE = typeof 0;
 var EMIT_CONTEXT_NEW = 1,
     EMIT_CONTEXT_STATEMENT = 2,
     EMIT_CONTEXT_NONE = 0;
+
+var IS_REF = 1,
+    IS_VAL = 2,
+    NOT_VAL = 0;
+
+var NOEXPRESSION = { type: 'NoExpression' };
+
+
+function ASSERT(cond, message) {
+  if (!cond) throw new Error(message);
+
+}
+
+var SIMPLE_PARTITION = 0;
+var CONTAINER_PARTITION = 1;
+
+function y(n) {
+  switch (n.type) {
+    case 'ThisExpression':
+    case 'Literal':
+    case 'FunctionExpression':
+    case 'Identifier':
+    case 'SynthesizedExpr':
+       return 0;
+
+    default:
+       return n.y;
+  }  
+}
+
+var HAS = {}.hasOwnProperty;
 
 ;
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
@@ -1458,20 +1535,6 @@ function cond_node(e, c, a) {
             alternate: a };
 }
 
-function y(n) {
-  switch (n.type) {
-    case 'ThisExpression':
-    case 'Literal':
-    case 'FunctionExpression':
-    case 'Identifier':
-    case 'SynthesizedExpr':
-       return 0;
-
-    default:
-       return n.y;
-  }  
-}
-
 function id_is_synth(n) {
    this.assert(id.type === 'Identifier');
    return n.name.charCodeAt() === CHAR_MODULO;
@@ -1505,12 +1568,6 @@ function synth_if_node(cond, body, alternate) {
 
   return { type: 'IfStatement', alternate: alternate, consequent: body, test: cond };
 }
-
-var IS_REF = 1,
-    IS_VAL = 2,
-    NOT_VAL = 0;
-
-var NOEXPRESSION = { type: 'NoExpression' };
 
 function append_assig(b, left, right) {
   var assig = null;
@@ -6631,6 +6688,11 @@ this. parseCatchClause = function () {
    var catParam = this.parsePattern();
    var y = this.y;
 
+   if (this.lttype=='op' && this.ltval=='=') {
+     catParam = this.parseAssig(catParam);
+     y += this.y;
+   }
+
    if ( !this.expectType_soft (')') )
       this['catch.has.no.end.paren' ] (startc,startLoc);
 
@@ -7168,6 +7230,74 @@ this.parseYield = function(context) {
 
 
 }]  ],
+[Partitioner.prototype, [function(){
+this.push = function(stmt) {
+   ASSERT.call(this, this.type === CONTAINER_PARTITION);
+
+   var yStmt = y(stmt), p = this.current();
+
+   if (stmt.type === 'YieldExpression') {
+      p.statements.push(stmt);
+      return this.close_current_active_partition();
+   }     
+   if (yStmt === 0)
+     return p.statements.push(stmt);
+
+   if (stmt.type !== 'ExpressionStatement') {
+     ASSERT.call(this, HAS.call(pushList, stmt.type));
+     var container = this.push_container(stmt);
+     return pushList[stmt.type].call(container, stmt);
+   }
+ 
+   var e = this.emitter.transformYield(stmt.expression, this, NOT_VAL);
+   if (e !== NOEXPRESSION) {
+     stmt.expression = e;
+     return this.current().statements.push(stmt);
+   }
+}; 
+
+this.close_current_active_partition = function() {
+   ASSERT.call(this, this.type === CONTAINER_PARTITION);
+   this.currentPartition = null;
+};
+
+this.current = function() {
+   ASSERT.call(this, this.type === CONTAINER_PARTITION);
+   if (this.currentPartition !== null)
+     return this.currentPartition;
+
+   var n = new Partitioner(this, null);
+   this.partitions.push(n);
+
+   this.currentPartition = n;
+   return n;
+};
+
+var pushList = {};
+
+this.push_container = function(stmt) {
+   var container = new Partitioner(this, stmt);
+   this.partitions.push(container);
+   return container;
+}; 
+
+pushList['WhileStatement'] = function(stmt) {
+   var test = this.emitter.transformYield(stmt.test, this, IS_VAL);
+   this.close_current_active_partition();
+   var current = this.current();
+   current.push(test);
+   this.test = current;
+   this.close_current_active_partition();
+   var b = stmt.body;
+   if (b.type !== 'BlockExpression')
+     return this.push(b); 
+
+   var e = 0;
+   while (e < b.length) this.push(b[e++]);
+};
+
+
+}]  ],
 [Scope.prototype, [function(){
      
 function name(n) { return n + '%'; }
@@ -7403,10 +7533,9 @@ this.parse = function(src, isModule ) {
   return newp.parseProgram();
 };
 
-this.Parser = 
-Parser;  
-
-this.Scope = Scope;
-this.Emitter = Emitter;
+; this.Parser = Parser;  
+; this.Scope = Scope;
+; this.Emitter = Emitter;
+; this.Partitioner = Partitioner;
 
 ;}).call (this)
