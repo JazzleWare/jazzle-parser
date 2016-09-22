@@ -1,7 +1,7 @@
 this.push = function(n) {
    ASSERT.call(this, this.type === CONTAINER_PARTITION);
 
-   if ( HAS.call(pushList, n.type) )
+   if ( y(n) !== 0 && HAS.call(pushList, n.type) )
      pushList[n.type].call( this, n );
    else
      this.current().statements.push(n);
@@ -45,9 +45,12 @@ pushList['YieldExpression'] = function(n) {
 };
 
 pushList['ExpressionStatement'] = function(n) {
+   var yc = y(n);
    var e = this.emitter.transformYield(n.expression, this, NOT_VAL);
    if (e !== NOEXPRESSION && !( e.type === 'Identifier' && e.synth ) )
      this.current().statements.push(e);
+   else
+     this.max--; // there has been a yield, or else the transformed expression wouldn't have been a NOEXPRESSION or a synth id
 };
 
 pushList['WhileStatement'] = function(n) {
@@ -67,6 +70,7 @@ pushList['WhileStatement'] = function(n) {
      while (e < list.length) container.push(list[e++]);
    }
    this.partitions.push(container);
+   this.max = container.max;
 };
        
 this.prettyString = function(emitter) {
@@ -92,14 +96,19 @@ this.prettyString = function(emitter) {
      emitter.newlineIndent();
      emitter.write('<seg'+(this === this.owner.test ? ':test' : '') +
                    ' [' + this.min + ']>');
-     emitter.indent();     
-     while (e < list.length) {
-       emitter.newlineIndent();
-       emitter.emit(list[e]);
-       e++ ;
+     if ( list.length>1 ) {
+        emitter.indent();     
+        while (e < list.length) {
+          emitter.newlineIndent();
+          emitter.emit(list[e]);
+          e++ ;
+        }
+        emitter.unindent();
+        emitter.newlineIndent();
      }
-     emitter.unindent();
-     emitter.newlineIndent();
+     else
+       emitter.emit(list[0]);
+    
      emitter.write('</seg>');
    }
 
