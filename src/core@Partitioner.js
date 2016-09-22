@@ -13,7 +13,9 @@ this.push = function(stmt) {
    if (stmt.type !== 'ExpressionStatement') {
      ASSERT.call(this, HAS.call(pushList, stmt.type));
      var container = this.push_container(stmt);
-     return pushList[stmt.type].call(container, stmt);
+     pushList[stmt.type].call(container, stmt);
+     this.max = container.max;
+     return;
    }
  
    var e = this.emitter.transformYield(stmt.expression, this, NOT_VAL);
@@ -29,8 +31,10 @@ this.close_current_active_partition = function() {
      return;
 
    ASSERT.call(this, this.currentPartition.type === SIMPLE_PARTITION);
-   if (this.currentPartition.statements.length !== 0)
+   if (this.currentPartition.statements.length !== 0) {
+     this.max++;
      this.currentPartition = null;
+   }
 };
 
 this.current = function() {
@@ -74,7 +78,8 @@ this.prettyString = function(emitter) {
    if (this.type === CONTAINER_PARTITION) {
      list = this.partitions;
      emitter.newlineIndent();
-     emitter.write('<container:'+(this.details?this.details.type:'main')+'>');
+     emitter.write('<container:'+(this.details?this.details.type:'main') +
+                    ' [' + this.min + ' to ' + (this.max) +']>');
      emitter.indent();
      while (e < list.length) {
         list[e].prettyString(emitter);
@@ -85,9 +90,11 @@ this.prettyString = function(emitter) {
      emitter.write('</container>');
    }
    else {
+     ASSERT.call(this, this.min === this.max);
      list = this.statements;
      emitter.newlineIndent();
-     emitter.write('<seg'+(this === this.owner.test ? ':test>' : '>'));
+     emitter.write('<seg'+(this === this.owner.test ? ':test' : '') +
+                   ' [' + this.min + ']>');
      emitter.indent();     
      while (e < list.length) {
        emitter.newlineIndent();
@@ -101,5 +108,3 @@ this.prettyString = function(emitter) {
 
    return emitter.code;
 };
-     
-   
