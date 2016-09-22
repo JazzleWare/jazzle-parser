@@ -128,6 +128,7 @@ var IS_REF = 1,
 
 var NOEXPRESSION = { type: 'NoExpression' };
 
+var START_BLOCK = { type: 'StartBlock' }, FINISH_BLOCK = { type: 'FinishBlock' };
 
 function ASSERT(cond, message) {
   if (!cond) throw new Error(message);

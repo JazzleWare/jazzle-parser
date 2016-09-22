@@ -783,5 +783,9 @@ this._emitObjAssigElem = function(prop, name, isStatement) {
 };
    
 this.emitters['NoExpression'] = function(n) { return; };
-this.emitters['SynthesizedExpr'] = function(n) { this.write(n.contents); };
+this.emitters['SynthesizedExpr'] = function(n) {
+  this.write(n.contents);
+};
 
+this.emitters['StartBlock'] = function(n) {};
+this.emitters['FinishBlock'] = function(n) {};
