@@ -7239,31 +7239,13 @@ this.parseYield = function(context) {
 
 }]  ],
 [Partitioner.prototype, [function(){
-this.push = function(stmt) {
+this.push = function(n) {
    ASSERT.call(this, this.type === CONTAINER_PARTITION);
 
-   var yStmt = y(stmt);
-
-   if (stmt.type === 'YieldExpression') {
-      this.current().statements.push(stmt);
-      return this.close_current_active_partition();
-   }     
-   if (yStmt === 0)
-     return this.current().statements.push(stmt);
-
-   if (stmt.type !== 'ExpressionStatement') {
-     ASSERT.call(this, HAS.call(pushList, stmt.type));
-     var container = this.push_container(stmt);
-     pushList[stmt.type].call(container, stmt);
-     this.max = container.max;
-     return;
-   }
- 
-   var e = this.emitter.transformYield(stmt.expression, this, NOT_VAL);
-   if (e !== NOEXPRESSION) {
-     stmt.expression = e;
-     return this.current().statements.push(stmt);
-   }
+   if ( HAS.call(pushList, n.type) )
+     pushList[n.type].call( this, n );
+   else
+     this.current().statements.push(n);
 }; 
 
 this.close_current_active_partition = function() {
@@ -7298,21 +7280,36 @@ this.push_container = function(stmt) {
    return container;
 }; 
 
-pushList['WhileStatement'] = function(stmt) {
-   var test = this.emitter.transformYield(stmt.test, this, IS_VAL);
+pushList['YieldExpression'] = function(n) {
+   this.current().statements.push(n);
    this.close_current_active_partition();
-   var current = this.current();
-   current.statements.push(test);
-   this.test = current;
-   this.close_current_active_partition();
-   var b = stmt.body;
-   if (b.type !== 'BlockExpression')
-     return this.push(b); 
-
-   var e = 0;
-   while (e < b.length) this.push(b[e++]);
 };
 
+pushList['ExpressionStatement'] = function(n) {
+   var e = this.emitter.transformYield(n.expression, this, NOT_VAL);
+   if (e !== NOEXPRESSION && !( e.type === 'Identifier' && e.synth ) )
+     this.current().statements.push(e);
+};
+
+pushList['WhileStatement'] = function(n) {
+   this.close_current_active_partition();
+   var container = new Partitioner(this, n);
+   var test = this.emitter.transformYield(n.test, container, IS_VAL);
+   container.close_current_active_partition();
+   var test_seg = container.current();
+   test_seg.statements.push(test);
+   container.close_current_active_partition();
+   container.test = test_seg;
+   var list = n.body;
+   if ( list.type !== 'BlockStatement' )
+     container.push(list);
+   else {
+     var e = 0;
+     while (e < list.length) container.push(list[e++]);
+   }
+   this.partitions.push(container);
+};
+       
 this.prettyString = function(emitter) {
    if (!emitter) emitter = new Emitter();
    var list = null, e = 0;
