@@ -5,10 +5,12 @@ function Partitioner(owner, details) {
    if (this.owner === null) {
      this.emitter = details;
      this.details = null;
+     this.idx = -1;
    }
    else {
      this.emitter = this.owner.emitter;
      this.details = details;
+     this.idx = this.owner.partitions.length;
    }
      
    if (owner !== null && details === null) {

@@ -102,6 +102,22 @@ this.exitScope = function() {
   this.partitions.push(FINISH_BLOCK);
 };
 
+this.out = function() {   
+  if ( this.owner === null ) return null;
+  if ( this.idx < this.owner.partitions.length - 1 )
+    return this.owner.partitions[this.idx+1];
+
+  return this.owner.next_or_out();
+};
+
+this.loop = function() {
+  if ( this.owner === null ) return null;
+  if ( this.idx < this.owner.partitions.length - 1 )
+    return this.owner.partitions[this.idx+1];
+
+  return this.owner.partitions[0];
+};
+
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
    while (e < list.length) {
@@ -161,4 +177,3 @@ pushList['YieldExpression'] = function(n) {
    this.close_current_active_partition();
 };
 
-   
