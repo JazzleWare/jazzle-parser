@@ -37,7 +37,7 @@ function id_is_synth(n) {
 var has = {}.hasOwnProperty;
 var transformerList = {};
 
-function isAssigment(n) {
+function isAssignmentExpression(n) { 
    if (n.type === 'ExpressionStatement')
      n = n.expression;
 
@@ -47,7 +47,7 @@ function isAssigment(n) {
 
 this.transformYield = function(n, b, isVal) {
   var yc = y(n);
-  if ( (yc || isAssignment(n)) && has.call(transformerList, n.type) ) {
+  if ( (yc || isAssignmentExpression(n)) && has.call(transformerList, n.type) ) {
     var transformedNode = transformerList[n.type].call(this, n, b, isVal);
     if ( transformedNode === n && yc )
       n.y = 0;

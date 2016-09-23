@@ -344,7 +344,7 @@ this.emitters['BinaryExpression'] = function(n) {
 
 this._transformAssignment = function(assig, vMode) {
    var b = [];
-   assig = this.transformAssignment(assig, b, vMode);
+   assig = this.transformYield(assig, b, vMode);
    if (vMode || assig.type === 'AssignmentExpression') b. push(assig);
 
    if (vMode && b.length === 1)
@@ -367,7 +367,7 @@ this.emitters['AssignmentExpression'] = function(n) {
    if (y(n) === 0)  switch (n.left.type) {
       case 'Identifier': 
       case 'MemberExpression':
-      case 'SynthesizedExpression':
+      case 'SynthesizedExpr':
          this.emit(n.left);
          this.write(n.operator);
          this._emitNonSeqExpr(n.right);
