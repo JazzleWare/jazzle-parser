@@ -170,9 +170,10 @@ this.parseNonSeqExpr = function (prec, context  ) {
        op = this. parseO( context );
        if ( op && isAssignment(this.prec) ) {
          this.firstUnassignable = firstUnassignable;
-         if ( prec === PREC_WITH_NO_OP )
+         if ( prec === PREC_WITH_NO_OP ) {
             head =  this. parseAssignment(head, context );
-         
+            y = this.y;
+         }
          else
             this['assig.not.first']();
 

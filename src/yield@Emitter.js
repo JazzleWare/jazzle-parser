@@ -37,9 +37,22 @@ function id_is_synth(n) {
 var has = {}.hasOwnProperty;
 var transformerList = {};
 
+function isAssigment(n) {
+   if (n.type === 'ExpressionStatement')
+     n = n.expression;
+
+   return n.type === 'AssignmentExpression' &&
+          n.left.type !== 'Identifier';
+}
+
 this.transformYield = function(n, b, isVal) {
-  if ( y(n) && has.call(transformerList, n.type) )
-    return transformerList[n.type].call(this, n, b, isVal);
+  var yc = y(n);
+  if ( (yc || isAssignment(n)) && has.call(transformerList, n.type) ) {
+    var transformedNode = transformerList[n.type].call(this, n, b, isVal);
+    if ( transformedNode === n && yc )
+      n.y = 0;
+    return transformedNode;
+  }
   
   return n;
 };
@@ -49,21 +62,34 @@ function synth_not_node(n) {
 
 }
 
+function synth_seq_or_block(b, yc, totalY) {
+   if (totalY === 0) {
+     ASSERT.call(this, yc === 0);
+     return { type: 'SequenceExpression', expressions: b, y: yc };
+   }
+   return { type: 'BlockStatement', body: b, y: yc};
+}
+
+var VOID0 = synth_expr_node('(void 0)');
 function synth_if_node(cond, body, alternate, yBody, yElse) {
   yBody = yBody || 0;
   yElse = yElse || 0;
 
+  var yc = yBody + yElse;
   if (body.length > 1 || body[0].type === 'IfStatement' )
-    body = { type: 'BlockStatement', body : body, y: yBody };
+    body = synth_seq_or_block(body, yBody, yc);
   else
     body = body[0];
 
   if(alternate)
-    alternate = alternate.length > 1 ? { type: 'BlockStatement', body: alternate, y: yElse } : alternate[0];
+    alternate = alternate.length > 1 ? synth_seq_or_block(body, yElse, yc) : alternate[0];
   else
     alternate = null;
 
-  return { type: 'IfStatement', alternate: alternate, consequent: body, test: cond, y: yBody + yElse };
+  return { type: yc > 0 ? 'IfStatement' : 'ConditionalExpression',
+           alternate: alternate === null && yc === 0 ? VOID0 : alternate ,
+           consequent: body, 
+           test: cond, y: yBody + yElse };
 }
 
 function append_assig(b, left, right) {
@@ -271,7 +297,7 @@ transformerList['CallExpression'] = function(n, b, vMode) {
 var transformAssig = null;
 transformAssig = {};
 
-transformerList['AssignmentExpression'] = function(n, b, vMode) {
+this.transformAssignment = transformerList['AssignmentExpression'] = function(n, b, vMode) {
    var lefttype = n.left.type;
    var temp = this.scope.allocateTemp();
    this.evaluateAssignee(n.left, b, y(n));
@@ -283,6 +309,7 @@ transformerList['AssignmentExpression'] = function(n, b, vMode) {
    switch (lefttype) {
      case 'Identifier': 
      case 'MemberExpression':
+        assigValue.y = 0; 
         return assigValue;
 
      default:
@@ -292,15 +319,11 @@ transformerList['AssignmentExpression'] = function(n, b, vMode) {
 
 this.evaluateAssignee = function( assignee, b, yc ) {
     if (assignee.type === 'Property' || assignee.type === 'AssignmentProperty' ) {
-      if (assignee.computed && yc ) {
-        yc -= y(assignee.key);
+      if (assignee.computed ) {
         assignee.key = this.transformYield(assignee.key, b, IS_VAL);
-
-        if (yc) {
-          var t = this.scope.allocateTemp();
-          append_assig(b, t, assignee.key);
-          assignee.key = synth_id_node(t);
-        }
+        var t = this.scope.allocateTemp();
+        append_assig(b, t, assignee.key);
+        assignee.key = synth_id_node(t);
       }
 
       assignee = assignee.value;
@@ -332,23 +355,18 @@ this.evaluateAssignee = function( assignee, b, yc ) {
        case 'MemberExpression':
           var objTemp = "";
           var propTemp = "";
-          var objY = y(assignee.object);
-          var propY = assignee.computed ? y(assignee.property) : 0;
 
           assignee.object = this.transformYield(assignee.object, b, IS_VAL);
-          if (yc) {
-            objTemp = this.scope.allocateTemp();
-            append_assig( b, objTemp, assignee.object);
-            assignee.object = synth_id_node(objTemp);
-          }
-        
+          objTemp = this.scope.allocateTemp();
+
+          append_assig( b, objTemp, assignee.object);
+          assignee.object = synth_id_node(objTemp);
           if (assignee.computed) {
             assignee.property = this.transformYield(assignee.property, b, IS_VAL);
-            if (yc) {
-              propTemp = this.scope.allocateTemp();
-              append_assig(b, propTemp, assignee.property );
-              assignee.property = synth_id_node(propTemp);
-            }   
+            propTemp = this.scope.allocateTemp();
+
+            append_assig(b, propTemp, assignee.property );
+            assignee.property = synth_id_node(propTemp);
           }
  
           break ;

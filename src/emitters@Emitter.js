@@ -43,28 +43,7 @@ this._emitCallArgs = function(list) {
      e++; 
   }
 };
-
-this._writeArray = function(list, start) {   
-   this.write('[');
-   var e = start;
-   while ( e < list.length ) {
-      if ( list[e] !== null && list[e].type === 'SpreadElement' )
-        break;
-
-      if ( e !== start )
-        this.write(', ');
-
-      if ( list[e] === null )
-        this.write('null');
- 
-      else
-        this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP );
- 
-      e++;
-   }
-   this.write(']');
-};
-     
+    
 this._emitExpr = function(n, prec) { // TODO: prec is not necessary
   var currentPrec = this.prec;
   this.prec = prec;
@@ -100,23 +79,7 @@ this._emitNonSeqExpr = function(n, prec) {
 
 this.emitters['ArrayExpression'] = function(n) {
    this.emitContext = EMIT_CONTEXT_NONE;
-   if ( !n.spread )
-     return this._writeArray(n.elements, 0);
-
-   var list = n.elements, e = 0;
- 
-   this.write(this.special('concat') );
-   this.write('(');
-   while ( e < list.length ) {
-      if ( e ) this.write(', ');
-      if ( list[e].type === 'SpreadElement' ) {
-        this.emit(list[e].argument);
-        e++ ;
-      }
-      else
-        e = this._writeArray(list, e);
-   }
-   this.write(')');
+   ASSERT.call(this, false, n.type);
 };
     
 this.emitters['BlockStatement'] = function(n) {
@@ -288,14 +251,15 @@ this._emitString = function(str) {
   this.write(quoteStr);
 };
              
-var ASSIGN_STATEMENT = !false;
 this.emitters['ExpressionStatement'] = function(n) {
    this.emitContext = EMIT_CONTEXT_STATEMENT;
    if (n.expression.type === 'AssignmentExpression' )
-     return this._emitAssignment(n.expression, ASSIGN_STATEMENT);
-
-   this.emit(n.expression);
-   this.code += ';';
+     this.emit(
+        this._transformAssignment(n.expression, NOT_VAL) );
+   else {
+     this.emit(n.expression);
+     this.code += ';';
+   }
 };
      
 this.emitters['DoWhileStatement'] = function(n) {
@@ -378,15 +342,39 @@ this.emitters['BinaryExpression'] = function(n) {
 
 };
 
-this._emitAssignment = function(assig, isStatement) {
-  return this.assigEmitters[assig.left.type].call(
-           this, assig, isStatement );
+this._transformAssignment = function(assig, vMode) {
+   var b = [];
+   assig = this.transformAssignment(assig, b, vMode);
+   if (vMode || assig.type === 'AssignmentExpression') b. push(assig);
 
+   if (vMode && b.length === 1)
+     return b[0];
+
+   return { type: vMode ? 'SequenceExpression' : 'SequenceStatement', expressions: b }
 };
    
-this.emitters['AssignmentExpression'] = function(n) {
-   return this._emitAssignment(n, !ASSIGN_STATEMENT);
+this.emitters['SequenceStatement'] = function(n) {
+  var list = n.expressions, e = 0;
+  while (e < list.length) {
+     if (e > 0) this.newlineIndent();
+     this.emit(list[e++]);
+     this.code += ';';
+  }
+};
 
+this.emitters['AssignmentExpression'] = function(n) {
+
+   if (y(n) === 0)  switch (n.left.type) {
+      case 'Identifier': 
+      case 'MemberExpression':
+      case 'SynthesizedExpression':
+         this.emit(n.left);
+         this.write(n.operator);
+         this._emitNonSeqExpr(n.right);
+         return;
+   }
+
+   return this.emit( this._transformAssignment(n, IS_VAL));
 };
 
 this.emitters['Program'] = function(n) {
@@ -547,150 +535,8 @@ this.emitters['ThisExpression'] = function(n) {
     this.write('this');
 };
 
-this._emitSimpAssig = function(assig, isStatement) {
-  var hasParen = this.prec !== PREC_WITH_NO_OP;
-  
-  if (hasParen) this.write('(');
-  this.emit(assig.left);
-  this.write(assig.operator);
-
-  this._emitNonSeqExpr(assig.right, PREC_WITH_NO_OP);
-
-  if (hasParen) this.write(')');
-  if (isStatement) this.code += ';';
-};
-
-function isSimpAssigHead(head) {
-  switch (head.type) {
-    case 'Identifier':
-    case 'MemberExpression':
-       return !false;
-   
-    default:
-       return head.type === 'SynthesizedExpr' ;
-  }
-}
-
-function containerLen(container) {
-
-   switch (container.type) { 
-     case 'ArrayPattern':
-        return container.elements.length;
-   
-     case 'ObjectPattern':
-        return container.properties.length;
-  
-     default:
-        return -1;
-
-   }
-}
-         
 this._emitAssignment = function(assig, isStatement) {
-    if (isSimpAssigHead(assig.left))
-      return this._emitSimpAssig(assig, isStatement);
-
-    var hasParen = false;
-    var len = containerLen(assig.left);
-    
-    if (len > 0) {
-      hasParen = !isStatement && this.prec !== PREC_WITH_NO_OP;
-      if (hasParen) this.write('(');
-      var temp = this.scope.allocateTemp();
-
-      this.write(temp);
-      this.write('=');
-    }
-    this._emitNonSeqExpr(assig.right, PREC_WITH_NO_OP);
-    if (isStatement)
-      this.write(';');
-
-    if (len > 0) {
-      if (!isStatement)
-        this.write(',');
-      this.assigEmitters[assig.left.type].call(
-         this, assig.left, temp, isStatement);
-
-      if (!isStatement)
-        this.write(temp);
-
-      this.scope.releaseTemp(temp);
-    }
-
-    if (hasParen) this.write(')');
-};
-
-this.assigEmitters = {};
-
-this.assigEmitters['ArrayPattern'] = function(head, name, isStatement) {
-   var list = head.elements;
-   if (list.length===0)
-     return;
-
-   var e = 0;
-   while (e < list.length) {
-      this._emitArrayAssigElem(list[e], e, name, isStatement);
-      e++ ;
-   }
-};
-
-this._emitArrayAssigElem = function(elem, idx, name, isStatement) {
-   var left = elem, right = null;
-   if (elem.type === 'AssignmentPattern') {
-     left = elem.left;
-     right = elem.right;
-   }
-
-   var simp = isSimpAssigHead(left);
-   var temp = "";   
-
-   if ( isStatement)
-     this.newlineIndent();
-
-   if (simp)
-     this.emit(left);
-   else {
-     temp = this.scope.allocateTemp();
-     this.write(temp);
-   }
-   this.write('=');
-   this.writeMulti(name, '.length>', idx+"", ' ? ', name, '[', idx+"", '] : ');
-   this._emitNonSeqExprOrVoid0(right);
-
-   this.ea(isStatement);
-
-   if (simp)
-     return;
-
-   this.assigEmitters[left.type].call(this, left, temp, isStatement);
-
-   this.scope.releaseTemp(temp);
-};
-
-this._emitNonSeqExprOrVoid0 = function(n, prec) {
-   if (n === null)
-     return this.write('void 0');
-
-   return this._emitNonSeqExpr(n, prec);
-};
-
-this.ea = function(isStatement) {
-  if (!isStatement)
-    return this.write(',');
-
-  this.write(';');
-};
-  
-this.assigEmitters['ObjectPattern'] = function(head, name, isStatement) {
-  var list = head.properties;
-  if (list.length === 0)
-    return;
-
-  var e = 0;
-  while (e < list.length) {
-    this._emitObjAssigElem(list[e], name, isStatement);
-    e++ ;
-  }
+    ASSERT.call(this, false, "_emitAssignment"); 
 };
 
 this.emitters['YieldExpression'] = function(n) {
@@ -703,85 +549,6 @@ this.emitters['YieldExpression'] = function(n) {
   }
 }; 
       
-this._emitObjAssigElem = function(prop, name, isStatement) {
-   var v = prop.value, k = prop.key;             
-   var left = v, right = null;
-
-   if (v.type === 'AssignmentPattern') {
-     left = v.left;
-     right = v.right;
-   }
-
-   if (isStatement)
-     this.newlineIndent();
-
-   var propTemp = "";
-
-   if (prop.computed) {
-     propTemp = this.scope.allocateTemp();
-     this.write(propTemp);
-     this.write('=');
-     this._emitNonSeqExpr(k, PREC_WITH_NO_OP);
-     this.ea(isStatement);
-   }
-
-   var simp = isSimpAssigHead(left);
-   var temp = "";
-
-   if (simp)
-     this.emit(left);
-   else {
-     temp = this.scope.allocateTemp();
-     this.write(temp);
-   }
-
-   this.write('=');
-   if (prop.computed) {
-     this.write(propTemp);
-     this.write('+""');
-   }
-   else switch(k.type) {
-      case 'Identifier':
-         this._emitString(k.name);
-         break;
-      case 'Literal':
-         this._emitString(k.value+"");
-   }
-
-   this.writeMulti(' in ', name);
-
-   this.write('?');
-   this.write(name);
-   this.write('[');
-   
-   if (prop.computed) {
-     this.write(propTemp);
-     this.write('+""');
-   }
-   else switch(k.type) {
-      case 'Identifier':
-         this._emitString(k.name);
-         break;
-      case 'Literal':
-         this._emitString(k.value+"");
-   }
-
-   this.write('] :' );
-
-   this._emitNonSeqExprOrVoid0(right, PREC_WITH_NO_OP );
-   this.ea(isStatement);
-
-   if (simp)
-     return;
-
-   this.assigEmitters[left.type].call(this, left, temp, isStatement);
-
-   if (prop.computed)
-     this.scope.releaseTemp(propTemp);
-
-   this.scope.releaseTemp(temp);
-};
-   
 this.emitters['NoExpression'] = function(n) { return; };
 this.emitters['SynthesizedExpr'] = function(n) {
   this.write(n.contents);
