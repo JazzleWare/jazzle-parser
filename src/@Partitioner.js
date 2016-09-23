@@ -13,16 +13,16 @@ function Partitioner(owner, details) {
      
    if (owner !== null && details === null) {
      this.partitions = null;
-     this.type = SIMPLE_PARTITION;
+     this.type = 'SimpleContainer';
      this.statements = [];
    }
    else if (owner === null) {
      this.partitions = [];
      this.statements = null;
-     this.type = CONTAINER_PARTITION;
+     this.type = 'MainContainer';
    }
    else switch (details.type) {
-     case 'BlockStatement':
+     case 'ElseClause':
      case 'WhileStatement':
      case 'SwitchStatement':
      case 'DoWhileStatement':
@@ -33,7 +33,7 @@ function Partitioner(owner, details) {
      case 'IfStatement':
         this.partitions = [];
         this.statements = null;
-        this.type = CONTAINER_PARTITION;
+        this.type = details.type.replace(/(?:Clause|Statement)$/, "Container");
         break;
 
      default:

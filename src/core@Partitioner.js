@@ -1,5 +1,5 @@
 this.push = function(n) {
-   ASSERT.call(this, this.type === CONTAINER_PARTITION);
+   ASSERT.call(this, !this.isSimple());
 
    if ( y(n) !== 0 && HAS.call(pushList, n.type) )
      pushList[n.type].call( this, n );
@@ -8,18 +8,18 @@ this.push = function(n) {
 }; 
 
 this.close_current_active_partition = function() {
-   ASSERT.call(this, this.type === CONTAINER_PARTITION);
+   ASSERT.call(this, !this.isSimple());
    if ( this.currentPartition === null )
      return;
 
-   ASSERT.call(this, this.currentPartition.type === SIMPLE_PARTITION);
+   ASSERT.call(this, this.currentPartition.isSimple());
    if (this.currentPartition.statements.length !== 0) {
      this.currentPartition = null;
    }
 };
 
 this.current = function() { // TODO: substitute it with add_to_current_partition
-   ASSERT.call(this, this.type === CONTAINER_PARTITION);
+   ASSERT.call(this, !this.isSimple());
    if (this.currentPartition !== null)
      return this.currentPartition;
 
@@ -31,16 +31,24 @@ this.current = function() { // TODO: substitute it with add_to_current_partition
    return n;
 };
 
+this.isSimple = function() {
+  return this.type === 'SimpleContainer';
+};
+
+this.isContainer = function() {
+  return !this.isSimple();
+};
+
 var pushList = {};
   
 this.prettyString = function(emitter) {
    if (!emitter) emitter = new Emitter();
     
    var list = null, e = 0;
-   if (this.type === CONTAINER_PARTITION) {
+   if (this.isContainer()) {
      list = this.partitions;
      emitter.newlineIndent();
-     emitter.write('<container:'+(this.details?this === this.owner.alternate ? 'else' :this.details.type:'main') +
+     emitter.write('<container:'+ this.type +
                     ' [' + this.min + ' to ' + (this.max-1) +']>');
      emitter.indent();
      while (e < list.length) {
@@ -138,7 +146,7 @@ pushList['IfStatement'] = function(n) {
    container.push(n.consequent);
    if (n.alternate !== null) {
        container.close_current_active_partition();
-       var elseContainer = new Partitioner(container, { type: 'BlockStatement' }); // TODO: eliminate { type: 'BlockStatement' }
+       var elseContainer = new Partitioner(container, { type: 'ElseClause' }); // TODO: eliminate { type: 'BlockStatement' }
        elseContainer.push(n.alternate);
        container.alternate = elseContainer;
        container.partitions.push(elseContainer);
