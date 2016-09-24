@@ -37,17 +37,22 @@ function id_is_synth(n) {
 var has = {}.hasOwnProperty;
 var transformerList = {};
 
-function isAssignmentExpression(n) { 
+function isComplexAssignment(n) { 
    if (n.type === 'ExpressionStatement')
      n = n.expression;
 
-   return n.type === 'AssignmentExpression' &&
-          n.left.type !== 'Identifier';
+   if ( n.type === 'AssignmentExpression' ) {
+     if ( n.left.type === 'Identifier') return false;
+     return n.left.type !== 'MemberExpression' ?
+               !false : y(n.left) !== 0;
+   }
+
+   return false;
 }
 
 this.transformYield = function(n, b, isVal) {
   var yc = y(n);
-  if ( (yc || isAssignmentExpression(n)) && has.call(transformerList, n.type) ) {
+  if ( (yc || isComplexAssignment(n)) && has.call(transformerList, n.type) ) {
     var transformedNode = transformerList[n.type].call(this, n, b, isVal);
     if ( transformedNode === n && yc )
       n.y = 0;
