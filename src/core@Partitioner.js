@@ -5,6 +5,8 @@ this.push = function(n) {
      pushList[n.type].call( this, n );
    else
      this.current().statements.push(n);
+
+   return this;
 }; 
 
 this.close_current_active_partition = function() {
@@ -126,6 +128,10 @@ pushList['BlockStatement'] = function(n) {
       if (e === list.length-1) this.exitScope();
       e++ ;
    }
+};
+
+function synth_do_while(cond, body) {
+   return { type: 'DoWhileStatement', test: cond, body: BLOCK(body) };
 };
 
 pushList['ExpressionStatement'] = function(n) {

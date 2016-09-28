@@ -554,5 +554,79 @@ this.emitters['SynthesizedExpr'] = function(n) {
   this.write(n.contents);
 };
 
-this.emitters['StartBlock'] = function(n) {};
-this.emitters['FinishBlock'] = function(n) {};
+this.emitters['StartBlock'] = function(n) {
+   this.write('<B>');
+   this.indent();
+};
+
+this.emitters['FinishBlock'] = function(n) {
+   this.unindent();
+   this.newlineIndent();
+   this.write('</B>');
+};
+
+this._emitGenerator = function(n) {
+  this.write('function*');
+  if (n.id !== null) this.write(' ' + n.id.name);
+  this.write('(<args>) {');
+  this.indent();
+  this.newlineIndent();
+  this.emit( new Partitioner(null, this).push(n.body) );
+  this.unindent();
+  this.write('}');
+};
+
+this.emitters['FunctionDeclaration'] = function(n) {
+  if (n.generator)
+    return this._emitGenerator(n);
+  
+  else 
+     ASSERT.call(this, false);
+};
+
+function describeContainer(container) {
+   var str = "";
+   if (container.isSimple()) {
+     str = 'seg';
+     if (container === container.owner.test)
+       str += ':test';
+
+     ASSERT.call(this, container.min === container.max);
+     str += ' ['+container.min+']';
+     return str;
+   }
+   return 'container:' + container.type + ' [' + container.min + ' to ' + (container.max-1) + ']';
+}
+
+this.emitters['MainContainer'] =
+this.emitters['IfContainer'] =
+this.emitters['WhileContainer'] = function(n) {
+  var containerStr = describeContainer(n);
+  this.write( '<'+containerStr+'>' );
+  this.indent();
+  var list = n.partitions, e = 0;
+  while (e < list.length) {
+    this.newlineIndent();
+    this.emit(list[e]);
+    e++ ;
+  }
+  this.unindent();
+  this.newlineIndent(); 
+  this.write('</'+containerStr+'>');
+};
+
+this.emitters['SimpleContainer'] = function(n) {
+  var containerStr = describeContainer(n);
+  this.write('<'+containerStr+'>');
+  this.indent();
+  var list = n.statements, e = 0;
+  while (e < list.length) {
+     this.newlineIndent();
+     this.emit(list[e]);
+     e++ ;
+  }
+  this.unindent();
+  this.newlineIndent();
+  this.write('</'+containerStr+'>');
+}; 
+ 

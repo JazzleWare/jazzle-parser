@@ -24,7 +24,7 @@ function Partitioner(owner, details) {
      this.type = 'MainContainer';
    }
    else switch (details.type) {
-     case 'ElseClause':
+     case 'CatchClause':
      case 'WhileStatement':
      case 'SwitchStatement':
      case 'DoWhileStatement':
@@ -33,6 +33,8 @@ function Partitioner(owner, details) {
      case 'TryStatement':
      case 'ForStatement':
      case 'IfStatement':
+     case 'ElseClause':
+     case 'CaseClause':
         this.partitions = [];
         this.statements = null;
         this.type = details.type.replace(/(?:Clause|Statement)$/, "Container");
