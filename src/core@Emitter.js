@@ -69,14 +69,17 @@ this.assert = function(cond, message) {
 
 var has = Object.hasOwnProperty;
 
-this.emit = function(n) {
+this.emit = function(n, prec, flags) {
   if ( !n )
     return;
+
+  if (arguments.length < 2) prec = PREC_WITH_NO_OP;
+  if (arguments.length < 3) flags = 0;
 
   this.assert(has.call(this.emitters, n.type),
       'No emitter for ' + n.type );
   var emitter = this.emitters[n.type];
-  return emitter.call(this, n);
+  return emitter.call(this, n, prec, flags);
 };
 
 this.startCode = function() {

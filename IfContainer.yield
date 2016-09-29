@@ -1,0 +1,26 @@
+if (yield) yield;
+else { yield; yield }
+
+<container:if>
+  <seg a>yield</seg>
+  <seg:test b>sent</seg>
+  <seg c>yield</seg>
+  <container:custom>
+    <seg e>yield</seg>
+    <seg l>yield</seg>
+  </container>
+</container>
+
+if state <= l {
+  if state == a { state = b; return }
+  if state == b {
+     if sent { state = c }
+     else { state = e }
+  }
+  if state == c { state = last; return }
+  if state >= e { 
+     if state == e { state = l; return; }
+     if state == l { state = last; return }
+  }
+}
+    

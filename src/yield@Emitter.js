@@ -622,3 +622,74 @@ transformerList['UnaryExpression'] = function(n, b, vMode) {
   return n;
 };
 
+function do_while_wrapper( body, yBody) {
+   if (body.length > 1)
+     body = { type: 'BlockStatement', body: body, y: yBody };
+
+   return { type: 'DoWhileStatement', body: body, test: {type: 'Literal', value: false}, y: yBody };
+}
+
+function synth_binexpr(left, o, right, yc) {
+   var t = "";
+   if ( o === '||' || o === '&&' ) t = 'LogicalExpression'; 
+   else if ( o.charAt(o.length-1) === '=' ) switch (o) {
+      case '==':
+      case '>=': 
+      case '<=':
+      case '!=':
+      case '!==':
+      case '===':
+         t = 'BinaryExpression';
+         break;
+
+      default:
+        t = 'AssignmentExpression';
+        break;
+   }
+   else t = 'BinaryExpression';  
+    
+   return {
+     type: t,
+     left: left,
+     y: yc, 
+     right: right,
+     operator: o
+   };
+}
+
+transformerList['SwitchStatement'] = function(n, b, vMode) {
+   var v = synth_id_node(this.scope.allocateTemp());
+   var m = synth_id_node(this.scope.allocateTemp());
+   var yc = y(n);
+   var doBody = []; 
+   this.scope.releaseTemp(v.name);
+   n. discriminant = this.transformYield(n. discriminant, doBody, IS_VAL);
+   this.scope.allocateTemp(v.name);
+   append_assig(doBody, v.name, n. discriminant);
+   append_assig(doBody, m.name, { type:'Literal', value: 0 });
+
+   var list = n.cases, e = 0;
+   while (e < list.length) {
+     var c = list[e];
+     var yTest = y(c.test);
+     var cond = this.transformYield(
+        synth_binexpr(
+           m, 
+          '||',
+          synth_binexpr(
+             m, 
+            '=',
+            synth_binexpr(
+               c.test,
+               '==',
+               v, yTest
+            ), yTest
+          ), yTest
+        ), doBody, IS_VAL
+      );
+     doBody.push(synth_if_node(cond, c.consequent, null, y(c)));
+     e++ ;
+  }
+  return do_while_wrapper(doBody, yc);
+};
+

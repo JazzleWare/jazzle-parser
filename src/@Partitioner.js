@@ -35,6 +35,7 @@ function Partitioner(owner, details) {
      case 'IfStatement':
      case 'ElseClause':
      case 'CaseClause':
+     case 'CustomContainer':
         this.partitions = [];
         this.statements = null;
         this.type = details.type.replace(/(?:Clause|Statement)$/, "Container");

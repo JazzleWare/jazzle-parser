@@ -31,7 +31,7 @@ this._emitBody = function(blockOrExpr) {
 
 this._paren = function(n) {
   this.write('(');
-  this._emitExpr(n, PREC_WITH_NO_OP);
+  this.emit(n, PREC_WITH_NO_OP, 0);
   this.write(')');
 };
 
@@ -42,14 +42,6 @@ this._emitCallArgs = function(list) {
      this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP );
      e++; 
   }
-};
-    
-this._emitExpr = function(n, prec) { // TODO: prec is not necessary
-  var currentPrec = this.prec;
-  this.prec = prec;
-  this.emit(n);
-  this.prec =  currentPrec ;
-
 };
 
 function isImplicitSeq(n) {
@@ -67,18 +59,14 @@ function isImplicitSeq(n) {
    return false;
 }
 
-this._emitNonSeqExpr = function(n, prec) {
-  var currentPrec = this.prec;
-  this.prec = prec;
+this._emitNonSeqExpr = function(n, prec, flags) {
   if ( n.type === 'SequenceExpression' || isImplicitSeq(n) )
     this._paren(n);
   else
-    this.emit(n);
-  this.prec = currentPrec;
+    this.emit(n, prec, flags);
 };
 
 this.emitters['ArrayExpression'] = function(n) {
-   this.emitContext = EMIT_CONTEXT_NONE;
    ASSERT.call(this, false, n.type);
 };
     
@@ -141,11 +129,11 @@ function isComplexExpr(n) {
   }
 }
 
-this._emitNonComplexExpr = function(n) {
+this._emitNonComplexExpr = function(n, prec, flags) {
     if ( isComplexExpr(n) )
       return this._paren(n);
 
-    this.emit(n);
+    this.emit(n, prec, flags);
 };
 
 this.emitters['MemberExpression'] = function(n) {
@@ -166,15 +154,13 @@ this.emitters['MemberExpression'] = function(n) {
 
 this.emitters['NewExpression'] = function(n) {
    this.write('new ');
-   this.emitContext = EMIT_CONTEXT_NEW;
-   this._emitNonComplexExpr (n.callee);
+   this._emitNonComplexExpr (n.callee, PREC_WITH_NO_OP, EMIT_NEW_HEAD);
    this.write('(');
    this._emitCallArgs(n.arguments);
    this.write(')');
 };
 
 this.emitters['Identifier'] = function(n) {
-   this.emitContext = EMIT_CONTEXT_NONE;
    var name = n.name;
    var e = 0;
    if ( name.length && name.charCodeAt(0) === CHAR_MODULO )
@@ -252,12 +238,12 @@ this._emitString = function(str) {
 };
              
 this.emitters['ExpressionStatement'] = function(n) {
-   this.emitContext = EMIT_CONTEXT_STATEMENT;
    if (n.expression.type === 'AssignmentExpression' )
      this.emit(
-        this._transformAssignment(n.expression, NOT_VAL) );
+        this._transformAssignment(n.expression, NOT_VAL), PREC_WITH_NO_OP, EMIT_STMT_HEAD
+     );
    else {
-     this.emit(n.expression);
+     this.emit(n.expression, PREC_WITH_NO_OP, EMIT_STMT_HEAD);
      this.code += ';';
    }
 };
@@ -312,31 +298,22 @@ this.emitters['EmptyStatement'] = function(n) {
 };
 
 this.emitters['LogicalExpression'] = 
-this.emitters['BinaryExpression'] = function(n) {
+this.emitters['BinaryExpression'] = function(n, prec, flags) {
    var currentPrec = binPrec[n.operator], hasParen = false;
    
-   if ( this.prec > currentPrec ||
-        (this.prec === currentPrec && !this.isLeft && !isRassoc(currentPrec)))
-     hasParen = !false;
+   hasParen = prec > currentPrec ||
+               (prec === currentPrec && 
+                !(flags & EMIT_LEFT)  && !isRassoc(currentPrec));
        
    if ( hasParen ) {
       this.write('(');
-      this.emitContext = EMIT_CONTEXT_NONE;
    }
 
-   var prec = this.prec;
-   var isLeft = this.isLeft;
-   this.prec = currentPrec;
-   this.isLeft = !false;
-   this.emit(n.left);
-   this.isLeft = false;
+   this._emitNonSeqExpr(n.left, currentPrec, flags|EMIT_LEFT|EMIT_VAL);
    this.disallowWrap();
    this.write(' ' + n.operator + ' ');
    this.restoreWrap();
-   this.emit(n.right);
-   this.isLeft = isLeft;
-   this.prec = prec;
-   
+   this._emitNonSeqExpr(n.right, currentPrec, EMIT_VAL);
 
    if ( hasParen ) this.write(')');
 
@@ -357,24 +334,28 @@ this.emitters['SequenceStatement'] = function(n) {
   var list = n.expressions, e = 0;
   while (e < list.length) {
      if (e > 0) this.newlineIndent();
-     this.emit(list[e++]);
+     this.emit(list[e++], PREC_WITH_NO_OP, EMIT_VAL);
      this.code += ';';
   }
 };
 
-this.emitters['AssignmentExpression'] = function(n) {
-
-   if (y(n) === 0)  switch (n.left.type) {
+this.emitters['AssignmentExpression'] = function(n, prec, flags) {
+   var hasParen = prec !== PREC_WITH_NO_OP;
+   if (hasParen) this.write('(');
+   switch (n.left.type) {
       case 'Identifier': 
       case 'MemberExpression':
       case 'SynthesizedExpr':
-         this.emit(n.left);
-         this.write(n.operator);
-         this._emitNonSeqExpr(n.right);
-         return;
+         if (y(n) === 0) {
+           this.emit(n.left);
+           this.write(' ' + n.operator + ' ');
+           this._emitNonSeqExpr(n.right, PREC_WITH_NO_OP, flags & EMIT_VAL);
+           break ;
+         }
+      default:
+         this.emit( this._transformAssignment(n, flags & EMIT_VAL), PREC_WITH_NO_OP, flags & EMIT_VAL);
    }
-
-   return this.emit( this._transformAssignment(n, IS_VAL));
+   if (hasParen) this.write(')');
 };
 
 this.emitters['Program'] = function(n) {
@@ -382,20 +363,13 @@ this.emitters['Program'] = function(n) {
 
 };
 
-this.emitters['CallExpression'] = function(n) {
-   var hasParen = false;
-   if ( this.emitContext & EMIT_CONTEXT_NEW ) {
-     this.emitContext = EMIT_CONTEXT_NONE;
-     hasParen = !false; 
-   }
-
+this.emitters['CallExpression'] = function(n, prec, flags) {
+   var hasParen = flags & EMIT_NEW_HEAD;
    if (hasParen) this.write('(');
-
-   this._emitNonComplexExpr (n.callee);
+   this._emitNonComplexExpr (n.callee, PREC_WITH_NO_OP, 0);
    this.write('('); 
    this._emitCallArgs(n.arguments);
    this.write(')');
-
    if (hasParen) this.write(')');
 };
    
@@ -449,17 +423,14 @@ this.emitters['ReturnStatement'] = function(n) {
    this.code += ';';
 };
 
-this.emitters['SequenceExpression'] = function(n) {
+this.emitters['SequenceExpression'] = function(n, prec, flags) {
   var hasParen = false, list = n.expressions, e = 0;
-
-  if ( this.prec !== PREC_WITH_NO_OP )   
-    hasParen = !false;
 
   if (hasParen) this.write('(');
 
   while ( e < list.length ) {
      if (e) this.write(', ');
-     this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP);
+     this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP, e ? 0 : flags);
      e++ ;
   }
 
@@ -475,10 +446,7 @@ this.emitters['UpdateExpression'] = function(n) {
       this.write(n.operator);
     }
 
-    if ( isComplexExpr(n.argument) )
-      this._paren(n.argument);
-    else
-      this.emit(n.argument);
+    this._emitNonComplexExpr(n.argument);
 
     if (!n.prefix) {
       this.disallowWrap();
@@ -487,43 +455,33 @@ this.emitters['UpdateExpression'] = function(n) {
     }
 };
 
-this.emitters['UnaryExpression'] = function(n) {
-    var hasParen = this.prec > PREC_U;
-
+this.emitters['UnaryExpression'] = function(n, prec, flags) {
+    var hasParen = prec > PREC_U;
     if (hasParen) this.write('(');
     if ( this.code.charAt(this.code.length-1) === n.operator)
       this.write(' ');
 
     this.write(n.operator);
-    var prevPrec = this.prec;
-    this.prec = PREC_U;
-    this.emit(n.argument);
-    this.prec = prevPrec;
-
+    this.emit(n.argument, PREC_U, EMIT_VAL);
     if (hasParen) this.write(')');
 };
  
 this.emitters['WithStatement'] = function(n) {
   this.write('with (');
-  this._emitExpr(n.object);
+  this.emit(n.object, PREC_WITH_NO_OP, 0);
   this.write(') ');
   this._emitBody(n.body);
 
 };
 
-this.emitters['ConditionalExpression'] = function(n) {
-   var hasParen = (this.prec !== PREC_WITH_NO_OP)
-
+this.emitters['ConditionalExpression'] = function(n, prec, flags) {
+   var hasParen = (prec !== PREC_WITH_NO_OP);
    if (hasParen) this.write('(');
-
-   var prevPrec = this.prec;
-   this.prec = PREC_COND;
    this._emitNonSeqExpr(n.test);
    this.write('?');
    this._emitNonSeqExpr(n.consequent, PREC_WITH_NO_OP);
    this.write(':');
    this._emitNonSeqExpr(n.alternate, PREC_WITH_NO_OP);
-   this.prec = prevPrec;
 
    if (hasParen) this.write(')');
 };

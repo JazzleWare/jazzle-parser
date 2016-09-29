@@ -1,0 +1,19 @@
+while (yield) yield
+
+<container:while>
+  <seg a>yield</seg>
+  <seg:test b>sent</seg>
+  <seg e>yield</seg>
+</container>
+
+if state <= e {
+  while !false {
+     if state == a { state = b; return }
+     if state == b {
+        if sent { state = e }
+        else { state = last; break }
+     }
+     if state == e { state = a; return }
+  }
+}
+

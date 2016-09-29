@@ -113,7 +113,7 @@ function Partitioner(owner, details) {
      this.type = 'MainContainer';
    }
    else switch (details.type) {
-     case 'ElseClause':
+     case 'CatchClause':
      case 'WhileStatement':
      case 'SwitchStatement':
      case 'DoWhileStatement':
@@ -122,6 +122,9 @@ function Partitioner(owner, details) {
      case 'TryStatement':
      case 'ForStatement':
      case 'IfStatement':
+     case 'ElseClause':
+     case 'CaseClause':
+     case 'CustomContainer':
         this.partitions = [];
         this.statements = null;
         this.type = details.type.replace(/(?:Clause|Statement)$/, "Container");
@@ -330,6 +333,11 @@ function y(n) {
 }
 
 var HAS = {}.hasOwnProperty;
+
+var EMIT_LEFT = 1,
+    EMIT_STMT_HEAD = 2,
+    EMIT_NEW_HEAD = 8,
+    EMIT_VAL = 16;
 
 ;
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
@@ -681,14 +689,17 @@ this.assert = function(cond, message) {
 
 var has = Object.hasOwnProperty;
 
-this.emit = function(n) {
+this.emit = function(n, prec, flags) {
   if ( !n )
     return;
+
+  if (arguments.length < 2) prec = PREC_WITH_NO_OP;
+  if (arguments.length < 3) flags = 0;
 
   this.assert(has.call(this.emitters, n.type),
       'No emitter for ' + n.type );
   var emitter = this.emitters[n.type];
-  return emitter.call(this, n);
+  return emitter.call(this, n, prec, flags);
 };
 
 this.startCode = function() {
@@ -754,7 +765,7 @@ this._emitBody = function(blockOrExpr) {
 
 this._paren = function(n) {
   this.write('(');
-  this._emitExpr(n, PREC_WITH_NO_OP);
+  this.emit(n, PREC_WITH_NO_OP, 0);
   this.write(')');
 };
 
@@ -765,14 +776,6 @@ this._emitCallArgs = function(list) {
      this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP );
      e++; 
   }
-};
-    
-this._emitExpr = function(n, prec) { // TODO: prec is not necessary
-  var currentPrec = this.prec;
-  this.prec = prec;
-  this.emit(n);
-  this.prec =  currentPrec ;
-
 };
 
 function isImplicitSeq(n) {
@@ -790,18 +793,14 @@ function isImplicitSeq(n) {
    return false;
 }
 
-this._emitNonSeqExpr = function(n, prec) {
-  var currentPrec = this.prec;
-  this.prec = prec;
+this._emitNonSeqExpr = function(n, prec, flags) {
   if ( n.type === 'SequenceExpression' || isImplicitSeq(n) )
     this._paren(n);
   else
-    this.emit(n);
-  this.prec = currentPrec;
+    this.emit(n, prec, flags);
 };
 
 this.emitters['ArrayExpression'] = function(n) {
-   this.emitContext = EMIT_CONTEXT_NONE;
    ASSERT.call(this, false, n.type);
 };
     
@@ -864,11 +863,11 @@ function isComplexExpr(n) {
   }
 }
 
-this._emitNonComplexExpr = function(n) {
+this._emitNonComplexExpr = function(n, prec, flags) {
     if ( isComplexExpr(n) )
       return this._paren(n);
 
-    this.emit(n);
+    this.emit(n, prec, flags);
 };
 
 this.emitters['MemberExpression'] = function(n) {
@@ -889,15 +888,13 @@ this.emitters['MemberExpression'] = function(n) {
 
 this.emitters['NewExpression'] = function(n) {
    this.write('new ');
-   this.emitContext = EMIT_CONTEXT_NEW;
-   this._emitNonComplexExpr (n.callee);
+   this._emitNonComplexExpr (n.callee, PREC_WITH_NO_OP, EMIT_NEW_HEAD);
    this.write('(');
    this._emitCallArgs(n.arguments);
    this.write(')');
 };
 
 this.emitters['Identifier'] = function(n) {
-   this.emitContext = EMIT_CONTEXT_NONE;
    var name = n.name;
    var e = 0;
    if ( name.length && name.charCodeAt(0) === CHAR_MODULO )
@@ -975,12 +972,12 @@ this._emitString = function(str) {
 };
              
 this.emitters['ExpressionStatement'] = function(n) {
-   this.emitContext = EMIT_CONTEXT_STATEMENT;
    if (n.expression.type === 'AssignmentExpression' )
      this.emit(
-        this._transformAssignment(n.expression, NOT_VAL) );
+        this._transformAssignment(n.expression, NOT_VAL), PREC_WITH_NO_OP, EMIT_STMT_HEAD
+     );
    else {
-     this.emit(n.expression);
+     this.emit(n.expression, PREC_WITH_NO_OP, EMIT_STMT_HEAD);
      this.code += ';';
    }
 };
@@ -1035,31 +1032,22 @@ this.emitters['EmptyStatement'] = function(n) {
 };
 
 this.emitters['LogicalExpression'] = 
-this.emitters['BinaryExpression'] = function(n) {
+this.emitters['BinaryExpression'] = function(n, prec, flags) {
    var currentPrec = binPrec[n.operator], hasParen = false;
    
-   if ( this.prec > currentPrec ||
-        (this.prec === currentPrec && !this.isLeft && !isRassoc(currentPrec)))
-     hasParen = !false;
+   hasParen = prec > currentPrec ||
+               (prec === currentPrec && 
+                !(flags & EMIT_LEFT)  && !isRassoc(currentPrec));
        
    if ( hasParen ) {
       this.write('(');
-      this.emitContext = EMIT_CONTEXT_NONE;
    }
 
-   var prec = this.prec;
-   var isLeft = this.isLeft;
-   this.prec = currentPrec;
-   this.isLeft = !false;
-   this.emit(n.left);
-   this.isLeft = false;
+   this._emitNonSeqExpr(n.left, currentPrec, flags|EMIT_LEFT|EMIT_VAL);
    this.disallowWrap();
    this.write(' ' + n.operator + ' ');
    this.restoreWrap();
-   this.emit(n.right);
-   this.isLeft = isLeft;
-   this.prec = prec;
-   
+   this._emitNonSeqExpr(n.right, currentPrec, EMIT_VAL);
 
    if ( hasParen ) this.write(')');
 
@@ -1080,24 +1068,28 @@ this.emitters['SequenceStatement'] = function(n) {
   var list = n.expressions, e = 0;
   while (e < list.length) {
      if (e > 0) this.newlineIndent();
-     this.emit(list[e++]);
+     this.emit(list[e++], PREC_WITH_NO_OP, EMIT_VAL);
      this.code += ';';
   }
 };
 
-this.emitters['AssignmentExpression'] = function(n) {
-
-   if (y(n) === 0)  switch (n.left.type) {
+this.emitters['AssignmentExpression'] = function(n, prec, flags) {
+   var hasParen = prec !== PREC_WITH_NO_OP;
+   if (hasParen) this.write('(');
+   switch (n.left.type) {
       case 'Identifier': 
       case 'MemberExpression':
       case 'SynthesizedExpr':
-         this.emit(n.left);
-         this.write(n.operator);
-         this._emitNonSeqExpr(n.right);
-         return;
+         if (y(n) === 0) {
+           this.emit(n.left);
+           this.write(' ' + n.operator + ' ');
+           this._emitNonSeqExpr(n.right, PREC_WITH_NO_OP, flags & EMIT_VAL);
+           break ;
+         }
+      default:
+         this.emit( this._transformAssignment(n, flags & EMIT_VAL), PREC_WITH_NO_OP, flags & EMIT_VAL);
    }
-
-   return this.emit( this._transformAssignment(n, IS_VAL));
+   if (hasParen) this.write(')');
 };
 
 this.emitters['Program'] = function(n) {
@@ -1105,20 +1097,13 @@ this.emitters['Program'] = function(n) {
 
 };
 
-this.emitters['CallExpression'] = function(n) {
-   var hasParen = false;
-   if ( this.emitContext & EMIT_CONTEXT_NEW ) {
-     this.emitContext = EMIT_CONTEXT_NONE;
-     hasParen = !false; 
-   }
-
+this.emitters['CallExpression'] = function(n, prec, flags) {
+   var hasParen = flags & EMIT_NEW_HEAD;
    if (hasParen) this.write('(');
-
-   this._emitNonComplexExpr (n.callee);
+   this._emitNonComplexExpr (n.callee, PREC_WITH_NO_OP, 0);
    this.write('('); 
    this._emitCallArgs(n.arguments);
    this.write(')');
-
    if (hasParen) this.write(')');
 };
    
@@ -1172,17 +1157,14 @@ this.emitters['ReturnStatement'] = function(n) {
    this.code += ';';
 };
 
-this.emitters['SequenceExpression'] = function(n) {
+this.emitters['SequenceExpression'] = function(n, prec, flags) {
   var hasParen = false, list = n.expressions, e = 0;
-
-  if ( this.prec !== PREC_WITH_NO_OP )   
-    hasParen = !false;
 
   if (hasParen) this.write('(');
 
   while ( e < list.length ) {
      if (e) this.write(', ');
-     this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP);
+     this._emitNonSeqExpr(list[e], PREC_WITH_NO_OP, e ? 0 : flags);
      e++ ;
   }
 
@@ -1198,10 +1180,7 @@ this.emitters['UpdateExpression'] = function(n) {
       this.write(n.operator);
     }
 
-    if ( isComplexExpr(n.argument) )
-      this._paren(n.argument);
-    else
-      this.emit(n.argument);
+    this._emitNonComplexExpr(n.argument);
 
     if (!n.prefix) {
       this.disallowWrap();
@@ -1210,43 +1189,33 @@ this.emitters['UpdateExpression'] = function(n) {
     }
 };
 
-this.emitters['UnaryExpression'] = function(n) {
-    var hasParen = this.prec > PREC_U;
-
+this.emitters['UnaryExpression'] = function(n, prec, flags) {
+    var hasParen = prec > PREC_U;
     if (hasParen) this.write('(');
     if ( this.code.charAt(this.code.length-1) === n.operator)
       this.write(' ');
 
     this.write(n.operator);
-    var prevPrec = this.prec;
-    this.prec = PREC_U;
-    this.emit(n.argument);
-    this.prec = prevPrec;
-
+    this.emit(n.argument, PREC_U, EMIT_VAL);
     if (hasParen) this.write(')');
 };
  
 this.emitters['WithStatement'] = function(n) {
   this.write('with (');
-  this._emitExpr(n.object);
+  this.emit(n.object, PREC_WITH_NO_OP, 0);
   this.write(') ');
   this._emitBody(n.body);
 
 };
 
-this.emitters['ConditionalExpression'] = function(n) {
-   var hasParen = (this.prec !== PREC_WITH_NO_OP)
-
+this.emitters['ConditionalExpression'] = function(n, prec, flags) {
+   var hasParen = (prec !== PREC_WITH_NO_OP);
    if (hasParen) this.write('(');
-
-   var prevPrec = this.prec;
-   this.prec = PREC_COND;
    this._emitNonSeqExpr(n.test);
    this.write('?');
    this._emitNonSeqExpr(n.consequent, PREC_WITH_NO_OP);
    this.write(':');
    this._emitNonSeqExpr(n.alternate, PREC_WITH_NO_OP);
-   this.prec = prevPrec;
 
    if (hasParen) this.write(')');
 };
@@ -1281,6 +1250,7 @@ this.emitters['StartBlock'] = function(n) {
    this.write('<B>');
    this.indent();
 };
+
 this.emitters['FinishBlock'] = function(n) {
    this.unindent();
    this.newlineIndent();
@@ -1977,6 +1947,77 @@ transformerList['UpdateExpression'] = function(n, b, vMode) {
 transformerList['UnaryExpression'] = function(n, b, vMode) {
   n.argument = this.transformYield(n.argument, b, IS_VAL);
   return n;
+};
+
+function do_while_wrapper( body, yBody) {
+   if (body.length > 1)
+     body = { type: 'BlockStatement', body: body, y: yBody };
+
+   return { type: 'DoWhileStatement', body: body, test: {type: 'Literal', value: false}, y: yBody };
+}
+
+function synth_binexpr(left, o, right, yc) {
+   var t = "";
+   if ( o === '||' || o === '&&' ) t = 'LogicalExpression'; 
+   else if ( o.charAt(o.length-1) === '=' ) switch (o) {
+      case '==':
+      case '>=': 
+      case '<=':
+      case '!=':
+      case '!==':
+      case '===':
+         t = 'BinaryExpression';
+         break;
+
+      default:
+        t = 'AssignmentExpression';
+        break;
+   }
+   else t = 'BinaryExpression';  
+    
+   return {
+     type: t,
+     left: left,
+     y: yc, 
+     right: right,
+     operator: o
+   };
+}
+
+transformerList['SwitchStatement'] = function(n, b, vMode) {
+   var v = synth_id_node(this.scope.allocateTemp());
+   var m = synth_id_node(this.scope.allocateTemp());
+   var yc = y(n);
+   var doBody = []; 
+   this.scope.releaseTemp(v.name);
+   n. discriminant = this.transformYield(n. discriminant, doBody, IS_VAL);
+   this.scope.allocateTemp(v.name);
+   append_assig(doBody, v.name, n. discriminant);
+   append_assig(doBody, m.name, { type:'Literal', value: 0 });
+
+   var list = n.cases, e = 0;
+   while (e < list.length) {
+     var c = list[e];
+     var yTest = y(c.test);
+     var cond = this.transformYield(
+        synth_binexpr(
+           m, 
+          '||',
+          synth_binexpr(
+             m, 
+            '=',
+            synth_binexpr(
+               c.test,
+               '==',
+               v, yTest
+            ), yTest
+          ), yTest
+        ), doBody, IS_VAL
+      );
+     doBody.push(synth_if_node(cond, c.consequent, null, y(c)));
+     e++ ;
+  }
+  return do_while_wrapper(doBody, yc);
 };
 
 
@@ -7242,6 +7283,10 @@ pushList['BlockStatement'] = function(n) {
    }
 };
 
+function synth_do_while(cond, body) {
+   return { type: 'DoWhileStatement', test: cond, body: BLOCK(body) };
+};
+
 pushList['ExpressionStatement'] = function(n) {
    var yc = y(n);
    var e = this.emitter.transformYield(n.expression, this, NOT_VAL);
@@ -7291,6 +7336,34 @@ pushList['YieldExpression'] = function(n) {
    this.close_current_active_partition();
 };
 
+pushList['ForStatement'] = function(n) {
+  this.close_current_active_partition();
+  var container = new Partitioner(this, n);
+  var e = this.transformYield(n.init, container, NOT_VAL);
+  container.close_current_active_partition();
+  var seg = container.current();
+  seg.statements.push(e);
+  container.close_current_active_partition();
+  container.init = seg;
+
+  e = this.transformYield(n.test);
+  container.close_current_active_partition();
+  seg = container.current();
+  seg.push(e);
+  container.close_current_active_partition();
+  container.test = e;
+
+  container.push(n.body);
+  var uContainer = new Partitioner(container, { type: 'CustomContainer' });
+  uContainer.push(n.update);
+
+  container.next = n.update;
+  container.max = uContainer.max;
+
+  this.partitions.push(container);
+  this.max = container.max;
+};
+     
 
 }]  ],
 [Scope.prototype, [function(){

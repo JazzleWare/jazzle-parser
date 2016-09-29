@@ -183,3 +183,31 @@ pushList['YieldExpression'] = function(n) {
    this.close_current_active_partition();
 };
 
+pushList['ForStatement'] = function(n) {
+  this.close_current_active_partition();
+  var container = new Partitioner(this, n);
+  var e = this.transformYield(n.init, container, NOT_VAL);
+  container.close_current_active_partition();
+  var seg = container.current();
+  seg.statements.push(e);
+  container.close_current_active_partition();
+  container.init = seg;
+
+  e = this.transformYield(n.test);
+  container.close_current_active_partition();
+  seg = container.current();
+  seg.push(e);
+  container.close_current_active_partition();
+  container.test = e;
+
+  container.push(n.body);
+  var uContainer = new Partitioner(container, { type: 'CustomContainer' });
+  uContainer.push(n.update);
+
+  container.next = n.update;
+  container.max = uContainer.max;
+
+  this.partitions.push(container);
+  this.max = container.max;
+};
+     

@@ -154,3 +154,8 @@ function y(n) {
 
 var HAS = {}.hasOwnProperty;
 
+var EMIT_LEFT = 1,
+    EMIT_STMT_HEAD = 2,
+    EMIT_NEW_HEAD = 8,
+    EMIT_VAL = 16;
+
