@@ -211,3 +211,48 @@ pushList['ForStatement'] = function(n) {
   this.max = container.max;
 };
      
+pushList['TryStatement'] = function(n) {
+   this.close_current_active_partition();
+   var container = new Partitioner(this, n);
+
+   var tryContainer = new Partitioner(container, {type:'CustomContainer'});
+   tryContainer.push(n.block);
+   container.block = tryContainer;
+   container.partitions.push(tryContainer);
+   container.max = tryContainer.max;
+
+   if (n.handler) {
+      var catchContainer = new Partitioner(container, {type:'CustomContainer'});
+      if (n.handler.param.type !== 'Identifier') {
+         var temp = synth_id_node(this.emitter.scope.allocateTemp());
+         tryContainer.errorVar = temp;
+         catchContainer.push({
+            type: 'AssignmentExpression',
+            y: y(n.handler.param),
+            left: n.handler.param,
+            right: temp
+         });
+         this.emitter.scope.releaseTemp(temp.name);
+         // n.handler.param = temp;
+      }
+      catchContainer.push(n.handler.body);
+      container.handler = catchContainer;
+      container.max = catchContainer.max; 
+   }  
+   else
+      n.handler = null;
+
+   if (n.finalizer) {
+      var finallyContainer = new Partitioner(container, {type:'CustomContainer'});
+      finallyContainer.push(n.finalizer);
+      container.finalizer = finallyContainer;
+      container. partitions.push(finallyContainer);
+      container.max = finallyContainer.max;
+   }
+   else
+      n.finalizer = null;
+
+   this.partitions.push(container);
+   this.max = container.max;
+};      
+

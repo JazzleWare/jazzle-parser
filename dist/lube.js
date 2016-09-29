@@ -447,6 +447,149 @@ var VAR_DEF = 1, LET_OR_CONST = 2;
 var SCOPE_LOOP = 4;
 
 ;
+
+function synth_id_node(name) {
+   return { type: 'Identifier', synth: !false, name: name };
+}
+
+function synth_expr_node(str) {
+   return { type: 'SynthesizedExpr', contents: str, y: 0 };
+}
+
+function synth_expr_set_node(arr, isStatement ) {
+   if (isStatement)
+     return { type: 'SynthesizedExprSet', expressions: arr, y: 0 };
+
+   return { type: 'SequenceExpression', expressions: arr, y: 0 };
+}
+
+function assig_node(left, right) {
+   if (left.type === 'Identifier' && right.type === 'Identifier')
+     if (left.synth && left.name === right.name )
+       return left;
+  
+   return { type: 'AssignmentExpression',  operator: '=', right: right, left: left, y: 0 };
+}
+
+function cond_node(e, c, a) {
+   return { type: 'ConditionalExpression', 
+            test: e,
+            consequent: c,
+            alternate: a,
+            y: 0 };
+}
+
+function id_is_synth(n) {
+   this.assert(id.type === 'Identifier');
+   return n.name.charCodeAt() === CHAR_MODULO;
+}
+
+function synth_not_node(n) {
+  return { type: 'UnaryExpression', operator: '!', argument: n, y: 0 };
+
+}
+
+function synth_seq_or_block(b, yc, totalY) {
+   if (totalY === 0) {
+     ASSERT.call(this, yc === 0);
+     return { type: 'SequenceExpression', expressions: b, y: yc };
+   }
+   return { type: 'BlockStatement', body: b, y: yc};
+}
+
+var VOID0 = synth_expr_node('(void 0)');
+function synth_if_node(cond, body, alternate, yBody, yElse) {
+  yBody = yBody || 0;
+  yElse = yElse || 0;
+
+  var yc = yBody + yElse;
+  if (body.length > 1 || body[0].type === 'IfStatement' )
+    body = synth_seq_or_block(body, yBody, yc);
+  else
+    body = body[0];
+
+  if(alternate)
+    alternate = alternate.length > 1 ? synth_seq_or_block(body, yElse, yc) : alternate[0];
+  else
+    alternate = null;
+
+  return { type: yc > 0 ? 'IfStatement' : 'ConditionalExpression',
+           alternate: alternate === null && yc === 0 ? VOID0 : alternate ,
+           consequent: body, 
+           test: cond, y: yBody + yElse };
+}
+
+function append_assig(b, left, right) {
+  var assig = null;
+  if ( right.type !== 'Identifier' || left !== right.name)
+    assig = assig_node(synth_id_node(left), right);
+
+  if ( assig ) b.push(assig);
+}
+   
+function append_non_synth(b, nexpr) {
+  if (nexpr.type !== 'Identifier' || !nexpr.synth )
+    b. push(nexpr);
+
+}
+
+function synth_mem_node(obj, prop, c) {
+  return { type: 'MemberExpression',
+           computed: c,
+           object: obj,
+           property: (prop),  
+           y: 0 };
+
+}
+
+function synth_call_node(callee, argList) {
+   return { type: 'CallExpression', arguments: argList, callee: callee, synth: !false, y: 0 };
+
+}
+
+var FUNC_PROTO_CALL = synth_id_node('call');
+
+function call_call(thisObj, callee, argList) {
+   return synth_call_node(
+      synth_mem_node(synth_id_node(callee), FUNC_PROTO_CALL, false),
+      [synth_id_node(thisObj)].concat(argList)
+   );
+}
+ 
+function synth_literal_node(value) {
+   return { type: 'Literal', value: value };
+}
+
+function synth_binexpr(left, o, right, yc) {
+   var t = "";
+   if ( o === '||' || o === '&&' ) t = 'LogicalExpression'; 
+   else if ( o.charAt(o.length-1) === '=' ) switch (o) {
+      case '==':
+      case '>=': 
+      case '<=':
+      case '!=':
+      case '!==':
+      case '===':
+         t = 'BinaryExpression';
+         break;
+
+      default:
+        t = 'AssignmentExpression';
+        break;
+   }
+   else t = 'BinaryExpression';  
+    
+   return {
+     type: t,
+     left: left,
+     y: yc, 
+     right: right,
+     operator: o
+   };
+}
+
+
+;
 var IDS_ = fromRunLenCodes([0,8472,1,21,1,3948,2],
  fromRunLenCodes([0,65,26,6,26,47,1,10,1,4,1,5,23,1,31,1,458,4,12,14,5,7,1,1,1,129,
 5,1,2,2,4,1,1,6,1,1,3,1,1,1,20,1,83,1,139,8,166,1,38,2,1,7,39,72,27,5,3,45,43,35,2,
@@ -1325,42 +1468,6 @@ this.emitters['SimpleContainer'] = function(n) {
 
 },
 function(){
-function synth_id_node(name) {
-   return { type: 'Identifier', synth: !false, name: name };
-}
-
-function synth_expr_node(str) {
-   return { type: 'SynthesizedExpr', contents: str, y: 0 };
-}
-
-function synth_expr_set_node(arr, isStatement ) {
-   if (isStatement)
-     return { type: 'SynthesizedExprSet', expressions: arr, y: 0 };
-
-   return { type: 'SequenceExpression', expressions: arr, y: 0 };
-}
-
-function assig_node(left, right) {
-   if (left.type === 'Identifier' && right.type === 'Identifier')
-     if (left.synth && left.name === right.name )
-       return left;
-  
-   return { type: 'AssignmentExpression',  operator: '=', right: right, left: left, y: 0 };
-}
-
-function cond_node(e, c, a) {
-   return { type: 'ConditionalExpression', 
-            test: e,
-            consequent: c,
-            alternate: a,
-            y: 0 };
-}
-
-function id_is_synth(n) {
-   this.assert(id.type === 'Identifier');
-   return n.name.charCodeAt() === CHAR_MODULO;
-}
-
 var has = {}.hasOwnProperty;
 var transformerList = {};
 
@@ -1388,55 +1495,6 @@ this.transformYield = function(n, b, isVal) {
   
   return n;
 };
-
-function synth_not_node(n) {
-  return { type: 'UnaryExpression', operator: '!', argument: n, y: 0 };
-
-}
-
-function synth_seq_or_block(b, yc, totalY) {
-   if (totalY === 0) {
-     ASSERT.call(this, yc === 0);
-     return { type: 'SequenceExpression', expressions: b, y: yc };
-   }
-   return { type: 'BlockStatement', body: b, y: yc};
-}
-
-var VOID0 = synth_expr_node('(void 0)');
-function synth_if_node(cond, body, alternate, yBody, yElse) {
-  yBody = yBody || 0;
-  yElse = yElse || 0;
-
-  var yc = yBody + yElse;
-  if (body.length > 1 || body[0].type === 'IfStatement' )
-    body = synth_seq_or_block(body, yBody, yc);
-  else
-    body = body[0];
-
-  if(alternate)
-    alternate = alternate.length > 1 ? synth_seq_or_block(body, yElse, yc) : alternate[0];
-  else
-    alternate = null;
-
-  return { type: yc > 0 ? 'IfStatement' : 'ConditionalExpression',
-           alternate: alternate === null && yc === 0 ? VOID0 : alternate ,
-           consequent: body, 
-           test: cond, y: yBody + yElse };
-}
-
-function append_assig(b, left, right) {
-  var assig = null;
-  if ( right.type !== 'Identifier' || left !== right.name)
-    assig = assig_node(synth_id_node(left), right);
-
-  if ( assig ) b.push(assig);
-}
-   
-function append_non_synth(b, nexpr) {
-  if (nexpr.type !== 'Identifier' || !nexpr.synth )
-    b. push(nexpr);
-
-}
 
 transformerList['BinaryExpression'] = function(n, b, vMode) {
    var leftTemp = "";
@@ -1551,30 +1609,7 @@ this.transformCallArgs = function(args, b, yc) {
     this.scope.releaseTemp(tempList[e++]);
 
 };      
-
-function synth_mem_node(obj, prop, c) {
-  return { type: 'MemberExpression',
-           computed: c,
-           object: obj,
-           property: (prop),  
-           y: 0 };
-
-}
-
-function synth_call_node(callee, argList) {
-   return { type: 'CallExpression', arguments: argList, callee: callee, synth: !false, y: 0 };
-
-}
-
-var FUNC_PROTO_CALL = synth_id_node('call');
-
-function call_call(thisObj, callee, argList) {
-   return synth_call_node(
-      synth_mem_node(synth_id_node(callee), FUNC_PROTO_CALL, false),
-      [synth_id_node(thisObj)].concat(argList)
-   );
-}
-   
+  
 transformerList['CallExpression'] = function(n, b, vMode) {
    vMode = IS_VAL;
    var yCall = y(n);
@@ -1710,10 +1745,6 @@ this.evaluateAssignee = function( assignee, b, yc ) {
 }
 
 var GET = synth_id_node('get');
-
-function synth_literal_node(value) {
-   return { type: 'Literal', value: value };
-}
 
 var UNORNULL = synth_id_node('unORnull');
 
@@ -1949,34 +1980,6 @@ function do_while_wrapper( body, yBody) {
      body = { type: 'BlockStatement', body: body, y: yBody };
 
    return { type: 'DoWhileStatement', body: body, test: {type: 'Literal', value: false}, y: yBody };
-}
-
-function synth_binexpr(left, o, right, yc) {
-   var t = "";
-   if ( o === '||' || o === '&&' ) t = 'LogicalExpression'; 
-   else if ( o.charAt(o.length-1) === '=' ) switch (o) {
-      case '==':
-      case '>=': 
-      case '<=':
-      case '!=':
-      case '!==':
-      case '===':
-         t = 'BinaryExpression';
-         break;
-
-      default:
-        t = 'AssignmentExpression';
-        break;
-   }
-   else t = 'BinaryExpression';  
-    
-   return {
-     type: t,
-     left: left,
-     y: yc, 
-     right: right,
-     operator: o
-   };
 }
 
 transformerList['SwitchStatement'] = function(n, b, vMode) {
@@ -7359,6 +7362,51 @@ pushList['ForStatement'] = function(n) {
   this.max = container.max;
 };
      
+pushList['TryStatement'] = function(n) {
+   this.close_current_active_partition();
+   var container = new Partitioner(this, n);
+
+   var tryContainer = new Partitioner(container, {type:'CustomContainer'});
+   tryContainer.push(n.block);
+   container.block = tryContainer;
+   container.partitions.push(tryContainer);
+   container.max = tryContainer.max;
+
+   if (n.handler) {
+      var catchContainer = new Partitioner(container, {type:'CustomContainer'});
+      if (n.handler.param.type !== 'Identifier') {
+         var temp = synth_id_node(this.emitter.scope.allocateTemp());
+         tryContainer.errorVar = temp;
+         catchContainer.push({
+            type: 'AssignmentExpression',
+            y: y(n.handler.param),
+            left: n.handler.param,
+            right: temp
+         });
+         this.emitter.scope.releaseTemp(temp.name);
+         // n.handler.param = temp;
+      }
+      catchContainer.push(n.handler.body);
+      container.handler = catchContainer;
+      container.max = catchContainer.max; 
+   }  
+   else
+      n.handler = null;
+
+   if (n.finalizer) {
+      var finallyContainer = new Partitioner(container, {type:'CustomContainer'});
+      finallyContainer.push(n.finalizer);
+      container.finalizer = finallyContainer;
+      container. partitions.push(finallyContainer);
+      container.max = finallyContainer.max;
+   }
+   else
+      n.finalizer = null;
+
+   this.partitions.push(container);
+   this.max = container.max;
+};      
+
 
 }]  ],
 [Scope.prototype, [function(){
@@ -7584,6 +7632,7 @@ this.releaseTemp = function(t) {
   
 
 }]  ],
+null,
 null,
 null,
 null,
