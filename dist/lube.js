@@ -1638,7 +1638,9 @@ this.transformAssignment = transformerList['AssignmentExpression'] = function(n,
    n.right = this.transformYield(n.right, b, IS_VAL);
    var assigValue = transformAssig[lefttype].call(this, n, b);
 
-   switch (lefttype) {
+   // in case the original assignment's left hand side is of the following types,
+   // the transformed assignment will still be an assignment (rather than a synthetisized expression)
+   switch (lefttype) { 
      case 'Identifier': 
      case 'MemberExpression':
         assigValue.y = 0; 
@@ -1722,27 +1724,7 @@ this.release_if_synth = function(nexpr) {
     this.scope.releaseTemp(nexpr.name);
 };
 
-this.assigElement = function(left, right, b) {
-   var defaultVal = null;
-
-   if (left.type === 'AssignmentPattern' ) {
-     var n = left;
-     defaultVal = n.right;
-     left = n.left;
-     var defTemp = this.scope.allocateTemp();
-     var cond =  assig_node(synth_id_node( defTemp), right);
-     cond = synth_call_node(UNORNULL, [cond]);
-     this.scope.releaseTemp(defTemp);
-     var ifBody = [], yBody = y( defaultVal) ;
-
-     defaultVal = this.transformYield(defaultVal, ifBody, IS_VAL);
-     defTemp = this.scope.allocateTemp(); // lolhehe
-     append_assig(ifBody, defTemp, defaultVal);
-     this.scope.releaseTemp(defTemp);
-     right = synth_id_node(defTemp);
-     b. push( synth_if_node(cond, ifBody, null, yBody ) ); 
-   }
-   
+this.assigElement = function(left, right, b) {  
    return transformAssig[left.type].call(this, assig_node(left, right), b); // TODO: eliminate need for assig_node
 };
 
@@ -1809,13 +1791,26 @@ transformAssig['ObjectPattern'] = function(n, b) {
  
 transformAssig['MemberExpression'] = function(n, b) {
    var left = n.left;
-   if (left.object.type === 'Identifier' && left.object.synth)
-     this.release_if_synth(left.object);
-
-   if (left.property.type === 'Identifier' && left. property.synth)
-     this.release_if_synth(left.property);
-
+   this.release_if_synth(left.object);
+   this.release_if_synth(left.property);
    return n;
+};
+
+transformAssig['AssignmentPattern'] = function(n, b) {
+   var left = n.left.left, defaultVal = n.left.right;
+   var cond = null, temp = this.scope.allocateTemp();
+   cond = assig_node(synth_id_node(temp), n.right);
+   cond = synth_call_node(UNORNULL, [cond]);
+   this.scope.releaseTemp(temp);
+   var ifBody = [], yc = y(defaultVal);
+   defaultVal = this.transformYield(defaultVal, ifBody, IS_VAL);
+   temp = this.scope.allocateTemp(); // lolhehe v2
+   append_assig(ifBody, temp, defaultVal);
+   n.right = synth_id_node(temp);
+   this.scope.releaseTemp(temp);
+   b. push(synth_if_node(cond, ifBody, null, yc));
+   n.left = left;
+   return transformAssig[left.type].call(this, n, b);
 };
 
 transformerList['ConditionalExpression'] = function( n, b, vMode ) {
