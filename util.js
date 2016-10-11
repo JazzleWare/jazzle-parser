@@ -21,11 +21,21 @@
       }
   };
 
+  _exports.dirIter = function iter(base, onItem) {
+      var list = fs.readdirSync(base), e = 0;
+      while (e < list.length) {
+         var itemPath = path.join(base, list[e]);
+         e++;
+         onItem(itemPath, iter);
+      }
+  };                
+
   _exports.contents = function(name) {
      return fs.readFileSync ( name, 'utf-8' ) ; 
 
   };
 
+  _exports.tailIndex =
   _exports.endsWith = function(str, e) {
       var i = str.lastIndexOf(e);
       return i >= 0 && str.length - i === e.length ? i : -1;
@@ -297,4 +307,4 @@
       return bytes;
   };
 
-})(this);
+})(module.exports);

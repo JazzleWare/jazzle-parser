@@ -2,7 +2,24 @@ this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
   this.next();
-  var list = this.blck(); 
+  var list = [];
+  var elem = this.parseStatement(!false);
+  if (elem &&
+      elem.type === 'ExpressionStatement' && 
+      elem.expression.type === 'Literal' &&
+      typeof elem.expression.value === typeof "") {
+    switch (this.src.substring(elem.expression.start, elem.expression.end)) {
+      case '"use strict"':
+      case "'use strict'":
+         this.tight = !false
+    }
+  }
+
+  while (elem) {
+    list.push(elem);
+    elem = this.parseStatement(!false);
+  } 
+
   var endLoc = null;
   if (list.length) {
     var firstStatement = list[0];

@@ -3,7 +3,7 @@
 var fs = require( 'fs' );
 var util = require( 'util' );
 var src = './src';
-var dist = './dist/lube.js';
+var dist = './dist/jazzle';
 
 function Builder() {
 
@@ -33,8 +33,7 @@ Builder.prototype.setExports = function(strExports) {
    this.strExports = strExports;
 };
 
-Builder.prototype.write = function(output) {
-   console.log("WRITING MODULES");
+Builder.prototype.build = function() {
    this.  write_string(  '(function(){\n"use strict";\n' );
    
    var e = 0;
@@ -58,7 +57,10 @@ Builder.prototype.write = function(output) {
    }
 
    this. write_string(  ']);\n' + this.strExports + ';}).call (this)' );
-   
+};  
+
+Builder.prototype.write = function(output) {
+   console.log("WRITING MODULES");
    fs .writeSync(output, this.str, 0, this.str.length);
    fs .closeSync(output);
 
@@ -106,7 +108,7 @@ Builder.prototype.writeSubmodules = function(module) {
 Builder.prototype.write_string = function ( str) {
   this.str += str;
 
-}
+};
 
 var builder = new Builder();
 var files = fs .readdirSync(src);
@@ -135,20 +137,20 @@ while ( e < files.length ) {
   e ++ ;
 }
 
-builder.write(fs .openSync(dist, 'w+'));
+var exports = {};
 
-var TestSession = require( './test/test.js' ).TestSession, util = require( './util.js' ) ;
-
-try {
-   var testSession =  new TestSession();
-   var ignoreList = util.contents( '.ignore' ).toString().split(/\r\n|\n/);
-   var e = 0;
-   while ( e < ignoreList.length )
-      testSession.ignore[ignoreList[e++]] = !false;
-  
-   testSession .startAt( './test/tests' );
-} catch ( err ) {
-  console.log( err.type === 'err' ? "Error: " + err.message + "\nStack:\n" + err.stack :
-                util.obj2str( err.val ) );
+console.log("BUILD STARTED");
+builder.build();
+console.log("TESTING.....");
+new Function(builder.str).call(exports);
+var summary = require('./test-runner.js').runTestSuite('test/tests',exports.Parser);
+if (summary.pass - summary.skipPass !== summary.passAsExpected) {
+  console.log("SOME TESTS WEREN'T PASSED.");
+  dist += '_error'; 
 }
+
+console.log("TESTING COMPLETE.");
+
+builder.write(fs .openSync(dist+'.js', 'w+'));
+console.log("BUILDING COMPLETE.");
 

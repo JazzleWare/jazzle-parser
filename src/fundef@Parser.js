@@ -159,7 +159,7 @@ this.parseFuncBody = function(context) {
   stmt = this.parseStatement(!false);
 
   if ( !this.tight && this.v > 5 && stmt && 
-       stmt.type === 'ExpressionStatement' && stmt.expression.type === 'Literal' )
+       stmt.type === 'ExpressionStatement' && stmt.expression.type === 'Literal' && typeof stmt.expression.value === typeof "" )
        switch (this.src.slice(stmt.expression.start,stmt.expression.end) )  {
            case "'use strict'":
            case '"use strict"':

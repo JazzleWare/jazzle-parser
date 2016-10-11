@@ -1,5 +1,14 @@
 lube.html
 node_modules
 npm-debug.log
-
+wiki/
+outline/
+yield/
+early-error*
+yield-container*
+a*
+*-
+.s*
+cond
+testEmitter.js
 
