@@ -142,15 +142,22 @@ var exports = {};
 console.log("BUILD STARTED");
 builder.build();
 console.log("TESTING.....");
-new Function(builder.str).call(exports);
-var summary = require('./test-runner.js').runTestSuite('test/tests',exports.Parser);
-if (summary.pass - summary.skipPass !== summary.passAsExpected) {
-  console.log("SOME TESTS WEREN'T PASSED.");
-  dist += '_error'; 
+// try {
+   new Function(builder.str).call(exports);
+   var summary = require('./test-runner.js').runTestSuite('test/tests',exports.Parser);
+   if (summary.pass - summary.skipPass !== summary.passAsExpected) {
+      console.log("SOME TESTS WEREN'T PASSED.");
+      dist += '_incomplete-tests'; 
+   }
+   console.log("TESTING COMPLETE.");
+
+   builder.write(fs .openSync(dist+'.js', 'w+'));
+   console.log("BUILDING COMPLETE.");
+// }
+/* catch (e) {
+   console.log("ERROR:\n", e);
+   dist += ".error";  
+   builder.write(fs .openSync(dist+'.js', 'w+'));
 }
-
-console.log("TESTING COMPLETE.");
-
-builder.write(fs .openSync(dist+'.js', 'w+'));
-console.log("BUILDING COMPLETE.");
+  */
 

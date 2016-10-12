@@ -3,13 +3,13 @@ this.peekTheSecondByte = function () {
   var e = this.src.charCodeAt(this.c);
   if (CHAR_BACK_SLASH === e) {
     if (CHAR_u !== this.src.charCodeAt(++this.c) &&
-        this['u.second.esc.not.u']() )
+        this.err('u.second.esc.not.u') )
       return this.errorHandlerOutput ;
 
     e = (this.peekUSeq());
   }
 //  else this.col--;
-  if ( (e < 0x0DC00 || e > 0x0DFFF) && this['u.second.not.in.range'](e) )
+  if ( (e < 0x0DC00 || e > 0x0DFFF) && this.err('u.second.not.in.range',e) )
     return this.errorHandlerOutput;
 
   return e;
@@ -24,18 +24,18 @@ this.peekUSeq = function () {
     n = l.charCodeAt(c);
     do {
       n = toNum(n);
-      if ( n === - 1 && this['u.esc.hex']('curly',c,byteVal) )
+      if ( n === - 1 && this.err('u.esc.hex','curly',c,byteVal) )
         return this.errorHandlerOutput ;
 
       byteVal <<= 4;
       byteVal += n;
-      if (byteVal > 0x010FFFF && this['u.curly.not.in.range'](c,byteVal) )
+      if (byteVal > 0x010FFFF && this.err('u.curly.not.in.range',c,byteVal) )
         return this.errorHandler ;
 
       n = l.charCodeAt( ++ c);
     } while (c < e && n !== CHAR_RCURLY);
 
-    if ( n !== CHAR_RCURLY && this['u.curly.is.unfinished'](c,byteVal) ) 
+    if ( n !== CHAR_RCURLY && this.err('u.curly.is.unfinished',c,byteVal) ) 
       return this.errorHandlerOutput ;
 
     this.c = c;
@@ -43,22 +43,22 @@ this.peekUSeq = function () {
   }
  
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this['u.esc.hex']('u',c,byteVal) )
+  if ( n === -1 && this.err('u.esc.hex','u',c,byteVal) )
     return this.errorHandlerOutput;
   byteVal = n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this['u.esc.hex']('u',c,byteVal) )
+  if ( n === -1 && this.err('u.esc.hex','u',c,byteVal) )
     return this.errorHandlerOutput;
   byteVal <<= 4; byteVal += n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this['u.esc.hex']('u',c,byteVal) )
+  if ( n === -1 && this.err('u.esc.hex','u',c,byteVal) )
     return this.errorHandlerOutput;
   byteVal <<= 4; byteVal += n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this['u.esc.hex']('u',c,byteVal) )
+  if ( n === -1 && this.err('u.esc.hex','u',c,byteVal) )
     return this.errorHandlerOutput;
   byteVal <<= 4; byteVal += n;
 

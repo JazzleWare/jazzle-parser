@@ -1,6 +1,6 @@
 this . parseVariableDeclaration = function(context) {
      if ( ! this.canBeStatement &&
-            this['not.stmt']('var',context) )
+            this.err('not.stmt','var',context) )
        return this.errorHandlerOutput;
 
      this.canBeStatement = false;
@@ -12,7 +12,7 @@ this . parseVariableDeclaration = function(context) {
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
        if (kind !== 'let' && 
-           this['var.has.no.declarators'](startc,startLoc,kind,elem,context  ) )
+           this.err('var.has.no.declarators',startc,startLoc,kind,elem,context  ) )
          return this.errorHandlerOutput;
 
        return null; 
@@ -24,7 +24,7 @@ this . parseVariableDeclaration = function(context) {
             this.next();     
             elem = this.parseVariableDeclarator(context);
             if (!elem &&
-                 this['var.has.an.empty.declarator'](startc,startLoc,kind,list,context ) )
+                 this.err('var.has.an.empty.declarator',startc,startLoc,kind,list,context ) )
               return this.erroHandlerOutput ;
 
             list.push(elem);
@@ -38,7 +38,7 @@ this . parseVariableDeclaration = function(context) {
        endLoc = this.semiLoc();
        if (  !endLoc ) {
           if ( this.newLineBeforeLookAhead ) endLoc =  lastItem.loc.end; 
-          else if ( this['no.semi']('var', [startc,startLoc,kind,list,endI] ) )
+          else if ( this.err('no.semi','var', [startc,startLoc,kind,list,endI] ) )
              return this.errorHandlerOutput;
        }
      }
@@ -68,7 +68,7 @@ this . parseVariableDeclarator = function(context) {
   }
   else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
        if (!( context & CONTEXT_FOR) )  // bail out in case it is not a 'for' loop's init
-         this['var.decl.neither.of.in'](head,init,context) ;
+         this.err('var.decl.neither.of.in',head,init,context) ;
 
        if( !this.unsatisfiedAssignment )
          this.unsatisfiedAssignment  =  head;     // an 'in' or 'of' will satisfy it

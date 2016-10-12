@@ -2,7 +2,7 @@ this .parseArgs  = function (argLen) {
   var list = [], elem = null;
 
   if ( !this.expectType_soft('(') &&
-        this['func.args.no.opening.paren'](argLen) )
+        this.err('func.args.no.opening.paren',argLen) )
     return this.errorHandlerOutput  ;
 
   var firstNonSimpArg = null;
@@ -13,7 +13,7 @@ this .parseArgs  = function (argLen) {
          elem = this.parseAssig(elem);
          if ( elem.left.type === 'Identifier' ) {
             if ( this.argNames[elem.left.name+'%'] !== null )
-                 this['func.args.has.dup'](elem);
+                 this.err('func.args.has.dup',elem);
          }
          this.inComplexArgs = !false;
        }
@@ -43,12 +43,12 @@ this .parseArgs  = function (argLen) {
   }
   else {
      if ( list.length !== argLen &&
-          this['func.args.not.enough'](argLen,list) )
+          this.err('func.args.not.enough',argLen,list) )
        return this.errorHandlerOutput;
   }
 
   if ( ! this.expectType_soft (')') &&
-       this['func.args.no.end.paren'](argLen,list) )
+       this.err('func.args.no.end.paren',argLen,list) )
     return this.errorHandlerOutput ;
 
   if ( firstNonSimpArg )
@@ -61,7 +61,7 @@ this .addArg = function(id) {
   var name = id.name + '%';
   if ( has.call(this.argNames, name) ) {
     if ( this.inComplexArgs )
-       this['func.args.has.dup'](id);
+       this.err('func.args.has.dup',id);
 
     if ( this.argNames[name] === null )
       this.argNames[name] = id ; // this will be useful if the body has a strictness directive
@@ -99,7 +99,7 @@ this .parseFunc = function(context, argListMode, argLen ) {
      }
      if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
         if ( this.lttype !== 'Identifier' &&
-             this['missing.name']('func', 
+             this.err('missing.name','func', 
                 { s: startc, l: startLoc, labels: prevLabels, strict: prevStrict, inArgsList: prevInArgList,
                   argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
                   args: [context, argListMode, argLen] } ) )
@@ -107,7 +107,7 @@ this .parseFunc = function(context, argListMode, argLen ) {
 
         currentFuncName = this.validateID(null);
         if ( this.tight && arguments_or_eval(currentFuncName.name) &&
-             this['binding.to.eval.or.arguments']('func',
+             this.err('binding.to.eval.or.arguments','func',
                 { s: startc, l: startLoc, labels: prevLabels, stmt: !false, strict: prevStrict, inArgsList: prevInArgList,
                   argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
                   args: [context, argListMode, argLen] } ) )
@@ -116,7 +116,7 @@ this .parseFunc = function(context, argListMode, argLen ) {
      else if ( this. lttype === 'Identifier' ) {
         currentFuncName = this.validateID(null);
         if ( this.tight && arguments_or_eval(currentFuncName.name) &&
-             this['binding.to.eval.or.arguments']('func',
+             this.err('binding.to.eval.or.arguments','func',
                 { s: startc, l: startLoc, labels: prevLabels, stmt: canBeStatement, strict: prevStrict, inArgsList: prevInArgList,
                   argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimArg,
                   context: [ context, argListMode, argLen] } )   )
@@ -180,7 +180,7 @@ this.parseFuncBody = function(context) {
   if ( this.lttype !== '{' ) {
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CONTEXT_NULLABLE);
     if ( elem === null )
-      return this['func.body.is.empty.expr'](context);
+      return this.err('func.body.is.empty.expr',context);
     return elem;
   }
 
@@ -202,7 +202,7 @@ this.parseFuncBody = function(context) {
            loc: { start: startLoc, end: this.loc() } };
 
   if ( ! this.expectType_soft ( '}' ) &&
-         this['func.body.is.unfinished'](n) )
+         this.err('func.body.is.unfinished',n) )
     return this.errorHandlerOutput ;
 
   return  n;
@@ -210,7 +210,7 @@ this.parseFuncBody = function(context) {
 
 this . makeStrict  = function() {
    if ( this.firstNonSimpArg )
-     return this['func.strict.non.simple.param']()  ; 
+     return this.err('func.strict.non.simple.param')  ; 
 
    if ( this.tight ) return;
 
@@ -219,7 +219,7 @@ this . makeStrict  = function() {
    var argName = null;
    for ( argName in this.argNames ) {
         if ( this.argNames[argName] !== null )
-          this['func.args.has.dup'](this.argNames[argName]);
+          this.err('func.args.has.dup',this.argNames[argName]);
 
         argName = argName.substring(0,argName.length-1) ;
         this.assert(!arguments_or_eval(argName));

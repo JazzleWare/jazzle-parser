@@ -73,7 +73,7 @@ this.parseExprHead = function (context) {
 
   if ( this.firstEA )  switch ( this.lttype )   {
     case '.': case '(': case '[': case '`':
-      if ( this['contains.assigned.eval.or.arguments'](
+      if ( this.err('contains.assigned.eval.or.arguments',
            head,context,firstUnassignable,firstParen) )
         return this.errorHandlerOutput ;
   }
@@ -99,7 +99,7 @@ this.parseExprHead = function (context) {
                       loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false };
             inner  = head ;
             if ( !this.expectType_soft (']') &&
-                  this['mem.unfinished'](head,firstParen,firstUnassignable) )
+                  this.err('mem.unfinished',head,firstParen,firstUnassignable) )
               return this.errorHandlerOutput ;
 
             continue;
@@ -109,7 +109,7 @@ this.parseExprHead = function (context) {
             head =  { type: 'CallExpression', callee: inner , start: head.start, end: this.c,
                       arguments: elem, loc: { start: head.loc.start, end: this.loc() } };
             if ( !this.expectType_soft (')'   ) &&
-                  this['call.args.is.unfinished'](head,firstParen,firstUnassignable) )
+                  this.err('call.args.is.unfinished',head,firstParen,firstUnassignable) )
               return this.errorHandlerOutput  ;
 
             inner = head  ;
@@ -144,7 +144,7 @@ this.parseExprHead = function (context) {
 
 this .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
     if ( this.ltval !== 'target' &&  
-         this['meta.new.has.unknown.prop'](startc,end,startLoc,endLoc,new_raw) )
+         this.err('meta.new.has.unknown.prop',startc,end,startLoc,endLoc,new_raw) )
       return this.errorHandlerOutput ;
 
     var prop = this.id();
@@ -163,8 +163,22 @@ this.numstr = function () {
   return n;
 };
 
-this.idLit = function(val) {
-  var n = { type: 'Literal', value: val, start: this.c0, end: this.c,
+this.parseTrue = function() {
+  var n = { type: 'Literal', value: true, start: this.c0, end: this.c,
+           loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
+  this.next();
+  return n;
+};
+
+this.parseNull = function() {
+  var n = { type: 'Literal', value: null, start: this.c0, end: this.c,
+           loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
+  this.next();
+  return n;
+};
+
+this.parseFalse = function() {
+  var n = { type: 'Literal', value: false, start: this.c0, end: this.c,
            loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw };
   this.next();
   return n;
@@ -211,8 +225,7 @@ this.parseParen = function () {
      if ( !elem ) {
         if ( this.lttype === '...' ) {
            if ( ! ( context & CONTEXT_PARAM ) &&
-                 this['paren.has.an.spread.elem'](
-                  )
+                 this.err('paren.has.an.spread.elem')
                ) 
               return this.errorHandlerOutput  ;
  
@@ -244,7 +257,7 @@ this.parseParen = function () {
 
      if ( !unsatisfiedArg && this.unsatisfiedAssignment) {
            if ( ! context & CONTEXT_PARAM &&
-                this['paren.with.an.unsatisfied.assig'](
+                this.err('paren.with.an.unsatisfied.assig',
                  { s:startc, l: startLoc, c: context, p: firstPAren, a: unsatisfiedArg,
                    list: list, ea: firstEA, firstElemWithYS: firstElemWithYS, parenYS: parenYS, ys: firstYS })
               )
@@ -302,7 +315,7 @@ this.parseParen = function () {
   this.parenYS = parenYS;
   this.firstYS = firstYS;
 
-  if ( ! this.expectType_soft (')') && this['paren.unfinished'](n) )
+  if ( ! this.expectType_soft (')') && this.err('paren.unfinished',n) )
     return this.errorHandlerOutput ;
 
 

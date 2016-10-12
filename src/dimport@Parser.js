@@ -1,5 +1,5 @@
 this.parseImport = function() {
-  if ( !this.canBeStatement && this['not.stmt']('import') )
+  if ( !this.canBeStatement && this.err('not.stmt','import') )
     return this.errorHandlerOutput ;
 
   this.canBeStatement = false;
@@ -18,7 +18,7 @@ this.parseImport = function() {
   }
 
   if ( this.lttype === ',' ) {
-    if (local === null && this['import.no.elem.yet.comma'](startc,startLoc) )
+    if (local === null && this.err('import.no.elem.yet.comma',startc,startLoc) )
       return this.errorHandlerOutput;
 
     this.next();
@@ -29,7 +29,7 @@ this.parseImport = function() {
   switch ( this.lttype ) {   
      case 'op':
        if ( this.ltraw !== '*' &&
-            this['import.namespace.specifier.not.*'](startc, startLoc) )
+            this.err('import.namespace.specifier.not.*',startc, startLoc) )
          return this.errorHandlerOutput ;
 
        else {
@@ -37,11 +37,11 @@ this.parseImport = function() {
          spStartLoc = this.locOn(1);
          this.next();
          if ( !this.expectID_soft('as') &&
-               this['import.namespace.specifier.no.as'](startc, startLoc, spStartc, spStartLoc) )
+               this.err('import.namespace.specifier.no.as',startc, startLoc, spStartc, spStartLoc) )
            return this.errorHandlerOutput;
 
          if (this.lttype !== 'Identifier' &&
-             this['import.namespace.specifier.local.not.id'](startc,startLoc,spStartc, spStartLoc ) )
+             this.err('import.namespace.specifier.local.not.id',startc,startLoc,spStartc, spStartLoc ) )
            return this.errorHandlerOutput;
 
          local = this.validateID(null);
@@ -61,12 +61,12 @@ this.parseImport = function() {
           var im = local; 
           if ( this.lttype === 'Identifier' ) {
              if ( this.ltval !== 'as' && 
-                  this['import.specifier.no.as'](startc,startLoc,local) )
+                  this.err('import.specifier.no.as',startc,startLoc,local) )
                return this.errorHandlerOutput ;
 
              this.next();
              if ( this.lttype !== 'Identifier' &&
-                  this['import.specifier.local.not.id'](startc,startLoc,local) )
+                  this.err('import.specifier.local.not.id',startc,startLoc,local) )
                return this.errorHandlerOutput ;
 
              local = this.validateID(null);
@@ -86,7 +86,7 @@ this.parseImport = function() {
        }
 
        if ( !this.expectType_soft('}') && 
-             this['import.specifier.list.unfinished'](startc,startLoc,list) )
+             this.err('import.specifier.list.unfinished',startc,startLoc,list) )
          return this.errorHandlerOutput  ;
 
        break ;
@@ -94,12 +94,12 @@ this.parseImport = function() {
     
    if ( list.length || hasList ) {
       if ( !this.expectID_soft('from') &&
-            this['import.from'](startc,startLoc,list) )
+            this.err('import.from',startc,startLoc,list) )
         return this.errorHandlerOutput;
    }
 
    if ( !(this.lttype === 'Literal' &&
-        typeof this.ltval === STRING_TYPE ) && this['import.source.is.not.str'] )
+        typeof this.ltval === STRING_TYPE ) && this.err('import.source.is.not.str') )
      return this.errorHandlerOutput;
 
    var src = this.numstr();
@@ -107,7 +107,7 @@ this.parseImport = function() {
        semiLoc = this.semiLoc();
 
    if ( !semiLoc && !this.newLineBeforeLookAhead &&
-        this['no.semi']('import',{s:startc,l:startLoc,list:list,endI:endI,src:src }) )
+        this.err('no.semi','import',{s:startc,l:startLoc,list:list,endI:endI,src:src }) )
      return this.errorHandlerOutput;
    
    this.foundStatement = !false;

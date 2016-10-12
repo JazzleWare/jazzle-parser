@@ -3,6 +3,7 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
+       if (this.tight) this.assert(!arguments_or_eval(id.name));
        if ( this.isInArgList ) 
           this.addArg(id);
  
@@ -55,7 +56,7 @@ this. parseArrayPattern = function() {
            start: startc, end: this.c, elements : list};
 
   if ( !this. expectType_soft ( ']' ) &&
-        this['pat.array.is.unfinished'](elem) )
+        this.err('pat.array.is.unfinished',elem) )
     return this.errorHandlerOutput ;
 
   return elem;
@@ -119,7 +120,7 @@ this.parseObjectPattern  = function() {
               end: this.c,
               properties: list };
 
-    if ( ! this.expectType_soft ('}') && this['pat.obj.is.unfinished'](n) )
+    if ( ! this.expectType_soft ('}') && this.err('pat.obj.is.unfinished',n) )
       return this.errorHandlerOutput ;
 
     return n;
@@ -139,7 +140,7 @@ this.parseRestElement = function() {
 
    this.next ();
    var e = this.parsePattern();
-   if (!e && this['rest.has.no.arg'](starc, startLoc) )
+   if (!e && this.err('rest.has.no.arg',starc, startLoc) )
      return this.errorHandlerOutput ;
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };

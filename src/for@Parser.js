@@ -8,7 +8,7 @@ this . parseFor = function() {
 
   this.next () ;
   if ( !this.expectType_soft ('(' ) &&
-        this['for.with.no.opening.paren'](startc, startLoc) )
+        this.err('for.with.no.opening.paren',startc, startLoc) )
     return this.errorHandlerOutput ;
 
   var head = null;
@@ -32,7 +32,7 @@ this . parseFor = function() {
 
      case 'const' :
 
-        if ( this.v < 5 && this['const.not.in.v5'](startc, startLoc) )
+        if ( this.v < 5 && this.err('const.not.in.v5',startc, startLoc) )
           return this.errorHandlerOutput ;
 
         this.canBeStatement = !false;
@@ -61,7 +61,7 @@ this . parseFor = function() {
 
        case 'of':
           if (!headIsExpr && head.declarations.length !== 1 &&
-               this['for.in.or.of.multi'](startc, startLoc,head) )
+               this.err('for.in.or.of.multi',startc, startLoc,head) )
             return this.errorHandlerOutput   ;
 
           if ( this.unsatisfiedAssignment )
@@ -72,12 +72,12 @@ this . parseFor = function() {
           this.next();
           afterHead = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE) ;
           if ( ! this.expectType_soft (')') &&
-                 this['for.iter.no.end.paren'](start,startLoc,head,afterHead) )
+                 this.err('for.iter.no.end.paren',start,startLoc,head,afterHead) )
             return this.errorHandlerOutput ;
 
           this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
           nbody = this.parseStatement(!false);
-          if ( !nbody && this['null.stmt']('for.iter',
+          if ( !nbody && this.err('null.stmt','for.iter',
                { s:startc, l:startLoc, h: head, iter: afterHead, scopeFlags: scopeFlags }) )
             return this.errorHandlerOutput;
 
@@ -88,12 +88,12 @@ this . parseFor = function() {
             start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
 
        default:
-          return this['for.iter.not.of.in'](startc, startLoc,head);
+          return this.err('for.iter.not.of.in',startc, startLoc,head);
     }
   }
 
   if ( this.unsatisfiedAssignment &&
-       this['for.simple.head.is.unsatisfied'](startc,startLoc,head) )
+       this.err('for.simple.head.is.unsatisfied',startc,startLoc,head) )
     return this.errorHandlerOutput ;
 
 /*
@@ -103,23 +103,23 @@ this . parseFor = function() {
   }
 */
   if ( ! this.expectType_soft (';') &&
-         this['for.simple.no.init.comma'](startc,startLoc,head) )
+         this.err('for.simple.no.init.comma',startc,startLoc,head) )
     return this.errorHandlerOutput ;
 
   afterHead = this.parseExpr(CONTEXT_NULLABLE );
   if ( ! this.expectType_soft (';') &&
-         this['for.simple.no.test.comma'](startc,startLoc,head,afterHead) )
+         this.err('for.simple.no.test.comma',startc,startLoc,head,afterHead) )
     return this.errorHandlerOutput ;
 
   var tail = this.parseExpr(CONTEXT_NULLABLE );
 
   if ( ! this.expectType_soft (')') &&
-         this['for.simple.no.end.paren'](startc,startLoc,head,afterHead,tail) )
+         this.err('for.simple.no.end.paren',startc,startLoc,head,afterHead,tail) )
     return this.errorHandlerOutput ;
 
   this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
   nbody = this.parseStatement(! false);
-  if ( !nbody && this['null.stmt']('for.simple',
+  if ( !nbody && this.err('null.stmt','for.simple',
       { s:startc, l:startc, h: head, t: afterHead, u: tail, scopeFlags: scopeFlags } ) )
     return this.errorhandlerOutput;  
 

@@ -20,10 +20,10 @@ this.readEsc = function ()  {
 
    case CHAR_x :
       b0 = toNum(this.src.charCodeAt(++this.c));
-      if ( b0 === -1 && this['hex.esc.byte.not.hex']() )
+      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
         return this.errorHandlerOutput;
       b = toNum(this.src.charCodeAt(++this.c));
-      if ( b0 === -1 && this['hex.esc.byte.not.hex']() )
+      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
         return this.errorHandlerOutput;
       return String.fromCharCode((b0<<4)|b);
 
@@ -36,7 +36,7 @@ this.readEsc = function ()  {
                if ( b0 < CHAR_0 || b0 >= CHAR_8 )
                  return '\0';
           }
-          if ( this['strict.oct.str.esc']() )
+          if ( this.err('strict.oct.str.esc') )
             return this.errorHandlerOutput
        }
 
@@ -56,7 +56,7 @@ this.readEsc = function ()  {
        return String.fromCharCode(b)  ;
 
     case CHAR_4: case CHAR_5: case CHAR_6: case CHAR_7:
-       if (this.tight && this['strict.oct.str.esc']() )
+       if (this.tight && this.err('strict.oct.str.esc') )
          return this.errorHandlerOutput  ;
 
        b0 = src.charCodeAt(this.c);
@@ -71,7 +71,7 @@ this.readEsc = function ()  {
 
    case CHAR_8:
    case CHAR_9:
-       if ( this['esc.8.or.9'] ) 
+       if ( this.err('esc.8.or.9') ) 
          return this.errorHandlerOutput ;
        return '';
 

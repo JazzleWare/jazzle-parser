@@ -19,13 +19,13 @@ this .ensureSimpAssig = function(head) {
   switch(head.type) {
     case 'Identifier':
        if ( this.tight && arguments_or_eval(head.name) )
-         this['assig.to.eval.or.arguments'](head);
+         this.err('assig.to.eval.or.arguments',head);
 
     case 'MemberExpression':
        return;
 
     default:
-       return this['assig.not.simple'](head);
+       return this.err('assig.not.simple',head);
   }
 };
 
@@ -33,7 +33,7 @@ this .ensureSimpAssig_soft = function(head) {
   switch(head.type) {
     case 'Identifier':
        if ( this.tight && arguments_or_eval(head.name) )
-         this['assig.to.eval.or.arguments'](head);
+         this.err('assig.to.eval.or.arguments',head);
 
     case 'MemberExpression':
        return ! false ;

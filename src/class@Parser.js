@@ -126,16 +126,16 @@ this.parseSuper  = function   () {
    switch ( this.lttype ) {
         case '(':
           if ( !( this.scopeFlags & SCOPE_CONSTRUCTOR ) &&
-                  this['class.super.call']() ) return this.errorHandlerOutput;
+                  this.err('class.super.call') ) return this.errorHandlerOutput;
           break ;
         case '.':
         case '[':
            if ( !(this.scopeFlags & SCOPE_METH) &&
-                  this['class.super.mem']() ) return this.errorHandlerOutput ;
+                  this.err('class.super.mem') ) return this.errorHandlerOutput ;
            break ;
         
        default:
-          if ( this['class.super.lone']() )
+          if ( this.err('class.super.lone') )
             return this.errorHandlerOutput ; 
    }
 

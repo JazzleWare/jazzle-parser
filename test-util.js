@@ -75,12 +75,12 @@ JazzleTestSuite.prototype.loadSource = function(test) {
 
    if (this.loadJSON(test, 'failure')) test.testMode = FAIL_MODE;
    else {
-     test.testMode = PASS_MODE;
-     if (this.loadJSON(test, 'tokens')) return;
-     if (this.loadJSON(test, 'module')) return; 
-     if (this.loadJSON(test, 'tree')) return;
-
-     throw new Error("Test <"+test.testURI+"> has no associated json file");
+     if (!this.loadJSON(test, 'tokens') &&
+         !this.loadJSON(test, 'module') && 
+         !this.loadJSON(test, 'tree'))
+          throw new Error("Test <"+test.testURI+"> has no associated json file");
+    
+     test.testMode = test.testJSON.lineNumber ? FAIL_MODE : PASS_MODE;
    }
 };
  

@@ -11,10 +11,10 @@ this.readNumberLiteral = function (peek) {
     switch (b) { // check out what the next is
       case CHAR_X: case CHAR_x:
          c++;
-         if (c >= len && this['num.with.no.digits']('hex', c) )
+         if (c >= len && this.err('num.with.no.digits','hex', c) )
            return this.errorHandlerOutput;
          b = src.charCodeAt(c);
-         if ( ! isHex(b) && this['num.with.first.not.valid']('hex', c)  )
+         if ( ! isHex(b) && this.err('num.with.first.not.valid','hex', c)  )
            return this.errorHandlerOutput ;
          c++;
          while ( c < len && isHex( b = src.charCodeAt(c) ) )
@@ -25,10 +25,10 @@ this.readNumberLiteral = function (peek) {
 
       case CHAR_B: case CHAR_b:
         ++c;
-        if (c >= len && this['num.with.no.digits']('bin',c) )
+        if (c >= len && this.err('num.with.no.digits','bin',c) )
           return this.errorHandlerOutput ;
         b = src.charCodeAt(c);
-        if ( b !== CHAR_0 && b !== CHAR_1 && this['num.with.first.not.valid']('bin',c) )
+        if ( b !== CHAR_0 && b !== CHAR_1 && this.err('num.with.first.not.valid','bin',c) )
           return this.errorHandlerOutput ;
         val = b - CHAR_0; 
         ++c;
@@ -45,10 +45,10 @@ this.readNumberLiteral = function (peek) {
 
       case CHAR_O: case CHAR_o:
         ++c;
-        if (c >= len && this['num.with.no.digits']('oct',c) )
+        if (c >= len && this.err('num.with.no.digits','oct',c) )
           return this.errorHandlerOutput ; 
         b = src.charCodeAt(c);
-        if ( (b < CHAR_0 || b >= CHAR_8) && this['num.with.first.not.valid']('oct',c)  )
+        if ( (b < CHAR_0 || b >= CHAR_8) && this.err('num.with.first.not.valid','oct',c)  )
           return this.errorHandlerOutput ;
 
         val = b - CHAR_0 ;
@@ -66,7 +66,7 @@ this.readNumberLiteral = function (peek) {
 
       default:
         if ( b >= CHAR_0 && b <= CHAR_9 ) {
-          if ( this.tight ) this['num.legacy.oct']();
+          if ( this.tight ) this.err('num.legacy.oct');
           var base = 8;
           do {
             if ( b >= CHAR_8 && base === 8 ) base = 10 ;
@@ -108,7 +108,7 @@ this.readNumberLiteral = function (peek) {
     this.c = c;
   }
   
-  if ( ( c < len && isIDHead(src.charCodeAt(c))) ) this['num.idhead.tail']() ; // needless
+  if ( ( c < len && isIDHead(src.charCodeAt(c))) ) this.err('num.idhead.tail') ; // needless
 };
 
 this . frac = function(n) {

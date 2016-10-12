@@ -34,6 +34,9 @@ this .validateID  = function (e) {
          case 'with': case 'enum':
             return this.errorReservedID(e);
 
+//       case 'eval':
+//          if (this.tight) return this.err('eval.arguments.in.strict', n);
+
          default:
             break SWITCH;
      }
@@ -97,6 +100,8 @@ this .validateID  = function (e) {
          case 'protected': case 'transient':
             if ( this.v <= 5 )
               return this.errorReservedID(e) ;
+//       case 'arguments':
+//          if (this.tight) return this.err('eval.arguments.in.strict', n);
 
          default: break SWITCH;
      }
@@ -125,7 +130,7 @@ this.errorReservedID = function(id) {
        this.throwReserved = !false;
        return null;
     }
-    if ( this['reserved.id'](id) ) return this.errorHandlerOutput;
+    if ( this.err('reserved.id',id) ) return this.errorHandlerOutput;
 }
 
 

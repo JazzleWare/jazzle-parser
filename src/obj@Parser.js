@@ -44,7 +44,7 @@ this.parseObjectExpression = function (context) {
      if ( elem ) {
        list.push(elem);
        if (!unsatisfiedAssignment && this.unsatisfiedAssignment ) {
-           if (!( context & CONTEXT_ELEM)  ) this['assig.unsatisfied']() ;
+           if (!( context & CONTEXT_ELEM)  ) this.err('assig.unsatisfied') ;
            unsatisfiedAssignment =  this.unsatisfiedAssignment ;
        }
        
@@ -66,7 +66,7 @@ this.parseObjectExpression = function (context) {
   elem = { properties: list, type: 'ObjectExpression', start: startc,
      end: this.c , loc: { start: startLoc, end: this.loc() }};
 
-  if ( ! this.expectType_soft ('}') && this['obj.unfinished']({
+  if ( ! this.expectType_soft ('}') && this.err('obj.unfinished',{
     obj: elem, asig: firstUnassignable, ea: firstEA,
     firstElemWithYS: firstElemWithYS, u: unsatisfiedAssignment, ys: firstYS }) )
     return this.errorHandlerOutput;
@@ -129,7 +129,7 @@ this.parseProperty = function (name, context) {
 
   switch (this.lttype) {
       case ':':
-         if ( __proto__ && first__proto__ ) this['obj.proto.has.dup']() ;
+         if ( __proto__ && first__proto__ ) this.err('obj.proto.has.dup') ;
 
          this.next();
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
@@ -145,14 +145,14 @@ this.parseProperty = function (name, context) {
          return this.parseMeth(name, OBJ_MEM);
 
       default:
-          if (name.type !== 'Identifier' && this['obj.prop.assig.not.id'](name,context) )
+          if (name.type !== 'Identifier' && this.err('obj.prop.assig.not.id',name,context) )
             return this.errorHandlerOutput ;
 
           if ( this.lttype === 'op' ) {
-             if (this.ltraw !== '=' && this['obj.prop.assig.not.assigop'](name,context) )
+             if (this.ltraw !== '=' && this.err('obj.prop.assig.not.assigop',name,context) )
                return this.errorHandlerOutput  ;
 
-             if (!(context & CONTEXT_ELEM) && this['obj.prop.assig.not.allowed'](name,context) )
+             if (!(context & CONTEXT_ELEM) && this.err('obj.prop.assig.not.allowed',name,context) )
                return this.errorHandlerOutput ;
 
              val = this.parseAssig(name);
