@@ -7,7 +7,9 @@ this . parseFor = function() {
       startLoc = this.locBegin();
 
   this.next () ;
-  this.expectType('(' ) ;
+  if ( !this.expectType_soft ('(' ) &&
+        this['for.with.no.opening.paren'](startc, startLoc) )
+    return this.errorHandlerOutput ;
 
   var head = null;
   var headIsExpr = false;
@@ -30,7 +32,9 @@ this . parseFor = function() {
 
      case 'const' :
 
-        this.assert( this.v >= 5 );
+        if ( this.v < 5 && this['const.not.in.v5'](startc, startLoc) )
+          return this.errorHandlerOutput ;
+
         this.canBeStatement = !false;
         head = this. parseVariableDeclaration(CONTEXT_FOR);
            break ;
@@ -47,15 +51,19 @@ this . parseFor = function() {
   var nbody = null;
   var afterHead = null;
 
-  if ( head !== null && // if we have a head
+  if ( head !== null /* && // if we have a head
        ( headIsExpr || // that is an expression
-       (head.declarations.length === 1 /* && !head.declarations[0].init */ ) ) && // or one and only one lone declarator
+       (head.declarations.length === 1  && !head.declarations[0].init ) ) */ && // or one and only one lone declarator
        this.lttype === 'Identifier' ) { // then if the token ahead is an id
     switch ( this.ltval ) {
        case 'in':
           kind = 'ForInStatement';
 
        case 'of':
+          if (!headIsExpr && head.declarations.length !== 1 &&
+               this['for.in.or.of.multi'](startc, startLoc,head) )
+            return this.errorHandlerOutput   ;
+
           if ( this.unsatisfiedAssignment )
             this.unsatisfiedAssignment = null;
 
@@ -63,10 +71,16 @@ this . parseFor = function() {
 
           this.next();
           afterHead = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE) ;
-          this.expectType(')');
+          if ( ! this.expectType_soft (')') &&
+                 this['for.iter.no.end.paren'](start,startLoc,head,afterHead) )
+            return this.errorHandlerOutput ;
 
           this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
-          nbody = this.parseStatement(false);
+          nbody = this.parseStatement(!false);
+          if ( !nbody && this['null.stmt']('for.iter',
+               { s:startc, l:startLoc, h: head, iter: afterHead, scopeFlags: scopeFlags }) )
+            return this.errorHandlerOutput;
+
           this.scopeFlags = scopeFlags;
 
           this.foundStatement = !false;
@@ -74,25 +88,41 @@ this . parseFor = function() {
             start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
 
        default:
-          this.assert(false) ;
+          return this['for.iter.not.of.in'](startc, startLoc,head);
     }
   }
 
-  this.assert(!this.unsatisfiedAssignment);
+  if ( this.unsatisfiedAssignment &&
+       this['for.simple.head.is.unsatisfied'](startc,startLoc,head) )
+    return this.errorHandlerOutput ;
+
 /*
   if ( head && !headIsExpr ) {
     head.end = this.c;
     head.loc.end = { line: head.loc.end.line, column: this.col };
   }
 */
-  this.expectType(';');
+  if ( ! this.expectType_soft (';') &&
+         this['for.simple.no.init.comma'](startc,startLoc,head) )
+    return this.errorHandlerOutput ;
+
   afterHead = this.parseExpr(CONTEXT_NULLABLE );
-  this.expectType(';');
+  if ( ! this.expectType_soft (';') &&
+         this['for.simple.no.test.comma'](startc,startLoc,head,afterHead) )
+    return this.errorHandlerOutput ;
+
   var tail = this.parseExpr(CONTEXT_NULLABLE );
-  this.expectType(')');
+
+  if ( ! this.expectType_soft (')') &&
+         this['for.simple.no.end.paren'](startc,startLoc,head,afterHead,tail) )
+    return this.errorHandlerOutput ;
 
   this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
-  nbody = this.parseStatement(false);
+  nbody = this.parseStatement(! false);
+  if ( !nbody && this['null.stmt']('for.simple',
+      { s:startc, l:startc, h: head, t: afterHead, u: tail, scopeFlags: scopeFlags } ) )
+    return this.errorhandlerOutput;  
+
   this.scopeFlags = scopeFlags;
 
   this.foundStatement = !false;

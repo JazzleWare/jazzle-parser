@@ -32,7 +32,9 @@ this.parseArrayExpression = function (context ) {
          elem = this.parseSpreadElement();
 
      if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
-           this.assert ( context & CONTEXT_ELEM );
+           if ( !(context & CONTEXT_ELEM) && 
+                this.err('err.prop.init', this.unsatisfiedAssignment) )
+                return this.errorHandlerOutput ;
            unsatisfiedAssignment =  this.unsatisfiedAssignment;
      }
  

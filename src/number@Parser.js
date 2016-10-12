@@ -11,9 +11,11 @@ this.readNumberLiteral = function (peek) {
     switch (b) { // check out what the next is
       case CHAR_X: case CHAR_x:
          c++;
-         this.assert(c < len);
+         if (c >= len && this['num.with.no.digits']('hex', c) )
+           return this.errorHandlerOutput;
          b = src.charCodeAt(c);
-         this.assert( isHex(b) );
+         if ( ! isHex(b) && this['num.with.first.not.valid']('hex', c)  )
+           return this.errorHandlerOutput ;
          c++;
          while ( c < len && isHex( b = src.charCodeAt(c) ) )
              c++ ;
@@ -23,9 +25,11 @@ this.readNumberLiteral = function (peek) {
 
       case CHAR_B: case CHAR_b:
         ++c;
-        this.assert(c < len);
+        if (c >= len && this['num.with.no.digits']('bin',c) )
+          return this.errorHandlerOutput ;
         b = src.charCodeAt(c);
-        this.assert( b === CHAR_0 || b === CHAR_1 );
+        if ( b !== CHAR_0 && b !== CHAR_1 && this['num.with.first.not.valid']('bin',c) )
+          return this.errorHandlerOutput ;
         val = b - CHAR_0; 
         ++c;
         while ( c < len &&
@@ -41,9 +45,12 @@ this.readNumberLiteral = function (peek) {
 
       case CHAR_O: case CHAR_o:
         ++c;
-        this.assert(c < len) ; 
+        if (c >= len && this['num.with.no.digits']('oct',c) )
+          return this.errorHandlerOutput ; 
         b = src.charCodeAt(c);
-        this.assert( b >= CHAR_0 && b < CHAR_8 );
+        if ( (b < CHAR_0 || b >= CHAR_8) && this['num.with.first.not.valid']('oct',c)  )
+          return this.errorHandlerOutput ;
+
         val = b - CHAR_0 ;
         ++c; 
         while ( c < len &&
@@ -59,7 +66,7 @@ this.readNumberLiteral = function (peek) {
 
       default:
         if ( b >= CHAR_0 && b <= CHAR_9 ) {
-          this.assert( !this.tight );
+          if ( this.tight ) this['num.legacy.oct']();
           var base = 8;
           do {
             if ( b >= CHAR_8 && base === 8 ) base = 10 ;
@@ -101,7 +108,7 @@ this.readNumberLiteral = function (peek) {
     this.c = c;
   }
   
-  this.assert ( !( c < len && isIDHead(src.charCodeAt(c))) ); // needless
+  if ( ( c < len && isIDHead(src.charCodeAt(c))) ) this['num.idhead.tail']() ; // needless
 };
 
 this . frac = function(n) {

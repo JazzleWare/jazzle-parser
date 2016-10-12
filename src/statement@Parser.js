@@ -15,14 +15,18 @@ this.parseStatement = function ( allowNull ) {
        break ;
 
     case 'eof':
-      this.assert(allowNull);
+      if (!allowNull && this['stmt.null']() )
+        return this.errorHandlerOutput ;
+
       return null;
   }
 
   this.assert(head === null) ;
   head = this.parseExpr(CONTEXT_NULLABLE) ;
   if ( !head ) {
-    this.assert( allowNull, "statement must not be null" )
+    if ( !allowNull && this['stmt.null']() )
+      this.errorHandlerOutput;
+
     return null;
   }
 
@@ -31,12 +35,17 @@ this.parseStatement = function ( allowNull ) {
 
   this.fixupLabels(false) ;
   e  = this.semiI() || head.end;
+  l = this.semiLoc_soft ();
+  if ( !l && !this.newLineBeforeLookAhead &&
+       this['no.semi']('expr',{head:head,e:e}) )
+    return this.errorHandlerOutput;
+ 
   return {
     type : 'ExpressionStatement',
     expression : core(head),
     start : head.start,
     end : e,
-    loc : { start : head.loc.start, end : this.semiLoc() || head.loc.end }
+    loc : { start : head.loc.start, end : l || head.loc.end }
   };
 };
 
@@ -49,7 +58,9 @@ this .parseLabeledStatement = function(label, allowNull) {
    this.next();
    var l = label.name;
    l += '%';
-   this.assert( !this.findLabel(l) );
+   if ( this.findLabel(l) && this['label.is.a.dup'](label,allowNull) )
+     return this.errorHandlerOutput ;
+
    this.labels[l] =
         this.unsatisfiedLabel ?
         this.unsatisfiedLabel :
@@ -65,6 +76,14 @@ this .parseLabeledStatement = function(label, allowNull) {
 this .ensureStmt = function() {
    if ( this.canBeStatement ) this.canBeStatement = false;
    else this.assert(false);
+};
+
+this .ensureStmt_soft = function() {
+   if ( this.canBeStatement ) {
+     this.canBeStatement = false;
+     return !false;
+   }
+   return false;
 };
 
 this . fixupLabels = function(loop) {
@@ -84,15 +103,23 @@ this .parseEmptyStatement = function() {
 };
 
 this.parseIfStatement = function () {
-  this.ensureStmt ();
+  if ( !this.ensureStmt_soft () && this['not.stmt']('if') )
+    return this.errorHandlerOutput;
+
   this.fixupLabels(false);
 
   var startc = this.c0,
       startLoc  = this.locBegin();
   this.next () ;
-  this.expectType('(');
+  if ( !this.expectType_soft('(') &&
+        this['if.has.no.opening.paren'](startc,startLoc) )
+    return this.errorHanlerOutput;
+
   var cond = core( this.parseExpr(CONTEXT_NONE) );
-  this.expectType(')' );
+  if ( !this.expectType_soft (')' ) &&
+        this['if.has.no.closing.paren'](startc,startLoc) )
+    return this.errorHandlerOutput ;
+
   var scopeFlags = this.scopeFlags ;
   this.scopeFlags |= SCOPE_BREAK; 
   var nbody = this. parseStatement (false);
@@ -109,15 +136,24 @@ this.parseIfStatement = function () {
 };
 
 this.parseWhileStatement = function () {
-   this.ensureStmt();
+   if ( ! this.ensureStmt_soft () &&
+          this['not.stmt']('while') )
+     return this.errorHandlerOutput;
+
    this.fixupLabels(!false);
 
    var startc = this.c0,
        startLoc = this.locBegin();
    this.next();
-   this.expectType('(');
+   if ( !this.expectType_soft ('(') &&
+         this['while.has.no.opening.paren'](startc,startLoc) )
+     return this.errorHandlerOutput;
+ 
    var cond = core( this.parseExpr(CONTEXT_NONE) );
-   this.expectType(')');
+   if ( !this.expectType_soft (')') &&
+         this['while.has.no.closing.paren' ](startc,startLoc) )
+     return this.errorHandlerOutput;
+
    var scopeFlags = this.scopeFlags;
    this.scopeFlags |= (SCOPE_CONTINUE|SCOPE_BREAK );
    var nbody = this.parseStatement(false);
@@ -136,12 +172,18 @@ this.parseBlckStatement = function () {
   var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() } };
 
-  this.expectType('}' );
+  if ( !this.expectType_soft ('}' ) &&
+        this['block.unfinished'](n) )
+    return this.errorHandlerOutput ;
+
   return n;
 };
 
 this.parseDoWhileStatement = function () {
-  this.ensureStmt () ;
+  if ( !this.ensureStmt_soft () &&
+        this['not.stmt']('do-while') )
+    return this.errorHandlerOutput ;
+
   this.fixupLabels(!false);
 
   var startc = this.c0,
@@ -151,11 +193,20 @@ this.parseDoWhileStatement = function () {
   this.scopeFlags |= (SCOPE_BREAK| SCOPE_CONTINUE);
   var nbody = this.parseStatement (!false) ;
   this.scopeFlags = scopeFlags;
-  this.expectID('while');
-  this.expectType('(');
+  if ( !this.expectID_soft('while') &&
+        this['do.has.no.while'](startc,startLoc,scopeFlags,nbody) )
+    return this.errorHandlerOutput;
+
+  if ( !this.expectType_soft('(') &&
+        this['do.has.no.opening.paren'](startc,startLoc,scopeFlags,nbody) )
+    return this.errorHandlerOutput;
+
   var cond = core(this.parseExpr(CONTEXT_NONE));
   var c = this.c, li = this.li, col = this.col;
-  this.expectType(')');
+  if ( !this.expectType_soft (')') &&
+        this['do.has.no.closing.paren'](startc,startLoc,scopeFlags,nbody,c,li,col,cond) )
+    return this.errorHandlerOutput;
+
   if (this.lttype === ';' ) {
      c = this.c;
      li = this.li ;
@@ -169,9 +220,14 @@ this.parseDoWhileStatement = function () {
 };
 
 this.parseContinueStatement = function () {
-   this.ensureStmt   () ;
+   if ( ! this.ensureStmt_soft   () &&
+          this['not.stmt']('continue') )
+     return this.errorHandlerOutput ;
+
    this.fixupLabels(false);
-   this.assert(this.scopeFlags & SCOPE_CONTINUE );
+   if (!(this.scopeFlags & SCOPE_CONTINUE) &&
+         this['continue.not.in.loop']() )
+     return this.errorHandlerOutput  ;
 
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;
@@ -180,25 +236,44 @@ this.parseContinueStatement = function () {
 
    var name = null, label = null, semi = 0;
 
+   var semiLoc = null;
+
    if ( !this.newLineBeforeLookAhead && this.lttype === 'Identifier' ) {
        label = this.validateID(null);
        name = this.findLabel(label.name + '%');
-       this.assert(name && name.loop) ;
+       if (!name) this['continue.no.such.label'](label) ;
+       if (!name.loop) this['continue.not.a.loop.label'](label);
+
        semi = this.semiI();
+       semiLoc = this.semiLoc_soft();
+       if ( !semiLoc && !this.newLineBeforeLookAhead &&
+             this['no.semi']('continue',startc,startLoc,c,li,col,semi,label) )
+         return this.errorHandlerOutput;
+
        this.foundStatement = !false;
        return { type: 'ContinueStatement', label: label, start: startc, end: semi || label.end,
-           loc: { start: startLoc, end: this.semiLoc() || label.loc.end } };
+           loc: { start: startLoc, end: semiLoc || label.loc.end } };
    }
    semi = this.semiI();
+   semiLoc = this.semiLoc_soft();
+   if ( !semiLoc && !this.newLineBeforeLookAhead &&
+         this['no.semi']('continue',startc,startLoc,c,li,col,semi,label) )
+     return this.errorHandlerOutput;
+
    this.foundStatement = !false;
    return { type: 'ContinueStatement', label: null, start: startc, end: semi || c,
-           loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
+           loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
 };
 
 this.parseBreakStatement = function () {
-   this.ensureStmt   () ;
+   if (! this.ensureStmt_soft   () &&
+         this['not.stmt']('break') )
+     return this.errorHandlerOutput ;
+
    this.fixupLabels(false);
-   this.assert(this.scopeFlags & SCOPE_BREAK);
+   if (!(this.scopeFlags & SCOPE_BREAK) &&
+         this['break.not.in.breakable']() )
+     return this.errorHandlerOutput ;
 
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;
@@ -207,23 +282,38 @@ this.parseBreakStatement = function () {
 
    var name = null, label = null, semi = 0;
 
+   var semiLoc = null;
+
    if ( !this.newLineBeforeLookAhead && this.lttype === 'Identifier' ) {
        label = this.validateID(null);
        name = this.findLabel(label.name + '%');
-       this.assert(name) ;
+       if (!name) this['break.no.such.label'](label);
        semi = this.semiI();
+       semiLoc = this.semiLoc_soft();
+       if ( !semiLoc && !this.newLineBeforeLookAhead &&
+            this['no.semi'](startc,startLoc,c,li,col,semi,label) )
+         return this.errorHandlerOutput;
+
        this.foundStatement = !false;
        return { type: 'BreakStatement', label: label, start: startc, end: semi || label.end,
-           loc: { start: startLoc, end: this.semiLoc() || label.loc.end } };
+           loc: { start: startLoc, end: semiLoc || label.loc.end } };
    }
    semi = this.semiI();
+   semiLoc = this.semiLoc_soft();
+   if ( !semiLoc && !this.newLineBeforeLookAhead &&
+        this['no.semi'](startc,startLoc,c,li,col,semi,label) )
+     return this.errorHandlerOutput;
+
    this.foundStatement = !false;
    return { type: 'BreakStatement', label: null, start: startc, end: semi || c,
-           loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
+           loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
 };
 
 this.parseSwitchStatement = function () {
-  this.ensureStmt();
+  if ( ! this.ensureStmt_soft () &&
+         this['not.stmt']('switch') )
+    return this.errorHandlerOutput ;
+
   this.fixupLabels(false) ;
 
   var startc = this.c0,
@@ -234,14 +324,23 @@ this.parseSwitchStatement = function () {
       elem = null;
 
   this.next() ;
-  this.expectType('(');
+  if ( !this.expectType_soft ('(') &&
+       this['switch.has.no.opening.paren'](startc,startLoc) )
+    return this.errorHandlerOutput;
+
   var switchExpr = core(this.parseExpr(CONTEXT_NONE));
-  this.expectType (')');
-  this.expectType('{');
+  if ( !this.expectType_soft (')') &&
+        this['switch.has.no.closing.paren'](startc,startLoc) )
+    return this.errorHandlerOutput ;
+
+  if ( !this.expectType_soft ('{') &&
+        this['switch.has.no.opening.curly'](startc,stratLoc) )
+    return this.errorHandlerOutput ;
+
   this.scopeFlags |=  SCOPE_BREAK;
   while ( elem = this.parseSwitchCase()) {
     if (elem.test === null) {
-       this.assert(!hasDefault);
+       if (hasDefault ) this['switch.has.a.dup.default'](elem );
        hasDefault = !false ;
     }
     cases.push(elem);
@@ -251,7 +350,9 @@ this.parseSwitchStatement = function () {
   this.foundStatement = !false;
   var n = { type: 'SwitchStatement', cases: cases, start: startc, discriminant: switchExpr,
             end: this.c, loc: { start: startLoc, end: this.loc() } };
-  this.expectType ('}' ) ;
+  if ( !this.expectType_soft ('}' ) &&
+        this['switch.unfinished'](n) )
+    return this.errorHandlerOutput ;
 
   return n;
 };
@@ -283,7 +384,10 @@ this.parseSwitchCase = function () {
      return null;
 
   var c = this.c, li = this.li, col = this.col;
-  this.expectType (':');
+  if ( ! this.expectType_soft (':') &&
+       this['switch.case.has.no.colon'](startc,startLoc,c,li,cond,col) )
+    return this.errorHandlerOutput;
+
   nbody = this.blck();
   var last = nbody.length ? nbody[nbody.length-1] : null;
   return { type: 'SwitchCase', test: cond, start: startc, end: last ? last.end : c,
@@ -291,10 +395,15 @@ this.parseSwitchCase = function () {
 };
 
 this.parseReturnStatement = function () {
-  this.ensureStmt();
+  if (! this.ensureStmt_soft () &&
+       this['not.stmt']('return') )
+    return this.errorHandlerOutput ;
+
   this.fixupLabels(false ) ;
 
-  this.assert( this.scopeFlags & SCOPE_FUNCTION );
+  if ( !( this.scopeFlags & SCOPE_FUNCTION ) &&
+          this['return.not.in.a.function']() )
+    return this.errorHandlerOutput ;
 
   var startc = this.c0,
       startLoc = this.locBegin(),
@@ -305,24 +414,33 @@ this.parseReturnStatement = function () {
 
   this.next();
 
-  var semi;
+  var semi = 0, semiLoc = null;
+
   if ( !this.newLineBeforeLookAhead )
      retVal = this.parseExpr(CONTEXT_NULLABLE);
 
   semi = this.semiI();
+  semiLoc = this.semiLoc();
+  if ( !semiLoc && !this.newLineBeforeLookAhead &&
+       this['no.semi']('return', [startc,startLoc,c,li,col,semi,retVal] ) )
+    return this.errorHandlerOutput;
+
   if ( retVal ) {
      this.foundStatement = !false;
      return { type: 'ReturnStatement', argument: core(retVal), start: startc, end: semi || retVal.end,
-        loc: { start: startLoc, end: this.semiLoc() || retVal.loc.end } }
+        loc: { start: startLoc, end: semiLoc || retVal.loc.end } }
   }
 
   this.foundStatement = !false;
   return {  type: 'ReturnStatement', argument: retVal, start: startc, end: semi || c,
-     loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
+     loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
 };
 
 this.parseThrowStatement = function () {
-  this.ensureStmt();
+  if ( ! this.ensureStmt_soft () &&
+         this['not.stmt']('throw') )
+    return this.errorHandlerOutput ;
+
   this.fixupLabels(false ) ;
 
   var startc = this.c0,
@@ -334,34 +452,51 @@ this.parseThrowStatement = function () {
 
   this.next();
 
-  var semi;
-  this.assert ( !this.newLineBeforeLookAhead );
+  var semi = 0 , semiLoc = null ;
+  if ( this.newLineBeforeLookAhead &&
+       this['throw.has.newline'](startc,startLoc,c,li,col) )
+    return this.errorHandlerOutput;
+
   retVal = this.parseExpr(CONTEXT_NULLABLE );
 
   semi = this.semiI();
+  semiLoc = this.semiLoc();
+  if ( !semiLoc && !this.newLineBeforeLookAhead &&
+        this['no.semi']('throw',[startc,startLoc,c,li,col,semi,retVal] ) )
+    return this.errorHandlerOutput;
+
   if ( retVal ) {
      this.foundStatement = !false;
      return { type: 'ThrowStatement', argument: core(retVal), start: startc, end: semi || retVal.end,
-        loc: { start: startLoc, end: this.semiLoc() || retVal.loc.end } }
+        loc: { start: startLoc, end: semiLoc || retVal.loc.end } }
   }
 
   this.foundStatement = !false;
   return {  type: 'ThrowStatement', argument: null, start: startc, end: semi || c,
-     loc: { start: startLoc, end: this.semiLoc() || { line: li, column : col } } };
+     loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
 };
 
 this. parseBlockStatement_dependent = function() {
     var startc = this.c - 1,
         startLoc = this.locOn(1);
-    this.expectType ('{');
+    if ( !this.expectType_soft ('{') &&
+         this['block.dependent.no.opening.curly' ]() )
+      return this.errorHandlerOutput;
+
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() } };
-    this.expectType ('}');
+    if ( ! this.expectType_soft ('}') &&
+         this['block.dependent.is.unfinished' ]( n)  )
+      return this.errorHandlerOutput;
+
     return n;
 };
 
 this.parseTryStatement = function () {
-  this.ensureStmt() ;
+  if ( ! this.ensureStmt_soft () &&
+         this['not.stmt' ]('try' ) )
+    return this.errorHandlerOutput ;
+
   this.fixupLabels(false);
   var startc = this.c0,
       startLoc = this.locBegin();
@@ -378,7 +513,9 @@ this.parseTryStatement = function () {
   }
 
   var finOrCat = finBlock || catBlock;
-  this.assert(finOrCat);
+  if ( ! finOrCat &&
+       this['try.has.no.tail'](startc,startLoc,tryBlock)  )
+    return this.errorHandlerOutput ;
 
   this.foundStatement = !false;
   return  { type: 'TryStatement', block: tryBlock, start: startc, end: finOrCat.end,
@@ -390,9 +527,15 @@ this. parseCatchClause = function () {
        startLoc = this.locBegin();
 
    this.next();
-   this.expectType('(');
+   if ( !this.expectType_soft ('(') &&
+        this['catch.has.no.opening.paren'](startc,startLoc) )
+     return this.errorHandlerOutput ;
+
    var catParam = this.parsePattern();
-   this.expectType(')');
+   if ( !this.expectType_soft (')') &&
+         this['catch.has.no.end.paren' ] (startc,startLoc,catParam)  )
+     return this.errorHandlerOutput    ;
+
    var catBlock = this.parseBlockStatement_dependent();
    return {
        type: 'CatchClause',
@@ -405,16 +548,26 @@ this. parseCatchClause = function () {
 };
 
 this . parseWithStatement = function() {
-   this.ensureStmt() ;
+   if ( !this.ensureStmt_soft () &&
+         this['not.stmt']('with' ) )
+     return this.errorHandlerOutput ;
+
+   if ( this.tight) this['with.strict' ]   ()  ;
    this.fixupLabels(false);
 
    var startc = this.c0,
        startLoc = this.locBegin();
 
    this.next();
-   this.expectType('(');
+   if (! this.expectType_soft ('(') &&
+         this['with.has.no.opening.paren'] (startc, startLoc) )
+     return this.errorHandlerOutput ;
+
    var obj = this.parseExpr(CONTEXT_NONE);
-   this.expectType(')' );
+   if (! this.expectType_soft (')' ) &&
+         this['with.has.no.end.paren'](startc,startLoc,obj ) )
+     return this.errorHandlerOutput ;
+
    var nbody = this.parseStatement(!false);
 
    this.foundStatement = !false;
@@ -428,7 +581,10 @@ this . parseWithStatement = function() {
 };
 
 this . prseDbg = function () {
-  this.ensureStmt() ;
+  if (! this.ensureStmt_soft () &&
+        this['not.stmt']('debugger') )
+    return this.errorHandlerOutput ;
+
   this.fixupLabels(false);
 
   var startc = this.c0,
@@ -441,7 +597,11 @@ this . prseDbg = function () {
     li = this.li;
     col = this.col;
     this.next();
-  }
+  } 
+  else if ( !this.newLineBeforeLookAhead &&
+     this['no.semi']('debugger', [startc,startLoc,c,li,col] ) )
+     return this.errorHandlerOutput;
+
   this.foundStatement = !false;
   return {
      type: 'DebuggerStatement',

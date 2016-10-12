@@ -42,6 +42,15 @@ function verifyRegex(regex, flags) {
 
 }
 
+function verifyRegex_soft (regex, flags) {
+  var regexVal = null;
+
+  try {
+    return new RegExp(regex, flags);
+  } catch ( e ) { return null; }
+
+}
+
 this.parseRegExpLiteral = function() {
      var startc = this.c - 1, startLoc = this.locOn(1),
          c = this.c, src = this.src, len = src.length;
@@ -78,17 +87,35 @@ this.parseRegExpLiteral = function() {
        c++ ;
      }
 
-     this.assert( src.charCodeAt(c) === CHAR_DIV );
+     if ( src.charCodeAt(c) !== CHAR_DIV && 
+          this['regex.unfinished'](startc,startLoc,c) )
+       return this.errorHandlerOutput ;
+
      var flags = 0;
      var flagCount = 0;
      WHILE:
      while ( flagCount <= 5 ) {
         switch ( src.charCodeAt ( ++c ) ) {
-            case CHAR_g: this.assert(!(flags & gRegexFlag)); flags |= gRegexFlag; break;
-            case CHAR_u: this.assert(!(flags & uRegexFlag)); flags |= uRegexFlag; break;
-            case CHAR_y: this.assert(!(flags & yRegexFlag)); flags |= yRegexFlag; break;
-            case CHAR_m: this.assert(!(flags & mRegexFlag)); flags |= mRegexFlag; break;
-            case CHAR_i: this.assert(!(flags & iRegexFlag)); flags |= iRegexFlag; break;
+            case CHAR_g:
+                if (flags & gRegexFlag)
+                  this['regex.flag.is.dup'](startc,startLoc,c);
+                flags |= gRegexFlag; break;
+            case CHAR_u:
+                if (flags & uRegexFlag)
+                  this['regex.flag.is.dup'](startc,startLoc,c);
+                flags |= uRegexFlag; break;
+            case CHAR_y:
+                if (flags & yRegexFlag)
+                  this['regex.flag.is.dup'](startc,startLoc,c);
+                flags |= yRegexFlag; break;
+            case CHAR_m:
+                if (flags & mRegexFlag)
+                  this['regex.flag.is.dup'](startc,startLoc,c);
+                flags |= mRegexFlag; break;
+            case CHAR_i:
+                if (flags & iRegexFlag)
+                  this['regex.flag.is.dup'](startc,startLoc,c);
+                flags |= iRegexFlag; break;
 
             default : break WHILE;
         }
@@ -115,10 +142,14 @@ this.parseRegExpLiteral = function() {
      // for knowing whether the 1 bit has also been 1 in flags, we '&' the above bit set with flags; the 1 bits in the
      // given bit set must both be 1 in flags and in flags ^ rsf; that is, they are both "used" and "unsupoorted or unused",
      // which would be equal to this: [used && (unsupported || !used)] === unsopprted
-     if ( flags & (regexFlagsSupported^flags) )
-        verifyRegex(normalizedRegex, "");
+     if (flags & (regexFlagsSupported^flags) )
+       val  = verifyRegex_soft (normalizedRegex, "");
      else
         val = verifyRegex( patternString, flagsString ) ;
+
+     if ( !val &&
+        this['regex.not.valid'](startc,startLoc,flagsString,patternString) )
+       return this.errorHandlerOutput;
 
      this.col += (c-this.c);
      var regex = { type: 'Literal', regex: { pattern: patternString, flags: flagsString },

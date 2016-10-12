@@ -10,22 +10,18 @@ this.parseNewHead = function () {
   switch (this  .lttype) {
     case 'Identifier':
        head = this.parseIdStatementOrId (CONTEXT_NONE);
-       this.assert(head);
        break;
 
     case '[':
-       head = this. parseArrayExpression();
-       this.assert(!this.unsatisfiedAssignment);
+       head = this. parseArrayExpression(CONTEXT_UNASSIGNABLE_CONTAINER);
        break ;
 
     case '(':
        head = this. parseParen() ;
-       this.assert(!this.unsatisfiedArg ) ;
        break ;
 
     case '{':
-       head = this. parseObjectExpression() ;
-       this.assert(!this.unsatisfiedAssignment);
+       head = this. parseObjectExpression(CONTEXT_UNASSIGNABLE_CONTAINER) ;
        break ;
 
     case '/':
@@ -40,7 +36,13 @@ this.parseNewHead = function () {
        head = this.numstr ();
        break ;
 
-    default: this.assert(false) ;
+    default:
+       head = this['new.head.is.not.valid'](startc, startLoc);
+       if ( head.type === ERR_RESUME ) {
+           head = head.val ;
+           break ;
+       }
+       return head.val;
   }
 
   var inner = core( head ) ;
@@ -60,14 +62,29 @@ this.parseNewHead = function () {
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                     loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false };
           inner = head ;
-          this.expectType(']') ;
+          if ( !this.expectType_soft (']') ) {
+            head = this['mem.unfinished'](startc,startLoc,head)  ;
+            if (head .type === ERR_RESUME)
+              head = head.val;
+     
+            else
+              return head.val;
+          }
+ 
           continue;
 
        case '(':
           elem = this. parseArgList();
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
                     loc: { start: startLoc, end: this.loc() }, arguments: elem };
-          this. expectType (')');
+          if ( !this. expectType_soft (')') ) {
+            inner = this['new.args.is.unfinished'](startc,startLoc,inner) ;
+            if ( inner.type === ERR_RESUME )
+              inner = inner.val;
+            else
+              return inner.val;
+          }
+
           return inner;
 
        case '`' :

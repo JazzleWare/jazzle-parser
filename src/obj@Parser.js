@@ -44,7 +44,7 @@ this.parseObjectExpression = function (context) {
      if ( elem ) {
        list.push(elem);
        if (!unsatisfiedAssignment && this.unsatisfiedAssignment ) {
-           this.assert( context & CONTEXT_ELEM );
+           if (!( context & CONTEXT_ELEM)  ) this['assig.unsatisfied']() ;
            unsatisfiedAssignment =  this.unsatisfiedAssignment ;
        }
        
@@ -66,7 +66,10 @@ this.parseObjectExpression = function (context) {
   elem = { properties: list, type: 'ObjectExpression', start: startc,
      end: this.c , loc: { start: startLoc, end: this.loc() }};
 
-  this.expectType('}');
+  if ( ! this.expectType_soft ('}') && this['obj.unfinished']({
+    obj: elem, asig: firstUnassignable, ea: firstEA,
+    firstElemWithYS: firstElemWithYS, u: unsatisfiedAssignment, ys: firstYS }) )
+    return this.errorHandlerOutput;
 
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
   if ( firstParen ) this.firstParen = firstParen;
@@ -126,7 +129,7 @@ this.parseProperty = function (name, context) {
 
   switch (this.lttype) {
       case ':':
-         this.assert( !( __proto__ && first__proto__ ) ) ;
+         if ( __proto__ && first__proto__ ) this['obj.proto.has.dup']() ;
 
          this.next();
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
@@ -142,10 +145,16 @@ this.parseProperty = function (name, context) {
          return this.parseMeth(name, OBJ_MEM);
 
       default:
-          this.assert(name.type === 'Identifier' ) ;
+          if (name.type !== 'Identifier' && this['obj.prop.assig.not.id'](name,context) )
+            return this.errorHandlerOutput ;
+
           if ( this.lttype === 'op' ) {
-             this.assert(this.ltraw === '=' );
-             this.assert(context & CONTEXT_ELEM );
+             if (this.ltraw !== '=' && this['obj.prop.assig.not.assigop'](name,context) )
+               return this.errorHandlerOutput  ;
+
+             if (!(context & CONTEXT_ELEM) && this['obj.prop.assig.not.allowed'](name,context) )
+               return this.errorHandlerOutput ;
+
              val = this.parseAssig(name);
              this.unsatisfiedAssignment = val;
           }
