@@ -189,9 +189,9 @@ this.parseFuncBody = function(context) {
   this.next() ;
   elem = this.parseStatement(!false);
 
-  if ( !this.tight && this.v > 5 && stmt && 
-       stmt.type === 'ExpressionStatement' && stmt.expression.type === 'Literal' && typeof stmt.expression.value === typeof "" )
-       switch (this.src.slice(stmt.expression.start,stmt.expression.end) )  {
+  if ( !this.tight && this.v > 5 && elem && 
+       elem.type === 'ExpressionStatement' && elem.expression.type === 'Literal' && typeof elem.expression.value === typeof "" )
+       switch (this.src.slice(elem.expression.start,elem.expression.end) )  {
            case "'use strict'":
            case '"use strict"':
               this.makeStrict();
