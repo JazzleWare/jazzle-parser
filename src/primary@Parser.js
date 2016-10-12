@@ -212,6 +212,7 @@ this.parseParen = function () {
   }
        
   var firstEA = null;
+  var firstNonTailRest = null;
 
   while ( !false ) {
      this.firstParen = null;
@@ -237,6 +238,7 @@ this.parseParen = function () {
                  parenYS = this.firstYS;
            }
            if ( !unsatisfiedArg ) unsatisfiedArg = elem;
+           if ( !firstNonTailRest && this.firstNonTailRest ) firstNonTailRest = this.firstNonTailRest;
         }
         break;
      }
@@ -265,6 +267,9 @@ this.parseParen = function () {
 
            unsatisfiedArg =  this.unsatisfiedAssignment;
      }
+
+     if ( !firstNonTailRest && this.firstNonTailRest )
+       firstNonTailRest = this.firstNonTailRest;
 
      if ( this.lttype !== ',' ) break ;
 
@@ -314,6 +319,8 @@ this.parseParen = function () {
   this.firstElemWithYS = firstElemWithYS;
   this.parenYS = parenYS;
   this.firstYS = firstYS;
+
+  this.firstNonTailRest = firstNonTailRest;
 
   if ( ! this.expectType_soft (')') && this.err('paren.unfinished',n) )
     return this.errorHandlerOutput ;

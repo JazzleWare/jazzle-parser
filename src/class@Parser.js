@@ -78,7 +78,16 @@ this. parseClass = function(context) {
                break SWITCH;
           }
           case '[': elem = this.parseMeth(this.memberExpr(), CLASS_MEM); break;
-          case 'Literal': elem = this.parseMeth(this.numstr(), CLASS_MEM); break ;
+          case 'Literal':
+             if ( this.ltval === 'constructor') {
+                if ( foundConstructor && this.ctorMultiError() )
+                  return this.errorHandlerOutput;
+
+                if (!isStatic) foundConstructor = true;
+             }
+                 
+             elem = this.parseMeth(this.numstr(), CLASS_MEM);
+             break ;
 
           case ';': this.next(); continue;
           case 'op': 

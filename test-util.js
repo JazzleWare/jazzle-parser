@@ -44,6 +44,7 @@ function JazzleTestSuite(Parser) {
    this.mustPassAndPassedButIncompatible = 0;
    this.excludeList = [];
    this.excludeCoverage = {};
+   this.testListeners = null;
 }
 
 var STR_TYPE = typeof "", FUNC_TYPE = typeof function(){};
@@ -101,8 +102,14 @@ JazzleTestSuite.prototype.push = function(test) {
    var state = 'unknown';
    if (test.testMode === PASS_MODE) {
       this.mustPass++;
-      if (this.skip(test)) { state = 'skipped-pass'; this.mustPassButSkipped++; }
-      else if (test.runWith(this.Parser)) { state = 'pass-as-expected'; this.mustPassAndPassed++; }
+      if (this.skip(test)) {
+        state = 'skipped-pass';
+        this.mustPassButSkipped++;
+      }
+      else if (test.runWith(this.Parser)) {
+        state = 'pass-as-expected';
+        this.mustPassAndPassed++;
+      }
       else if (test.error !== null) state = 'unexpected-fail';
       else {
          state = 'incompatible-pass';
@@ -121,6 +128,10 @@ JazzleTestSuite.prototype.push = function(test) {
         this.mustFailAndFailedButIncompatible++;
       }
    }
+
+   if (this.testListener)
+     this.testListener(test, state);
+
    return state;
 };
 

@@ -60,6 +60,7 @@ var Parser = function (src, isModule) {
   this.inComplexArgs = false;
 
   this.first__proto__ = false;
+  this.firstNonTailRest = null;
 };
 
 ;
@@ -446,7 +447,9 @@ this.parseArrayExpression = function (context ) {
       parenYS = null,
       firstParen = null,
       unsatisfiedAssignment = null,
-      firstYS = this.firstYS;
+      firstYS = this.firstYS,
+      restElem = false, 
+      firstNonTailRest = null ;
 
   do {
      this.firstUnassignable =
@@ -456,8 +459,10 @@ this.parseArrayExpression = function (context ) {
      this.firstElemWithYS = null;
 
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
-     if ( !elem && this.lttype === '...' )
+     if ( !elem && this.lttype === '...' ) {
          elem = this.parseSpreadElement();
+         restElem = !false;
+     }
 
      if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
            if ( !(context & CONTEXT_ELEM) && 
@@ -485,6 +490,12 @@ this.parseArrayExpression = function (context ) {
      if ( !firstYS && this.firstYS ) firstYS = this.firstYS;
 
      if ( this.lttype === ',' ) { 
+        if (restElem) { 
+           if (firstNonTailRest===null)
+             firstNonTailRest = elem;
+
+           restElem = false;
+        }
         list.push(elem) ;
         this.next();
      }
@@ -504,6 +515,7 @@ this.parseArrayExpression = function (context ) {
      this.parenYS = parenYS;
   } 
   this.firstYS = firstYS;
+  this.firstNonTailRest = firstNonTailRest;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};
@@ -569,8 +581,11 @@ this .asArrowFuncArgList = function(head) {
       this.asArrowFuncArg(head);
 };
 
-this. asArrowFuncArg = function(arg  ) {
+this. asArrowFuncArg = function(arg) {
     var i = 0, list = null;
+
+    if (arg.type !== 'Identifier')
+      this.firstNonSimpArg = arg;
 
     switch  ( arg.type ) {
         case 'Identifier':
@@ -643,6 +658,7 @@ this. asArrowFuncArg = function(arg  ) {
            return;
 
         case 'SpreadElement':
+            this.assert(arg !== this.firstNonTailRest);
             this.asArrowFuncArg(arg.argument);
             arg.type = 'RestElement';
             return;
@@ -672,6 +688,12 @@ this . parseArrowFunctionExpression = function(arg,context)   {
 
   var prevArgNames = this.argNames;
   this.argNames = {};
+  
+  var prevComplexArgs = this.inComplexArgs;
+  this.inComplexArgs = !false;
+
+  var prevNonSimpArg = this.firstNonSimpArg;
+  this.firstNonSimpArg = null;
 
   var tight = this.tight;
 
@@ -691,6 +713,10 @@ this . parseArrowFunctionExpression = function(arg,context)   {
 
   if ( this.firstEA )
      this.firstEA = null;
+
+  if ( this.newLineBeforeLookAhead &&
+       this.err('new.line.before.arrow'))
+     return this.errorHandlerOutput;
 
   this.next();
 
@@ -713,10 +739,12 @@ this . parseArrowFunctionExpression = function(arg,context)   {
 
   this.argNames = prevArgNames;
   this.scopeFlags = scopeFlags;
+  this.firstNonSimpArg = prevNonSimpArg;
 
   var params = core(arg);
 
   this.tight = tight;
+  this.inComplexArgs = prevComplexArgs;
 
   return { type: 'ArrowFunctionExpression',
            params: params ?  params.type === 'SequenceExpression' ? params.expressions : [params] : [] ,
@@ -856,6 +884,7 @@ this .toAssig = function(head) {
        return;
 
      case 'SpreadElement':
+       this.assert(head !== this.firstNonTailRest);
        this.toAssig(head.argument);
        head.type = 'RestElement';
        return;
@@ -1022,7 +1051,16 @@ this. parseClass = function(context) {
                break SWITCH;
           }
           case '[': elem = this.parseMeth(this.memberExpr(), CLASS_MEM); break;
-          case 'Literal': elem = this.parseMeth(this.numstr(), CLASS_MEM); break ;
+          case 'Literal':
+             if ( this.ltval === 'constructor') {
+                if ( foundConstructor && this.ctorMultiError() )
+                  return this.errorHandlerOutput;
+
+                if (!isStatic) foundConstructor = true;
+             }
+                 
+             elem = this.parseMeth(this.numstr(), CLASS_MEM);
+             break ;
 
           case ';': this.next(); continue;
           case 'op': 
@@ -1760,9 +1798,14 @@ this . parseFor = function() {
           kind = 'ForInStatement';
 
        case 'of':
-          if (!headIsExpr && head.declarations.length !== 1 &&
-               this.err('for.in.or.of.multi',startc, startLoc,head) )
-            return this.errorHandlerOutput   ;
+          if (!headIsExpr) {
+             if ( head.declarations.length !== 1 &&
+                  this.err('for.in.or.of.multi',startc, startLoc,head) )
+                return this.errorHandlerOutput;
+//           if ( head.kind === 'const' &&
+//                this.err( 'for.in.or.of.const', startc, starLoc, head) )
+//              return this.errorHandlerOutput;
+          }
 
           if ( this.unsatisfiedAssignment )
             this.unsatisfiedAssignment = null;
@@ -3033,7 +3076,7 @@ this.expectID = function (n) {
 };
 
 this.expectType_soft = function (n)  {
-  if (this.lttype === n, 'expected ' + n + '; got ' + this.lttype  ) {
+  if (this.lttype === n ) {
       this.next();
       return !false;
   }
@@ -3578,6 +3621,7 @@ this.parseObjectExpression = function (context) {
   var parenYS = null;
 
   var firstYS = this.firstYS;
+  var firstNonTailRest = null;
 
   if ( context & CONTEXT_UNASSIGNABLE_CONTAINER ) 
     context = context & CONTEXT_PARAM;
@@ -3621,6 +3665,8 @@ this.parseObjectExpression = function (context) {
        if ( !firstYS && this.firstYS )
          firstYS = this.firstYS;
 
+       if ( !firstNonTailRest && this.firstNonTailRest )
+             firstNonTailRest =  this.firstNonTailRest;
      }
      else
         break ;
@@ -3647,6 +3693,7 @@ this.parseObjectExpression = function (context) {
      this.unsatisfiedAssignment = unsatisfiedAssignment ;
 
   this.firstYS = firstYS;
+  this.firstNonTailRest = firstNonTailRest;
 
   return elem;
 };
@@ -4103,6 +4150,7 @@ this.parseParen = function () {
   }
        
   var firstEA = null;
+  var firstNonTailRest = null;
 
   while ( !false ) {
      this.firstParen = null;
@@ -4128,6 +4176,7 @@ this.parseParen = function () {
                  parenYS = this.firstYS;
            }
            if ( !unsatisfiedArg ) unsatisfiedArg = elem;
+           if ( !firstNonTailRest && this.firstNonTailRest ) firstNonTailRest = this.firstNonTailRest;
         }
         break;
      }
@@ -4156,6 +4205,9 @@ this.parseParen = function () {
 
            unsatisfiedArg =  this.unsatisfiedAssignment;
      }
+
+     if ( !firstNonTailRest && this.firstNonTailRest )
+       firstNonTailRest = this.firstNonTailRest;
 
      if ( this.lttype !== ',' ) break ;
 
@@ -4205,6 +4257,8 @@ this.parseParen = function () {
   this.firstElemWithYS = firstElemWithYS;
   this.parenYS = parenYS;
   this.firstYS = firstYS;
+
+  this.firstNonTailRest = firstNonTailRest;
 
   if ( ! this.expectType_soft (')') && this.err('paren.unfinished',n) )
     return this.errorHandlerOutput ;
@@ -5041,7 +5095,20 @@ this. parseCatchClause = function () {
         this.err('catch.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput ;
 
+   var isInArgList = this.isInArgList,
+       inComplexArgs = this.inComplexArgs,
+       argNames = this.argNames;
+   
+   this.isInArgList = true;
+   this.inComplexArgs = true;
+   this.argNames = {};   
+
    var catParam = this.parsePattern();
+
+   this.isInArgList = isInArgList;
+   this.inComplexArgs = inComplexArgs;
+   this.argNames = this.argNames;
+
    if ( !this.expectType_soft (')') &&
          this.err('catch.has.no.end.paren' , startc,startLoc,catParam)  )
      return this.errorHandlerOutput    ;

@@ -37,3 +37,10 @@ test/tests/test/ES6/yield/yield-generator-arrow-default
 test/tests/test/declaration/function/empty-param
 test/tests/test/ES6/binding-pattern/array-pattern/dupe-param
 test/tests/test/declaration/function/dupe-param
+test/tests/test/ES6/for-of/invalid-const-init
+test/tests/test/ES6/for-of/invalid-for-of-array-pattern
+test/tests/test/ES6/for-of/invalid-for-of-object-pattern
+test/tests/test/ES6/for-of/invalid-let-init
+test/tests/test/ES6/for-of/invalid-var-init
+test/tests/test/ES6/for-of/invalid_const_let
+test/tests/test/ES6/for-of/invalid_let_let

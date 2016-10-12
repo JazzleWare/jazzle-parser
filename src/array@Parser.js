@@ -18,7 +18,9 @@ this.parseArrayExpression = function (context ) {
       parenYS = null,
       firstParen = null,
       unsatisfiedAssignment = null,
-      firstYS = this.firstYS;
+      firstYS = this.firstYS,
+      restElem = false, 
+      firstNonTailRest = null ;
 
   do {
      this.firstUnassignable =
@@ -28,8 +30,10 @@ this.parseArrayExpression = function (context ) {
      this.firstElemWithYS = null;
 
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
-     if ( !elem && this.lttype === '...' )
+     if ( !elem && this.lttype === '...' ) {
          elem = this.parseSpreadElement();
+         restElem = !false;
+     }
 
      if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
            if ( !(context & CONTEXT_ELEM) && 
@@ -57,6 +61,12 @@ this.parseArrayExpression = function (context ) {
      if ( !firstYS && this.firstYS ) firstYS = this.firstYS;
 
      if ( this.lttype === ',' ) { 
+        if (restElem) { 
+           if (firstNonTailRest===null)
+             firstNonTailRest = elem;
+
+           restElem = false;
+        }
         list.push(elem) ;
         this.next();
      }
@@ -76,6 +86,7 @@ this.parseArrayExpression = function (context ) {
      this.parenYS = parenYS;
   } 
   this.firstYS = firstYS;
+  this.firstNonTailRest = firstNonTailRest;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list};

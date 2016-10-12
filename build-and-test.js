@@ -147,7 +147,7 @@ console.log("TESTING.....");
    var summary = require('./test-runner.js').runTestSuite('test/tests',exports.Parser);
    if (summary.pass - summary.skipPass !== summary.passAsExpected) {
       console.log("SOME TESTS WEREN'T PASSED.");
-      dist += '_incomplete-tests'; 
+//      dist += '_incomplete-tests'; 
    }
    console.log("TESTING COMPLETE.");
 

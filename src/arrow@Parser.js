@@ -37,8 +37,11 @@ this .asArrowFuncArgList = function(head) {
       this.asArrowFuncArg(head);
 };
 
-this. asArrowFuncArg = function(arg  ) {
+this. asArrowFuncArg = function(arg) {
     var i = 0, list = null;
+
+    if (arg.type !== 'Identifier')
+      this.firstNonSimpArg = arg;
 
     switch  ( arg.type ) {
         case 'Identifier':
@@ -111,6 +114,7 @@ this. asArrowFuncArg = function(arg  ) {
            return;
 
         case 'SpreadElement':
+            this.assert(arg !== this.firstNonTailRest);
             this.asArrowFuncArg(arg.argument);
             arg.type = 'RestElement';
             return;
@@ -140,6 +144,12 @@ this . parseArrowFunctionExpression = function(arg,context)   {
 
   var prevArgNames = this.argNames;
   this.argNames = {};
+  
+  var prevComplexArgs = this.inComplexArgs;
+  this.inComplexArgs = !false;
+
+  var prevNonSimpArg = this.firstNonSimpArg;
+  this.firstNonSimpArg = null;
 
   var tight = this.tight;
 
@@ -159,6 +169,10 @@ this . parseArrowFunctionExpression = function(arg,context)   {
 
   if ( this.firstEA )
      this.firstEA = null;
+
+  if ( this.newLineBeforeLookAhead &&
+       this.err('new.line.before.arrow'))
+     return this.errorHandlerOutput;
 
   this.next();
 
@@ -181,10 +195,12 @@ this . parseArrowFunctionExpression = function(arg,context)   {
 
   this.argNames = prevArgNames;
   this.scopeFlags = scopeFlags;
+  this.firstNonSimpArg = prevNonSimpArg;
 
   var params = core(arg);
 
   this.tight = tight;
+  this.inComplexArgs = prevComplexArgs;
 
   return { type: 'ArrowFunctionExpression',
            params: params ?  params.type === 'SequenceExpression' ? params.expressions : [params] : [] ,

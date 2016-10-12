@@ -57,5 +57,6 @@ var Parser = function (src, isModule) {
   this.inComplexArgs = false;
 
   this.first__proto__ = false;
+  this.firstNonTailRest = null;
 };
 

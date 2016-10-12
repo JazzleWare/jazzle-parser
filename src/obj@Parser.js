@@ -14,6 +14,7 @@ this.parseObjectExpression = function (context) {
   var parenYS = null;
 
   var firstYS = this.firstYS;
+  var firstNonTailRest = null;
 
   if ( context & CONTEXT_UNASSIGNABLE_CONTAINER ) 
     context = context & CONTEXT_PARAM;
@@ -57,6 +58,8 @@ this.parseObjectExpression = function (context) {
        if ( !firstYS && this.firstYS )
          firstYS = this.firstYS;
 
+       if ( !firstNonTailRest && this.firstNonTailRest )
+             firstNonTailRest =  this.firstNonTailRest;
      }
      else
         break ;
@@ -83,6 +86,7 @@ this.parseObjectExpression = function (context) {
      this.unsatisfiedAssignment = unsatisfiedAssignment ;
 
   this.firstYS = firstYS;
+  this.firstNonTailRest = firstNonTailRest;
 
   return elem;
 };

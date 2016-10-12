@@ -9,7 +9,7 @@ function runTestSuite(testRoot, Parser) {
 
   testSuite.exclude(function(test) { return test.testURI.indexOf('tolerant') !== -1 }, '.tolerant' );
   testSuite.exclude(function(test) { return test.testJSON.comments }, '.comments' );
-  testSuite.exclude(function(test) { return test.testJSON.hasOwnProperty('lineNumber') }, '.lineNumber');
+  testSuite.exclude(function(test) { return false && test.testJSON.hasOwnProperty('lineNumber') }, '.lineNumber');
   testSuite.exclude(function(test) { return test.testURI.indexOf('JSX') !== -1 }, '.js.xml');
   testSuite.exclude(function(test) { return test.jsonType === 'tokens' }, '.tokens');
 
@@ -20,19 +20,27 @@ function runTestSuite(testRoot, Parser) {
      }
   });
 
+  var listenerErr = null;
+  testSuite.testListener = function(test, state) {
+     if (state === 'unexpected-fail' || state === 'unexpected-pass') {
+       listenerErr = state;
+       console.log("================== ERROR ================");
+       console.log("test: <"+test.testURI+">\nsource: <"+test.src+"> (raw <"+test.rawSource+">)");
+       console.log("================== END ==================\n");
+     }
+  };
+
   function onItem(itemPath, iter) {
      var stat = fs.statSync(itemPath);
      if (stat.isFile(itemPath) && 
        util.tailIndex(itemPath, '.js') !== -1) {
        var test = new JazzleTest(itemPath);
+       listenerErr = null;
        var testState = testSuite.push(test); 
-       console.log(testState, "<" + itemPath +">" );
-       switch (testState ) {
-         case 'unexpected-pass': case 'unexpected-fail':
-           console.log("============COMP START=============");
-           console.log(test.compError);
-           console.log("============COMP END===============\n");
-       } 
+       if (listenerErr !== null)
+         throw new Error( "ERROR IS NOT TOLERATED: " + listenerErr + "; test <" + test.testURI + ">");
+
+       console.log(testState, "<" + itemPath +">" ); 
      }
      else if (stat.isDirectory())
        iter(itemPath, onItem);

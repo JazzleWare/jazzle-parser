@@ -60,9 +60,14 @@ this . parseFor = function() {
           kind = 'ForInStatement';
 
        case 'of':
-          if (!headIsExpr && head.declarations.length !== 1 &&
-               this.err('for.in.or.of.multi',startc, startLoc,head) )
-            return this.errorHandlerOutput   ;
+          if (!headIsExpr) {
+             if ( head.declarations.length !== 1 &&
+                  this.err('for.in.or.of.multi',startc, startLoc,head) )
+                return this.errorHandlerOutput;
+//           if ( head.kind === 'const' &&
+//                this.err( 'for.in.or.of.const', startc, starLoc, head) )
+//              return this.errorHandlerOutput;
+          }
 
           if ( this.unsatisfiedAssignment )
             this.unsatisfiedAssignment = null;

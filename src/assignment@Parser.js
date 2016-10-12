@@ -116,6 +116,7 @@ this .toAssig = function(head) {
        return;
 
      case 'SpreadElement':
+       this.assert(head !== this.firstNonTailRest);
        this.toAssig(head.argument);
        head.type = 'RestElement';
        return;

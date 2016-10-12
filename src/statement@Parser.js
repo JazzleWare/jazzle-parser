@@ -531,7 +531,20 @@ this. parseCatchClause = function () {
         this.err('catch.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput ;
 
+   var isInArgList = this.isInArgList,
+       inComplexArgs = this.inComplexArgs,
+       argNames = this.argNames;
+   
+   this.isInArgList = true;
+   this.inComplexArgs = true;
+   this.argNames = {};   
+
    var catParam = this.parsePattern();
+
+   this.isInArgList = isInArgList;
+   this.inComplexArgs = inComplexArgs;
+   this.argNames = this.argNames;
+
    if ( !this.expectType_soft (')') &&
          this.err('catch.has.no.end.paren' , startc,startLoc,catParam)  )
      return this.errorHandlerOutput    ;
