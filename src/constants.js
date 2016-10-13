@@ -79,6 +79,7 @@ var SCOPE_FUNCTION    = SCOPE_CONTINUE << 1;
 var SCOPE_METH        = SCOPE_FUNCTION << 1;
 var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
+var SCOPE_ARGS = SCOPE_CONSTRUCTOR << 1;
 
 var  CONTEXT_FOR = 1,
      CONTEXT_ELEM = CONTEXT_FOR << 1 ,
@@ -116,4 +117,10 @@ var CLASS_MEM = 1;
 var STATIC_MEM =  5;
 
 var STRING_TYPE = typeof "string";
+
+var ICA_CATCH = 1,
+    ICA_LEXICAL = 2,
+    ICA_NONE = 0,
+    ICA_ARROW = 4,
+    ICA_FUNCTION = 8;
 

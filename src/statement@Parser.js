@@ -536,7 +536,7 @@ this. parseCatchClause = function () {
        argNames = this.argNames;
    
    this.isInArgList = true;
-   this.inComplexArgs = true;
+   this.inComplexArgs = ICA_CATCH;
    this.argNames = {};   
 
    var catParam = this.parsePattern();

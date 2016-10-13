@@ -26,8 +26,11 @@ this . parseTemplateLiteral = function() {
 
               this.c = c + 2; // ${
               this.col += 2; // ${
-             
-              this.next(); // this must be done manually because we must have a lookahead before starting to parse an actual expression
+
+              // this must be done manually because we must have                       
+              // a lookahead before starting to parse an actual expression
+              this.next(); 
+                           
               templExpressions.push( this.parseExpr(CONTEXT_NONE) );
               if ( this. lttype !== '}')
                 this.err('templ.expr.is.unfinished') ;
@@ -72,7 +75,7 @@ this . parseTemplateLiteral = function() {
  
        case CHAR_BACK_SLASH :
            this.c = c; 
-           currentElemContents += src.slice( startElemFragment, c ) + this.readEsc();
+           currentElemContents += src.slice( startElemFragment, c ) + this.readStrictEsc();
            c  = this.c;
            c++;
            if ( this.col === 0 ) // if we had an escaped newline 

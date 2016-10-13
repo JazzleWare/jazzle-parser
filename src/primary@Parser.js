@@ -145,7 +145,10 @@ this.parseExprHead = function (context) {
 this .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
     if ( this.ltval !== 'target' &&  
          this.err('meta.new.has.unknown.prop',startc,end,startLoc,endLoc,new_raw) )
-      return this.errorHandlerOutput ;
+       return this.errorHandlerOutput ;
+    
+    if ( !(this.scopeFlags & SCOPE_FUNCTION) )
+      this.err('meta.new.not.in.function',startc,end,startLoc,endLoc,new_raw);
 
     var prop = this.id();
     return { type: 'MetaProperty',

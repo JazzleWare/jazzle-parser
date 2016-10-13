@@ -57,7 +57,7 @@ var Parser = function (src, isModule) {
   this.firstEA = null;
   this.firstEAContainer = null;
   this.defaultEA = null;
-  this.inComplexArgs = false;
+  this.inComplexArgs = ICA_NONE;
 
   this.first__proto__ = false;
   this.firstNonTailRest = null;
@@ -145,6 +145,7 @@ var SCOPE_FUNCTION    = SCOPE_CONTINUE << 1;
 var SCOPE_METH        = SCOPE_FUNCTION << 1;
 var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
+var SCOPE_ARGS = SCOPE_CONSTRUCTOR << 1;
 
 var  CONTEXT_FOR = 1,
      CONTEXT_ELEM = CONTEXT_FOR << 1 ,
@@ -182,6 +183,12 @@ var CLASS_MEM = 1;
 var STATIC_MEM =  5;
 
 var STRING_TYPE = typeof "string";
+
+var ICA_CATCH = 1,
+    ICA_LEXICAL = 2,
+    ICA_NONE = 0,
+    ICA_ARROW = 4,
+    ICA_FUNCTION = 8;
 
 ;
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
@@ -690,7 +697,7 @@ this . parseArrowFunctionExpression = function(arg,context)   {
   this.argNames = {};
   
   var prevComplexArgs = this.inComplexArgs;
-  this.inComplexArgs = !false;
+  this.inComplexArgs = ICA_ARROW;
 
   var prevNonSimpArg = this.firstNonSimpArg;
   this.firstNonSimpArg = null;
@@ -1659,6 +1666,69 @@ this.readEsc = function ()  {
   }
 };
 
+this.readStrictEsc = function ()  {
+  var src = this.src, b0 = 0, b = 0;
+  switch ( src.charCodeAt ( ++this.c ) ) {
+   case CHAR_BACK_SLASH: return '\\';
+   case CHAR_MULTI_QUOTE: return'\"' ;
+   case CHAR_SINGLE_QUOTE: return '\'' ;
+   case CHAR_b: return '\b' ;
+   case CHAR_v: return '\v' ;
+   case CHAR_f: return '\f' ;
+   case CHAR_t: return '\t' ;
+   case CHAR_r: return '\r' ;
+   case CHAR_n: return '\n' ;
+   case CHAR_u:
+      b0 = this.peekUSeq();
+      if ( b0 >= 0x0D800 && b0 <= 0x0DBFF ) {
+        this.c++;
+        return String.fromCharCode(b0, this.peekTheSecondByte());
+      }
+      return fromcode(b0);
+
+   case CHAR_x :
+      b0 = toNum(this.src.charCodeAt(++this.c));
+      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
+        return this.errorHandlerOutput;
+      b = toNum(this.src.charCodeAt(++this.c));
+      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
+        return this.errorHandlerOutput;
+      return String.fromCharCode((b0<<4)|b);
+
+   case CHAR_0: case CHAR_1: case CHAR_2:
+   case CHAR_3:
+       b0 = src.charCodeAt(this.c);
+       if ( b0 === CHAR_0 ) {
+            b0 = src.charCodeAt(this.c +  1);
+            if ( b0 < CHAR_0 || b0 >= CHAR_8 )
+              return '\0';
+       }
+       if ( this.err('strict.oct.str.esc') )
+         return this.errorHandlerOutput
+
+    case CHAR_4: case CHAR_5: case CHAR_6: case CHAR_7:
+       if (this.err('strict.oct.str.esc') )
+         return this.errorHandlerOutput  ;
+
+   case CHAR_8:
+   case CHAR_9:
+       if ( this.err('esc.8.or.9') ) 
+         return this.errorHandlerOutput ;
+
+   case CHAR_CARRIAGE_RETURN:
+      if ( src.charCodeAt(this.c + 1) === CHAR_LINE_FEED ) this.c++;
+   case CHAR_LINE_FEED:
+   case 0x2028:
+   case 0x2029:
+      this.col = 0;
+      this.li++;
+      return '';
+
+   default:
+      return src.charAt(this.c) ;
+  }
+};
+
 
 
 },
@@ -1887,6 +1957,7 @@ this .parseArgs  = function (argLen) {
         this.err('func.args.no.opening.paren',argLen) )
     return this.errorHandlerOutput  ;
 
+  this.inComplexArgs = this.tight ? ICA_FUNCTION : ICA_NONE;
   var firstNonSimpArg = null;
   while ( list.length !== argLen ) {
     elem = this.parsePattern();
@@ -1897,7 +1968,7 @@ this .parseArgs  = function (argLen) {
             if ( this.argNames[elem.left.name+'%'] !== null )
                  this.err('func.args.has.dup',elem);
          }
-         this.inComplexArgs = !false;
+         this.inComplexArgs = ICA_FUNCTION;
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
@@ -1916,7 +1987,7 @@ this .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        this.inComplexArgs = !false;
+        this.inComplexArgs = ICA_FUNCTION;
         elem = this.parseRestElement();
         list.push( elem  );
         if ( !firstNonSimpArg )
@@ -1940,9 +2011,13 @@ this .parseArgs  = function (argLen) {
 };
 
 this .addArg = function(id) {
+  var inComplexArgs = this.inComplexArgs;
+  if (inComplexArgs === ICA_LEXICAL)
+    this.assert(id.name !== 'let');
+
   var name = id.name + '%';
   if ( has.call(this.argNames, name) ) {
-    if ( this.inComplexArgs )
+    if ( inComplexArgs )
        this.err('func.args.has.dup',id);
 
     if ( this.argNames[name] === null )
@@ -2014,9 +2089,9 @@ this .parseFunc = function(context, argListMode, argLen ) {
        this.scopeFlags = 0;
 
   var prevComplexArgs = this.inComplexArgs;
-  this.inComplexArgs = this.tight;
   this.isInArgList = !false;
   this.argNames = {};
+  if ( isGen ) this.scopeFlags |= SCOPE_YIELD|SCOPE_ARGS;
   var argList = this.parseArgs(argLen) ;
   this.isInArgList = false;
   this.tight = this.tight || argListMode !== WHOLE_FUNCTION;
@@ -2026,10 +2101,10 @@ this .parseFunc = function(context, argListMode, argLen ) {
   
   else if ( argListMode & CONSTRUCTOR_FUNCTION )
     this.scopeFlags |= SCOPE_CONSTRUCTOR;
-
-  if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
    
-  this.inComplexArgs = false;
+  if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
+
+  this.inComplexArgs = ICA_NONE;
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
             id: currentFuncName,
@@ -2072,14 +2147,20 @@ this.parseFuncBody = function(context) {
   elem = this.parseStatement(!false);
 
   if ( !this.tight && this.v > 5 && elem && 
-       elem.type === 'ExpressionStatement' && elem.expression.type === 'Literal' && typeof elem.expression.value === typeof "" )
-       switch (this.src.slice(elem.expression.start,elem.expression.end) )  {
-           case "'use strict'":
-           case '"use strict"':
-              this.makeStrict();
-       }
+       elem.type === 'ExpressionStatement' &&
+       elem.expression.type === 'Literal' && 
+       typeof elem.expression.value === typeof "" )
+     switch (this.src.slice(elem.expression.start,
+                              elem.expression.end)) {
+         case "'use strict'":
+         case '"use strict"':
+            this.makeStrict();
+     }
 
-  while ( elem ) { list.push(elem); elem = this.parseStatement(!false); }
+  while ( elem ) {
+    list.push(elem);
+    elem = this.parseStatement(!false);
+  }
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
            loc: { start: startLoc, end: this.loc() } };
 
@@ -2210,6 +2291,9 @@ this. parseIdStatementOrId = function ( context ) {
         case 'while': return this.parseWhileStatement();
         case 'yield': 
              if ( this.scopeFlags & SCOPE_YIELD ) {
+                if (this.scopeFlags & SCOPE_ARGS)
+                  this.err('yield.args');
+
                 if ( this.canBeStatement )
                      this.canBeStatement = false;
 
@@ -2423,7 +2507,7 @@ function(){
 
 this.parseLet = function(context) {
 
-// this function is only calld when we have a 'let' at the start of an statement,
+// this function is only calld when we have a 'let' at the start of a statement,
 // or else when we have a 'let' at the start of a for's init; so, CONTEXT_FOR means "at the start of a for's init ",
 // not 'in for'
  
@@ -3756,8 +3840,11 @@ this.parseProperty = function (name, context) {
          return this.parseMeth(name, OBJ_MEM);
 
       default:
-          if (name.type !== 'Identifier' && this.err('obj.prop.assig.not.id',name,context) )
-            return this.errorHandlerOutput ;
+          if (name.type !== 'Identifier') {
+            if ( this.err('obj.prop.assig.not.id',name,context) )
+              return this.errorHandlerOutput ;
+          }
+          else this.validateID(name.name);
 
           if ( this.lttype === 'op' ) {
              if (this.ltraw !== '=' && this.err('obj.prop.assig.not.assigop',name,context) )
@@ -3812,7 +3899,7 @@ this. parseArrayPattern = function() {
       list = [];
 
   if ( this.isInArgList ) {
-     this.inComplexArgs = !false;
+     this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
   }
 
   this.next();
@@ -3858,7 +3945,7 @@ this.parseObjectPattern  = function() {
     var name = null;
 
     if ( this.isInArgList ) {
-         this.inComplexArgs = !false;
+         this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
     }
 
     LOOP:
@@ -3872,7 +3959,7 @@ this.parseObjectPattern  = function() {
               this.next();
               val = this.parsePattern()
             }
-            else { sh = !false; val = name; }
+            else { this.validateID(name.name); sh = !false; val = name; }
             break ;
 
          case '[':
@@ -4083,7 +4170,10 @@ this.parseExprHead = function (context) {
 this .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
     if ( this.ltval !== 'target' &&  
          this.err('meta.new.has.unknown.prop',startc,end,startLoc,endLoc,new_raw) )
-      return this.errorHandlerOutput ;
+       return this.errorHandlerOutput ;
+    
+    if ( !(this.scopeFlags & SCOPE_FUNCTION) )
+      this.err('meta.new.not.in.function',startc,end,startLoc,endLoc,new_raw);
 
     var prop = this.id();
     return { type: 'MetaProperty',
@@ -5100,7 +5190,7 @@ this. parseCatchClause = function () {
        argNames = this.argNames;
    
    this.isInArgList = true;
-   this.inComplexArgs = true;
+   this.inComplexArgs = ICA_CATCH;
    this.argNames = {};   
 
    var catParam = this.parsePattern();
@@ -5276,8 +5366,11 @@ this . parseTemplateLiteral = function() {
 
               this.c = c + 2; // ${
               this.col += 2; // ${
-             
-              this.next(); // this must be done manually because we must have a lookahead before starting to parse an actual expression
+
+              // this must be done manually because we must have                       
+              // a lookahead before starting to parse an actual expression
+              this.next(); 
+                           
               templExpressions.push( this.parseExpr(CONTEXT_NONE) );
               if ( this. lttype !== '}')
                 this.err('templ.expr.is.unfinished') ;
@@ -5322,7 +5415,7 @@ this . parseTemplateLiteral = function() {
  
        case CHAR_BACK_SLASH :
            this.c = c; 
-           currentElemContents += src.slice( startElemFragment, c ) + this.readEsc();
+           currentElemContents += src.slice( startElemFragment, c ) + this.readStrictEsc();
            c  = this.c;
            c++;
            if ( this.col === 0 ) // if we had an escaped newline 
@@ -5421,8 +5514,12 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
     
          case 'yield': 
-            if ( !( this.tight || ( this.scopeFlags & SCOPE_YIELD ) ) )
+            if (!this.tight) {
+              if ( this.scopeFlags & SCOPE_YIELD ) 
+                this.assert(!(this.scopeFlags & SCOPE_ARGS));
+
               break SWITCH;
+            }
 
          case 'break': case 'catch': case 'class': case 'const':
          case 'super': case 'throw': case 'while': 
@@ -5519,11 +5616,29 @@ this . parseVariableDeclaration = function(context) {
      var elem = null;
 
      this.next () ;
+
+     var lexical = kind !== 'var';
+     var isInArgList = false, inComplexArgs = 0, argNames = null;
+
+     if ( lexical ) {
+       isInArgList = this.isInArgList;
+       this.isInArgList = true;
+       inComplexArgs = this.inComplexArgs ;
+       this.inComplexArgs = ICA_LEXICAL;
+       argNames = this.argNames;
+       this.argNames = {};
+     }
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
        if (kind !== 'let' && 
-           this.err('var.has.no.declarators',startc,startLoc,kind,elem,context  ) )
+           this.err('var.has.no.declarators',startc,startLoc,kind,elem,context,isInArgsList,inComplexArgs,argNames  ) )
          return this.errorHandlerOutput;
+
+       if ( lexical ) {
+         this.isInArgsList = isInArgList;
+         this.inComplexArgs = inComplexArgs;
+         this.argNames = argNames;
+       }
 
        return null; 
      }
@@ -5534,11 +5649,17 @@ this . parseVariableDeclaration = function(context) {
             this.next();     
             elem = this.parseVariableDeclarator(context);
             if (!elem &&
-                 this.err('var.has.an.empty.declarator',startc,startLoc,kind,list,context ) )
+                 this.err('var.has.an.empty.declarator',startc,startLoc,kind,list,context,isInArgList,inComplexArgs,argNames ) )
               return this.erroHandlerOutput ;
 
             list.push(elem);
           }
+
+     if ( lexical ) {
+       this.isInArgsList = isInArgList;
+       this.inComplexArgs = inComplexArgs;
+       this.argNames = argNames;
+     }
 
      var lastItem = list[list.length-1];
      var endI = 0, endLoc = null;

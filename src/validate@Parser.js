@@ -50,8 +50,12 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
     
          case 'yield': 
-            if ( !( this.tight || ( this.scopeFlags & SCOPE_YIELD ) ) )
+            if (!this.tight) {
+              if ( this.scopeFlags & SCOPE_YIELD ) 
+                this.assert(!(this.scopeFlags & SCOPE_ARGS));
+
               break SWITCH;
+            }
 
          case 'break': case 'catch': case 'class': case 'const':
          case 'super': case 'throw': case 'while': 

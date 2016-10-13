@@ -5,6 +5,7 @@ this .parseArgs  = function (argLen) {
         this.err('func.args.no.opening.paren',argLen) )
     return this.errorHandlerOutput  ;
 
+  this.inComplexArgs = this.tight ? ICA_FUNCTION : ICA_NONE;
   var firstNonSimpArg = null;
   while ( list.length !== argLen ) {
     elem = this.parsePattern();
@@ -15,7 +16,7 @@ this .parseArgs  = function (argLen) {
             if ( this.argNames[elem.left.name+'%'] !== null )
                  this.err('func.args.has.dup',elem);
          }
-         this.inComplexArgs = !false;
+         this.inComplexArgs = ICA_FUNCTION;
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
@@ -34,7 +35,7 @@ this .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        this.inComplexArgs = !false;
+        this.inComplexArgs = ICA_FUNCTION;
         elem = this.parseRestElement();
         list.push( elem  );
         if ( !firstNonSimpArg )
@@ -58,9 +59,13 @@ this .parseArgs  = function (argLen) {
 };
 
 this .addArg = function(id) {
+  var inComplexArgs = this.inComplexArgs;
+  if (inComplexArgs === ICA_LEXICAL)
+    this.assert(id.name !== 'let');
+
   var name = id.name + '%';
   if ( has.call(this.argNames, name) ) {
-    if ( this.inComplexArgs )
+    if ( inComplexArgs )
        this.err('func.args.has.dup',id);
 
     if ( this.argNames[name] === null )
@@ -132,9 +137,9 @@ this .parseFunc = function(context, argListMode, argLen ) {
        this.scopeFlags = 0;
 
   var prevComplexArgs = this.inComplexArgs;
-  this.inComplexArgs = this.tight;
   this.isInArgList = !false;
   this.argNames = {};
+  if ( isGen ) this.scopeFlags |= SCOPE_YIELD|SCOPE_ARGS;
   var argList = this.parseArgs(argLen) ;
   this.isInArgList = false;
   this.tight = this.tight || argListMode !== WHOLE_FUNCTION;
@@ -144,10 +149,10 @@ this .parseFunc = function(context, argListMode, argLen ) {
   
   else if ( argListMode & CONSTRUCTOR_FUNCTION )
     this.scopeFlags |= SCOPE_CONSTRUCTOR;
-
-  if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
    
-  this.inComplexArgs = false;
+  if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
+
+  this.inComplexArgs = ICA_NONE;
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
             id: currentFuncName,
@@ -190,14 +195,20 @@ this.parseFuncBody = function(context) {
   elem = this.parseStatement(!false);
 
   if ( !this.tight && this.v > 5 && elem && 
-       elem.type === 'ExpressionStatement' && elem.expression.type === 'Literal' && typeof elem.expression.value === typeof "" )
-       switch (this.src.slice(elem.expression.start,elem.expression.end) )  {
-           case "'use strict'":
-           case '"use strict"':
-              this.makeStrict();
-       }
+       elem.type === 'ExpressionStatement' &&
+       elem.expression.type === 'Literal' && 
+       typeof elem.expression.value === typeof "" )
+     switch (this.src.slice(elem.expression.start,
+                              elem.expression.end)) {
+         case "'use strict'":
+         case '"use strict"':
+            this.makeStrict();
+     }
 
-  while ( elem ) { list.push(elem); elem = this.parseStatement(!false); }
+  while ( elem ) {
+    list.push(elem);
+    elem = this.parseStatement(!false);
+  }
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
            loc: { start: startLoc, end: this.loc() } };
 

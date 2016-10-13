@@ -146,7 +146,7 @@ this . parseArrowFunctionExpression = function(arg,context)   {
   this.argNames = {};
   
   var prevComplexArgs = this.inComplexArgs;
-  this.inComplexArgs = !false;
+  this.inComplexArgs = ICA_ARROW;
 
   var prevNonSimpArg = this.firstNonSimpArg;
   this.firstNonSimpArg = null;

@@ -44,3 +44,12 @@ test/tests/test/ES6/for-of/invalid-let-init
 test/tests/test/ES6/for-of/invalid-var-init
 test/tests/test/ES6/for-of/invalid_const_let
 test/tests/test/ES6/for-of/invalid_let_let
+test/tests/test/ES6/identifier/invalid_escaped_surrogate_pairs
+test/tests/test/ES6/lexical-declaration/invalid_const_forin
+test/tests/test/ES6/lexical-declaration/invalid_let_forin
+test/tests/test/ES6/object-initialiser/invalid-proto-identifier-shorthand
+test/tests/test/ES6/object-initialiser/invalid-proto-literal-shorthand
+test/tests/test/ES6/object-initialiser/invalid-proto-setter-literal-identifier
+test/tests/test/ES6/object-initialiser/invalid-proto-shorthand-identifier
+test/tests/test/ES6/object-initialiser/invalid-proto-shorthand-literal
+test/tests/test/ES6/object-initialiser/invalid-proto-shorthands

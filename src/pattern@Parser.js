@@ -26,7 +26,7 @@ this. parseArrayPattern = function() {
       list = [];
 
   if ( this.isInArgList ) {
-     this.inComplexArgs = !false;
+     this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
   }
 
   this.next();
@@ -72,7 +72,7 @@ this.parseObjectPattern  = function() {
     var name = null;
 
     if ( this.isInArgList ) {
-         this.inComplexArgs = !false;
+         this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
     }
 
     LOOP:
@@ -86,7 +86,7 @@ this.parseObjectPattern  = function() {
               this.next();
               val = this.parsePattern()
             }
-            else { sh = !false; val = name; }
+            else { this.validateID(name.name); sh = !false; val = name; }
             break ;
 
          case '[':

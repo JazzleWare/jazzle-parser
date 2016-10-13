@@ -94,6 +94,9 @@ this. parseIdStatementOrId = function ( context ) {
         case 'while': return this.parseWhileStatement();
         case 'yield': 
              if ( this.scopeFlags & SCOPE_YIELD ) {
+                if (this.scopeFlags & SCOPE_ARGS)
+                  this.err('yield.args');
+
                 if ( this.canBeStatement )
                      this.canBeStatement = false;
 

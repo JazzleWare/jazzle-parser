@@ -9,11 +9,29 @@ this . parseVariableDeclaration = function(context) {
      var elem = null;
 
      this.next () ;
+
+     var lexical = kind !== 'var';
+     var isInArgList = false, inComplexArgs = 0, argNames = null;
+
+     if ( lexical ) {
+       isInArgList = this.isInArgList;
+       this.isInArgList = true;
+       inComplexArgs = this.inComplexArgs ;
+       this.inComplexArgs = ICA_LEXICAL;
+       argNames = this.argNames;
+       this.argNames = {};
+     }
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
        if (kind !== 'let' && 
-           this.err('var.has.no.declarators',startc,startLoc,kind,elem,context  ) )
+           this.err('var.has.no.declarators',startc,startLoc,kind,elem,context,isInArgsList,inComplexArgs,argNames  ) )
          return this.errorHandlerOutput;
+
+       if ( lexical ) {
+         this.isInArgsList = isInArgList;
+         this.inComplexArgs = inComplexArgs;
+         this.argNames = argNames;
+       }
 
        return null; 
      }
@@ -24,11 +42,17 @@ this . parseVariableDeclaration = function(context) {
             this.next();     
             elem = this.parseVariableDeclarator(context);
             if (!elem &&
-                 this.err('var.has.an.empty.declarator',startc,startLoc,kind,list,context ) )
+                 this.err('var.has.an.empty.declarator',startc,startLoc,kind,list,context,isInArgList,inComplexArgs,argNames ) )
               return this.erroHandlerOutput ;
 
             list.push(elem);
           }
+
+     if ( lexical ) {
+       this.isInArgsList = isInArgList;
+       this.inComplexArgs = inComplexArgs;
+       this.argNames = argNames;
+     }
 
      var lastItem = list[list.length-1];
      var endI = 0, endLoc = null;

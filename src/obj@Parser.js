@@ -149,8 +149,11 @@ this.parseProperty = function (name, context) {
          return this.parseMeth(name, OBJ_MEM);
 
       default:
-          if (name.type !== 'Identifier' && this.err('obj.prop.assig.not.id',name,context) )
-            return this.errorHandlerOutput ;
+          if (name.type !== 'Identifier') {
+            if ( this.err('obj.prop.assig.not.id',name,context) )
+              return this.errorHandlerOutput ;
+          }
+          else this.validateID(name.name);
 
           if ( this.lttype === 'op' ) {
              if (this.ltraw !== '=' && this.err('obj.prop.assig.not.assigop',name,context) )
