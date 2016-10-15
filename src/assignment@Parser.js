@@ -117,6 +117,9 @@ this .toAssig = function(head) {
 
      case 'SpreadElement':
        this.assert(head !== this.firstNonTailRest);
+       if (!this.ensureSimpAssig_soft(head.argument))
+         this.err('rest.assig.non.id.arg', head);
+
        this.toAssig(head.argument);
        head.type = 'RestElement';
        return;

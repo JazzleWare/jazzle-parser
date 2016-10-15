@@ -37,7 +37,19 @@ this . parseVariableDeclaration = function(context) {
      }
 
      var list = [elem];
-     if ( !this.unsatisfiedAssignment ) // parseVariableDeclarator sets it when it finds an uninitialized BindingPattern
+     var isConst = kind === 'const';
+     
+     if (isConst) {
+        if (!(this.scopeFlags & SCOPE_BLOCK))
+          this.err('let.decl.not.in.block');
+     }
+
+     if ( isConst && elem.init === null ) {
+       this.assert(context & CONTEXT_FOR);
+       this.unsatisfiedAssignment = elem;
+     }
+
+     if (!this.unsatisfiedAssignment) // parseVariableDeclarator sets it when it finds an uninitialized BindingPattern
           while ( this.lttype === ',' ) {
             this.next();     
             elem = this.parseVariableDeclarator(context);
@@ -45,6 +57,7 @@ this . parseVariableDeclaration = function(context) {
                  this.err('var.has.an.empty.declarator',startc,startLoc,kind,list,context,isInArgList,inComplexArgs,argNames ) )
               return this.erroHandlerOutput ;
 
+            if (isConst) this.assert(elem.init !== null);
             list.push(elem);
           }
 

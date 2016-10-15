@@ -30,8 +30,9 @@ this .validateID  = function (e) {
      case 4: switch (n) {
          case 'byte': case 'char': case 'goto': case 'long':
             if ( this. v > 5 ) break SWITCH;
-         case 'case': case 'else': case 'this': case 'void':
+         case 'case': case 'else': case 'this': case 'void': case 'true':
          case 'with': case 'enum':
+         case 'null':
             return this.errorReservedID(e);
 
 //       case 'eval':
@@ -50,14 +51,11 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
     
          case 'yield': 
-            if (!this.tight) {
-              if ( this.scopeFlags & SCOPE_YIELD ) 
-                this.assert(!(this.scopeFlags & SCOPE_ARGS));
-
+            if (!this.tight && !(this.scopeFlags & SCOPE_YIELD)) {
               break SWITCH;
             }
 
-         case 'break': case 'catch': case 'class': case 'const':
+         case 'break': case 'catch': case 'class': case 'const': case 'false':
          case 'super': case 'throw': case 'while': 
             return this.errorReservedID(e);
 
@@ -98,10 +96,11 @@ this .validateID  = function (e) {
          default: break SWITCH;
      }
      case 9: switch (n) {
+         case 'protected':
          case 'interface':
             if ( this.tight )
               return this.errorReservedID (e);
-         case 'protected': case 'transient':
+         case 'transient':
             if ( this.v <= 5 )
               return this.errorReservedID(e) ;
 //       case 'arguments':

@@ -140,8 +140,15 @@ this.parseRestElement = function() {
 
    this.next ();
    var e = this.parsePattern();
-   if (!e && this.err('rest.has.no.arg',starc, startLoc) )
-     return this.errorHandlerOutput ;
+
+   if (!e) {
+      if (this.err('rest.has.no.arg',starc, startLoc))
+       return this.errorHandlerOutput ;
+   }
+   else if ( e.type !== 'Identifier' ) {
+      if (this.err('rest.arg.not.id', startc, startLoc, e) )
+        return this.errorHandlerOutput;
+   }
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
 };

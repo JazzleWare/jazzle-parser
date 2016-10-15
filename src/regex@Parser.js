@@ -67,6 +67,16 @@ this.parseRegExpLiteral = function() {
 
          case CHAR_BACK_SLASH:
             ++c;
+            if (c < len) switch(src.charCodeAt(c)) {
+               case CHAR_CARRIAGE_RETURN: 
+                  if ( l.charCodeAt(c + 1) === CHAR_LINE_FEED ) c++;
+               case CHAR_LINE_FEED :
+               case 0x2028 :
+               case 0x2029 :
+                  if ( this.err('regex.newline.esc',c,startLoc) )
+                    return this.errorHandlerOutput ;
+            }
+
             break;
 
          case CHAR_RSQBRACKET:
@@ -80,6 +90,13 @@ this.parseRegExpLiteral = function() {
                break;
 
             break WHILE;
+
+         case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CHAR_LINE_FEED ) c++ ;
+         case CHAR_LINE_FEED :
+         case 0x2028 :
+         case 0x2029 :
+           if ( this.err('regex.newline',c,startLoc) )
+             return this.errorHandlerOutput ;
 
 //       default:if ( o >= 0x0D800 && o <= 0x0DBFF ) { this.col-- ; }
        }

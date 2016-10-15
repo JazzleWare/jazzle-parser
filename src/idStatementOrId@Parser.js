@@ -55,7 +55,7 @@ this. parseIdStatementOrId = function ( context ) {
             if ( this.canBeStatement )
                this.canBeStatement = false;
             this.lttype = 'u'; 
-            this.isVDT = !false;
+            this.isVDT = VDT_VOID;
             return null;
         case 'this':
             pendingExprHead = this. parseThis();
@@ -103,6 +103,7 @@ this. parseIdStatementOrId = function ( context ) {
                 this.lttype = 'yield';
                 return null;
              }
+             else if (this.tight) this.errorReservedID(null);
 
              pendingExprHead = this.id();
              break SWITCH;
@@ -128,7 +129,7 @@ this. parseIdStatementOrId = function ( context ) {
             if ( this.canBeStatement )
                this.canBeStatement = false ;
             this.lttype = 'u'; 
-            this.isVDT = !false;
+            this.isVDT = id === 'delete' ? VDT_DELETE : VDT_VOID;
             return null;
 
         case 'export': 
@@ -145,6 +146,8 @@ this. parseIdStatementOrId = function ( context ) {
 
         case 'return': return this.parseReturnStatement();
         case 'switch': return this.parseSwitchStatement();
+        case 'public':
+            if (this.tight) this.errorReservedID();
         case 'double': case 'native': case 'throws':
             if ( this. v <= 5 ) this.errorReservedID();
 

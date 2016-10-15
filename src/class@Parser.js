@@ -13,13 +13,17 @@ this. parseClass = function(context) {
   var canBeStatement = this.canBeStatement, name = null;
   this.next () ;
 
-  if ( canBeStatement && context !== CONTEXT_DEFAULT  ) {
-     if ( this.lttype !== 'Identifier' ) {
-       if ( this.noNameError() ) return this.errorHandlerOutput;
-     }
-     else
-       name = this. validateID(null);
+  if ( canBeStatement ) {
+     if (!(this.scopeFlags & SCOPE_BLOCK))
+       this.err('class.decl.not.in.block', startc, startLoc);
 
+     if ( context !== CONTEXT_DEFAULT ) {
+       if ( this.lttype !== 'Identifier' ) {
+         if ( this.noNameError() ) return this.errorHandlerOutput;
+       }
+       else
+         name = this. validateID(null);
+     }
      this.canBeStatement = false;
   }
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
@@ -28,7 +32,7 @@ this. parseClass = function(context) {
   var classExtends = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
      this.next();
-     classExtends = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE);
+     classExtends = this.parseExprHead(CONTEXT_NONE);
   }
 
   var list = [];
@@ -101,6 +105,18 @@ this. parseClass = function(context) {
       if ( isStatic ) {
         if ( elem.kind === 'constructor' ) 
           elem.kind   =  "method"; 
+
+        var elemName = "";
+        if ( !elem.computed ) switch (elem.key.type) {
+           case 'Identifier':
+              elemName = elem.key.name;
+              break;
+           case 'Literal':
+              if (typeof elem.key.value === STRING_TYPE)
+                elemName = elem.key.value;
+        }
+        if (elemName === 'prototype')
+          this.err('class.has.static.prototype');
 
         elem.start = startcStatic;
         elem.loc.start = startLocStatic;

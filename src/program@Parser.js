@@ -2,24 +2,11 @@ this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
   this.next();
-  var list = [];
-  var elem = this.parseStatement(!false);
-  if (elem &&
-      elem.type === 'ExpressionStatement' && 
-      elem.expression.type === 'Literal' &&
-      typeof elem.expression.value === typeof "") {
-    switch (this.src.substring(elem.expression.start, elem.expression.end)) {
-      case '"use strict"':
-      case "'use strict'":
-         this.tight = !false
-    }
-  }
+  this.scopeFlags = SCOPE_BLOCK;
 
-  while (elem) {
-    list.push(elem);
-    elem = this.parseStatement(!false);
-  } 
-
+  this.directive = DIRECTIVE_FUNC; 
+  var list = this.blck(); 
+ 
   var endLoc = null;
   if (list.length) {
     var firstStatement = list[0];

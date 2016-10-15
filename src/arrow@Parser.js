@@ -48,6 +48,8 @@ this. asArrowFuncArg = function(arg) {
            if ( arg === this.firstParen && this.parenParamError() )
               return this.errorHandlerOutput ;
 
+           if (this.tight)
+             this.assert(!arguments_or_eval(arg.name));
            return this.addArg(arg);
 
         case 'ArrayExpression':

@@ -5,6 +5,9 @@ this.parseLet = function(context) {
 // or else when we have a 'let' at the start of a for's init; so, CONTEXT_FOR means "at the start of a for's init ",
 // not 'in for'
  
+  if ( !(this.scopeFlags & SCOPE_BLOCK) )
+    this.err('lexical.decl.not.in.block');
+
   var startc = this.c0, startLoc = this.locBegin();
   var c = this.c, li = this.li, col = this.col;
 

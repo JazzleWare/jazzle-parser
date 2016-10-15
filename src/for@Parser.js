@@ -80,6 +80,7 @@ this . parseFor = function() {
                  this.err('for.iter.no.end.paren',start,startLoc,head,afterHead) )
             return this.errorHandlerOutput ;
 
+          this.scopeFlags &= ~SCOPE_BLOCK;
           this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
           nbody = this.parseStatement(!false);
           if ( !nbody && this.err('null.stmt','for.iter',
@@ -122,6 +123,7 @@ this . parseFor = function() {
          this.err('for.simple.no.end.paren',startc,startLoc,head,afterHead,tail) )
     return this.errorHandlerOutput ;
 
+  this.scopeFlags &= ~SCOPE_BLOCK;
   this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
   nbody = this.parseStatement(! false);
   if ( !nbody && this.err('null.stmt','for.simple',

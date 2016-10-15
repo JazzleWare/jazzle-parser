@@ -85,6 +85,9 @@ this.parseExprHead = function (context) {
      switch (this.lttype ) {
          case '.':
             this.next();
+            if (this.lttype !== 'Identifier')
+              this.err('mem.name.not.id');
+
             elem  = this.memberID();
             this.assert(elem);
             head = {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,

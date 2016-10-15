@@ -1,5 +1,6 @@
 this.parseStatement = function ( allowNull ) {
-  var head = null, l, e ;
+  var head = null, l, e , directive = this.directive ;
+  this.directive = DIRECTIVE_NONE;
 
   switch (this.lttype) {
     case '{': return this.parseBlckStatement();
@@ -34,6 +35,16 @@ this.parseStatement = function ( allowNull ) {
     return this.parseLabeledStatement(head, allowNull);
 
   this.fixupLabels(false) ;
+  if ( directive &&
+       head.type === 'Literal' &&
+       typeof head.value === STRING_TYPE )
+     switch ( this.src.substring(head.start, head.end ) ) {
+       case "'use strict'":
+       case '"use strict"':
+          if (directive & DIRECTIVE_FUNC) this.makeStrict();
+          else this.tight = true;
+     }
+ 
   e  = this.semiI() || head.end;
   l = this.semiLoc_soft ();
   if ( !l && !this.newLineBeforeLookAhead &&
@@ -121,13 +132,14 @@ this.parseIfStatement = function () {
     return this.errorHandlerOutput ;
 
   var scopeFlags = this.scopeFlags ;
+  this.scopeFlags &= ~SCOPE_BLOCK;
   this.scopeFlags |= SCOPE_BREAK; 
   var nbody = this. parseStatement (false);
   this.scopeFlags = scopeFlags ;
   var alt = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'else') {
      this.next() ;
-     alt = this.parseStatement(!false);
+     alt = this.parseStatement(false);
   }
 
   this.foundStatement = !false;
@@ -155,6 +167,7 @@ this.parseWhileStatement = function () {
      return this.errorHandlerOutput;
 
    var scopeFlags = this.scopeFlags;
+   this.scopeFlags &= ~SCOPE_BLOCK;
    this.scopeFlags |= (SCOPE_CONTINUE|SCOPE_BREAK );
    var nbody = this.parseStatement(false);
    this.scopeFlags = scopeFlags ;
@@ -169,6 +182,9 @@ this.parseBlckStatement = function () {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
+  var scopeFlags = this.scopeFlags;
+  this.scopeFlags |= SCOPE_BLOCK;
+
   var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() } };
 
@@ -176,6 +192,7 @@ this.parseBlckStatement = function () {
         this.err('block.unfinished',n) )
     return this.errorHandlerOutput ;
 
+  this.scopeFlags = scopeFlags;
   return n;
 };
 
@@ -190,6 +207,7 @@ this.parseDoWhileStatement = function () {
       startLoc = this.locBegin() ;
   this.next() ;
   var scopeFlags = this.scopeFlags;
+  this.scopeFlags &= ~SCOPE_BLOCK;
   this.scopeFlags |= (SCOPE_BREAK| SCOPE_CONTINUE);
   var nbody = this.parseStatement (!false) ;
   this.scopeFlags = scopeFlags;
@@ -458,6 +476,9 @@ this.parseThrowStatement = function () {
     return this.errorHandlerOutput;
 
   retVal = this.parseExpr(CONTEXT_NULLABLE );
+  if ( retVal === null &&
+       this.err('throw.has.no.argument',[startc,startLoc,c,li,col,semi,retVal]) )
+     return this.errorHandlerOutput;
 
   semi = this.semiI();
   semiLoc = this.semiLoc();
@@ -465,15 +486,10 @@ this.parseThrowStatement = function () {
         this.err('no.semi','throw',[startc,startLoc,c,li,col,semi,retVal] ) )
     return this.errorHandlerOutput;
 
-  if ( retVal ) {
-     this.foundStatement = !false;
-     return { type: 'ThrowStatement', argument: core(retVal), start: startc, end: semi || retVal.end,
-        loc: { start: startLoc, end: semiLoc || retVal.loc.end } }
-  }
-
   this.foundStatement = !false;
-  return {  type: 'ThrowStatement', argument: null, start: startc, end: semi || c,
-     loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
+  return { type: 'ThrowStatement', argument: core(retVal), start: startc, end: semi || retVal.end,
+     loc: { start: startLoc, end: semiLoc || retVal.loc.end } }
+
 };
 
 this. parseBlockStatement_dependent = function() {
@@ -483,12 +499,16 @@ this. parseBlockStatement_dependent = function() {
          this.err('block.dependent.no.opening.curly') )
       return this.errorHandlerOutput;
 
+    var scopeFlags = this.scopeFlags;
+    this.scopeFlags |= SCOPE_BLOCK;
+
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() } };
     if ( ! this.expectType_soft ('}') &&
          this.err('block.dependent.is.unfinished' , n)  )
       return this.errorHandlerOutput;
 
+    this.scopeFlags = scopeFlags;
     return n;
 };
 
@@ -540,6 +560,8 @@ this. parseCatchClause = function () {
    this.argNames = {};   
 
    var catParam = this.parsePattern();
+   if (catParam === null)
+     this.err('catch.has.no.param');
 
    this.isInArgList = isInArgList;
    this.inComplexArgs = inComplexArgs;

@@ -50,6 +50,9 @@ this.parseNewHead = function () {
     switch (this. lttype) {
        case '.':
           this.next();
+          if (this.lttype !== 'Identifier')
+            this.err('mem.name.not.id');
+
           elem = this.memberID();
           head =   {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
                       loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };

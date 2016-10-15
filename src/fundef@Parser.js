@@ -85,8 +85,12 @@ this .parseFunc = function(context, argListMode, argLen ) {
   var prevYS = this.firstYS ;
   var prevNonSimpArg = this.firstNonSimpArg;
 
-  if ( !this.canBeStatement )
+  if ( !this.canBeStatement ) {
+    if ( !(this.scopeFlags & SCOPE_BLOCK) )
+      this.err('func.decl.not.in.block', startc, startLoc);
+ 
     this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
+  }
 
   var isGen = false;
 
@@ -102,6 +106,9 @@ this .parseFunc = function(context, argListMode, argLen ) {
           isGen = !false;
           this.next();
      }
+     if ( !canBeStatement && isGen ) // GeneratorExpression's BindingIdentifier can't be 'yield'
+       this.scopeFlags = SCOPE_YIELD;
+
      if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
         if ( this.lttype !== 'Identifier' &&
              this.err('missing.name','func', 
@@ -189,26 +196,13 @@ this.parseFuncBody = function(context) {
     return elem;
   }
 
+  this.scopeFlags |= SCOPE_BLOCK;
   var startc= this.c - 1, startLoc = this.locOn(1);
-  var list = [];
   this.next() ;
-  elem = this.parseStatement(!false);
 
-  if ( !this.tight && this.v > 5 && elem && 
-       elem.type === 'ExpressionStatement' &&
-       elem.expression.type === 'Literal' && 
-       typeof elem.expression.value === typeof "" )
-     switch (this.src.slice(elem.expression.start,
-                              elem.expression.end)) {
-         case "'use strict'":
-         case '"use strict"':
-            this.makeStrict();
-     }
+  this.directive = DIRECTIVE_FUNC;
+  var list = this.blck();
 
-  while ( elem ) {
-    list.push(elem);
-    elem = this.parseStatement(!false);
-  }
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
            loc: { start: startLoc, end: this.loc() } };
 
