@@ -908,7 +908,7 @@ this._emitBody = function(blockOrExpr) {
 
 this._paren = function(n) {
   this.write('(');
-  this.emit(n, PREC_WITH_NO_OP, 0);
+  this.emit(n, PREC_WITH_NO_OP, EMIT_VAL);
   this.write(')');
 };
 
