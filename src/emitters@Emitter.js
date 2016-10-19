@@ -141,7 +141,7 @@ this.emitters['MemberExpression'] = function(n) {
 
   if ( n.computed ) {
     this.write('[');
-    this._emitExpr(n.property, PREC_WITH_NO_OP);
+    this.emit(n.property, PREC_WITH_NO_OP, EMIT_VAL);
     this.write(']');
   }
 
@@ -524,6 +524,8 @@ this.emitters['FinishBlock'] = function(n) {
 };
 
 this._emitGenerator = function(n) {
+  var labels = this.labels;
+  this.labels = {};
   this.write('function*');
   if (n.id !== null) this.write(' ' + n.id.name);
   this.write('(<args>) {');
@@ -532,6 +534,7 @@ this._emitGenerator = function(n) {
   this.emit( new Partitioner(null, this).push(n.body) );
   this.unindent();
   this.write('}');
+  this.labels = labels;
 };
 
 this.emitters['FunctionDeclaration'] = function(n) {
@@ -540,6 +543,13 @@ this.emitters['FunctionDeclaration'] = function(n) {
   
   else 
      ASSERT.call(this, false);
+};
+
+this.fixupContainerLabels = function(target) {
+  if (this.unresolvedLabel) {
+    this.unresolvedLabel.target = target;
+    this.unresolvedLabel = null
+  }
 };
 
 function describeContainer(container) {
@@ -569,6 +579,7 @@ this.emitters['WhileContainer'] = function(n) {
     e++ ;
   }
   this.unindent();
+  this.unindent();
   this.newlineIndent(); 
   this.write('</'+containerStr+'>');
 };
@@ -588,3 +599,34 @@ this.emitters['SimpleContainer'] = function(n) {
   this.write('</'+containerStr+'>');
 }; 
  
+this.emitters['LabeledContainer'] = function(n) {
+  var name = n.label.name + '%';
+  this.labels[name] = this.unresolvedLabel || 
+      ( this.unresolvedLabel = { target: null } );
+  this.write(n.label.name + ':');
+  this.write('// head=' + n.label.head.name);
+  this.newlineIndent();
+  var statement = n.partitions[0];
+  if (statement.type === 'LabeledContainer') {
+    statement.label.head = n.label;
+    n.label.next = statement.label;
+  }
+  this.emit(statement);
+  this.labels[name] = null;
+};
+
+this.emitters['BlockContainer'] = function(n) {
+  var list = n.partitions, e = 0;
+  this.write('{');
+  if (list.length > 0) {
+    this.indent();
+    while (e < list.length) {
+       this.newlineIndent();
+       this.emit(list[e++]);
+    }
+    this.unindent();
+    this.newlineIndent();
+  }
+  this.write('}');
+};
+  

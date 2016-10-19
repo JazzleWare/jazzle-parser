@@ -541,10 +541,16 @@ transformerList['SwitchStatement'] = function(n, b, vMode) {
             ), yTest
           ), yTest
         ), doBody, IS_VAL
-      );
+     );
      doBody.push(synth_if_node(cond, c.consequent, null, y(c)));
      e++ ;
   }
   return do_while_wrapper(doBody, yc);
 };
+
+this.transformGenerator = function(n, vMode) {
+  var partitioner = new Partitioner(null, this);
+  return partitioner.push(n.body);
+};
+
 

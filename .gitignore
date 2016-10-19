@@ -22,3 +22,5 @@ early-errors.js
 yield/
 outline/
 yield-containers
+*.sh
+

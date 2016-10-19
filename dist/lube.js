@@ -18,6 +18,7 @@ function Emitter(indenter) {
    this.codeStack = [];
    this.wrap = !false;
    this.scope = new Scope(null, SCOPE_FUNC);
+   this.labels = {};
 
 }
 
@@ -90,6 +91,7 @@ var Parser = function (src, isModule) {
 function Partitioner(owner, details) {
 
    this.owner = owner;
+   this.labels = null;
 
    if (this.owner === null) {
      this.emitter = details;
@@ -111,19 +113,22 @@ function Partitioner(owner, details) {
      this.partitions = [];
      this.statements = null;
      this.type = 'MainContainer';
+     this.labels = {}
    }
    else switch (details.type) {
-     case 'CatchClause':
      case 'WhileStatement':
      case 'SwitchStatement':
      case 'DoWhileStatement':
      case 'ForOfStatement':
+     case 'BlockStatement':
      case 'ForInStatement':
      case 'TryStatement':
      case 'ForStatement':
      case 'IfStatement':
+     case 'CatchClause':
      case 'ElseClause':
      case 'CaseClause':
+     case 'LabeledStatement':
      case 'CustomContainer':
         this.partitions = [];
         this.statements = null;
@@ -1018,7 +1023,7 @@ this.emitters['MemberExpression'] = function(n) {
 
   if ( n.computed ) {
     this.write('[');
-    this._emitExpr(n.property, PREC_WITH_NO_OP);
+    this.emit(n.property, PREC_WITH_NO_OP, EMIT_VAL);
     this.write(']');
   }
 
@@ -1401,6 +1406,8 @@ this.emitters['FinishBlock'] = function(n) {
 };
 
 this._emitGenerator = function(n) {
+  var labels = this.labels;
+  this.labels = {};
   this.write('function*');
   if (n.id !== null) this.write(' ' + n.id.name);
   this.write('(<args>) {');
@@ -1409,6 +1416,7 @@ this._emitGenerator = function(n) {
   this.emit( new Partitioner(null, this).push(n.body) );
   this.unindent();
   this.write('}');
+  this.labels = labels;
 };
 
 this.emitters['FunctionDeclaration'] = function(n) {
@@ -1417,6 +1425,13 @@ this.emitters['FunctionDeclaration'] = function(n) {
   
   else 
      ASSERT.call(this, false);
+};
+
+this.fixupContainerLabels = function(target) {
+  if (this.unresolvedLabel) {
+    this.unresolvedLabel.target = target;
+    this.unresolvedLabel = null
+  }
 };
 
 function describeContainer(container) {
@@ -1465,6 +1480,37 @@ this.emitters['SimpleContainer'] = function(n) {
   this.write('</'+containerStr+'>');
 }; 
  
+this.emitters['LabeledContainer'] = function(n) {
+  var name = n.label.name + '%';
+  this.labels[name] = this.unresolvedLabel || 
+      ( this.unresolvedLabel = { target: null } );
+  this.write(n.label.name + ':');
+  this.write('// head=' + n.label.head.name);
+  this.newlineIndent();
+  var statement = n.partitions[0];
+  if (statement.type === 'LabeledContainer') {
+    statement.label.head = n.label;
+    n.label.next = statement.label;
+  }
+  this.emit(statement);
+  this.labels[name] = null;
+};
+
+this.emitters['BlockContainer'] = function(n) {
+  var list = n.partitions, e = 0;
+  this.write('{');
+  if (list.length > 0) {
+    this.indent();
+    while (e < list.length) {
+       this.newlineIndent();
+       this.emit(list[e++]);
+    }
+    this.unindent();
+    this.newlineIndent();
+  }
+  this.write('}');
+};
+  
 
 },
 function(){
@@ -2011,12 +2057,18 @@ transformerList['SwitchStatement'] = function(n, b, vMode) {
             ), yTest
           ), yTest
         ), doBody, IS_VAL
-      );
+     );
      doBody.push(synth_if_node(cond, c.consequent, null, y(c)));
      e++ ;
   }
   return do_while_wrapper(doBody, yc);
 };
+
+this.transformGenerator = function(n, vMode) {
+  var partitioner = new Partitioner(null, this);
+  return partitioner.push(n.body);
+};
+
 
 
 }]  ],
@@ -7273,12 +7325,13 @@ this.loop = function() {
 
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
+   var container = new Partitioner(this, n);
    while (e < list.length) {
-      if (e === 0) this.enterScope();
-      this.push(list[e]);
-      if (e === list.length-1) this.exitScope();
+      container.push(list[e]);
       e++ ;
    }
+   this.max = container.max;
+   this.partitions.push(container);
 };
 
 function synth_do_while(cond, body) {
@@ -7406,6 +7459,17 @@ pushList['TryStatement'] = function(n) {
    this.partitions.push(container);
    this.max = container.max;
 };      
+
+pushList['LabeledStatement'] = function(n) {
+   this.close_current_active_partition();
+   var container = new Partitioner(this, n);
+   var name = n.label.name + '%';
+   container.label = { name: n.label.name, head: null, next: null };
+   container.label.head = container.label;
+   container.push(n.body);
+   this.partitions.push(container);
+   this.max = container.max;
+};
 
 
 }]  ],

@@ -1,6 +1,7 @@
 function Partitioner(owner, details) {
 
    this.owner = owner;
+   this.labels = null;
 
    if (this.owner === null) {
      this.emitter = details;
@@ -22,19 +23,22 @@ function Partitioner(owner, details) {
      this.partitions = [];
      this.statements = null;
      this.type = 'MainContainer';
+     this.labels = {}
    }
    else switch (details.type) {
-     case 'CatchClause':
      case 'WhileStatement':
      case 'SwitchStatement':
      case 'DoWhileStatement':
      case 'ForOfStatement':
+     case 'BlockStatement':
      case 'ForInStatement':
      case 'TryStatement':
      case 'ForStatement':
      case 'IfStatement':
+     case 'CatchClause':
      case 'ElseClause':
      case 'CaseClause':
+     case 'LabeledStatement':
      case 'CustomContainer':
         this.partitions = [];
         this.statements = null;

@@ -1,0 +1,41 @@
+la: while a() {
+  yield
+  lb: while b() {
+     yield
+     lc: while c() {
+         yield
+     }
+  }
+}
+
+<container:while label=label(la) a to f>
+  <seg:test a>a()</seg>
+  <seg b>yield</seg>
+  <container:while label=label(lb) c to f>
+     <seg:test c>b()</seg>
+     <seg d>yield</seg>
+     <container:while label=label(lc) e to f>
+        <seg:test e>c()</seg>
+        <seg f>yield</seg>
+     </container>
+  </container>
+</container>
+
+if state <= f {
+  la:
+  while true {
+     if state == a {
+       if a() { state = b }
+       else { state = g; break }
+     }
+     if state == b {
+       state = c
+       return
+     }
+     if state <= f {
+       while true {
+         if state == c {
+           if b() { state = d }
+           else { state = a; break }
+         }
+ 

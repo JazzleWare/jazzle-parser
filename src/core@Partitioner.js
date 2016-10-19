@@ -122,12 +122,13 @@ this.loop = function() {
 
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
+   var container = new Partitioner(this, n);
    while (e < list.length) {
-      if (e === 0) this.enterScope();
-      this.push(list[e]);
-      if (e === list.length-1) this.exitScope();
+      container.push(list[e]);
       e++ ;
    }
+   this.max = container.max;
+   this.partitions.push(container);
 };
 
 function synth_do_while(cond, body) {
@@ -255,4 +256,15 @@ pushList['TryStatement'] = function(n) {
    this.partitions.push(container);
    this.max = container.max;
 };      
+
+pushList['LabeledStatement'] = function(n) {
+   this.close_current_active_partition();
+   var container = new Partitioner(this, n);
+   var name = n.label.name + '%';
+   container.label = { name: n.label.name, head: null, next: null };
+   container.label.head = container.label;
+   container.push(n.body);
+   this.partitions.push(container);
+   this.max = container.max;
+};
 

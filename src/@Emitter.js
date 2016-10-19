@@ -15,6 +15,7 @@ function Emitter(indenter) {
    this.codeStack = [];
    this.wrap = !false;
    this.scope = new Scope(null, SCOPE_FUNC);
+   this.labels = {};
 
 }
 
