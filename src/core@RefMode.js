@@ -19,11 +19,14 @@ this.updateExistingRefWith = function(name, fromScope) {
 };
 
 this.updateForwardRefWith = function(name, fromScope) {
-   if (!fromScope.isFunc()) this.direct |= ACCESS_FORWARD;
-   else {
-     var ref = this.unresolvedNames[name+'%'];
-     this.direct |= ref.direct;
+   var ref = fromScope.unresolvedNames[name+'%'];
+   if (fromScope.isFunc()) {
+     this.indirect |= ref.direct;
      this.indirect |= ref.indirect;
    }
+   else {
+     this.indirect |= ref.indirect;
+     this.direct |= ref.direct;
+   }   
 };
 
