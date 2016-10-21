@@ -9,5 +9,4 @@ this.parse = function(src, isModule ) {
 ; this.Partitioner = Partitioner;
   this.Decl = Decl;
   this.RefMode = RefMode;
-  this.NewScope = NewScope;
 
