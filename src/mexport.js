@@ -7,4 +7,7 @@ this.parse = function(src, isModule ) {
 ; this.Scope = Scope;
 ; this.Emitter = Emitter;
 ; this.Partitioner = Partitioner;
+  this.Decl = Decl;
+  this.RefMode = RefMode;
+  this.NewScope = NewScope;
 

@@ -1,7 +1,7 @@
 function Partitioner(owner, details) {
 
    this.owner = owner;
-   this.labels = null;
+   this.label = null;
 
    if (this.owner === null) {
      this.emitter = details;

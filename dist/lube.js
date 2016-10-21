@@ -1,6 +1,15 @@
 (function(){
 "use strict";
 ;
+function Decl(type, name, scope, synthName) {
+  this.type = type;
+  this.name = name;
+  this.scope = scope;
+  this.synthName = synthName;
+  this.ref = null;
+}
+
+;
 function Emitter(indenter) {
    this.code = "";
    this.currentIndentLevel = 0;
@@ -23,6 +32,47 @@ function Emitter(indenter) {
 }
 
 Emitter.prototype.emitters = {};
+
+;
+var SCOPE_FUNC = 1, SCOPE_LEXICAL = 0;
+
+var NewScope = function(parent, type) {
+  this.type = type;
+
+  if (!parent) 
+    ASSERT.call(this.type === SCOPE_FUNC, 'sub-scopes must have a parent');
+
+  this.parent = parent;
+  this.funcScope = 
+     this.type === SCOPE_FUNC ? this : this.parent.funcScope;
+
+  this.definedNames = {};
+  this.unresolvedNames = {};
+}
+
+NewScope.createFunc = function(parent, funcParams) {
+  var scope = new NewScope(parent, SCOPE_FUNC);
+  if (funcParams) 
+    for (var name in funcParams) {
+      if (!HAS.call(funcParams, name)) continue; 
+      scope.define(funcParams[name].name, VAR);
+    }
+  return scope;
+};
+
+NewScope.createCatch = function(parent, catchParams) {
+  var scope = NewScope.createLexical(parent);
+  if (catchParams)
+    for (var name in catchParams) {
+      if (!HAS.call(catchParams, name)) continue;
+      scope.define(catchParams[name].name, LET);
+    }
+  return scope;
+};
+
+NewScope.createLexical = function(parent) {
+   return new NewScope(parent, SCOPE_LEXICAL);
+};
 
 ;
 var Parser = function (src, isModule) {
@@ -91,7 +141,7 @@ var Parser = function (src, isModule) {
 function Partitioner(owner, details) {
 
    this.owner = owner;
-   this.labels = null;
+   this.label = null;
 
    if (this.owner === null) {
      this.emitter = details;
@@ -143,6 +193,12 @@ function Partitioner(owner, details) {
 
    this.min = this.owner ? this.owner.max : 0;
    this.max = this.min;
+}
+
+;
+function RefMode() {
+   this.direct = 0;
+   this.indirect = 0;
 }
 
 ;
@@ -265,14 +321,14 @@ var SCOPE_METH        = SCOPE_FUNCTION << 1;
 var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 
-var  CONTEXT_FOR = 1,
-     CONTEXT_ELEM = CONTEXT_FOR << 1 ,
-     CONTEXT_NONE = 0,
-     CONTEXT_PARAM = CONTEXT_ELEM << 1,
-     CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
-     CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
-     CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1, 
-     CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
+var CONTEXT_FOR = 1,
+    CONTEXT_ELEM = CONTEXT_FOR << 1 ,
+    CONTEXT_NONE = 0,
+    CONTEXT_PARAM = CONTEXT_ELEM << 1,
+    CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
+    CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
+    CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1, 
+    CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
 
 var INTBITLEN = (function() { var i = 0;
   while ( 0 < (1 << (i++)))
@@ -280,7 +336,6 @@ var INTBITLEN = (function() { var i = 0;
 
   return i;
 }());
-
 
 var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
@@ -315,10 +370,7 @@ var NOEXPRESSION = { type: 'NoExpression' };
 
 var START_BLOCK = { type: 'StartBlock' }, FINISH_BLOCK = { type: 'FinishBlock' };
 
-function ASSERT(cond, message) {
-  if (!cond) throw new Error(message);
-
-}
+function ASSERT(cond, message) { if (!cond) throw new Error(message); }
 
 var SIMPLE_PARTITION = 0;
 var CONTAINER_PARTITION = 1;
@@ -344,6 +396,9 @@ var EMIT_LEFT = 1,
     EMIT_NEW_HEAD = 8,
     EMIT_VAL = 16;
 
+var ACCESS_FORWARD = 1, ACCESS_EXISTING = 2;
+
+var VAR = 'var', LET = 'let';
 ;
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
 function isIDHead(c) {
@@ -765,6 +820,10 @@ function toNum (n) {
              def[1][e++].call(def[0]);
        }
      }).call([
+[Decl.prototype, [function(){
+this.funcDecl = function() { return this.scope === this.scope.funcScope; };
+
+}]  ],
 [Emitter.prototype, [function(){
 this.write = function(line) {
    if ( this.wrap ) {
@@ -1448,9 +1507,18 @@ function describeContainer(container) {
    return 'container:' + container.type + ' [' + container.min + ' to ' + (container.max-1) + ']';
 }
 
-this.emitters['MainContainer'] =
-this.emitters['IfContainer'] =
-this.emitters['WhileContainer'] = function(n) {
+function listLabels(container) {
+  var str = "";
+  var label = container.label;
+  while (label) {
+    if (str.length !== 0 ) str += ',';
+    str += label.name;
+    label = label.next;
+  }
+  return "<labels>"+str+"</labels>";
+}
+
+this.emitters['MainContainer'] = function(n) {
   var containerStr = describeContainer(n);
   this.write( '<'+containerStr+'>' );
   this.indent();
@@ -1464,8 +1532,31 @@ this.emitters['WhileContainer'] = function(n) {
   this.newlineIndent(); 
   this.write('</'+containerStr+'>');
 };
+ 
+this.emitters['IfContainer'] =
+this.emitters['WhileContainer'] = function(n) {
+  this.fixupContainerLabels(n);
+  var containerStr = describeContainer(n);
+  this.write( '<'+containerStr+'>' );
+  this.indent();
+  this.newlineIndent();
+  this.write(listLabels(n));
+
+  var list = n.partitions, e = 0;
+  while (e < list.length) {
+    this.newlineIndent();
+    this.emit(list[e]);
+    e++ ;
+  }
+  this.unindent();
+  this.newlineIndent(); 
+  this.write('</'+containerStr+'>');
+};
 
 this.emitters['SimpleContainer'] = function(n) {
+  // TODO: won't work exactly with things like a: (yield) * (yield) ; it has no side-effects, but should be nevertheless corrected 
+  this.fixupContainerLabels(n);  
+
   var containerStr = describeContainer(n);
   this.write('<'+containerStr+'>');
   this.indent();
@@ -1484,19 +1575,24 @@ this.emitters['LabeledContainer'] = function(n) {
   var name = n.label.name + '%';
   this.labels[name] = this.unresolvedLabel || 
       ( this.unresolvedLabel = { target: null } );
-  this.write(n.label.name + ':');
-  this.write('// head=' + n.label.head.name);
-  this.newlineIndent();
+//this.write(n.label.name + ':');
+//this.write('// head=' + n.label.head.name);
+//this.newlineIndent();
   var statement = n.partitions[0];
+
   if (statement.type === 'LabeledContainer') {
-    statement.label.head = n.label;
+    statement.label.head = n.label.head;
     n.label.next = statement.label;
   }
+  else
+    statement.label = n.label.head;
+
   this.emit(statement);
   this.labels[name] = null;
 };
 
 this.emitters['BlockContainer'] = function(n) {
+  this.fixupContainerLabels();
   var list = n.partitions, e = 0;
   this.write('{');
   if (list.length > 0) {
@@ -2070,6 +2166,157 @@ this.transformGenerator = function(n, vMode) {
 };
 
 
+
+}]  ],
+[NewScope.prototype, [function(){
+this.reference = function(name, fromScope) {
+  if (!fromScope) fromScope = this;
+  var decl = this.findDeclInScope(name), ref = null;
+  if (decl && !decl.funcDecl() && this.isFunc()) { // the decl is synthetic, and must be renamed
+    var synthName = decl.scope.newSynthName(decl.name);
+    decl.synthName = synthName;
+    this.insertDecl0(false, synthName, decl);
+    decl = null;
+    // TODO: the name should be deleted altogether (i.e., `delete this.definedNames[name+'%']`),
+    // but looks like setting it to null will do
+    this.definedNames[name+'%'] = null;
+  }
+  if (decl) {
+    ref = decl.refMode;
+    if (this !== fromScope) ref.updateExistingRefWith(name, fromScope);
+    else ref.direct |= ACCESS_EXISTING;
+  }
+  else {
+    ref = this.findRefInScope(name);
+    if (!ref) {
+      ref = new RefMode();
+      this.insertRef(name, ref);
+    }
+    if (this !== fromScope) ref.updateForwardRefWith(name, fromScope);
+    else ref.direct |= ACCESS_FORWARD;
+  }
+};
+
+this.declare = function(name, declType) {
+  return declare[declType].call(this, name);
+};
+
+this.findRefInScope = function(name) {
+  name += '%';
+  return HAS.call(this.unresolvedNames, name) ?
+            this.unresolvedNames[name] : null;
+};
+
+var declare = {};
+
+declare[VAR] = function(name) {
+   var func = this.funcScope;
+   var decl = new Decl(VAR, name, func, name);
+   var scope = this;
+   scope.insertDecl(name, decl);
+   while (scope !== func) {
+     scope = scope.parent;
+     scope.insertDecl(name, decl);
+   }
+};
+
+declare[LET] = function(name) {
+   var decl = new Decl(LET, name, this, name);
+   this.insertDecl(name, decl);
+};
+
+this.insertDecl = function(name, decl) {
+  var existingDecl = this.findDeclInScope(name);
+  var func = this.funcScope;
+  if (existingDecl !== null) {
+    if (decl.type === VAR && existingDecl.type === VAR) // if a var decl is overriding a var decl of the same name,
+      return; // no matter what scope we are in, it's not a problem.
+     
+    if ( 
+         ( // but
+           this === func && // if we are in func scope
+           existingDecl.scope === func // and what we are trying to override is real (i.e., not synthesized)
+         ) ||
+         this !== func // or we are in a lexical scope, trying to override a let with a var or vice versa, 
+       ) // then raise an error
+       ASSERT.call(this, false, 
+        'name "'+decl.name+'" is a "'+decl.type+
+        '" and can not override the "'+existingDecl.type+'" that exists in the current scope');
+  }
+  if (this !== func) {
+    this.insertDecl0(true, name, decl);
+    if (decl.type !== VAR && !decl.scope.isFunc()) {
+      var synthName = decl.scope.newSynthName(name);
+      decl.synthName = synthName;
+      func.insertDecl0(false, synthName, decl);
+    }
+  }
+  else {
+    this.insertDecl0(true, name, decl);
+    if (existingDecl !== null) { // if there is a synthesized declaration of the same name, rename it
+      var synthName = existingDecl.scope.newSynthName(name);
+      existingDecl.synthName = synthName;
+      this.insertDecl0(false, synthName, existingDecl);
+    } 
+  }
+};
+
+this.insertDecl0 = function(isOwn, name, decl) {
+  name += '%';
+  this.definedNames[name] = decl;
+  if ( isOwn && HAS.call(this.unresolvedNames, name)) {
+    decl.refMode = this.unresolvedNames[name];
+    this.unresolvedNames[name] = null;
+  }
+};
+
+this.findDeclInScope = function(name) {
+  name += '%';
+  return HAS.call(this.definedNames, name) ? 
+     this.definedNames[name] : null;
+};
+
+this.finish = function() {
+  var parent = this.parent;
+  if (!parent) return;
+  for (var name in this.unresolvedNames) {
+    if (!HAS.call(this.unresolvedNames, name)) continue;
+    var ref = this.unresolvedNames[name];
+    if (ref === null) continue;
+    parent.reference(name.substring(0,name.length-1), this);
+  }
+};
+    
+this.insertRef = function(name, ref) {
+  this.unresolvedNames[name+'%'] = ref;
+};
+
+this.newSynthName = function(baseName) {
+  var num = 0, func = this.funcScope;
+  var name = baseName + '%';
+  for (;;num++, name = baseName + "" + num + '%') {
+     if (HAS.call(func.definedNames, name)) continue; // must not be in the surrounding func scope's defined names, 
+     if (HAS.call(func.unresolvedNames, name)) continue; // must not be in the surrounding func scope's referenced names;
+     if (!this.isFunc()) { // furthermore, if we're not allocating in a func scope,
+       if (HAS.call(this.unresolvedNames, name)) continue; // it must not have been referenced in the current scope
+       
+       // this one requires a little more clarification; while a func scope's defined names are "real" names (in the sense
+       // that an entry like 'n' in the func scope's definedNames maps to a variable of the exact same name 'n'), it is not so
+       // for lexical scopes; this gives us the possibility to choose synthesized name with the exact same name as the variable
+       // itself. For example, if we want to find a synthesized approximate name for a name like 'n2' defined inside
+       // a lexical scope, and it has satisfied all previous conditions (i.e., it's neither defined nor referenced in the 
+       // surrounding func scope, and it has not been referenced in the scope we are synthesizing the name in), then the synthesized
+       // name can be the name itself, in this case 'n2'.
+       if (HAS.call(this.definedNames, name)) // if the current suffixed name exists in the scope's declarations,
+         // it must not actually be a suffixed name (i.e., it must be the base name, which has not been appended with a 'num' yet) 
+         if (name !== baseName+'%') continue; // or, num !== 0 
+     }
+     break;
+  }
+  return num ? baseName + "" + num : baseName;
+};
+
+this.isFunc = function() { return this === this.funcScope; };     
 
 }]  ],
 [Parser.prototype, [function(){
@@ -7473,6 +7720,38 @@ pushList['LabeledStatement'] = function(n) {
 
 
 }]  ],
+[RefMode.prototype, [function(){
+this.updateExistingRefWith = function(name, fromScope) {
+
+  // TODO: check whether the scope has a direct eval, because it can make things like this happen:
+  // var a = []; while (a.length<12) { let e = a.length; a.push(function(){ return eval("e++") }); }
+  // when there is a direct eval in a (possibly loop) scope, the transformation for closure-let must be applied for every let
+  // declaration the scope might contain, even if none of them has been expressly accessed from inside a function
+  if (!fromScope.isFunc()) {
+    var ref = fromScope.unresolvedNames[name+'%'];
+    if (ref.indirect) this.indirect |= ACCESS_EXISTING;
+    if (ref.direct) this.direct |= ACCESS_EXISTING;
+  }
+  else {
+    // let e = 12; var l = function() { return e--; };
+    if (!fromScope.isDeclaration) this.indirect |= ACCESS_EXISTING;
+
+    // let e = 12; function l()  { return e--; } 
+    else this.indirect |= ACCESS_FORWARD;
+  }
+};
+
+this.updateForwardRefWith = function(name, fromScope) {
+   if (!fromScope.isFunc()) this.direct |= ACCESS_FORWARD;
+   else {
+     var ref = this.unresolvedNames[name+'%'];
+     this.direct |= ref.direct;
+     this.indirect |= ref.indirect;
+   }
+};
+
+
+}]  ],
 [Scope.prototype, [function(){
      
 function name(n) { return n + '%'; }
@@ -7713,5 +7992,8 @@ this.parse = function(src, isModule ) {
 ; this.Scope = Scope;
 ; this.Emitter = Emitter;
 ; this.Partitioner = Partitioner;
+  this.Decl = Decl;
+  this.RefMode = RefMode;
+  this.NewScope = NewScope;
 
 ;}).call (this)

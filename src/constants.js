@@ -80,14 +80,14 @@ var SCOPE_METH        = SCOPE_FUNCTION << 1;
 var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 
-var  CONTEXT_FOR = 1,
-     CONTEXT_ELEM = CONTEXT_FOR << 1 ,
-     CONTEXT_NONE = 0,
-     CONTEXT_PARAM = CONTEXT_ELEM << 1,
-     CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
-     CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
-     CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1, 
-     CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
+var CONTEXT_FOR = 1,
+    CONTEXT_ELEM = CONTEXT_FOR << 1 ,
+    CONTEXT_NONE = 0,
+    CONTEXT_PARAM = CONTEXT_ELEM << 1,
+    CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
+    CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
+    CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1, 
+    CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
 
 var INTBITLEN = (function() { var i = 0;
   while ( 0 < (1 << (i++)))
@@ -95,7 +95,6 @@ var INTBITLEN = (function() { var i = 0;
 
   return i;
 }());
-
 
 var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
@@ -130,10 +129,7 @@ var NOEXPRESSION = { type: 'NoExpression' };
 
 var START_BLOCK = { type: 'StartBlock' }, FINISH_BLOCK = { type: 'FinishBlock' };
 
-function ASSERT(cond, message) {
-  if (!cond) throw new Error(message);
-
-}
+function ASSERT(cond, message) { if (!cond) throw new Error(message); }
 
 var SIMPLE_PARTITION = 0;
 var CONTAINER_PARTITION = 1;
@@ -159,3 +155,6 @@ var EMIT_LEFT = 1,
     EMIT_NEW_HEAD = 8,
     EMIT_VAL = 16;
 
+var ACCESS_FORWARD = 1, ACCESS_EXISTING = 2;
+
+var VAR = 'var', LET = 'let';

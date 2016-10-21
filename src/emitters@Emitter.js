@@ -566,9 +566,18 @@ function describeContainer(container) {
    return 'container:' + container.type + ' [' + container.min + ' to ' + (container.max-1) + ']';
 }
 
-this.emitters['MainContainer'] =
-this.emitters['IfContainer'] =
-this.emitters['WhileContainer'] = function(n) {
+function listLabels(container) {
+  var str = "";
+  var label = container.label;
+  while (label) {
+    if (str.length !== 0 ) str += ',';
+    str += label.name;
+    label = label.next;
+  }
+  return "<labels>"+str+"</labels>";
+}
+
+this.emitters['MainContainer'] = function(n) {
   var containerStr = describeContainer(n);
   this.write( '<'+containerStr+'>' );
   this.indent();
@@ -579,12 +588,34 @@ this.emitters['WhileContainer'] = function(n) {
     e++ ;
   }
   this.unindent();
+  this.newlineIndent(); 
+  this.write('</'+containerStr+'>');
+};
+ 
+this.emitters['IfContainer'] =
+this.emitters['WhileContainer'] = function(n) {
+  this.fixupContainerLabels(n);
+  var containerStr = describeContainer(n);
+  this.write( '<'+containerStr+'>' );
+  this.indent();
+  this.newlineIndent();
+  this.write(listLabels(n));
+
+  var list = n.partitions, e = 0;
+  while (e < list.length) {
+    this.newlineIndent();
+    this.emit(list[e]);
+    e++ ;
+  }
   this.unindent();
   this.newlineIndent(); 
   this.write('</'+containerStr+'>');
 };
 
 this.emitters['SimpleContainer'] = function(n) {
+  // TODO: won't work exactly with things like a: (yield) * (yield) ; it has no side-effects, but should be nevertheless corrected 
+  this.fixupContainerLabels(n);  
+
   var containerStr = describeContainer(n);
   this.write('<'+containerStr+'>');
   this.indent();
@@ -603,19 +634,24 @@ this.emitters['LabeledContainer'] = function(n) {
   var name = n.label.name + '%';
   this.labels[name] = this.unresolvedLabel || 
       ( this.unresolvedLabel = { target: null } );
-  this.write(n.label.name + ':');
-  this.write('// head=' + n.label.head.name);
-  this.newlineIndent();
+//this.write(n.label.name + ':');
+//this.write('// head=' + n.label.head.name);
+//this.newlineIndent();
   var statement = n.partitions[0];
+
   if (statement.type === 'LabeledContainer') {
-    statement.label.head = n.label;
+    statement.label.head = n.label.head;
     n.label.next = statement.label;
   }
+  else
+    statement.label = n.label.head;
+
   this.emit(statement);
   this.labels[name] = null;
 };
 
 this.emitters['BlockContainer'] = function(n) {
+  this.fixupContainerLabels();
   var list = n.partitions, e = 0;
   this.write('{');
   if (list.length > 0) {
