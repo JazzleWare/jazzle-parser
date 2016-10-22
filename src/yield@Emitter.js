@@ -512,6 +512,7 @@ function do_while_wrapper( body, yBody) {
    return { type: 'DoWhileStatement', body: body, test: {type: 'Literal', value: false}, y: yBody };
 }
 
+// this one is exclusively used by pushList['SwitchStatement']
 transformerList['SwitchStatement'] = function(n, b, vMode) {
    var v = synth_id_node(this.scope.allocateTemp());
    var m = synth_id_node(this.scope.allocateTemp());

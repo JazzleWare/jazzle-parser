@@ -143,6 +143,8 @@ pushList['ExpressionStatement'] = function(n) {
 };
 
 pushList['WhileStatement'] = function(n) {
+   var cbt = this.cbt, cct = this.cct;
+   this.cbt = this.cct = n;
    this.close_current_active_partition();
    var container = new Partitioner(this, n);
    var test = this.emitter.transformYield(n.test, container, IS_VAL);
@@ -155,6 +157,9 @@ pushList['WhileStatement'] = function(n) {
 
    this.partitions.push(container);
    this.max = container.max;
+
+   this.cbt = cbt;
+   this.cct = cct;
 };
        
 pushList['IfStatement'] = function(n) {
@@ -185,6 +190,8 @@ pushList['YieldExpression'] = function(n) {
 };
 
 pushList['ForStatement'] = function(n) {
+  var cbt = this.cbt, cct = this.cct;
+  this.cbt = this.cct = n;
   this.close_current_active_partition();
   var container = new Partitioner(this, n);
   var e = this.transformYield(n.init, container, NOT_VAL);
@@ -267,4 +274,5 @@ pushList['LabeledStatement'] = function(n) {
    this.partitions.push(container);
    this.max = container.max;
 };
+
 

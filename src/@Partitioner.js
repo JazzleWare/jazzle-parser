@@ -53,5 +53,9 @@ function Partitioner(owner, details) {
 
    this.min = this.owner ? this.owner.max : 0;
    this.max = this.min;
+
+   this.currentBreakTarget = null;
+   this.currentContinueTarget = null;
+
 }
 

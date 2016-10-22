@@ -11,7 +11,7 @@ this.updateExistingRefWith = function(name, fromScope) {
   }
   else {
     // let e = 12; var l = function() { return e--; };
-    if (!fromScope.isDeclaration) this.indirect |= ACCESS_EXISTING;
+    if (!fromScope.isDeclaration()) this.indirect |= ACCESS_EXISTING;
 
     // let e = 12; function l()  { return e--; } 
     else this.indirect |= ACCESS_FORWARD;
