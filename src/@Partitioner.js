@@ -3,6 +3,8 @@ function Partitioner(owner, details) {
    this.owner = owner;
    this.label = null;
 
+   this.labelNames = null;
+
    if (this.owner === null) {
      this.emitter = details;
      this.details = null;
@@ -23,7 +25,7 @@ function Partitioner(owner, details) {
      this.partitions = [];
      this.statements = null;
      this.type = 'MainContainer';
-     this.labels = {}
+     this.labelNames = {}
    }
    else switch (details.type) {
      case 'WhileStatement':
@@ -43,6 +45,7 @@ function Partitioner(owner, details) {
         this.partitions = [];
         this.statements = null;
         this.type = details.type.replace(/(?:Clause|Statement)$/, "Container");
+        this.labelNames = this.owner.labelNames;
         break;
 
      default:
@@ -54,8 +57,6 @@ function Partitioner(owner, details) {
    this.min = this.owner ? this.owner.max : 0;
    this.max = this.min;
 
-   this.currentBreakTarget = null;
-   this.currentContinueTarget = null;
-
+   this.synthLabel = null;
 }
 

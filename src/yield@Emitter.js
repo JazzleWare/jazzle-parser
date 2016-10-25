@@ -512,8 +512,7 @@ function do_while_wrapper( body, yBody) {
    return { type: 'DoWhileStatement', body: body, test: {type: 'Literal', value: false}, y: yBody };
 }
 
-// this one is exclusively used by pushList['SwitchStatement']
-transformerList['SwitchStatement'] = function(n, b, vMode) {
+this.transformSwitch = function(n, b) {
    var v = synth_id_node(this.scope.allocateTemp());
    var m = synth_id_node(this.scope.allocateTemp());
    var yc = y(n);
@@ -528,22 +527,23 @@ transformerList['SwitchStatement'] = function(n, b, vMode) {
    while (e < list.length) {
      var c = list[e];
      var yTest = y(c.test);
-     var cond = this.transformYield(
+     var cond = synth_not_node(m);
+     var ifBody = [];
+     var ex = this.transformYield(
         synth_binexpr(
            m, 
-          '||',
+          '=',
           synth_binexpr(
-             m, 
-            '=',
-            synth_binexpr(
-               c.test,
-               '==',
-               v, yTest
-            ), yTest
+             c.test,
+             '==',
+             v, yTest
           ), yTest
-        ), doBody, IS_VAL
+        ), ifBody, IS_VAL
      );
-     doBody.push(synth_if_node(cond, c.consequent, null, y(c)));
+     if (ex !== NOEXPRESSION) ifBody.push(ex);
+
+     doBody.push(synth_if_node(cond,ifBody, null, yTest));
+     doBody.push(synth_if_node(m, c.consequent, null, y(c)));
      e++ ;
   }
   return do_while_wrapper(doBody, yc);

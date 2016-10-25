@@ -1,7 +1,7 @@
 this.push = function(n) {
    ASSERT.call(this, !this.isSimple());
 
-   if ( y(n) !== 0 && HAS.call(pushList, n.type) )
+   if ( ( y(n) !== 0 || n.type === 'LabeledStatement' ) && HAS.call(pushList, n.type) )
      pushList[n.type].call( this, n );
    else
      this.current().statements.push(n);
@@ -120,6 +120,48 @@ this.loop = function() {
   return this.owner.partitions[0];
 };
 
+this.addLabel = function(name, labelRef) {
+  if (!labelRef) labelRef = LabelRef.real();
+
+  var existingLabel = this.findLabel(name);
+  if (existingLabel) {
+    existingLabel.synthName = this.synthLabelName(existingLabel.baseName);
+    this.addLabel(existingLabel.synthName, existingLabel);
+  }
+  this.labelNames[name+'%'] = labelRef;
+};
+
+this.removeLabel = function(name) {
+  this.labelNames[name+'%'] = null;
+};
+
+this.synthLabelName = function(baseName) {
+  baseName = baseName || "label";
+  var num = 0;
+  var name = baseName;
+  while (this.findLabel(name)) {
+    num++;  
+    name = baseName + "" + num;
+  }
+  return name;
+};
+
+this.addContainerLabel = function() {
+   this.synthLabel = LabelRef.synth(this.type);
+   this.synthLabel.synthName = this.synthLabelName(this.synthLabel.baseName);
+   this.addLabel(this.synthLabel.synthName, this.synthLabel);
+};
+
+this.removeContainerLabel = function() {
+   this.removeLabel(this.synthLabel.synthName);
+}; 
+  
+this.findLabel = function(name) {
+   name += '%';
+   return HAS.call(this.labelNames, name) ?
+       this.labelNames[name] : null;
+};
+
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
    var container = new Partitioner(this, n);
@@ -143,10 +185,9 @@ pushList['ExpressionStatement'] = function(n) {
 };
 
 pushList['WhileStatement'] = function(n) {
-   var cbt = this.cbt, cct = this.cct;
-   this.cbt = this.cct = n;
    this.close_current_active_partition();
    var container = new Partitioner(this, n);
+   container.addContainerLabel();
    var test = this.emitter.transformYield(n.test, container, IS_VAL);
    container.close_current_active_partition();
    var test_seg = container.current();
@@ -154,12 +195,10 @@ pushList['WhileStatement'] = function(n) {
    container.close_current_active_partition();
    container.test = test_seg;
    container.push(n.body);
+   container.removeContainerLabel();
 
    this.partitions.push(container);
    this.max = container.max;
-
-   this.cbt = cbt;
-   this.cct = cct;
 };
        
 pushList['IfStatement'] = function(n) {
@@ -190,8 +229,6 @@ pushList['YieldExpression'] = function(n) {
 };
 
 pushList['ForStatement'] = function(n) {
-  var cbt = this.cbt, cct = this.cct;
-  this.cbt = this.cct = n;
   this.close_current_active_partition();
   var container = new Partitioner(this, n);
   var e = this.transformYield(n.init, container, NOT_VAL);
@@ -265,14 +302,19 @@ pushList['TryStatement'] = function(n) {
 };      
 
 pushList['LabeledStatement'] = function(n) {
-   this.close_current_active_partition();
-   var container = new Partitioner(this, n);
-   var name = n.label.name + '%';
-   container.label = { name: n.label.name, head: null, next: null };
-   container.label.head = container.label;
-   container.push(n.body);
-   this.partitions.push(container);
-   this.max = container.max;
+   this.addLabel(n.label.name);
+   if (y(n) > 0) {
+     this.close_current_active_partition();
+     var container = new Partitioner(this, n);
+     var name = n.label.name + '%';
+     container.label = { name: n.label.name, head: null, next: null };
+     container.label.head = container.label;
+     container.push(n.body);
+     this.partitions.push(container);
+     this.max = container.max;
+   }
+   else
+      this.current().statements.push(n);
+   this.removeLabel(n.label.name);
 };
-
 

@@ -537,6 +537,15 @@ this._emitGenerator = function(n) {
   this.labels = labels;
 };
 
+this.addLabel = function(name) {
+   this.labelNames[name+'%'] = this.unresolvedLabel ||
+       ( this.unresolvedLabel = { target:null } );
+};
+
+this.removeLabel = function(name) {
+   this.labelNames[name+'%'] = null;
+};
+
 this.emitters['FunctionDeclaration'] = function(n) {
   if (n.generator)
     return this._emitGenerator(n);
@@ -563,7 +572,9 @@ function describeContainer(container) {
      str += ' ['+container.min+']';
      return str;
    }
-   return 'container:' + container.type + ' [' + container.min + ' to ' + (container.max-1) + ']';
+   return 'container:' + container.type +
+          ' [' + container.min + ' to ' + (container.max-1) + ']' +
+          ' ; label=' + ( container.synthLabel ? container.synthLabel.synthName : '<none>' ) ;
 }
 
 function listLabels(container) {
@@ -631,9 +642,8 @@ this.emitters['SimpleContainer'] = function(n) {
 }; 
  
 this.emitters['LabeledContainer'] = function(n) {
-  var name = n.label.name + '%';
-  this.labels[name] = this.unresolvedLabel || 
-      ( this.unresolvedLabel = { target: null } );
+  var name = n.label.name;
+  this.addLabel(name);
 //this.write(n.label.name + ':');
 //this.write('// head=' + n.label.head.name);
 //this.newlineIndent();
@@ -647,7 +657,7 @@ this.emitters['LabeledContainer'] = function(n) {
     statement.label = n.label.head;
 
   this.emit(statement);
-  this.labels[name] = null;
+  this.removeLabel(name);
 };
 
 this.emitters['BlockContainer'] = function(n) {
