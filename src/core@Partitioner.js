@@ -211,14 +211,11 @@ scanList['TryStatement'] = function(n) {
 scanList['SwitchStatement'] = function(n) {
   var abt = this.abt, ebt = this.ebt;
   this.abt = this.ebt = n;
-  var act = this.act;
-  this.act = n;
   var list = n.cases, e = 0;
   while (e < list.length)
      this.scanArray(list[e++].consequent);
   
   this.abt = abt; this.ebt = ebt;
-  this.act = act;
 };
 
 scanList['IfStatement'] = function(n) {

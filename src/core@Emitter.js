@@ -69,17 +69,49 @@ this.assert = function(cond, message) {
 
 var has = Object.hasOwnProperty;
 
+function isLoop(n) {
+   var t = n.type;
+
+   switch (t) {
+      case 'ForOfStatement':
+      case 'ForInStatement':
+      case 'ForStatement':
+      case 'DoWhileStatement':
+      case 'WhileStatement':
+         return true;
+
+      default:
+         return false;
+   }
+}
+     
 this.emit = function(n, prec, flags) {
   if ( !n )
     return;
 
+  var cc = null, loop = isLoop(n);
+  if (this.currentContainer) {
+    if (loop) {
+      cc = this.currentContainer;
+      this.currentContainer = null;
+    }
+    else if (n.type === 'SwitchStatement') {
+      cc = this.currentContainer.abt;
+      this.container.abt = this.container.ebt;
+    }
+  }
   if (arguments.length < 2) prec = PREC_WITH_NO_OP;
   if (arguments.length < 3) flags = 0;
 
   this.assert(has.call(this.emitters, n.type),
       'No emitter for ' + n.type );
   var emitter = this.emitters[n.type];
-  return emitter.call(this, n, prec, flags);
+  var r = emitter.call(this, n, prec, flags);
+  
+  if (cc) {
+    if (loop) this.currentContainer = cc;
+    else this.currentContainer.abt = cc;
+  }
 };
 
 this.startCode = function() {

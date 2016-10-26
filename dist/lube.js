@@ -570,10 +570,6 @@ function synth_not_node(n) {
 }
 
 function synth_seq_or_block(b, yc, totalY) {
-   if (totalY === 0) {
-     ASSERT.call(this, yc === 0);
-     return { type: 'SequenceExpression', expressions: b, y: yc };
-   }
    return { type: 'BlockStatement', body: b, y: yc};
 }
 
@@ -930,17 +926,49 @@ this.assert = function(cond, message) {
 
 var has = Object.hasOwnProperty;
 
+function isLoop(n) {
+   var t = n.type;
+
+   switch (t) {
+      case 'ForOfStatement':
+      case 'ForInStatement':
+      case 'ForStatement':
+      case 'DoWhileStatement':
+      case 'WhileStatement':
+         return true;
+
+      default:
+         return false;
+   }
+}
+     
 this.emit = function(n, prec, flags) {
   if ( !n )
     return;
 
+  var cc = null, loop = isLoop(n);
+  if (this.currentContainer) {
+    if (loop) {
+      cc = this.currentContainer;
+      this.currentContainer = null;
+    }
+    else if (n.type === 'SwitchStatement') {
+      cc = this.currentContainer.abt;
+      this.container.abt = this.container.ebt;
+    }
+  }
   if (arguments.length < 2) prec = PREC_WITH_NO_OP;
   if (arguments.length < 3) flags = 0;
 
   this.assert(has.call(this.emitters, n.type),
       'No emitter for ' + n.type );
   var emitter = this.emitters[n.type];
-  return emitter.call(this, n, prec, flags);
+  var r = emitter.call(this, n, prec, flags);
+  
+  if (cc) {
+    if (loop) this.currentContainer = cc;
+    else this.currentContainer.abt = cc;
+  }
 };
 
 this.startCode = function() {
@@ -7652,14 +7680,11 @@ scanList['TryStatement'] = function(n) {
 scanList['SwitchStatement'] = function(n) {
   var abt = this.abt, ebt = this.ebt;
   this.abt = this.ebt = n;
-  var act = this.act;
-  this.act = n;
   var list = n.cases, e = 0;
   while (e < list.length)
      this.scanArray(list[e++].consequent);
   
   this.abt = abt; this.ebt = ebt;
-  this.act = act;
 };
 
 scanList['IfStatement'] = function(n) {

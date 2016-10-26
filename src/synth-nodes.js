@@ -41,10 +41,6 @@ function synth_not_node(n) {
 }
 
 function synth_seq_or_block(b, yc, totalY) {
-   if (totalY === 0) {
-     ASSERT.call(this, yc === 0);
-     return { type: 'SequenceExpression', expressions: b, y: yc };
-   }
    return { type: 'BlockStatement', body: b, y: yc};
 }
 
