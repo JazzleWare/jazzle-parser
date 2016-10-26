@@ -1,6 +1,9 @@
 this.push = function(n) {
    ASSERT.call(this, !this.isSimple());
 
+   if ( n.type === 'BreakStatement' && n.label === null) this.verifyBreakTarget();
+   else if (n.type === 'ContinueStatement' && n.label === null) this.verifyContinueTarget();
+
    if ( ( y(n) !== 0 || n.type === 'LabeledStatement' ) && HAS.call(pushList, n.type) )
      pushList[n.type].call( this, n );
    else
@@ -162,6 +165,16 @@ this.findLabel = function(name) {
        this.labelNames[name] : null;
 };
 
+this.useSynthLabel = function() { this.usedSynthLabel = true; };
+
+this.verifyBreakTarget = function() {
+  if (this.abt !== this.ebt) this.ebt.useSynthLabel();
+};
+
+this.verifyContinueTarget = function() {
+  if (this.act !== this.ect) this.ect.useSynthLabel();
+};
+
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
    var container = new Partitioner(this, n);
@@ -318,3 +331,14 @@ pushList['LabeledStatement'] = function(n) {
    this.removeLabel(n.label.name);
 };
 
+pushList['SwitchStatement'] = function(n) {
+   this.close_current_active_partition();
+   var switchContainer = new Partitioner(this, n);
+   var switchBody = this.emitter.transformSwitch(n), e = 0;
+   while (e < switchBody.length)
+     switchContainer.push(switchBody[e++]);
+
+   this.partitions.push(switchContainer);
+   this.max = switchContainer.max;
+};
+   

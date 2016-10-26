@@ -5,6 +5,11 @@ function Partitioner(owner, details) {
 
    this.labelNames = null;
 
+   this.act = null;
+   this.ect = null;
+   this.abt = null;
+   this.ebt = null;
+
    if (this.owner === null) {
      this.emitter = details;
      this.details = null;
@@ -46,6 +51,12 @@ function Partitioner(owner, details) {
         this.statements = null;
         this.type = details.type.replace(/(?:Clause|Statement)$/, "Container");
         this.labelNames = this.owner.labelNames;
+
+        this.act = this.owner.act;
+        this.ect = this.owner.ect;
+        this.abt = this.owner.abt;
+        this.ebt = this.owner.ebt;
+
         break;
 
      default:
@@ -58,5 +69,21 @@ function Partitioner(owner, details) {
    this.max = this.min;
 
    this.synthLabel = null;
-}
+   this.usedSynthLabel = false;
 
+   switch (this.type) {
+     case 'ForOfContainer':
+     case 'ForContainer':
+     case 'ForInContainer':
+     case 'DoWhileContainer':
+     case 'WhileContainer':
+       this.act = this.ect = this.abt = this.ebt = this;
+       break;
+
+     case 'SwitchContainer':
+       this.ebt = this;
+     case 'TryContainer':
+       this.abt = this.act = this;
+       break;
+   }      
+}   

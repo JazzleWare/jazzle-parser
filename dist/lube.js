@@ -27,11 +27,26 @@ function Emitter(indenter) {
    this.codeStack = [];
    this.wrap = !false;
    this.scope = new Scope(null, SCOPE_FUNC);
-   this.labels = {};
-
+   this.labelNames = {};
+   this.unresolvedLabel = null;
+   this.currentContainer = null;
 }
 
 Emitter.prototype.emitters = {};
+
+;
+function LabelRef(baseName) {
+   this.synthName = "";
+   this.baseName = baseName;
+}
+
+LabelRef.real = function() {
+   return new LabelRef("");
+};
+
+LabelRef.synth = function(baseName) {
+   return new LabelRef(baseName);
+};
 
 ;
 var Parser = function (src, isModule) {
@@ -102,6 +117,8 @@ function Partitioner(owner, details) {
    this.owner = owner;
    this.label = null;
 
+   this.labelNames = null;
+
    if (this.owner === null) {
      this.emitter = details;
      this.details = null;
@@ -122,7 +139,7 @@ function Partitioner(owner, details) {
      this.partitions = [];
      this.statements = null;
      this.type = 'MainContainer';
-     this.labels = {}
+     this.labelNames = {}
    }
    else switch (details.type) {
      case 'WhileStatement':
@@ -142,6 +159,7 @@ function Partitioner(owner, details) {
         this.partitions = [];
         this.statements = null;
         this.type = details.type.replace(/(?:Clause|Statement)$/, "Container");
+        this.labelNames = this.owner.labelNames;
         break;
 
      default:
@@ -152,6 +170,8 @@ function Partitioner(owner, details) {
 
    this.min = this.owner ? this.owner.max : 0;
    this.max = this.min;
+
+   this.synthLabel = null;
 }
 
 ;
@@ -1459,6 +1479,15 @@ this._emitGenerator = function(n) {
   this.labels = labels;
 };
 
+this.addLabel = function(name) {
+   this.labelNames[name+'%'] = this.unresolvedLabel ||
+       ( this.unresolvedLabel = { target:null } );
+};
+
+this.removeLabel = function(name) {
+   this.labelNames[name+'%'] = null;
+};
+
 this.emitters['FunctionDeclaration'] = function(n) {
   if (n.generator)
     return this._emitGenerator(n);
@@ -1485,7 +1514,9 @@ function describeContainer(container) {
      str += ' ['+container.min+']';
      return str;
    }
-   return 'container:' + container.type + ' [' + container.min + ' to ' + (container.max-1) + ']';
+   return 'container:' + container.type +
+          ' [' + container.min + ' to ' + (container.max-1) + ']' +
+          ' ; label=' + ( container.synthLabel ? container.synthLabel.synthName : '<none>' ) ;
 }
 
 function listLabels(container) {
@@ -1553,9 +1584,8 @@ this.emitters['SimpleContainer'] = function(n) {
 }; 
  
 this.emitters['LabeledContainer'] = function(n) {
-  var name = n.label.name + '%';
-  this.labels[name] = this.unresolvedLabel || 
-      ( this.unresolvedLabel = { target: null } );
+  var name = n.label.name;
+  this.addLabel(name);
 //this.write(n.label.name + ':');
 //this.write('// head=' + n.label.head.name);
 //this.newlineIndent();
@@ -1569,7 +1599,7 @@ this.emitters['LabeledContainer'] = function(n) {
     statement.label = n.label.head;
 
   this.emit(statement);
-  this.labels[name] = null;
+  this.removeLabel(name);
 };
 
 this.emitters['BlockContainer'] = function(n) {
@@ -2105,7 +2135,7 @@ function do_while_wrapper( body, yBody) {
    return { type: 'DoWhileStatement', body: body, test: {type: 'Literal', value: false}, y: yBody };
 }
 
-transformerList['SwitchStatement'] = function(n, b, vMode) {
+this.transformSwitch = function(n, b) {
    var v = synth_id_node(this.scope.allocateTemp());
    var m = synth_id_node(this.scope.allocateTemp());
    var yc = y(n);
@@ -2120,22 +2150,23 @@ transformerList['SwitchStatement'] = function(n, b, vMode) {
    while (e < list.length) {
      var c = list[e];
      var yTest = y(c.test);
-     var cond = this.transformYield(
+     var cond = synth_not_node(m);
+     var ifBody = [];
+     var ex = this.transformYield(
         synth_binexpr(
            m, 
-          '||',
+          '=',
           synth_binexpr(
-             m, 
-            '=',
-            synth_binexpr(
-               c.test,
-               '==',
-               v, yTest
-            ), yTest
+             c.test,
+             '==',
+             v, yTest
           ), yTest
-        ), doBody, IS_VAL
+        ), ifBody, IS_VAL
      );
-     doBody.push(synth_if_node(cond, c.consequent, null, y(c)));
+     if (ex !== NOEXPRESSION) ifBody.push(ex);
+
+     doBody.push(synth_if_node(cond,ifBody, null, yTest));
+     doBody.push(synth_if_node(m, c.consequent, null, y(c)));
      e++ ;
   }
   return do_while_wrapper(doBody, yc);
@@ -2147,6 +2178,10 @@ this.transformGenerator = function(n, vMode) {
 };
 
 
+
+}]  ],
+[LabelRef.prototype, [function(){
+this.isSynth = function() { return this.baseName !== ""; };
 
 }]  ],
 [Parser.prototype, [function(){
@@ -7290,7 +7325,7 @@ this.parseYield = function(context) {
 this.push = function(n) {
    ASSERT.call(this, !this.isSimple());
 
-   if ( y(n) !== 0 && HAS.call(pushList, n.type) )
+   if ( ( y(n) !== 0 || n.type === 'LabeledStatement' ) && HAS.call(pushList, n.type) )
      pushList[n.type].call( this, n );
    else
      this.current().statements.push(n);
@@ -7409,6 +7444,48 @@ this.loop = function() {
   return this.owner.partitions[0];
 };
 
+this.addLabel = function(name, labelRef) {
+  if (!labelRef) labelRef = LabelRef.real();
+
+  var existingLabel = this.findLabel(name);
+  if (existingLabel) {
+    existingLabel.synthName = this.synthLabelName(existingLabel.baseName);
+    this.addLabel(existingLabel.synthName, existingLabel);
+  }
+  this.labelNames[name+'%'] = labelRef;
+};
+
+this.removeLabel = function(name) {
+  this.labelNames[name+'%'] = null;
+};
+
+this.synthLabelName = function(baseName) {
+  baseName = baseName || "label";
+  var num = 0;
+  var name = baseName;
+  while (this.findLabel(name)) {
+    num++;  
+    name = baseName + "" + num;
+  }
+  return name;
+};
+
+this.addContainerLabel = function() {
+   this.synthLabel = LabelRef.synth(this.type);
+   this.synthLabel.synthName = this.synthLabelName(this.synthLabel.baseName);
+   this.addLabel(this.synthLabel.synthName, this.synthLabel);
+};
+
+this.removeContainerLabel = function() {
+   this.removeLabel(this.synthLabel.synthName);
+}; 
+  
+this.findLabel = function(name) {
+   name += '%';
+   return HAS.call(this.labelNames, name) ?
+       this.labelNames[name] : null;
+};
+
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
    var container = new Partitioner(this, n);
@@ -7434,6 +7511,7 @@ pushList['ExpressionStatement'] = function(n) {
 pushList['WhileStatement'] = function(n) {
    this.close_current_active_partition();
    var container = new Partitioner(this, n);
+   container.addContainerLabel();
    var test = this.emitter.transformYield(n.test, container, IS_VAL);
    container.close_current_active_partition();
    var test_seg = container.current();
@@ -7441,6 +7519,7 @@ pushList['WhileStatement'] = function(n) {
    container.close_current_active_partition();
    container.test = test_seg;
    container.push(n.body);
+   container.removeContainerLabel();
 
    this.partitions.push(container);
    this.max = container.max;
@@ -7547,14 +7626,20 @@ pushList['TryStatement'] = function(n) {
 };      
 
 pushList['LabeledStatement'] = function(n) {
-   this.close_current_active_partition();
-   var container = new Partitioner(this, n);
-   var name = n.label.name + '%';
-   container.label = { name: n.label.name, head: null, next: null };
-   container.label.head = container.label;
-   container.push(n.body);
-   this.partitions.push(container);
-   this.max = container.max;
+   this.addLabel(n.label.name);
+   if (y(n) > 0) {
+     this.close_current_active_partition();
+     var container = new Partitioner(this, n);
+     var name = n.label.name + '%';
+     container.label = { name: n.label.name, head: null, next: null };
+     container.label.head = container.label;
+     container.push(n.body);
+     this.partitions.push(container);
+     this.max = container.max;
+   }
+   else
+      this.current().statements.push(n);
+   this.removeLabel(n.label.name);
 };
 
 

@@ -512,7 +512,7 @@ function do_while_wrapper( body, yBody) {
    return { type: 'DoWhileStatement', body: body, test: {type: 'Literal', value: false}, y: yBody };
 }
 
-this.transformSwitch = function(n, b) {
+this.transformSwitch = function(n) {
    var v = synth_id_node(this.scope.allocateTemp());
    var m = synth_id_node(this.scope.allocateTemp());
    var yc = y(n);
@@ -546,7 +546,7 @@ this.transformSwitch = function(n, b) {
      doBody.push(synth_if_node(m, c.consequent, null, y(c)));
      e++ ;
   }
-  return do_while_wrapper(doBody, yc);
+  return doBody;
 };
 
 this.transformGenerator = function(n, vMode) {
