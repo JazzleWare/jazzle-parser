@@ -14,6 +14,8 @@ var Scope = function(parent, type) {
   this.wrappedDeclList = null;
   this.wrappedDeclNames = null;
   this.scopeObjVar = null;
+
+  this.tempStack = this.isFunc() ? [] : null;
 }
 
 Scope.createFunc = function(parent, decl, funcParams) {

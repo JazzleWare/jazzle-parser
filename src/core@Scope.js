@@ -169,6 +169,21 @@ this.makeScopeObj = function() {
   this.wrappedDeclNames = {};
 };   
 
+this.allocateTemp = function() {
+  var temp = "";
+  if (this.tempStack.length) 
+    temp = this.tempStack.pop();
+  else {
+    temp = this.funcScope.newSynthName('temp');
+    this.funcScope.declare(temp, VAR);
+  }
+  return temp;
+};
+
+this.releaseTemp = function(tempName) {
+  this.tempStack.push(tempName);
+};
+ 
 this.isLoop = function() { return this.type === SCOPE_TYPE_LEXICAL_LOOP; };
 this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
 this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };

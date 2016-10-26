@@ -119,6 +119,11 @@ function Partitioner(owner, details) {
 
    this.labelNames = null;
 
+   this.act = null;
+   this.ect = null;
+   this.abt = null;
+   this.ebt = null;
+
    if (this.owner === null) {
      this.emitter = details;
      this.details = null;
@@ -160,6 +165,12 @@ function Partitioner(owner, details) {
         this.statements = null;
         this.type = details.type.replace(/(?:Clause|Statement)$/, "Container");
         this.labelNames = this.owner.labelNames;
+
+        this.act = this.owner.act;
+        this.ect = this.owner.ect;
+        this.abt = this.owner.abt;
+        this.ebt = this.owner.ebt;
+
         break;
 
      default:
@@ -172,8 +183,24 @@ function Partitioner(owner, details) {
    this.max = this.min;
 
    this.synthLabel = null;
-}
+   this.usedSynthLabel = false;
 
+   switch (this.type) {
+     case 'ForOfContainer':
+     case 'ForContainer':
+     case 'ForInContainer':
+     case 'DoWhileContainer':
+     case 'WhileContainer':
+       this.act = this.ect = this.abt = this.ebt = this;
+       break;
+
+     case 'SwitchContainer':
+       this.ebt = this;
+     case 'TryContainer':
+       this.abt = this.act = this;
+       break;
+   }      
+}   
 ;
 function RefMode() {
    this.direct = 0;
@@ -197,6 +224,8 @@ var Scope = function(parent, type) {
   this.wrappedDeclList = null;
   this.wrappedDeclNames = null;
   this.scopeObjVar = null;
+
+  this.tempStack = this.isFunc() ? [] : null;
 }
 
 Scope.createFunc = function(parent, decl, funcParams) {
@@ -2135,7 +2164,7 @@ function do_while_wrapper( body, yBody) {
    return { type: 'DoWhileStatement', body: body, test: {type: 'Literal', value: false}, y: yBody };
 }
 
-this.transformSwitch = function(n, b) {
+this.transformSwitch = function(n) {
    var v = synth_id_node(this.scope.allocateTemp());
    var m = synth_id_node(this.scope.allocateTemp());
    var yc = y(n);
@@ -2169,7 +2198,7 @@ this.transformSwitch = function(n, b) {
      doBody.push(synth_if_node(m, c.consequent, null, y(c)));
      e++ ;
   }
-  return do_while_wrapper(doBody, yc);
+  return doBody;
 };
 
 this.transformGenerator = function(n, vMode) {
@@ -7325,6 +7354,9 @@ this.parseYield = function(context) {
 this.push = function(n) {
    ASSERT.call(this, !this.isSimple());
 
+   if ( n.type === 'BreakStatement' && n.label === null) this.verifyBreakTarget();
+   else if (n.type === 'ContinueStatement' && n.label === null) this.verifyContinueTarget();
+
    if ( ( y(n) !== 0 || n.type === 'LabeledStatement' ) && HAS.call(pushList, n.type) )
      pushList[n.type].call( this, n );
    else
@@ -7486,6 +7518,16 @@ this.findLabel = function(name) {
        this.labelNames[name] : null;
 };
 
+this.useSynthLabel = function() { this.usedSynthLabel = true; };
+
+this.verifyBreakTarget = function() {
+  if (this.abt !== this.ebt) this.ebt.useSynthLabel();
+};
+
+this.verifyContinueTarget = function() {
+  if (this.act !== this.ect) this.ect.useSynthLabel();
+};
+
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
    var container = new Partitioner(this, n);
@@ -7642,6 +7684,17 @@ pushList['LabeledStatement'] = function(n) {
    this.removeLabel(n.label.name);
 };
 
+pushList['SwitchStatement'] = function(n) {
+   this.close_current_active_partition();
+   var switchContainer = new Partitioner(this, n);
+   var switchBody = this.emitter.transformSwitch(n), e = 0;
+   while (e < switchBody.length)
+     switchContainer.push(switchBody[e++]);
+
+   this.partitions.push(switchContainer);
+   this.max = switchContainer.max;
+};
+   
 
 }]  ],
 [RefMode.prototype, [function(){
@@ -7851,6 +7904,21 @@ this.makeScopeObj = function() {
   this.wrappedDeclNames = {};
 };   
 
+this.allocateTemp = function() {
+  var temp = "";
+  if (this.tempStack.length) 
+    temp = this.tempStack.pop();
+  else {
+    temp = this.funcScope.newSynthName('temp');
+    this.funcScope.declare(temp, VAR);
+  }
+  return temp;
+};
+
+this.releaseTemp = function(tempName) {
+  this.tempStack.push(tempName);
+};
+ 
 this.isLoop = function() { return this.type === SCOPE_TYPE_LEXICAL_LOOP; };
 this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
 this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
