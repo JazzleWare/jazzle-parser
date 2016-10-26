@@ -1527,8 +1527,8 @@ this.emitters['FunctionDeclaration'] = function(n) {
 
 this.emitBreak = function(n) {
   this.write('break');
-  if (this.label !== null)
-    this.write(' '+this.label.name);
+  if (n.label !== null)
+    this.write(' '+n.label.name);
   else if (!this.inActualBreakTarget())
     this.write(' ['+this.currentContainer.ebt.synthLabel.synthName+']');
   this.write(';');
