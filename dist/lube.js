@@ -1525,10 +1525,68 @@ this.emitters['FunctionDeclaration'] = function(n) {
      ASSERT.call(this, false);
 };
 
+this.emitBreak = function(n) {
+  this.write('break');
+  if (this.label !== null)
+    this.write(' '+this.label.name);
+  else if (!this.inActualBreakTarget())
+    this.write(' ['+this.currentContainer.ebt.synthLabel.synthName+']');
+  this.write(';');
+};
+
+this.emitReturn = function(n) {
+  this.write('return');
+  if (n.argument) {
+    this.write(' ');
+    this.emit(n.argument);
+  }
+  this.write(';');
+};
+
+this.emitContinue = function(n) {
+  this.write('continue');
+  if (n.label !== null)
+    this.write(' '+n.label.name);
+  else if (!this.inActualContinueTarget())
+    this.write(' ['+this.currentContainer.ect.synthLabel.synthName+']');
+  this.write(';');
+};
+
+this.emitYield = function(n) {
+   this.write('yield');
+   if (n.argument) {
+     this.write(' ');
+     this.emit(n.argument);
+   }
+   this.write(';');
+};
+
+this.inActualBreakTarget = function() {
+   return this.currentContainer === null ||
+          this.currentContainer.abt === this.currentContainer.ebt;
+};
+
+this.inActualContinueTarget = function() {
+   return this.currentContainer === null ||
+          this.currentContainer.act === this.currentContainer.ect;
+};
+
 this.fixupContainerLabels = function(target) {
   if (this.unresolvedLabel) {
     this.unresolvedLabel.target = target;
     this.unresolvedLabel = null
+  }
+};
+
+this.emitContainerStatement = function(n) {
+
+  switch (n.type) {
+     case 'BreakStatement': return this.emitBreak(n); 
+     case 'ReturnStatement': return this.emitReturn(n);
+     case 'ContinueStatement': return this.emitContinue(n);
+
+     case 'YieldExpression': return this.emitYield(n);
+     default: return this.emit(n);
   }
 };
 
@@ -1545,7 +1603,8 @@ function describeContainer(container) {
    }
    return 'container:' + container.type +
           ' [' + container.min + ' to ' + (container.max-1) + ']' +
-          ' ; label=' + ( container.synthLabel ? container.synthLabel.synthName : '<none>' ) ;
+          ' label=' + ( container.synthLabel ? container.synthLabel.synthName : '[none]' ) +
+          ' usedLabel=' + container.usedSynthLabel ;
 }
 
 function listLabels(container) {
@@ -1560,6 +1619,8 @@ function listLabels(container) {
 }
 
 this.emitters['MainContainer'] = function(n) {
+  var cc = this.currentContainer;
+  this.currentContainer = n;
   var containerStr = describeContainer(n);
   this.write( '<'+containerStr+'>' );
   this.indent();
@@ -1572,11 +1633,14 @@ this.emitters['MainContainer'] = function(n) {
   this.unindent();
   this.newlineIndent(); 
   this.write('</'+containerStr+'>');
+  this.currentContainer = cc;
 };
  
 this.emitters['IfContainer'] =
 this.emitters['WhileContainer'] = function(n) {
   this.fixupContainerLabels(n);
+  var cc = this.currentContainer;
+  this.currentContainer = n;
   var containerStr = describeContainer(n);
   this.write( '<'+containerStr+'>' );
   this.indent();
@@ -1592,6 +1656,7 @@ this.emitters['WhileContainer'] = function(n) {
   this.unindent();
   this.newlineIndent(); 
   this.write('</'+containerStr+'>');
+  this.currentContainer = cc;
 };
 
 this.emitters['SimpleContainer'] = function(n) {
@@ -1604,7 +1669,7 @@ this.emitters['SimpleContainer'] = function(n) {
   var list = n.statements, e = 0;
   while (e < list.length) {
      this.newlineIndent();
-     this.emit(list[e]);
+     this.emitContainerStatement(list[e]);
      e++ ;
   }
   this.unindent();
@@ -1632,7 +1697,7 @@ this.emitters['LabeledContainer'] = function(n) {
 };
 
 this.emitters['BlockContainer'] = function(n) {
-  this.fixupContainerLabels();
+  this.fixupContainerLabels(n);
   var list = n.partitions, e = 0;
   this.write('{');
   if (list.length > 0) {
@@ -1647,6 +1712,20 @@ this.emitters['BlockContainer'] = function(n) {
   this.write('}');
 };
   
+this.emitters['SwitchContainer'] = function(n) {
+  var containerStr = describeContainer(n);
+  this.write('<'+containerStr+'>');
+  this.indent();
+  var list = n.partitions, e = 0;
+  while (e < list.length) {
+    this.newlineIndent(); 
+    this.emit(list[e++]);
+  }
+  this.unindent();
+  this.newlineIndent();
+  this.write('</'+containerStr+'>');
+};
+
 
 },
 function(){
