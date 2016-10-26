@@ -954,7 +954,7 @@ this.emit = function(n, prec, flags) {
     }
     else if (n.type === 'SwitchStatement') {
       cc = this.currentContainer.abt;
-      this.container.abt = this.container.ebt;
+      this.currentContainer.abt = this.currentContainer.ebt;
     }
   }
   if (arguments.length < 2) prec = PREC_WITH_NO_OP;
