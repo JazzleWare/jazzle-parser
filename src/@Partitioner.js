@@ -25,6 +25,11 @@ function Partitioner(owner, details) {
      this.partitions = null;
      this.type = 'SimpleContainer';
      this.statements = [];
+
+     this.ect = this.owner.ect;
+     this.act = this.owner.act;
+     this.abt = this.owner.abt;
+     this.ebt = this.owner.ebt;
    }
    else if (owner === null) {
      this.partitions = [];
@@ -69,7 +74,6 @@ function Partitioner(owner, details) {
    this.max = this.min;
 
    this.synthLabel = null;
-   this.usedSynthLabel = false;
 
    switch (this.type) {
      case 'ForOfContainer':

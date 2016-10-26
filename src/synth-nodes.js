@@ -64,8 +64,8 @@ function synth_if_node(cond, body, alternate, yBody, yElse) {
   else
     alternate = null;
 
-  return { type: yc > 0 ? 'IfStatement' : 'ConditionalExpression',
-           alternate: alternate === null && yc === 0 ? VOID0 : alternate ,
+  return { type: 'IfStatement',
+           alternate: alternate ,
            consequent: body, 
            test: cond, y: yBody + yElse };
 }

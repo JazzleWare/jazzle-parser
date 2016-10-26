@@ -278,6 +278,9 @@ this.emitters['BreakStatement'] = function(n) {
      this.emit(n.label);
      this.restoreWrap();
    }
+   else if (!this.inActualBreakTarget()) {
+     this.write(' ['+this.currentContainer.ebt.synthLabel.synthName+']');
+   }
    this.code += ';';
 };
 
@@ -288,6 +291,9 @@ this.emitters['ContinueStatement'] = function(n) {
      this.write(' ');
      this.emit(n.label);
      this.restoreWrap();
+   }
+   else if (!this.inActualContinueTarget()) {
+     this.write(' ['+this.currentContainer.ect.synthLabel.synthName+']');
    }
    this.code += ';';
 };  
@@ -610,10 +616,7 @@ this.fixupContainerLabels = function(target) {
 this.emitContainerStatement = function(n) {
 
   switch (n.type) {
-     case 'BreakStatement': return this.emitBreak(n); 
      case 'ReturnStatement': return this.emitReturn(n);
-     case 'ContinueStatement': return this.emitContinue(n);
-
      case 'YieldExpression': return this.emitYield(n);
      default: return this.emit(n);
   }
@@ -632,8 +635,7 @@ function describeContainer(container) {
    }
    return 'container:' + container.type +
           ' [' + container.min + ' to ' + (container.max-1) + ']' +
-          ' label=' + ( container.synthLabel ? container.synthLabel.synthName : '[none]' ) +
-          ' usedLabel=' + container.usedSynthLabel ;
+          ' label=' + ( container.synthLabel ? container.synthLabel.synthName : '[none]' );
 }
 
 function listLabels(container) {
@@ -744,6 +746,8 @@ this.emitters['BlockContainer'] = function(n) {
 this.emitters['SwitchContainer'] = function(n) {
   var containerStr = describeContainer(n);
   this.write('<'+containerStr+'>');
+  var cc = this.currentContainer;
+  this.currentContainer = n;
   this.indent();
   var list = n.partitions, e = 0;
   while (e < list.length) {
@@ -751,6 +755,7 @@ this.emitters['SwitchContainer'] = function(n) {
     this.emit(list[e++]);
   }
   this.unindent();
+  this.currentContainer = cc;
   this.newlineIndent();
   this.write('</'+containerStr+'>');
 };

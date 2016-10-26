@@ -1,13 +1,9 @@
 this.push = function(n) {
    ASSERT.call(this, !this.isSimple());
-
-   if ( n.type === 'BreakStatement' && n.label === null) this.verifyBreakTarget();
-   else if (n.type === 'ContinueStatement' && n.label === null) this.verifyContinueTarget();
-
    if ( ( y(n) !== 0 || n.type === 'LabeledStatement' ) && HAS.call(pushList, n.type) )
      pushList[n.type].call( this, n );
    else
-     this.current().statements.push(n);
+     this.current().addStmt(n);
 
    return this;
 }; 
@@ -40,11 +36,23 @@ this.isSimple = function() {
   return this.type === 'SimpleContainer';
 };
 
+this.addStmt = function(n) {
+  this.scanStmt(n);
+  this.statements.push(n);
+};
+
+this.scanStmt = function(n) {
+  if (HAS.call(scanList, n.type)) {
+    scanList[n.type].call(this, n);
+  }
+};
+
 this.isContainer = function() {
   return !this.isSimple();
 };
 
 var pushList = {};
+var scanList = {};
   
 this.prettyString = function(emitter) {
    if (!emitter) emitter = new Emitter();
@@ -149,14 +157,15 @@ this.synthLabelName = function(baseName) {
   return name;
 };
 
-this.addContainerLabel = function() {
+this.useSynthLabel = function() {
    this.synthLabel = LabelRef.synth(this.type);
    this.synthLabel.synthName = this.synthLabelName(this.synthLabel.baseName);
    this.addLabel(this.synthLabel.synthName, this.synthLabel);
 };
 
 this.removeContainerLabel = function() {
-   this.removeLabel(this.synthLabel.synthName);
+   if (this.synthLabel !== null)
+     this.removeLabel(this.synthLabel.synthName);
 }; 
   
 this.findLabel = function(name) {
@@ -165,14 +174,17 @@ this.findLabel = function(name) {
        this.labelNames[name] : null;
 };
 
-this.useSynthLabel = function() { this.usedSynthLabel = true; };
-
 this.verifyBreakTarget = function() {
   if (this.abt !== this.ebt) this.ebt.useSynthLabel();
 };
 
 this.verifyContinueTarget = function() {
   if (this.act !== this.ect) this.ect.useSynthLabel();
+};
+
+this.scanArray = function(list) {
+   var e = 0;
+   while (e < list.length) this.scanStmt(list[e++]);
 };
 
 pushList['BlockStatement'] = function(n) {
@@ -186,6 +198,53 @@ pushList['BlockStatement'] = function(n) {
    this.partitions.push(container);
 };
 
+scanList['BlockStatement'] = function(n) {
+  this.scanArray(n.body);
+};
+
+scanList['TryStatement'] = function(n) {
+  this.scanArray(n.block.body);
+  if (n.handler) this.scanArray(n.handler.body);
+  if (n.finalizer) this.scanArray(n.finalizer.body);
+};
+
+scanList['SwitchStatement'] = function(n) {
+  var abt = this.abt, ebt = this.ebt;
+  this.abt = this.ebt = n;
+  var act = this.act;
+  this.act = n;
+  var list = n.cases, e = 0;
+  while (e < list.length)
+     this.scanArray(list[e++].consequent);
+  
+  this.abt = abt; this.ebt = ebt;
+  this.act = act;
+};
+
+scanList['IfStatement'] = function(n) {
+  this.scanStmt(n.consequent);
+  if (n.alternate) this.scanStmt(n.alternate);
+};
+
+scanList['ForOfStatement'] =
+scanList['ForInStatement'] =
+scanList['ForStatement'] =
+scanList['DoWhileStatement'] =
+scanList['WhileStatement'] = function(n) {
+   var abt = this.abt, ebt = this.ebt;
+   this.abt = this.ebt = n;
+   var act = this.act, ect = this.ect; 
+   this.act = this.ect = n;
+
+   this.scanStmt(n.body); 
+
+   this.abt = abt; this.ebt = ebt;
+   this.act = act; this.ect = ect;   
+};
+
+scanList['BreakStatement'] = function(n) { this.verifyBreakTarget(); };
+scanList['ContinueStatement'] = function(n) { this.verifyContinueTarget(); };
+
 function synth_do_while(cond, body) {
    return { type: 'DoWhileStatement', test: cond, body: BLOCK(body) };
 };
@@ -194,17 +253,16 @@ pushList['ExpressionStatement'] = function(n) {
    var yc = y(n);
    var e = this.emitter.transformYield(n.expression, this, NOT_VAL);
    if (e !== NOEXPRESSION && !( e.type === 'Identifier' && e.synth ) )
-     this.current().statements.push(e);
+     this.current().addStmt(e);
 };
 
 pushList['WhileStatement'] = function(n) {
    this.close_current_active_partition();
    var container = new Partitioner(this, n);
-   container.addContainerLabel();
    var test = this.emitter.transformYield(n.test, container, IS_VAL);
    container.close_current_active_partition();
    var test_seg = container.current();
-   test_seg.statements.push(test);
+   test_seg.addStmt(test);
    container.close_current_active_partition();
    container.test = test_seg;
    container.push(n.body);
@@ -220,7 +278,7 @@ pushList['IfStatement'] = function(n) {
    var test = this.emitter.transformYield(n.test, container, IS_VAL);
    container.close_current_active_partition();
    var test_seg = container.current();
-   test_seg.statements.push(test);
+   test_seg.addStmt(test);
    container.close_current_active_partition();
    container.test = test_seg;
    container.push(n.consequent);
@@ -237,7 +295,7 @@ pushList['IfStatement'] = function(n) {
 };  
 
 pushList['YieldExpression'] = function(n) {
-   this.current().statements.push(n);
+   this.current().addStmt(n);
    this.close_current_active_partition();
 };
 
@@ -247,7 +305,7 @@ pushList['ForStatement'] = function(n) {
   var e = this.transformYield(n.init, container, NOT_VAL);
   container.close_current_active_partition();
   var seg = container.current();
-  seg.statements.push(e);
+  seg.addStmt(e);
   container.close_current_active_partition();
   container.init = seg;
 
@@ -327,7 +385,7 @@ pushList['LabeledStatement'] = function(n) {
      this.max = container.max;
    }
    else
-      this.current().statements.push(n);
+      this.current().addStmt(n);
    this.removeLabel(n.label.name);
 };
 
