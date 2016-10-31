@@ -623,6 +623,7 @@ this.emitContainerStatement = function(n) {
 };
 
 function describeContainer(container) {
+   var out = container.out(), loop = container.loop();
    var str = "";
    if (container.isSimple()) {
      str = 'seg';
@@ -630,12 +631,13 @@ function describeContainer(container) {
        str += ':test';
 
      ASSERT.call(this, container.min === container.max);
-     str += ' ['+container.min+']';
+     str += ' ['+container.min+']'+' out='+(out?out.min:'[none]')+' loop='+(loop?loop.min:'[none]')+'>';
      return str;
    }
    return 'container:' + container.type +
           ' [' + container.min + ' to ' + (container.max-1) + ']' +
-          ' label=' + ( container.synthLabel ? container.synthLabel.synthName : '[none]' );
+          ' label=' + ( container.synthLabel ? container.synthLabel.synthName : '[none]' )+
+          ' out='+(out?out.min:'[none]')+' loop='+(loop?loop.min:'[none]')+'>';
 }
 
 function listLabels(container) {
@@ -695,8 +697,7 @@ this.emitters['SimpleContainer'] = function(n) {
   this.fixupContainerLabels(n);  
 
   var containerStr = describeContainer(n);
-  var out = n.out(), loop = n.loop();
-  this.write('<'+containerStr+' out='+(out?out.min:'[none]')+' loop='+(loop?loop.min:'[none]')+'>');
+  this.write('<'+containerStr);
   this.indent();
   var list = n.statements, e = 0;
   while (e < list.length) {

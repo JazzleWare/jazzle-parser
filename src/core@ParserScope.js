@@ -24,9 +24,15 @@ ParserScope.prototype.setDeclMode = function(mode) {
   this.declMode = mode;
 };
 
-ParserScope.prototype.setComplexMode = function(mode) {
+ParserScope.prototype.makeComplex = function() {
   ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
-  this.isInComplexArgs = mode;
+  if (this.mustNotHaveAnyDupeParams()) return;
+  for (var a in this.paramNames) {
+     if (!HAS.call(this.paramNames, a)) continue;
+     a = this.paramNames[a];
+     if (a !== null) this.parser.err('func.args.has.dup', a);
+  }
+  this.isInComplexArgs = true;
 };
 
 ParserScope.prototype.parserDeclare = function(id) {

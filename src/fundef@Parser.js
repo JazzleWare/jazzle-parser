@@ -10,10 +10,7 @@ this .parseArgs  = function (argLen) {
     if ( elem ) {
        if ( this.lttype === 'op' && this.ltraw === '=' ) {
          elem = this.parseAssig(elem);
-         if ( elem.left.type === 'Identifier' )
-           this.scope.ensureParamIsNotDupe(elem.left);
-
-         this.scope.setComplexMode(true);
+         this.scope.makeComplex();
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
@@ -32,7 +29,7 @@ this .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        this.scope.setComplexMode(true);
+        this.scope.makeComplex();
         elem = this.parseRestElement();
         list.push( elem  );
         if ( !firstNonSimpArg )
@@ -187,7 +184,7 @@ this . makeStrict  = function() {
    this.tight = !false;
    this.scope.strict = true;
 
-   var a = null, argNames = this.scope.argNames;
+   var a = null, argNames = this.scope.paramNames;
    for ( a in argNames ) {
         if ( argNames[a] !== null )
           this['func.args.has.dup'](argNames[a]);

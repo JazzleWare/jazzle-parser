@@ -12,6 +12,7 @@ this.parseNewHead = function () {
   switch (this  .lttype) {
     case 'Identifier':
        head = this.parseIdStatementOrId (CONTEXT_NONE);
+       this.scope.reference(head.name);
        break;
 
     case '[':

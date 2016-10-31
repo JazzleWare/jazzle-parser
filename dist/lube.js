@@ -1651,6 +1651,7 @@ this.emitContainerStatement = function(n) {
 };
 
 function describeContainer(container) {
+   var out = container.out(), loop = container.loop();
    var str = "";
    if (container.isSimple()) {
      str = 'seg';
@@ -1658,12 +1659,13 @@ function describeContainer(container) {
        str += ':test';
 
      ASSERT.call(this, container.min === container.max);
-     str += ' ['+container.min+']';
+     str += ' ['+container.min+']'+' out='+(out?out.min:'[none]')+' loop='+(loop?loop.min:'[none]')+'>';
      return str;
    }
    return 'container:' + container.type +
           ' [' + container.min + ' to ' + (container.max-1) + ']' +
-          ' label=' + ( container.synthLabel ? container.synthLabel.synthName : '[none]' );
+          ' label=' + ( container.synthLabel ? container.synthLabel.synthName : '[none]' )+
+          ' out='+(out?out.min:'[none]')+' loop='+(loop?loop.min:'[none]')+'>';
 }
 
 function listLabels(container) {
@@ -1723,8 +1725,7 @@ this.emitters['SimpleContainer'] = function(n) {
   this.fixupContainerLabels(n);  
 
   var containerStr = describeContainer(n);
-  var out = n.out(), loop = n.loop();
-  this.write('<'+containerStr+' out='+(out?out.min:'[none]')+' loop='+(loop?loop.min:'[none]')+'>');
+  this.write('<'+containerStr);
   this.indent();
   var list = n.statements, e = 0;
   while (e < list.length) {
@@ -3753,10 +3754,7 @@ this .parseArgs  = function (argLen) {
     if ( elem ) {
        if ( this.lttype === 'op' && this.ltraw === '=' ) {
          elem = this.parseAssig(elem);
-         if ( elem.left.type === 'Identifier' )
-           this.scope.ensureParamIsNotDupe(elem.left);
-
-         this.scope.setComplexMode(true);
+         this.scope.makeComplex();
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
@@ -3775,7 +3773,7 @@ this .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        this.scope.setComplexMode(true);
+        this.scope.makeComplex();
         elem = this.parseRestElement();
         list.push( elem  );
         if ( !firstNonSimpArg )
@@ -3930,7 +3928,7 @@ this . makeStrict  = function() {
    this.tight = !false;
    this.scope.strict = true;
 
-   var a = null, argNames = this.scope.argNames;
+   var a = null, argNames = this.scope.paramNames;
    for ( a in argNames ) {
         if ( argNames[a] !== null )
           this['func.args.has.dup'](argNames[a]);
@@ -4320,6 +4318,7 @@ this.parseNewHead = function () {
   switch (this  .lttype) {
     case 'Identifier':
        head = this.parseIdStatementOrId (CONTEXT_NONE);
+       this.scope.reference(head.name);
        break;
 
     case '[':
@@ -5877,6 +5876,9 @@ this.parseExprHead = function (context) {
        this['contains.assigned.eval.or.arguments']();
   }
      
+  if (head.type === 'Identifier')
+    this.scope.reference(head.name);
+
   inner = core( head ) ;
 
   LOOP:
@@ -6348,7 +6350,7 @@ this.enterFuncScope = function(decl) { this.scope = this.scope.spawnFunc(decl); 
 
 this.enterComplex = function() {
    if (this.scope.declMode === DECL_MODE_FUNCTION_PARAMS)
-     this.scope.setComplexMode(true);
+     this.scope.makeComplex();
 };
 
 this.enterLexicalScope = function(loop) { this.scope = this.scope.spawnLexical(loop); };
@@ -7538,9 +7540,15 @@ ParserScope.prototype.setDeclMode = function(mode) {
   this.declMode = mode;
 };
 
-ParserScope.prototype.setComplexMode = function(mode) {
+ParserScope.prototype.makeComplex = function() {
   ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
-  this.isInComplexArgs = mode;
+  if (this.mustNotHaveAnyDupeParams()) return;
+  for (var a in this.paramNames) {
+     if (!HAS.call(this.paramNames, a)) continue;
+     a = this.paramNames[a];
+     if (a !== null) this.parser.err('func.args.has.dup', a);
+  }
+  this.isInComplexArgs = true;
 };
 
 ParserScope.prototype.parserDeclare = function(id) {
@@ -7803,7 +7811,9 @@ this.isLoop = function() {
 
 this.addSynthContinueLoopPartition = function() {
    ASSERT.call(this, this.isLoop());
-   this.partitions.push(new Partition(this, null));
+   var continuePartition = new Partitioner(this, null);
+   this.partitions.push(continuePartition);
+   this.max++;
 };
     
 pushList['BlockStatement'] = function(n) {
@@ -7883,6 +7893,7 @@ pushList['WhileStatement'] = function(n) {
    container.test = test_seg;
    container.push(n.body);
    container.removeContainerLabel();
+   container.addSynthContinueLoopPartition();
 
    this.partitions.push(container);
    this.max = container.max;
@@ -8163,7 +8174,7 @@ this.insertDecl0 = function(isOwn, name, decl) {
   if (isOwn)
     if (HAS.call(this.unresolvedNames, name)) {
       decl.refMode = this.unresolvedNames[name];
-      this.unresolvedNames[name] = null;SSERT
+      this.unresolvedNames[name] = null;
     }
     else decl.refMode = new RefMode();
 };

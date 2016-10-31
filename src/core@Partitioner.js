@@ -203,7 +203,9 @@ this.isLoop = function() {
 
 this.addSynthContinueLoopPartition = function() {
    ASSERT.call(this, this.isLoop());
-   this.partitions.push(new Partition(this, null));
+   var continuePartition = new Partitioner(this, null);
+   this.partitions.push(continuePartition);
+   this.max++;
 };
     
 pushList['BlockStatement'] = function(n) {
@@ -283,6 +285,7 @@ pushList['WhileStatement'] = function(n) {
    container.test = test_seg;
    container.push(n.body);
    container.removeContainerLabel();
+   container.addSynthContinueLoopPartition();
 
    this.partitions.push(container);
    this.max = container.max;

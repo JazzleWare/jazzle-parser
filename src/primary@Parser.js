@@ -88,6 +88,9 @@ this.parseExprHead = function (context) {
        this['contains.assigned.eval.or.arguments']();
   }
      
+  if (head.type === 'Identifier')
+    this.scope.reference(head.name);
+
   inner = core( head ) ;
 
   LOOP:

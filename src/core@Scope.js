@@ -107,7 +107,7 @@ this.insertDecl0 = function(isOwn, name, decl) {
   if (isOwn)
     if (HAS.call(this.unresolvedNames, name)) {
       decl.refMode = this.unresolvedNames[name];
-      this.unresolvedNames[name] = null;SSERT
+      this.unresolvedNames[name] = null;
     }
     else decl.refMode = new RefMode();
 };
