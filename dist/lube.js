@@ -6883,7 +6883,7 @@ this.parseThrowStatement = function () {
   if ( this.newLineBeforeLookAhead )
     this['throw.has.newline'](startc,startLoc);
 
-  retVal = core(this.parseExpr(CONTEXT_NONE));
+  retVal = this.parseExpr(CONTEXT_NONE);
 
   semi = this.semiI();
   semiLoc = this.semiLoc();
@@ -6891,7 +6891,7 @@ this.parseThrowStatement = function () {
      this['no.semi']('throw',startc,startLoc);
 
   this.foundStatement = !false;
-  return {  type: 'ThrowStatement', argument: retVal, start: startc, end: semi || retVal.end,
+  return {  type: 'ThrowStatement', argument: core(retVal), start: startc, end: semi || retVal.end,
      loc: { start: startLoc, end: semiLoc || retVal.loc.end }, y: this.y };
 };
 
