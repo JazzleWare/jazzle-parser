@@ -120,7 +120,7 @@ this.out = function() {
   if ( this.idx < this.owner.partitions.length - 1 )
     return this.owner.partitions[this.idx+1];
 
-  return this.owner.next_or_out();
+  return this.owner.out();
 };
 
 this.loop = function() {
@@ -187,6 +187,25 @@ this.scanArray = function(list) {
    while (e < list.length) this.scanStmt(list[e++]);
 };
 
+this.isLoop = function() {
+   switch (this.type) {
+     case 'ForInContainer':
+     case 'ForOfContainer':
+     case 'ForContainer': 
+     case 'DoWhileContainer':
+     case 'WhileContainer':
+        return true;
+     
+     default:
+        return false;
+   }
+};
+
+this.addSynthContinueLoopPartition = function() {
+   ASSERT.call(this, this.isLoop());
+   this.partitions.push(new Partition(this, null));
+};
+    
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
    var container = new Partitioner(this, n);

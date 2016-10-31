@@ -10,11 +10,10 @@ this .parseArgs  = function (argLen) {
     if ( elem ) {
        if ( this.lttype === 'op' && this.ltraw === '=' ) {
          elem = this.parseAssig(elem);
-         if ( elem.left.type === 'Identifier' ) {
-            if ( this.argNames[elem.left.name+'%'] !== null )
-              this['func.args.has.dup'](elem);
-         }
-         this.inComplexArgs = !false;
+         if ( elem.left.type === 'Identifier' )
+           this.scope.ensureParamIsNotDupe(elem.left);
+
+         this.scope.setComplexMode(true);
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
@@ -33,7 +32,7 @@ this .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        this.inComplexArgs = !false;
+        this.scope.setComplexMode(true);
         elem = this.parseRestElement();
         list.push( elem  );
         if ( !firstNonSimpArg )
@@ -54,25 +53,10 @@ this .parseArgs  = function (argLen) {
   return list;
 };
 
-this .addArg = function(id) {
-  var name = id.name + '%';
-  if ( has.call(this.argNames, name) ) {
-    if ( this.inComplexArgs )
-       this['func.args.has.dup'](id);
-
-    if ( this.argNames[name] === null )
-      this.argNames[name] = id ; // this will be useful if the body has a strictness directive
-  }
-  else
-     this.argNames[name] = null ;
-};
-
 this .parseFunc = function(context, argListMode, argLen ) {
   var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
   var prevLabels = this.labels;
   var prevStrict = this.tight;
-  var prevInArgList = this.isInArgList;
-  var prevArgNames = this.argNames;
   var prevScopeFlags = this.scopeFlags;
   var prevYS = this.firstYS ;
   var prevNonSimpArg = this.firstNonSimpArg;
@@ -98,12 +82,16 @@ this .parseFunc = function(context, argListMode, argLen ) {
         if ( this.lttype !== 'Identifier' )
           this['missing.name']('func', startc, startLoc);
 
-        currentFuncName = this.validateID(null);
+        this.scope.setDeclMode(DECL_MODE_VAR);
+        currentFuncName = this.parsePattern();
         if ( this.tight && arguments_or_eval(currentFuncName.name) )
           this['binding.to.eval.or.arguments']('func', startc, startLoc);
      }
      else if ( this. lttype === 'Identifier' ) {
-        currentFuncName = this.validateID(null);
+        this.enterLexicalScope(false);
+        this.scope.synth = true;
+        this.scope.setDeclMode(DECL_MODE_VAR);
+        currentFuncName = this.parsePattern();
         if ( this.tight && arguments_or_eval(currentFuncName.name) )
           this['binding.to.eval.or.arguments']('func', startc, startLoc);
      }
@@ -116,12 +104,10 @@ this .parseFunc = function(context, argListMode, argLen ) {
   if ( this.scopeFlags )
        this.scopeFlags = 0;
 
-  var prevComplexArgs = this.inComplexArgs;
-  this.inComplexArgs = this.tight;
-  this.isInArgList = !false;
-  this.argNames = {};
+  this.enterFuncScope(canBeStatement);
+  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
   var argList = this.parseArgs(argLen) ;
-  this.isInArgList = false;
+  this.scope.setDeclMode(DECL_MODE_NONE);
   this.tight = this.tight || argListMode !== WHOLE_FUNCTION;
   this.scopeFlags = SCOPE_FUNCTION;
   if ( argListMode & METH_FUNCTION )
@@ -132,7 +118,6 @@ this .parseFunc = function(context, argListMode, argLen ) {
 
   if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
    
-  this.inComplexArgs = false;
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
             id: currentFuncName,
@@ -148,15 +133,14 @@ this .parseFunc = function(context, argListMode, argLen ) {
      this.foundStatement = !false;
 
   this.labels = prevLabels;
-  this.isInArgList = prevInArgList;
-  this.argNames = prevArgNames; 
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
   this.firstYS = prevYS;
   this.firstNonSimpArg = prevNonSimpArg;
-  this.inComplexArgs = prevComplexArgs;
 
   this.y = 0;
+
+  this.exitScope();
   return  n  ;
 };
 
@@ -201,16 +185,16 @@ this . makeStrict  = function() {
    if ( this.tight ) return;
 
    this.tight = !false;
+   this.scope.strict = true;
 
-   var argName = null;
-   for ( argName in this.argNames ) {
-        if ( this.argNames[argName] !== null )
-          this['func.args.has.dup'](this.argNames[argName]);
+   var a = null, argNames = this.scope.argNames;
+   for ( a in argNames ) {
+        if ( argNames[a] !== null )
+          this['func.args.has.dup'](argNames[a]);
 
-        argName = argName.substring(0,argName.length-1) ;
-        this.assert(!arguments_or_eval(argName));
-        this.validateID(argName);
-
+        a = a.substring(0,a.length-1) ;
+        this.assert(!arguments_or_eval(a));
+        this.validateID(a);
    }
 };
 

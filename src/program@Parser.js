@@ -1,7 +1,9 @@
 this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
+  this.scope = new ParserScope(this, null, SCOPE_TYPE_MAIN);
   this.next();
+  
   var list = this.blck(); 
   var endLoc = null;
   if (list.length) {

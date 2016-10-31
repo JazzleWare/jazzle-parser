@@ -9,6 +9,8 @@ this . parseVariableDeclaration = function(context) {
 
      this.next () ;
 
+     this.setDeclModeByName(kind);
+
      elem = this.parseVariableDeclarator(context);
      var y = this.y;
    

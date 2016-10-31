@@ -103,6 +103,7 @@ this.parseIfStatement = function () {
   if ( !this.ensureStmt_soft () ) this['not.stmt']('if');
 
   this.fixupLabels(false);
+  this.enterLexicalScope(false);
 
   var startc = this.c0,
       startLoc  = this.locBegin();
@@ -131,11 +132,14 @@ this.parseIfStatement = function () {
 
   this.foundStatement = !false;
   this.y = y;
+
+  this.exitScope();
   return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,
      loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt, y: y };
 };
 
 this.parseWhileStatement = function () {
+   this.enterLexicalScope(true);
    if ( ! this.ensureStmt_soft () )
        this['not.stmt']('while');
 
@@ -162,12 +166,15 @@ this.parseWhileStatement = function () {
    this.foundStatement = !false;
 
    this.y = y;
+
+   this.exitScope();
    return { type: 'WhileStatement', test: cond, start: startc, end: nbody.end,
        loc: { start: startLoc, end: nbody.loc.end }, body:nbody, y: y };
 };
 
 this.parseBlckStatement = function () {
   this.fixupLabels(false);
+  this.enterLexicalScope(false);
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
@@ -178,6 +185,7 @@ this.parseBlckStatement = function () {
   if ( !this.expectType_soft ('}' ) )
      this['block.unfinished'](n);
 
+  this.exitScope();
   return n;
 };
 
@@ -185,6 +193,7 @@ this.parseDoWhileStatement = function () {
   if ( !this.ensureStmt_soft () )
      this['not.stmt']('do-while');
 
+  this.enterLexicalScope(true);
   this.fixupLabels(!false);
 
   var startc = this.c0,
@@ -218,6 +227,8 @@ this.parseDoWhileStatement = function () {
   this.y = y;
 
   this.foundStatement = !false;
+
+  this.exitScope();
   return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
           body: nbody, loc: { start: startLoc, end: { line: li, column: col } }, y: y } ;
 };
@@ -329,6 +340,7 @@ this.parseSwitchStatement = function () {
   if ( !this.expectType_soft ('{') )
      this['switch.has.no.opening.curly'](startc,stratLoc);
 
+  this.enterLexicalScope(false);
   this.scopeFlags |=  SCOPE_BREAK;
   while ( elem = this.parseSwitchCase()) {
     y += this.y;
@@ -349,6 +361,7 @@ this.parseSwitchStatement = function () {
   if ( !this.expectType_soft ('}' ) )
      this['switch.unfinished'](n);
 
+  this.exitScope();
   return n;
 };
 
@@ -458,7 +471,7 @@ this.parseThrowStatement = function () {
   if ( this.newLineBeforeLookAhead )
     this['throw.has.newline'](startc,startLoc);
 
-  retVal = this.parseExpr(CONTEXT_NONE);
+  retVal = core(this.parseExpr(CONTEXT_NONE));
 
   semi = this.semiI();
   semiLoc = this.semiLoc();
@@ -495,7 +508,9 @@ this.parseTryStatement = function () {
 
   this.next() ;
 
+  this.enterLexicalScope(false);
   var tryBlock = this.parseBlockStatement_dependent();
+  this.exitScope();
   var y = this.y;
   
   var finBlock = null, catBlock  = null;
@@ -506,7 +521,9 @@ this.parseTryStatement = function () {
 
   if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
      this.next();
+     this.enterLexicalScope(false);
      finBlock = this.parseBlockStatement_dependent();
+     this.exitScope();
      y += this.y;
   }
 
@@ -526,10 +543,15 @@ this. parseCatchClause = function () {
        startLoc = this.locBegin();
 
    this.next();
+
+   this.enterLexicalScope(false);
    if ( !this.expectType_soft ('(') )
      this['catch.has.no.opening.paren'](startc,startLoc);
 
+   this.scope.setDeclMode(DECL_MODE_LET);
+
    var catParam = this.parsePattern();
+   this.scope.setDeclMode(DECL_MODE_NONE);
    var y = this.y;
 
    if (this.lttype=='op' && this.ltval=='=') {
@@ -543,6 +565,7 @@ this. parseCatchClause = function () {
    var catBlock = this.parseBlockStatement_dependent();
    this.y += y;
 
+   this.exitScope();
    return {
        type: 'CatchClause',
         loc: { start: startLoc, end: catBlock.loc.end },

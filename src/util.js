@@ -69,4 +69,9 @@ function toNum (n) {
          (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
 };
 
+function createObj(fromPrototype) {
+  function Obj() {}
+  Obj.prototype = fromPrototype;
+  return new Obj();
+}
 

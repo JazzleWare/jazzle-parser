@@ -78,10 +78,6 @@ var Parser = function (src, isModule) {
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
-
-  this.isInArgList = false;
-  this.argNames = null;
-
   this.tight = !!isModule ;
 
   this.parenYS = null;
@@ -105,11 +101,30 @@ var Parser = function (src, isModule) {
   this.firstEA = null;
   this.firstEAContainer = null;
   this.defaultEA = null;
-  this.inComplexArgs = false;
 
   this.first__proto__ = false;
   this.y = 0;
+
+  this.scope = null;
 };
+
+;
+function ParserScope(ownerParser, parent, type) {
+   Scope.call(
+     this, parent, type
+   );
+
+   this.paramNames = null;
+   this.declMode = DECL_MODE_NONE;
+   this.isInComplexArgs = false;
+   this.parser = ownerParser;
+   this.strict = this.parser.tight;
+
+   if (this.isFunc())
+     this.paramNames = {};
+
+   this.synth = false;
+}
 
 ;
 function Partitioner(owner, details) {
@@ -417,7 +432,12 @@ var SCOPE_TYPE_FUNCTION_EXPRESSION = 1,
     SCOPE_TYPE_FUNCTION_DECLARATION = 2|SCOPE_TYPE_FUNCTION_EXPRESSION;
 var SCOPE_TYPE_LEXICAL_SIMPLE = 8,
     SCOPE_TYPE_LEXICAL_LOOP = 16|SCOPE_TYPE_LEXICAL_SIMPLE;
+var SCOPE_TYPE_MAIN = SCOPE_TYPE_FUNCTION_EXPRESSION;
 
+var DECL_MODE_VAR = 1,
+    DECL_MODE_LET = 2,
+    DECL_MODE_NONE = 0,
+    DECL_MODE_FUNCTION_PARAMS = 4;
 
 ;
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
@@ -824,6 +844,11 @@ function toNum (n) {
          (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
 };
 
+function createObj(fromPrototype) {
+  function Obj() {}
+  Obj.prototype = fromPrototype;
+  return new Obj();
+}
 
 ;
  (function(){
@@ -1698,7 +1723,8 @@ this.emitters['SimpleContainer'] = function(n) {
   this.fixupContainerLabels(n);  
 
   var containerStr = describeContainer(n);
-  this.write('<'+containerStr+'>');
+  var out = n.out(), loop = n.loop();
+  this.write('<'+containerStr+' out='+(out?out.min:'[none]')+' loop='+(loop?loop.min:'[none]')+'>');
   this.indent();
   var list = n.statements, e = 0;
   while (e < list.length) {
@@ -2484,7 +2510,7 @@ this. asArrowFuncArg = function(arg  ) {
            if ( arg === this.firstParen && this.parenParamError() )
               return this.errorHandlerOutput ;
 
-           return this.addArg(arg);
+           return this.scope.parserDeclare(arg);
 
         case 'ArrayExpression':
            if ( arg === this.firstParen && this.parenParamError() ) 
@@ -2571,17 +2597,16 @@ this. asArrowFuncArg = function(arg  ) {
     }
 };
 
-
 this . parseArrowFunctionExpression = function(arg,context)   {
 
   if ( this.unsatisfiedArg )
        this.unsatisfiedArg = null;
 
-  var prevArgNames = this.argNames;
-  this.argNames = {};
-
   var tight = this.tight;
 
+  this.enterFuncScope(false);
+  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
+  this.enterComplex();
   switch ( arg.type ) {
     case 'Identifier':
        this.asArrowFuncArg(arg, 0)  ;
@@ -2618,12 +2643,10 @@ this . parseArrowFunctionExpression = function(arg,context)   {
   else
     nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context) ;
 
-  this.argNames = prevArgNames;
-  this.scopeFlags = scopeFlags;
-
   var params = core(arg);
-
   this.tight = tight;
+
+  this.exitScope();
 
   return { type: 'ArrowFunctionExpression',
            params: params ?  params.type === 'SequenceExpression' ? params.expressions : [params] : [] ,
@@ -3730,11 +3753,10 @@ this .parseArgs  = function (argLen) {
     if ( elem ) {
        if ( this.lttype === 'op' && this.ltraw === '=' ) {
          elem = this.parseAssig(elem);
-         if ( elem.left.type === 'Identifier' ) {
-            if ( this.argNames[elem.left.name+'%'] !== null )
-              this['func.args.has.dup'](elem);
-         }
-         this.inComplexArgs = !false;
+         if ( elem.left.type === 'Identifier' )
+           this.scope.ensureParamIsNotDupe(elem.left);
+
+         this.scope.setComplexMode(true);
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
@@ -3753,7 +3775,7 @@ this .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        this.inComplexArgs = !false;
+        this.scope.setComplexMode(true);
         elem = this.parseRestElement();
         list.push( elem  );
         if ( !firstNonSimpArg )
@@ -3774,25 +3796,10 @@ this .parseArgs  = function (argLen) {
   return list;
 };
 
-this .addArg = function(id) {
-  var name = id.name + '%';
-  if ( has.call(this.argNames, name) ) {
-    if ( this.inComplexArgs )
-       this['func.args.has.dup'](id);
-
-    if ( this.argNames[name] === null )
-      this.argNames[name] = id ; // this will be useful if the body has a strictness directive
-  }
-  else
-     this.argNames[name] = null ;
-};
-
 this .parseFunc = function(context, argListMode, argLen ) {
   var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
   var prevLabels = this.labels;
   var prevStrict = this.tight;
-  var prevInArgList = this.isInArgList;
-  var prevArgNames = this.argNames;
   var prevScopeFlags = this.scopeFlags;
   var prevYS = this.firstYS ;
   var prevNonSimpArg = this.firstNonSimpArg;
@@ -3818,12 +3825,16 @@ this .parseFunc = function(context, argListMode, argLen ) {
         if ( this.lttype !== 'Identifier' )
           this['missing.name']('func', startc, startLoc);
 
-        currentFuncName = this.validateID(null);
+        this.scope.setDeclMode(DECL_MODE_VAR);
+        currentFuncName = this.parsePattern();
         if ( this.tight && arguments_or_eval(currentFuncName.name) )
           this['binding.to.eval.or.arguments']('func', startc, startLoc);
      }
      else if ( this. lttype === 'Identifier' ) {
-        currentFuncName = this.validateID(null);
+        this.enterLexicalScope(false);
+        this.scope.synth = true;
+        this.scope.setDeclMode(DECL_MODE_VAR);
+        currentFuncName = this.parsePattern();
         if ( this.tight && arguments_or_eval(currentFuncName.name) )
           this['binding.to.eval.or.arguments']('func', startc, startLoc);
      }
@@ -3836,12 +3847,10 @@ this .parseFunc = function(context, argListMode, argLen ) {
   if ( this.scopeFlags )
        this.scopeFlags = 0;
 
-  var prevComplexArgs = this.inComplexArgs;
-  this.inComplexArgs = this.tight;
-  this.isInArgList = !false;
-  this.argNames = {};
+  this.enterFuncScope(canBeStatement);
+  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
   var argList = this.parseArgs(argLen) ;
-  this.isInArgList = false;
+  this.scope.setDeclMode(DECL_MODE_NONE);
   this.tight = this.tight || argListMode !== WHOLE_FUNCTION;
   this.scopeFlags = SCOPE_FUNCTION;
   if ( argListMode & METH_FUNCTION )
@@ -3852,7 +3861,6 @@ this .parseFunc = function(context, argListMode, argLen ) {
 
   if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
    
-  this.inComplexArgs = false;
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
             id: currentFuncName,
@@ -3868,15 +3876,14 @@ this .parseFunc = function(context, argListMode, argLen ) {
      this.foundStatement = !false;
 
   this.labels = prevLabels;
-  this.isInArgList = prevInArgList;
-  this.argNames = prevArgNames; 
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
   this.firstYS = prevYS;
   this.firstNonSimpArg = prevNonSimpArg;
-  this.inComplexArgs = prevComplexArgs;
 
   this.y = 0;
+
+  this.exitScope();
   return  n  ;
 };
 
@@ -3921,16 +3928,16 @@ this . makeStrict  = function() {
    if ( this.tight ) return;
 
    this.tight = !false;
+   this.scope.strict = true;
 
-   var argName = null;
-   for ( argName in this.argNames ) {
-        if ( this.argNames[argName] !== null )
-          this['func.args.has.dup'](this.argNames[argName]);
+   var a = null, argNames = this.scope.argNames;
+   for ( a in argNames ) {
+        if ( argNames[a] !== null )
+          this['func.args.has.dup'](argNames[a]);
 
-        argName = argName.substring(0,argName.length-1) ;
-        this.assert(!arguments_or_eval(argName));
-        this.validateID(argName);
-
+        a = a.substring(0,a.length-1) ;
+        this.assert(!arguments_or_eval(a));
+        this.validateID(a);
    }
 };
 
@@ -5619,8 +5626,7 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
-       if ( this.isInArgList ) 
-          this.addArg(id);
+       this.scope.parserDeclare(id);
  
        return id;
 
@@ -5640,9 +5646,7 @@ this. parseArrayPattern = function() {
       elem = null,
       list = [];
 
-  if ( this.isInArgList ) {
-     this.inComplexArgs = !false;
-  }
+  this.enterComplex();
 
   var y = 0;
 
@@ -5695,9 +5699,7 @@ this.parseObjectPattern  = function() {
     var name = null;
 
     var yObj = 0, yProp = 0;
-    if ( this.isInArgList ) {
-         this.inComplexArgs = !false;
-    }
+    this.enterComplex();
 
     LOOP:
     do {
@@ -5758,6 +5760,7 @@ this.parseObjectPattern  = function() {
     return n;
 };
 
+// this need not enter complex mode by itself, because the head has already been taken care of
 this .parseAssig = function (head) {
     this.next() ;
     var y = this.y;
@@ -5766,7 +5769,9 @@ this .parseAssig = function (head) {
            right: core(e), loc: { start: head.loc.start, end: e.loc.end }, y: y + this.y };
 };
 
-
+// this need not enter complex mode by itself too, because can occur in either an obj- or an arr-pattern,
+// which are themselves already complex, or it can directly be a param, in which case the `this.enterComplexMode()` thing is called
+// on site.
 this.parseRestElement = function() {
    var startc = this.c-1-2,
        startLoc = this.locOn(1+2);
@@ -6143,7 +6148,9 @@ function(){
 this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
+  this.scope = new ParserScope(this, null, SCOPE_TYPE_MAIN);
   this.next();
+  
   var list = this.blck(); 
   var endLoc = null;
   if (list.length) {
@@ -6337,11 +6344,24 @@ this.parseRegExpLiteral = function() {
 
 },
 function(){
-/* this.enterScope = function(flags) {
-   var parent = this.currentScope;
-   var createFlags = 0;
-   if (createFlags & SCOPE_TYPE_
-*/
+this.enterFuncScope = function(decl) { this.scope = this.scope.spawnFunc(decl); };
+
+this.enterComplex = function() {
+   if (this.scope.declMode === DECL_MODE_FUNCTION_PARAMS)
+     this.scope.setComplexMode(true);
+};
+
+this.enterLexicalScope = function(loop) { this.scope = this.scope.spawnLexical(loop); };
+
+this.setDeclModeByName = function(modeName) {
+  this.scope.setDeclMode(modeName === 'var' ? DECL_MODE_VAR : DECL_MODE_LET);
+};
+
+this.exitScope = function() {
+  this.scope = this.scope.parent;
+  if (this.scope.synth)
+    this.scope = this.scope.parent;
+};
 
 
 },
@@ -6495,6 +6515,7 @@ this.parseIfStatement = function () {
   if ( !this.ensureStmt_soft () ) this['not.stmt']('if');
 
   this.fixupLabels(false);
+  this.enterLexicalScope(false);
 
   var startc = this.c0,
       startLoc  = this.locBegin();
@@ -6523,11 +6544,14 @@ this.parseIfStatement = function () {
 
   this.foundStatement = !false;
   this.y = y;
+
+  this.exitScope();
   return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,
      loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt, y: y };
 };
 
 this.parseWhileStatement = function () {
+   this.enterLexicalScope(true);
    if ( ! this.ensureStmt_soft () )
        this['not.stmt']('while');
 
@@ -6554,12 +6578,15 @@ this.parseWhileStatement = function () {
    this.foundStatement = !false;
 
    this.y = y;
+
+   this.exitScope();
    return { type: 'WhileStatement', test: cond, start: startc, end: nbody.end,
        loc: { start: startLoc, end: nbody.loc.end }, body:nbody, y: y };
 };
 
 this.parseBlckStatement = function () {
   this.fixupLabels(false);
+  this.enterLexicalScope(false);
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
@@ -6570,6 +6597,7 @@ this.parseBlckStatement = function () {
   if ( !this.expectType_soft ('}' ) )
      this['block.unfinished'](n);
 
+  this.exitScope();
   return n;
 };
 
@@ -6577,6 +6605,7 @@ this.parseDoWhileStatement = function () {
   if ( !this.ensureStmt_soft () )
      this['not.stmt']('do-while');
 
+  this.enterLexicalScope(true);
   this.fixupLabels(!false);
 
   var startc = this.c0,
@@ -6610,6 +6639,8 @@ this.parseDoWhileStatement = function () {
   this.y = y;
 
   this.foundStatement = !false;
+
+  this.exitScope();
   return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
           body: nbody, loc: { start: startLoc, end: { line: li, column: col } }, y: y } ;
 };
@@ -6721,6 +6752,7 @@ this.parseSwitchStatement = function () {
   if ( !this.expectType_soft ('{') )
      this['switch.has.no.opening.curly'](startc,stratLoc);
 
+  this.enterLexicalScope(false);
   this.scopeFlags |=  SCOPE_BREAK;
   while ( elem = this.parseSwitchCase()) {
     y += this.y;
@@ -6741,6 +6773,7 @@ this.parseSwitchStatement = function () {
   if ( !this.expectType_soft ('}' ) )
      this['switch.unfinished'](n);
 
+  this.exitScope();
   return n;
 };
 
@@ -6850,7 +6883,7 @@ this.parseThrowStatement = function () {
   if ( this.newLineBeforeLookAhead )
     this['throw.has.newline'](startc,startLoc);
 
-  retVal = this.parseExpr(CONTEXT_NONE);
+  retVal = core(this.parseExpr(CONTEXT_NONE));
 
   semi = this.semiI();
   semiLoc = this.semiLoc();
@@ -6887,7 +6920,9 @@ this.parseTryStatement = function () {
 
   this.next() ;
 
+  this.enterLexicalScope(false);
   var tryBlock = this.parseBlockStatement_dependent();
+  this.exitScope();
   var y = this.y;
   
   var finBlock = null, catBlock  = null;
@@ -6898,7 +6933,9 @@ this.parseTryStatement = function () {
 
   if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
      this.next();
+     this.enterLexicalScope(false);
      finBlock = this.parseBlockStatement_dependent();
+     this.exitScope();
      y += this.y;
   }
 
@@ -6918,10 +6955,15 @@ this. parseCatchClause = function () {
        startLoc = this.locBegin();
 
    this.next();
+
+   this.enterLexicalScope(false);
    if ( !this.expectType_soft ('(') )
      this['catch.has.no.opening.paren'](startc,startLoc);
 
+   this.scope.setDeclMode(DECL_MODE_LET);
+
    var catParam = this.parsePattern();
+   this.scope.setDeclMode(DECL_MODE_NONE);
    var y = this.y;
 
    if (this.lttype=='op' && this.ltval=='=') {
@@ -6935,6 +6977,7 @@ this. parseCatchClause = function () {
    var catBlock = this.parseBlockStatement_dependent();
    this.y += y;
 
+   this.exitScope();
    return {
        type: 'CatchClause',
         loc: { start: startLoc, end: catBlock.loc.end },
@@ -7344,6 +7387,8 @@ this . parseVariableDeclaration = function(context) {
 
      this.next () ;
 
+     this.setDeclModeByName(kind);
+
      elem = this.parseVariableDeclarator(context);
      var y = this.y;
    
@@ -7463,6 +7508,92 @@ this.parseYield = function(context) {
   return n;
 };
 
+
+
+}]  ],
+[ParserScope.prototype, [function(){
+
+ParserScope.prototype = createObj(Scope.prototype);
+
+ParserScope.prototype.spawnFunc = function(fundecl) {
+  return new ParserScope(
+       this.parser,
+       this,
+       fundecl ?
+         SCOPE_TYPE_FUNCTION_DECLARATION :
+         SCOPE_TYPE_FUNCTION_EXPRESSION
+  );
+};
+
+ParserScope.prototype.spawnLexical = function(loop) {
+  return new ParserScope(
+       this.parser,
+       this,
+       !loop ?
+        SCOPE_TYPE_LEXICAL_SIMPLE :
+        SCOPE_TYPE_LEXICAL_LOOP );
+};
+
+ParserScope.prototype.setDeclMode = function(mode) {
+  this.declMode = mode;
+};
+
+ParserScope.prototype.setComplexMode = function(mode) {
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
+  this.isInComplexArgs = mode;
+};
+
+ParserScope.prototype.parserDeclare = function(id) {
+   switch (this.declMode) {
+     case DECL_MODE_FUNCTION_PARAMS:
+       this.addParam(id);
+       break;
+
+     case DECL_MODE_LET:
+       this.declare(id.name, LET);
+       break;
+
+     case DECL_MODE_VAR:
+       this.declare(id.name, VAR);
+       break;
+
+     default:
+       ASSERT.call(this, false, 'default mode is not defined');
+   }
+};
+
+ParserScope.prototype.mustNotHaveAnyDupeParams = function() {
+  return this.strict || this.isInComplexArgs;
+};
+
+ParserScope.prototype.err = function(errType, errParams) {
+  return this.parser.err(errType, errParams);
+};
+ 
+ParserScope.prototype.hasParam = function(name) {
+  return HAS.call(this.paramNames, name+'%');
+};
+
+ParserScope.prototype.addParam = function(id) {
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
+  var name = id.name + '%';
+  if ( HAS.call(this.paramNames, name) ) {
+    if (this.mustNotHaveAnyDupeParams())
+      this.err('func.args.has.dup', id);
+
+    if (this.paramNames[name] === null)
+      this.paramNames[name] = id ;
+  }
+  else
+    this.paramNames[name] = null;
+};
+
+ParserScope.prototype.ensureParamIsNotDupe = function(id) {
+   var name = id.name + '%';
+
+   if (HAS.call(this.paramNames, name) && this.paramNames[name])
+     this.parser.err('func.args.has.dup', id );
+};
 
 
 }]  ],
@@ -7589,7 +7720,7 @@ this.out = function() {
   if ( this.idx < this.owner.partitions.length - 1 )
     return this.owner.partitions[this.idx+1];
 
-  return this.owner.next_or_out();
+  return this.owner.out();
 };
 
 this.loop = function() {
@@ -7656,6 +7787,25 @@ this.scanArray = function(list) {
    while (e < list.length) this.scanStmt(list[e++]);
 };
 
+this.isLoop = function() {
+   switch (this.type) {
+     case 'ForInContainer':
+     case 'ForOfContainer':
+     case 'ForContainer': 
+     case 'DoWhileContainer':
+     case 'WhileContainer':
+        return true;
+     
+     default:
+        return false;
+   }
+};
+
+this.addSynthContinueLoopPartition = function() {
+   ASSERT.call(this, this.isLoop());
+   this.partitions.push(new Partition(this, null));
+};
+    
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
    var container = new Partitioner(this, n);
@@ -7940,6 +8090,20 @@ this.findRefInScope = function(name) {
             this.unresolvedNames[name] : null;
 };
 
+this.err = function(errType, errParams) {
+   if (errType === 'exists.in.current') {
+     var decl = errParams.newDecl,
+         existingDecl = errParams.existingDecl;
+
+     ASSERT.call(this, false, 
+        'name "'+decl.name+'" is a "'+decl.type+
+        '" and can not override the "'+existingDecl.type+
+        '" that exists in the current scope');
+   }
+   else
+     ASSERT.call(this, false, errType + '; PARAMS='+errParams);
+};
+
 var declare = {};
 
 declare[VAR] = function(name) {
@@ -7974,10 +8138,8 @@ this.insertDecl = function(name, decl) {
          ) ||
          this !== func // or we are in a lexical scope, trying to override a let with a var or vice versa, 
        ) // then raise an error
-       ASSERT.call(this, false, 
-        'name "'+decl.name+'" is a "'+decl.type+
-        '" and can not override the "'+existingDecl.type+
-        '" that exists in the current scope');
+       this.err('exists.in.current',{
+           newDecl:decl, existingDecl:existingDecl});
   }
   if (this !== func) {
     this.insertDecl0(true, name, decl);
@@ -8001,7 +8163,7 @@ this.insertDecl0 = function(isOwn, name, decl) {
   if (isOwn)
     if (HAS.call(this.unresolvedNames, name)) {
       decl.refMode = this.unresolvedNames[name];
-      this.unresolvedNames[name] = null;
+      this.unresolvedNames[name] = null;SSERT
     }
     else decl.refMode = new RefMode();
 };

@@ -695,7 +695,8 @@ this.emitters['SimpleContainer'] = function(n) {
   this.fixupContainerLabels(n);  
 
   var containerStr = describeContainer(n);
-  this.write('<'+containerStr+'>');
+  var out = n.out(), loop = n.loop();
+  this.write('<'+containerStr+' out='+(out?out.min:'[none]')+' loop='+(loop?loop.min:'[none]')+'>');
   this.indent();
   var list = n.statements, e = 0;
   while (e < list.length) {

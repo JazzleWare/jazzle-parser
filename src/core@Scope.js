@@ -34,6 +34,20 @@ this.findRefInScope = function(name) {
             this.unresolvedNames[name] : null;
 };
 
+this.err = function(errType, errParams) {
+   if (errType === 'exists.in.current') {
+     var decl = errParams.newDecl,
+         existingDecl = errParams.existingDecl;
+
+     ASSERT.call(this, false, 
+        'name "'+decl.name+'" is a "'+decl.type+
+        '" and can not override the "'+existingDecl.type+
+        '" that exists in the current scope');
+   }
+   else
+     ASSERT.call(this, false, errType + '; PARAMS='+errParams);
+};
+
 var declare = {};
 
 declare[VAR] = function(name) {
@@ -68,10 +82,8 @@ this.insertDecl = function(name, decl) {
          ) ||
          this !== func // or we are in a lexical scope, trying to override a let with a var or vice versa, 
        ) // then raise an error
-       ASSERT.call(this, false, 
-        'name "'+decl.name+'" is a "'+decl.type+
-        '" and can not override the "'+existingDecl.type+
-        '" that exists in the current scope');
+       this.err('exists.in.current',{
+           newDecl:decl, existingDecl:existingDecl});
   }
   if (this !== func) {
     this.insertDecl0(true, name, decl);
@@ -95,7 +107,7 @@ this.insertDecl0 = function(isOwn, name, decl) {
   if (isOwn)
     if (HAS.call(this.unresolvedNames, name)) {
       decl.refMode = this.unresolvedNames[name];
-      this.unresolvedNames[name] = null;
+      this.unresolvedNames[name] = null;SSERT
     }
     else decl.refMode = new RefMode();
 };

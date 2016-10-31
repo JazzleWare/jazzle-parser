@@ -4,8 +4,7 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
-       if ( this.isInArgList ) 
-          this.addArg(id);
+       this.scope.parserDeclare(id);
  
        return id;
 
@@ -25,9 +24,7 @@ this. parseArrayPattern = function() {
       elem = null,
       list = [];
 
-  if ( this.isInArgList ) {
-     this.inComplexArgs = !false;
-  }
+  this.enterComplex();
 
   var y = 0;
 
@@ -80,9 +77,7 @@ this.parseObjectPattern  = function() {
     var name = null;
 
     var yObj = 0, yProp = 0;
-    if ( this.isInArgList ) {
-         this.inComplexArgs = !false;
-    }
+    this.enterComplex();
 
     LOOP:
     do {
@@ -143,6 +138,7 @@ this.parseObjectPattern  = function() {
     return n;
 };
 
+// this need not enter complex mode by itself, because the head has already been taken care of
 this .parseAssig = function (head) {
     this.next() ;
     var y = this.y;
@@ -151,7 +147,9 @@ this .parseAssig = function (head) {
            right: core(e), loc: { start: head.loc.start, end: e.loc.end }, y: y + this.y };
 };
 
-
+// this need not enter complex mode by itself too, because can occur in either an obj- or an arr-pattern,
+// which are themselves already complex, or it can directly be a param, in which case the `this.enterComplexMode()` thing is called
+// on site.
 this.parseRestElement = function() {
    var startc = this.c-1-2,
        startLoc = this.locOn(1+2);
