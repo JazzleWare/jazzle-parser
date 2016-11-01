@@ -245,6 +245,9 @@ var Scope = function(parent, type) {
   this.scopeObjVar = null;
 
   this.tempStack = this.isFunc() ? [] : null;
+
+  if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
+    this.type = SCOPE_TYPE_LEXICAL_LOOP;    
 }
 
 Scope.createFunc = function(parent, decl, funcParams) {
@@ -863,6 +866,7 @@ function createObj(fromPrototype) {
      }).call([
 [Decl.prototype, [function(){
 this.funcDecl = function() { return this.scope === this.scope.funcScope; };
+
 this.needsScopeVar = function() {
    return this.type === LET &&
           this.scope.isLoop() &&
@@ -877,6 +881,11 @@ this.rename = function() {
    this.synthName = synthName;
    funcScope.insertDecl0(false, this.synthName, this);
 };
+
+this.isScopeObj = function() { 
+   return this === this.scope.scopeObjVar;
+};
+
 
 }]  ],
 [Emitter.prototype, [function(){
@@ -1651,7 +1660,7 @@ this.emitContainerStatement = function(n) {
 };
 
 function describeContainer(container) {
-   var out = container.out(), loop = container.loop();
+   var next = container.next();
    var str = "";
    if (container.isSimple()) {
      str = 'seg';
@@ -1659,13 +1668,13 @@ function describeContainer(container) {
        str += ':test';
 
      ASSERT.call(this, container.min === container.max);
-     str += ' ['+container.min+']'+' out='+(out?out.min:'[none]')+' loop='+(loop?loop.min:'[none]')+'>';
+     str += ' ['+container.min+']'+' next='+(next?next.min:'[none]');
      return str;
    }
    return 'container:' + container.type +
           ' [' + container.min + ' to ' + (container.max-1) + ']' +
           ' label=' + ( container.synthLabel ? container.synthLabel.synthName : '[none]' )+
-          ' out='+(out?out.min:'[none]')+' loop='+(loop?loop.min:'[none]')+'>';
+          ' next='+(next?next.min:'[none]');
 }
 
 function listLabels(container) {
@@ -1725,7 +1734,7 @@ this.emitters['SimpleContainer'] = function(n) {
   this.fixupContainerLabels(n);  
 
   var containerStr = describeContainer(n);
-  this.write('<'+containerStr);
+  this.write('<'+containerStr+ '>');
   this.indent();
   var list = n.statements, e = 0;
   while (e < list.length) {
@@ -6360,6 +6369,7 @@ this.setDeclModeByName = function(modeName) {
 };
 
 this.exitScope = function() {
+  this.scope.finish();
   this.scope = this.scope.parent;
   if (this.scope.synth)
     this.scope = this.scope.parent;
@@ -7723,20 +7733,15 @@ this.exitScope = function() {
   this.partitions.push(FINISH_BLOCK);
 };
 
-this.out = function() {   
+this.next = function() {   
   if ( this.owner === null ) return null;
   if ( this.idx < this.owner.partitions.length - 1 )
     return this.owner.partitions[this.idx+1];
+  
+  if ( this.owner.isLoop() )
+    return this.owner.partitions[0];
 
-  return this.owner.out();
-};
-
-this.loop = function() {
-  if ( this.owner === null ) return null;
-  if ( this.idx < this.owner.partitions.length - 1 )
-    return this.owner.partitions[this.idx+1];
-
-  return this.owner.partitions[0];
+  return this.owner.next();
 };
 
 this.addLabel = function(name, labelRef) {
@@ -7809,13 +7814,6 @@ this.isLoop = function() {
    }
 };
 
-this.addSynthContinueLoopPartition = function() {
-   ASSERT.call(this, this.isLoop());
-   var continuePartition = new Partitioner(this, null);
-   this.partitions.push(continuePartition);
-   this.max++;
-};
-    
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
    var container = new Partitioner(this, n);
@@ -7893,7 +7891,6 @@ pushList['WhileStatement'] = function(n) {
    container.test = test_seg;
    container.push(n.body);
    container.removeContainerLabel();
-   container.addSynthContinueLoopPartition();
 
    this.partitions.push(container);
    this.max = container.max;

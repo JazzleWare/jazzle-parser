@@ -115,20 +115,15 @@ this.exitScope = function() {
   this.partitions.push(FINISH_BLOCK);
 };
 
-this.out = function() {   
+this.next = function() {   
   if ( this.owner === null ) return null;
   if ( this.idx < this.owner.partitions.length - 1 )
     return this.owner.partitions[this.idx+1];
+  
+  if ( this.owner.isLoop() )
+    return this.owner.partitions[0];
 
-  return this.owner.out();
-};
-
-this.loop = function() {
-  if ( this.owner === null ) return null;
-  if ( this.idx < this.owner.partitions.length - 1 )
-    return this.owner.partitions[this.idx+1];
-
-  return this.owner.partitions[0];
+  return this.owner.next();
 };
 
 this.addLabel = function(name, labelRef) {
@@ -201,13 +196,6 @@ this.isLoop = function() {
    }
 };
 
-this.addSynthContinueLoopPartition = function() {
-   ASSERT.call(this, this.isLoop());
-   var continuePartition = new Partitioner(this, null);
-   this.partitions.push(continuePartition);
-   this.max++;
-};
-    
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
    var container = new Partitioner(this, n);
@@ -285,7 +273,6 @@ pushList['WhileStatement'] = function(n) {
    container.test = test_seg;
    container.push(n.body);
    container.removeContainerLabel();
-   container.addSynthContinueLoopPartition();
 
    this.partitions.push(container);
    this.max = container.max;

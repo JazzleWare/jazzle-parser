@@ -12,6 +12,7 @@ this.setDeclModeByName = function(modeName) {
 };
 
 this.exitScope = function() {
+  this.scope.finish();
   this.scope = this.scope.parent;
   if (this.scope.synth)
     this.scope = this.scope.parent;

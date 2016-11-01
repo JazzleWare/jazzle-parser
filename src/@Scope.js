@@ -16,6 +16,9 @@ var Scope = function(parent, type) {
   this.scopeObjVar = null;
 
   this.tempStack = this.isFunc() ? [] : null;
+
+  if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
+    this.type = SCOPE_TYPE_LEXICAL_LOOP;    
 }
 
 Scope.createFunc = function(parent, decl, funcParams) {

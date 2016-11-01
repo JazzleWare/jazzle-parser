@@ -1,4 +1,5 @@
 this.funcDecl = function() { return this.scope === this.scope.funcScope; };
+
 this.needsScopeVar = function() {
    return this.type === LET &&
           this.scope.isLoop() &&
@@ -13,3 +14,8 @@ this.rename = function() {
    this.synthName = synthName;
    funcScope.insertDecl0(false, this.synthName, this);
 };
+
+this.isScopeObj = function() { 
+   return this === this.scope.scopeObjVar;
+};
+
