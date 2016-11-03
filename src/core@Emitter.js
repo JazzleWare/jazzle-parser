@@ -1,19 +1,22 @@
-this.write = function(line) {
+this.write = function(lexeme) {
    if ( this.wrap ) {
        var lineLengthIncludingIndentation = 
           this.currentLineLengthIncludingIndentation +
-          line.length;
+          lexeme.length;
        
        if ( this.maxLineLength &&
             lineLengthIncludingIndentation > this.maxLineLength )
          this.indentForWrap();
 
-       this.currentLineLengthIncludingIndentation += line.length; 
+       this.currentLineLengthIncludingIndentation += lexeme.length; 
    } 
+   else this.wrap = true;
 
-   this.code += line;
+   this.code += lexeme;
 
 };
+
+this.space = function() { this.code += ' '; };
 
 this.enterSynth = function() {
    this.synthStack.push(this.synth);
@@ -21,7 +24,7 @@ this.enterSynth = function() {
 };
 
 this.exitSynth = function() {
-   this.assert(this.synthStack.length>=1);
+   ASSERT.call(this, this.synthStack.length>=1);
    this.synth = this.pop(); 
 };
 
@@ -35,7 +38,7 @@ this.indent = function() {
 };
 
 this.unindent = function() {
-   this.assert(this.currentIndentLevel > 0);
+   ASSERT.call(this, this.currentIndentLevel > 0);
    this.currentIndentStr = this.indentStrCache[--this.currentIndentLevel];
    this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
 };
@@ -61,13 +64,6 @@ this.indentForWrap = function() {
    this.code += '\n' + wrapIndenter ;
 
 };
-
-this.assert = function(cond, message) {
-  if (!cond) throw new Error(message);
-
-};
-
-var has = Object.hasOwnProperty;
 
 function isLoop(n) {
    var t = n.type;
@@ -103,7 +99,7 @@ this.emit = function(n, prec, flags) {
   if (arguments.length < 2) prec = PREC_WITH_NO_OP;
   if (arguments.length < 3) flags = 0;
 
-  this.assert(has.call(this.emitters, n.type),
+  ASSERT.call(this, HAS.call(this.emitters, n.type),
       'No emitter for ' + n.type );
   var emitter = this.emitters[n.type];
   var r = emitter.call(this, n, prec, flags);
@@ -123,21 +119,5 @@ this.endCode = function() {
   var c = this.code;
   this.code = this.codeStack.pop();
   return c;
-};
-
-this.disallowWrap = function() {
-   this.wrapStack.push(this.wrap);
-   this.wrap = false;
-};
-
-this.restoreWrap = function() {
-   this.wrap = this.wrapStack.pop();
-
-};
-
-this.writeMulti = function() {
-  var e = 0;
-  while (e < arguments.length) 
-    this.write(arguments[e++]);
 };
 

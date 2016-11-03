@@ -10,6 +10,9 @@ function Partitioner(owner, details) {
    this.abt = null;
    this.ebt = null;
 
+   this.mainContainer = null;
+   this.hasFinally = false;
+
    if (this.owner === null) {
      this.emitter = details;
      this.details = null;
@@ -22,9 +25,8 @@ function Partitioner(owner, details) {
    }
      
    if (owner !== null && details === null) {
-     this.partitions = null;
      this.type = 'SimpleContainer';
-     this.statements = [];
+     this.statements = this.partitions = [];
 
      this.ect = this.owner.ect;
      this.act = this.owner.act;
@@ -90,4 +92,11 @@ function Partitioner(owner, details) {
        this.abt = this.act = this;
        break;
    }      
-}   
+
+   if (this.owner === null) // main container
+     this.mainContainer = this;
+
+   else
+     this.mainContainer = this.owner.mainContainer;
+}
+

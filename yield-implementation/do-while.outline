@@ -1,0 +1,22 @@
+do {
+  yield a
+} while ( yield b );
+
+<container:do-while a to l>
+   <seg a>yield a</seg>
+   <seg b>yield b</seg>
+   <seg:test e>sent</seg>
+   <loop l></loop>
+</container>
+
+if state <= l {
+  do {
+    if state == a { state = b; return a }
+    if state == b { state = e; return b }
+    if state == e {
+      if sent { state = l }
+      else { state = <break>; break }
+    }
+    if state == l { state = a } 
+  } while (true)
+}

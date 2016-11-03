@@ -32,6 +32,13 @@ this.current = function() { // TODO: substitute it with add_to_current_partition
    return n;
 };
 
+this.pushAll = function(a) {
+  var e = 0;
+  while (e < a.length) this.push(a[e++]);
+ 
+  return this;
+};
+
 this.isSimple = function() {
   return this.type === 'SimpleContainer';
 };
@@ -196,6 +203,24 @@ this.isLoop = function() {
    }
 };
 
+this.addSynthContinuePartition = function() {
+  ASSERT.call(this, this.isLoop());
+  this.partitions.push(new Partitioner(this, null));
+  this.max++;
+};
+
+this.isSynthContinuePartition = function() {
+
+  if ( this.owner !== null &&
+       this.owner.isLoop() &&
+       this.idx === this.owner.partitions.length ) {
+    ASSERT.call(this, this.partitions.length === 0);
+    return true;
+  }
+
+  return false;
+};
+
 pushList['BlockStatement'] = function(n) {
    var list = n.body, e = 0;
    var container = new Partitioner(this, n);
@@ -273,6 +298,7 @@ pushList['WhileStatement'] = function(n) {
    container.test = test_seg;
    container.push(n.body);
    container.removeContainerLabel();
+   container.addSynthContinuePartition();
 
    this.partitions.push(container);
    this.max = container.max;
@@ -338,7 +364,7 @@ pushList['TryStatement'] = function(n) {
    var container = new Partitioner(this, n);
 
    var tryContainer = new Partitioner(container, {type:'CustomContainer'});
-   tryContainer.push(n.block);
+   tryContainer.pushAll(n.block.body);
    container.block = tryContainer;
    container.partitions.push(tryContainer);
    container.max = tryContainer.max;
@@ -348,16 +374,16 @@ pushList['TryStatement'] = function(n) {
       if (n.handler.param.type !== 'Identifier') {
          var temp = synth_id_node(this.emitter.scope.allocateTemp());
          tryContainer.errorVar = temp;
-         catchContainer.push({
+         catchContainer.push( { type: 'ExpressionStatement', expression: {
             type: 'AssignmentExpression',
             y: y(n.handler.param),
             left: n.handler.param,
             right: temp
-         });
+         }, y: y(n.handler.param) } );
          this.emitter.scope.releaseTemp(temp.name);
          // n.handler.param = temp;
       }
-      catchContainer.push(n.handler.body);
+      catchContainer.pushAll(n.handler.body.body);
       container.handler = catchContainer;
       container.max = catchContainer.max; 
    }  
@@ -365,8 +391,9 @@ pushList['TryStatement'] = function(n) {
       n.handler = null;
 
    if (n.finalizer) {
+      this.mainContainer.hasFinally = true;
       var finallyContainer = new Partitioner(container, {type:'CustomContainer'});
-      finallyContainer.push(n.finalizer);
+      finallyContainer.pushAll(n.finalizer.body);
       container.finalizer = finallyContainer;
       container. partitions.push(finallyContainer);
       container.max = finallyContainer.max;

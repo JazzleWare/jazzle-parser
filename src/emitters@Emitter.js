@@ -244,7 +244,7 @@ this.emitters['ExpressionStatement'] = function(n) {
      );
    else {
      this.emit(n.expression, PREC_WITH_NO_OP, EMIT_STMT_HEAD);
-     this.code += ';';
+     this.write(';');
    }
 };
      
@@ -273,29 +273,27 @@ this.emitters['LabeledStatement'] = function(n) {
 this.emitters['BreakStatement'] = function(n) {
    this.write('break');
    if ( n.label !== null ) {
-     this.disallowWrap();
-     this.write(' ');
+     this.wrap = false;
+     this.space();
      this.emit(n.label);
-     this.restoreWrap();
    }
    else if (!this.inActualBreakTarget()) {
      this.write(' ['+this.currentContainer.ebt.synthLabel.synthName+']');
    }
-   this.code += ';';
+   this.write(';');
 };
 
 this.emitters['ContinueStatement'] = function(n) {
    this.write('continue');
    if ( n.label !== null ) {
-     this.disallowWrap();
-     this.write(' ');
+     this.wrap = false;
+     this.space();
      this.emit(n.label);
-     this.restoreWrap();
    }
    else if (!this.inActualContinueTarget()) {
      this.write(' ['+this.currentContainer.ect.synthLabel.synthName+']');
    }
-   this.code += ';';
+   this.write(';');
 };  
 
 this.emitters['EmptyStatement'] = function(n) {
@@ -316,9 +314,7 @@ this.emitters['BinaryExpression'] = function(n, prec, flags) {
    }
 
    this._emitNonSeqExpr(n.left, currentPrec, flags|EMIT_LEFT|EMIT_VAL);
-   this.disallowWrap();
    this.write(' ' + n.operator + ' ');
-   this.restoreWrap();
    this._emitNonSeqExpr(n.right, currentPrec, EMIT_VAL);
 
    if ( hasParen ) this.write(')');
@@ -341,7 +337,7 @@ this.emitters['SequenceStatement'] = function(n) {
   while (e < list.length) {
      if (e > 0) this.newlineIndent();
      this.emit(list[e++], PREC_WITH_NO_OP, EMIT_VAL);
-     this.code += ';';
+     this.write(';');
   }
 };
 
@@ -447,7 +443,7 @@ this.emitters['UpdateExpression'] = function(n) {
     if ( n.prefix ) { 
       if ( this.code.charAt(this.code.length-1) === 
            n.operator.charAt(0) )
-        this.write(' ');
+        this.space();
 
       this.write(n.operator);
     }
@@ -455,9 +451,8 @@ this.emitters['UpdateExpression'] = function(n) {
     this._emitNonComplexExpr(n.argument);
 
     if (!n.prefix) {
-      this.disallowWrap();
+      this.wrap = false;
       this.write(n.operator);
-      this.restoreWrap();
     }
 };
 
@@ -465,7 +460,7 @@ this.emitters['UnaryExpression'] = function(n, prec, flags) {
     var hasParen = prec > PREC_U;
     if (hasParen) this.write('(');
     if ( this.code.charAt(this.code.length-1) === n.operator)
-      this.write(' ');
+      this.space();
 
     this.write(n.operator);
     this.emit(n.argument, PREC_U, EMIT_VAL);
@@ -506,27 +501,16 @@ this._emitAssignment = function(assig, isStatement) {
 this.emitters['YieldExpression'] = function(n) {
   this.write('yield');
   if (n.argument !== null) {
-    this.disallowWrap();
-    this.write(' '); 
+    this.wrap = false;
+    this.space();
     this.emit(n.argument);
-    this.restoreWrap()
   }
 }; 
       
 this.emitters['NoExpression'] = function(n) { return; };
+
 this.emitters['SynthesizedExpr'] = function(n) {
   this.write(n.contents);
-};
-
-this.emitters['StartBlock'] = function(n) {
-   this.write('<B>');
-   this.indent();
-};
-
-this.emitters['FinishBlock'] = function(n) {
-   this.unindent();
-   this.newlineIndent();
-   this.write('</B>');
 };
 
 this._emitGenerator = function(n) {
@@ -655,6 +639,7 @@ this.emitters['MainContainer'] = function(n) {
   var cc = this.currentContainer;
   this.currentContainer = n;
   var containerStr = describeContainer(n);
+  if (n.hasFinally) containerStr += ' hasFinally';
   this.write( '<'+containerStr+'>' );
   this.indent();
   var list = n.partitions, e = 0;
@@ -693,7 +678,12 @@ this.emitters['WhileContainer'] = function(n) {
 };
 
 this.emitters['SimpleContainer'] = function(n) {
-  // TODO: won't work exactly with things like a: (yield) * (yield) ; it has no side-effects, but should be nevertheless corrected 
+  
+  this.emit(if_state_eq(n, n.max));
+  return;
+
+  // TODO: won't work exactly, even though it works correctly, with things like
+  // `a: (yield) * (yield)` ; it has no side-effects, but should be nevertheless corrected 
   this.fixupContainerLabels(n);  
 
   var containerStr = describeContainer(n);
@@ -733,24 +723,57 @@ this.emitters['BlockContainer'] = function(n) {
   this.fixupContainerLabels(n);
   var list = n.partitions, e = 0;
   this.write('{');
-  if (list.length > 0) {
-    this.indent();
-    while (e < list.length) {
-       this.newlineIndent();
-       this.emit(list[e++]);
-    }
-    this.unindent();
-    this.newlineIndent();
+  this.indent();
+  this.newlineIndent();
+  this.write(listLabels(n));
+  while (e < list.length) {
+     this.newlineIndent();
+     this.emit(list[e++]);
   }
+  this.unindent();
+  this.newlineIndent();
   this.write('}');
+};
+
+this.emitters['TryContainer'] = function(n) {
+  this.fixupContainerLabels(n);
+  var containerStr = describeContainer(n);
+  this.write('<'+containerStr+'>');
+  this.indent(); this.newlineIndent();
+     this.write('<main>');
+     this.indent();
+        this.emit(n.block);
+     this.unindent(); this.newlineIndent();
+     this.write('</main>');
+     if (n.handler) {
+       this.newlineIndent();
+       this.write('<catch>');
+       this.indent();
+          this.emit(n.handler);
+       this.unindent();this.newlineIndent();
+       this.write('</catch>');
+     }
+     if (n.finalizer) {
+       this.newlineIndent();
+       this.write('<finally>');
+       this.indent();
+          this.emit(n.finalizer);
+       this.unindent(); this.newlineIndent();
+       this.write('</finally>');
+     }
+  this.unindent(); this.newlineIndent();
+  this.write('</'+containerStr+'>');
 };
   
 this.emitters['SwitchContainer'] = function(n) {
+  this.fixupContainerLabels(n);
   var containerStr = describeContainer(n);
   this.write('<'+containerStr+'>');
   var cc = this.currentContainer;
   this.currentContainer = n;
   this.indent();
+  this.newlineIndent();
+  this.write(listLabels(n));
   var list = n.partitions, e = 0;
   while (e < list.length) {
     this.newlineIndent(); 
@@ -760,5 +783,13 @@ this.emitters['SwitchContainer'] = function(n) {
   this.currentContainer = cc;
   this.newlineIndent();
   this.write('</'+containerStr+'>');
+};
+
+this.emitters['CustomContainer'] = function(n) {
+  var list = n.partitions, e = 0;
+  while (e < list.length) {
+    this.newlineIndent();
+    this.emit(list[e++]);
+  }
 };
 

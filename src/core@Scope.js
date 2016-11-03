@@ -186,8 +186,7 @@ this.allocateTemp = function() {
   if (this.tempStack.length) 
     temp = this.tempStack.pop();
   else {
-    temp = this.funcScope.newSynthName('temp');
-    this.funcScope.declare(temp, VAR);
+    temp = this.funcScope.declSynth('temp');
   }
   return temp;
 };
@@ -196,6 +195,13 @@ this.releaseTemp = function(tempName) {
   this.tempStack.push(tempName);
 };
  
+this.declSynth = function(name) {
+  ASSERT.call(this, this.isFunc());
+  var synthName = this.newSynthName(name);
+  this.declare(synthName, VAR);
+  return synthName;
+};
+
 this.isLoop = function() { return this.type === SCOPE_TYPE_LEXICAL_LOOP; };
 this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
 this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
