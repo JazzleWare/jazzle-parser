@@ -15,8 +15,8 @@ function runTestSuite(testRoot, Parser) {
 
   fs.readFileSync('.ignore').toString().split('\n').forEach( function(item){
      if (item) {
-       testSuite.exclude(item+'.js', 'ignore-js');
-       testSuite.exclude(item+'.source.js', 'ignore-source.js');
+       testSuite.exclude(item+'.js', 'ignore-.js');
+       testSuite.exclude(item+'.source.js', 'ignore-.source.js');
      }
   });
 

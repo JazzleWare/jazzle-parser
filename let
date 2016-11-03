@@ -1,0 +1,21 @@
+while (false) {
+  l--;
+  let l = 0;
+}
+
+while (false) {
+  errTZ('l'), l.v--;
+  scope.l = { v: 0 };
+}
+
+while (false) {
+  (function() { l--; })();
+  let l = 0;
+}
+
+while (false) {
+  scope.invalidate();
+  (function() { scope.l.tz().v--; })(); // this one is working because it's not used out of while, or else it should have been wrapped in '(funcuion() { <closure let-vars>; return <function> })() 
+  scope.def('l', 0);
+}
+

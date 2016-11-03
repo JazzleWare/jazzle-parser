@@ -165,18 +165,16 @@ JazzleTestSuite.prototype.summary = function() {
 
 JazzleTestSuite.prototype.str = function() {
    var s = this.summary(), str = "";
-   str += "PASS MODE:\n" + 
-          "TOTAL COUNT:\t" + s.pass + "(" +
+   str += "PASS MODE: " + s.pass + "(" +
           (s.skipPass) + " skipped; remaining: " +
           (s.pass - s.skipPass ) + "); " +
           (s.passAsExpected) + "/" + (s.pass-s.skipPass) + " as expected (" + s.incompatiblePass + " incompatible.)";
    str += "\n";
-   str += "FAIL MODE:\n" + 
-          "TOTAL COUNT:\t" + s.fail + "(" +
+   str += "FAIL MODE: " + s.fail + "(" +
           (s.skipFail) + " skipped; remaining: " +
           (s.fail - s.skipFail ) + "); " +
           (s.failAsExpected) + "/" + (s.fail-s.skipFail) + " as expected (" + s.incompatibleFail + " incompatible.)";
-   str += "\nSKIP STATS:\ncoverage\t\tname\n-----\t\t-----\n";
+   str += "\n\nSKIP STATS:\ncoverage\tname\n--------\t----\n";
    var list = this.excludeList, e = 0;
    while (e < list.length) {
       var elem = list[e];
