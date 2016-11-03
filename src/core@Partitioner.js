@@ -43,6 +43,13 @@ this.isSimple = function() {
   return this.type === 'SimpleContainer';
 };
 
+// TODO: do it just once in the constructor
+this.addErrorGuard = function() {
+  var next = this.next();
+  if (next)
+    this.partitions = [set_state(-next.min)].concat(this.partitions);
+};
+
 this.addStmt = function(n) {
   this.scanStmt(n);
   this.statements.push(n);
@@ -203,6 +210,16 @@ this.isLoop = function() {
    }
 };
 
+this.isTest = function() {
+   return this.owner &&
+          this === this.owner.test;
+};
+
+this.isLoopTestSeg = function() {
+  return this.isTest() &&
+         this.owner.isLoop();
+};
+
 this.addSynthContinuePartition = function() {
   ASSERT.call(this, this.isLoop());
   this.partitions.push(new Partitioner(this, null));
@@ -219,6 +236,11 @@ this.isSynthContinuePartition = function() {
   }
 
   return false;
+};
+
+this.isIfTestSeg = function() {
+  return this.isTest() &&
+         this.owner.type === 'IfContainer';
 };
 
 pushList['BlockStatement'] = function(n) {
@@ -313,13 +335,15 @@ pushList['IfStatement'] = function(n) {
    test_seg.addStmt(test);
    container.close_current_active_partition();
    container.test = test_seg;
-   container.push(n.consequent);
+   var consequentContainer = new Partitioner(container, { type: 'CustomContainer' } );
+   consequentContainer.push(n.consequent);
+   container.consequent = consequentContainer;
+   container.max = consequentContainer.max;
    if (n.alternate !== null) {
        container.close_current_active_partition();
-       var elseContainer = new Partitioner(container, { type: 'ElseClause' }); // TODO: eliminate { type: 'BlockStatement' }
+       var elseContainer = new Partitioner(container, { type: 'CustomContainer' }); // TODO: eliminate { type: 'BlockStatement' }
        elseContainer.push(n.alternate);
        container.alternate = elseContainer;
-       container.partitions.push(elseContainer);
        container.max = elseContainer.max;
    }
    this.partitions.push(container);

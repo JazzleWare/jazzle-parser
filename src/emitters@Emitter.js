@@ -25,8 +25,10 @@ this._emitBody = function(blockOrExpr) {
     this.emit(blockOrExpr);
     this.unindent();
   }
-  else
+  else {
+    this.space();
     this.emit(blockOrExpr);
+  }
 };
 
 this._paren = function(n) {
@@ -523,6 +525,7 @@ this._emitGenerator = function(n) {
   this.newlineIndent();
   this.emit( new Partitioner(null, this).push(n.body) );
   this.unindent();
+  this.newlineIndent();
   this.write('}');
   this.labels = labels;
 };
@@ -654,7 +657,36 @@ this.emitters['MainContainer'] = function(n) {
   this.currentContainer = cc;
 };
  
-this.emitters['IfContainer'] =
+this.emitters['IfContainer'] = function(n) {
+  this.fixupContainerLabels(n);
+  var cc = this.currentContainer;
+  this.currentContainer = n;
+
+  var containerStr = describeContainer(n);
+  this.write('<'+containerStr+'>');
+  this.indent();
+  this.newlineIndent();
+  this.emit(n.test);
+
+  this.newlineIndent();
+  this.write('<consequent>');
+  this.indent();
+     this.emit(n.consequent);
+  this.unindent(); this.newlineIndent();
+  this.write('</consequent>');
+ 
+  if ( n.alternate ) {
+    this.newlineIndent();
+    this.write('<alternate>');
+    this.indent();
+      this.emit(n.alternate);
+    this.unindent(); this.newlineIndent();
+    this.write('</alternate>');
+  }
+  this.unindent();  this.newlineIndent();
+  this.write('</'+containerStr+'>');
+};
+
 this.emitters['WhileContainer'] = function(n) {
   this.fixupContainerLabels(n);
   var cc = this.currentContainer;
@@ -678,26 +710,23 @@ this.emitters['WhileContainer'] = function(n) {
 };
 
 this.emitters['SimpleContainer'] = function(n) {
-  
-  this.emit(if_state_eq(n, n.max));
-  return;
-
   // TODO: won't work exactly, even though it works correctly, with things like
   // `a: (yield) * (yield)` ; it has no side-effects, but should be nevertheless corrected 
   this.fixupContainerLabels(n);  
+  
 
-  var containerStr = describeContainer(n);
-  this.write('<'+containerStr+ '>');
-  this.indent();
-  var list = n.statements, e = 0;
-  while (e < list.length) {
-     this.newlineIndent();
-     this.emitContainerStatement(list[e]);
-     e++ ;
-  }
-  this.unindent();
-  this.newlineIndent();
-  this.write('</'+containerStr+'>');
+  var state = n.min, b = null;
+  if (n.isIfTestSeg())
+    b = [toIfTest(n)];
+  else if (n.isLoopTestSeg())
+    b = [toLoopTest(n)];
+  else
+    b = n.partitions;
+
+  if (!n.isSynthContinuePartition())
+    b = withErrorGuard(b, n);
+
+  return this.emit(if_state_eq(b, state));
 }; 
  
 this.emitters['LabeledContainer'] = function(n) {

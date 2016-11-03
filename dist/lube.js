@@ -451,12 +451,13 @@ var DECL_MODE_VAR = 1,
     DECL_MODE_FUNCTION_PARAMS = 4;
 
 ;
-function if_state_geq(n, v) { return if_state.call(n, '>=', v); }
-function if_state_lt(n, v) { return if_state.call(n, '<', v); }
-function if_state_leq(n, v) { return if_state.call(n, '<=', v); }
-function if_state_gt(n, v) { return if_state.call(n, '>', v); }
-function if_state_eq(n, v) { return if_state.call(n, '===', v); }
-function if_state(o, state) {
+function if_state_geq(n, v) { return if_state(n, '>=', v); }
+function if_state_lt(n, v) { return if_state(n, '<', v); }
+function if_state_leq(n, v) { return if_state(n, '<=', v); }
+function if_state_gt(n, v) { return if_state(n, '>', v); }
+function if_state_eq(n, v) { return if_state(n, '===', v); }
+
+function if_state(b, o, state) {
   return {
     type: 'IfStatement', 
     test: {
@@ -464,7 +465,7 @@ function if_state(o, state) {
      right: { type: 'Literal', value: state },
      left: { type: 'Identifier', name: 'state' },
      operator: o, y: 0
-    }, consequent: toBody(this.partitions), alternate: null, y: 0
+    }, consequent: toBody(b), alternate: null, y: 0
   }; 
 }
 
@@ -473,14 +474,14 @@ var TRUE = { type: 'Literal', value: true };
 function do_while_nocond(n) {
   return {
     type: 'DoWhileStatement',
-    test: TRUE, body: toBody(n.partitions), y: 0
+    test: TRUE, body: toBody(b), y: 0
   };
 }
 
 function while_nocond(n) {
   return {
     type: 'WhileStatement', y: 0,
-    test: TRUE, body: toBody(n.partitions)
+    test: TRUE, body: toBody(b)
   };
 }
 
@@ -496,6 +497,33 @@ function set_state(v) {
     }, y: 0
   };
 }
+
+function withErrorGuard(b, n) {
+  var next = n.next();
+  if (next)
+    return [set_state(-next.min)].concat(b);
+
+  return b;
+}
+
+function toIfTest(n) {
+  var cond = n.partitions[0];
+  var a = null, c = [set_state(n.owner.consequent.min)];
+
+  if (n.owner.alternate)
+    a = [set_state(n.owner.alternate.min)];
+  else {
+    var next = n.owner.next();
+    a = [set_state(next?next.min:-1)];
+  }
+  return synth_if_node(cond,c,a,0,0);
+}
+
+function toLoopTest(n) {
+  return synth_if_node(
+     n.partitions[0], [set_state(n.next().min)], [{ type: 'BreakStatement', label: null }], 0, 0);
+}
+ 
 ;
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
 function isIDHead(c) {
@@ -1040,14 +1068,16 @@ this.emit = function(n, prec, flags) {
   if ( !n )
     return;
 
-  var cc = null, loop = isLoop(n);
+  var abt = null, act = null, loop = isLoop(n);
   if (this.currentContainer) {
     if (loop) {
-      cc = this.currentContainer;
-      this.currentContainer = null;
+      abt = this.currentContainer.abt;
+      this.currentContainer.abt = this.currentContainer.ebt;
+      act = this.currentContainer.act;
+      this.currentContainer.act = this.currentContainer.ect;
     }
     else if (n.type === 'SwitchStatement') {
-      cc = this.currentContainer.abt;
+      abt = this.currentContainer.abt;
       this.currentContainer.abt = this.currentContainer.ebt;
     }
   }
@@ -1059,9 +1089,13 @@ this.emit = function(n, prec, flags) {
   var emitter = this.emitters[n.type];
   var r = emitter.call(this, n, prec, flags);
   
-  if (cc) {
-    if (loop) this.currentContainer = cc;
-    else this.currentContainer.abt = cc;
+  if (this.currentContainer) {
+    if (loop) {
+      this.currentContainer.abt = abt;
+      this.currentContainer.act = act;
+    }
+    else if (n.type === 'SwitchStatement')
+      this.currentContainer.abt = abt;
   }
 };
 
@@ -1106,8 +1140,10 @@ this._emitBody = function(blockOrExpr) {
     this.emit(blockOrExpr);
     this.unindent();
   }
-  else
+  else {
+    this.space();
     this.emit(blockOrExpr);
+  }
 };
 
 this._paren = function(n) {
@@ -1604,6 +1640,7 @@ this._emitGenerator = function(n) {
   this.newlineIndent();
   this.emit( new Partitioner(null, this).push(n.body) );
   this.unindent();
+  this.newlineIndent();
   this.write('}');
   this.labels = labels;
 };
@@ -1735,7 +1772,36 @@ this.emitters['MainContainer'] = function(n) {
   this.currentContainer = cc;
 };
  
-this.emitters['IfContainer'] =
+this.emitters['IfContainer'] = function(n) {
+  this.fixupContainerLabels(n);
+  var cc = this.currentContainer;
+  this.currentContainer = n;
+
+  var containerStr = describeContainer(n);
+  this.write('<'+containerStr+'>');
+  this.indent();
+  this.newlineIndent();
+  this.emit(n.test);
+
+  this.newlineIndent();
+  this.write('<consequent>');
+  this.indent();
+     this.emit(n.consequent);
+  this.unindent(); this.newlineIndent();
+  this.write('</consequent>');
+ 
+  if ( n.alternate ) {
+    this.newlineIndent();
+    this.write('<alternate>');
+    this.indent();
+      this.emit(n.alternate);
+    this.unindent(); this.newlineIndent();
+    this.write('</alternate>');
+  }
+  this.unindent();  this.newlineIndent();
+  this.write('</'+containerStr+'>');
+};
+
 this.emitters['WhileContainer'] = function(n) {
   this.fixupContainerLabels(n);
   var cc = this.currentContainer;
@@ -1759,26 +1825,23 @@ this.emitters['WhileContainer'] = function(n) {
 };
 
 this.emitters['SimpleContainer'] = function(n) {
-  
-  this.emit(if_state_eq(n, n.max));
-  return;
-
   // TODO: won't work exactly, even though it works correctly, with things like
   // `a: (yield) * (yield)` ; it has no side-effects, but should be nevertheless corrected 
   this.fixupContainerLabels(n);  
+  
 
-  var containerStr = describeContainer(n);
-  this.write('<'+containerStr+ '>');
-  this.indent();
-  var list = n.statements, e = 0;
-  while (e < list.length) {
-     this.newlineIndent();
-     this.emitContainerStatement(list[e]);
-     e++ ;
-  }
-  this.unindent();
-  this.newlineIndent();
-  this.write('</'+containerStr+'>');
+  var state = n.min, b = null;
+  if (n.isIfTestSeg())
+    b = [toIfTest(n)];
+  else if (n.isLoopTestSeg())
+    b = [toLoopTest(n)];
+  else
+    b = n.partitions;
+
+  if (!n.isSynthContinuePartition())
+    b = withErrorGuard(b, n);
+
+  return this.emit(if_state_eq(b, state));
 }; 
  
 this.emitters['LabeledContainer'] = function(n) {
@@ -7736,6 +7799,13 @@ this.isSimple = function() {
   return this.type === 'SimpleContainer';
 };
 
+// TODO: do it just once in the constructor
+this.addErrorGuard = function() {
+  var next = this.next();
+  if (next)
+    this.partitions = [set_state(-next.min)].concat(this.partitions);
+};
+
 this.addStmt = function(n) {
   this.scanStmt(n);
   this.statements.push(n);
@@ -7896,6 +7966,16 @@ this.isLoop = function() {
    }
 };
 
+this.isTest = function() {
+   return this.owner &&
+          this === this.owner.test;
+};
+
+this.isLoopTestSeg = function() {
+  return this.isTest() &&
+         this.owner.isLoop();
+};
+
 this.addSynthContinuePartition = function() {
   ASSERT.call(this, this.isLoop());
   this.partitions.push(new Partitioner(this, null));
@@ -7912,6 +7992,11 @@ this.isSynthContinuePartition = function() {
   }
 
   return false;
+};
+
+this.isIfTestSeg = function() {
+  return this.isTest() &&
+         this.owner.type === 'IfContainer';
 };
 
 pushList['BlockStatement'] = function(n) {
@@ -8006,13 +8091,15 @@ pushList['IfStatement'] = function(n) {
    test_seg.addStmt(test);
    container.close_current_active_partition();
    container.test = test_seg;
-   container.push(n.consequent);
+   var consequentContainer = new Partitioner(container, { type: 'CustomContainer' } );
+   consequentContainer.push(n.consequent);
+   container.consequent = consequentContainer;
+   container.max = consequentContainer.max;
    if (n.alternate !== null) {
        container.close_current_active_partition();
-       var elseContainer = new Partitioner(container, { type: 'ElseClause' }); // TODO: eliminate { type: 'BlockStatement' }
+       var elseContainer = new Partitioner(container, { type: 'CustomContainer' }); // TODO: eliminate { type: 'BlockStatement' }
        elseContainer.push(n.alternate);
        container.alternate = elseContainer;
-       container.partitions.push(elseContainer);
        container.max = elseContainer.max;
    }
    this.partitions.push(container);

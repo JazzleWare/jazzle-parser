@@ -85,14 +85,16 @@ this.emit = function(n, prec, flags) {
   if ( !n )
     return;
 
-  var cc = null, loop = isLoop(n);
+  var abt = null, act = null, loop = isLoop(n);
   if (this.currentContainer) {
     if (loop) {
-      cc = this.currentContainer;
-      this.currentContainer = null;
+      abt = this.currentContainer.abt;
+      this.currentContainer.abt = this.currentContainer.ebt;
+      act = this.currentContainer.act;
+      this.currentContainer.act = this.currentContainer.ect;
     }
     else if (n.type === 'SwitchStatement') {
-      cc = this.currentContainer.abt;
+      abt = this.currentContainer.abt;
       this.currentContainer.abt = this.currentContainer.ebt;
     }
   }
@@ -104,9 +106,13 @@ this.emit = function(n, prec, flags) {
   var emitter = this.emitters[n.type];
   var r = emitter.call(this, n, prec, flags);
   
-  if (cc) {
-    if (loop) this.currentContainer = cc;
-    else this.currentContainer.abt = cc;
+  if (this.currentContainer) {
+    if (loop) {
+      this.currentContainer.abt = abt;
+      this.currentContainer.act = act;
+    }
+    else if (n.type === 'SwitchStatement')
+      this.currentContainer.abt = abt;
   }
 };
 
