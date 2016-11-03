@@ -26,3 +26,5 @@ partitionYield
 yield-containers
 all-errors.list
 let
+yield*/*
+
