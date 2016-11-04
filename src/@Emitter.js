@@ -17,6 +17,7 @@ function Emitter(indenter) {
    this.labelNames = {};
    this.unresolvedLabel = null;
    this.currentContainer = null;
+   this.block_stack = [];
 }
 
 Emitter.prototype.emitters = {};

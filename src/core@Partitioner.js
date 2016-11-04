@@ -43,6 +43,13 @@ this.isSimple = function() {
   return this.type === 'SimpleContainer';
 };
 
+this.hasMany = function() {
+  return !this.isSimple() &&
+         this.type !== 'IfContainer' &&
+         !this.isLoop() &&
+         this.partitions.length > 1;
+};
+
 // TODO: do it just once in the constructor
 this.addErrorGuard = function() {
   var next = this.next();

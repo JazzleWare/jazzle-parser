@@ -170,3 +170,8 @@ var DECL_MODE_VAR = 1,
     DECL_MODE_NONE = 0,
     DECL_MODE_FUNCTION_PARAMS = 4;
 
+var IF_BLOCK = 1,
+    WHILE_BLOCK = 2,
+    SIMPLE_BLOCK = 0,
+    DO_BLOCK = 4;
+

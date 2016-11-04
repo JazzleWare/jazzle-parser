@@ -609,6 +609,21 @@ this.emitContainerStatement = function(n) {
   }
 };
 
+this.writeLabels = function(n) {
+  var label = n.label;
+  if (label === null)
+    return false;
+  
+  label = label.head;
+
+  while (label !== null) {
+    this.write(label.name+': ');
+    label = label.next;
+  }
+
+  return true;
+};
+
 function describeContainer(container) {
    var next = container.next();
    var str = "";
@@ -662,29 +677,56 @@ this.emitters['IfContainer'] = function(n) {
   var cc = this.currentContainer;
   this.currentContainer = n;
 
-  var containerStr = describeContainer(n);
-  this.write('<'+containerStr+'>');
-  this.indent();
-  this.newlineIndent();
-  this.emit(n.test);
+  if (this.writeLabels(n))
+    this.newlineIndent();
 
+  this.if_state_leq(n.max-1);
+  this.write(' // main if');
+  var list = n.partitions, e = 0;
+  while (true) {
+    var current = list[e++];
+    if (current === n.test) 
+      break;
+    this.newlineIndent();
+    this.emit(current);
+  }
   this.newlineIndent();
-  this.write('<consequent>');
-  this.indent();
+  this.if_state_eq(n.test.min);
+    this.newlineIndent();
+    this.write('if (');
+    this.emit(n.test.partitions[0]);
+    this.write(') /* test */');
+    var next = n.consequent;
+    this.set_state(next.min);
+    this.newlineIndent();
+    this.write('else ');
+    next = n.alternate || n.next(); 
+    this.set_state(next?next.min:-12);
+  this.end_block();
+    
+  this.newlineIndent();
+  if (n.consequent.hasMany()) this.if_state_leq(n.consequent.max-1);
+     this.write(' // consequent');
+     this.newlineIndent();
      this.emit(n.consequent);
-  this.unindent(); this.newlineIndent();
-  this.write('</consequent>');
- 
+  if (n.hasMany()) this.end_block();
+  
   if ( n.alternate ) {
     this.newlineIndent();
-    this.write('<alternate>');
-    this.indent();
-      this.emit(n.alternate);
-    this.unindent(); this.newlineIndent();
-    this.write('</alternate>');
+    this.write('else ');
+    if (n.alternate.hasMany()) {
+      this.write('{');
+      this.indent();
+      this.newlineIndent();
+    }
+    this.emit(n.alternate);
+    if (n.alternate.hasMany()) {
+      this.unindent(); 
+      this.newlineIndent();
+      this.write('}');
+    }
   }
-  this.unindent();  this.newlineIndent();
-  this.write('</'+containerStr+'>');
+  this.end_block();
 };
 
 this.emitters['WhileContainer'] = function(n) {
@@ -709,24 +751,18 @@ this.emitters['WhileContainer'] = function(n) {
   this.currentContainer = cc;
 };
 
+// TODO: pack non-test, non-synth SimpleContainers together in a switch (if fit)
 this.emitters['SimpleContainer'] = function(n) {
   // TODO: won't work exactly, even though it works correctly, with things like
   // `a: (yield) * (yield)` ; it has no side-effects, but should be nevertheless corrected 
   this.fixupContainerLabels(n);  
   
-
-  var state = n.min, b = null;
-  if (n.isIfTestSeg())
-    b = [toIfTest(n)];
-  else if (n.isLoopTestSeg())
-    b = [toLoopTest(n)];
-  else
-    b = n.partitions;
-
-  if (!n.isSynthContinuePartition())
-    b = withErrorGuard(b, n);
-
-  return this.emit(if_state_eq(b, state));
+  this.if_state_eq(n.min);
+  this.newlineIndent();
+  var next = n.next();
+  this.set_state(next?-next.min:-12);
+  this._emitBlock(n.partitions); 
+  this.end_block();
 }; 
  
 this.emitters['LabeledContainer'] = function(n) {
@@ -817,7 +853,7 @@ this.emitters['SwitchContainer'] = function(n) {
 this.emitters['CustomContainer'] = function(n) {
   var list = n.partitions, e = 0;
   while (e < list.length) {
-    this.newlineIndent();
+    if (e>0) this.newlineIndent();
     this.emit(list[e++]);
   }
 };

@@ -29,6 +29,7 @@ function Emitter(indenter) {
    this.labelNames = {};
    this.unresolvedLabel = null;
    this.currentContainer = null;
+   this.block_stack = [];
 }
 
 Emitter.prototype.emitters = {};
@@ -450,80 +451,11 @@ var DECL_MODE_VAR = 1,
     DECL_MODE_NONE = 0,
     DECL_MODE_FUNCTION_PARAMS = 4;
 
-;
-function if_state_geq(n, v) { return if_state(n, '>=', v); }
-function if_state_lt(n, v) { return if_state(n, '<', v); }
-function if_state_leq(n, v) { return if_state(n, '<=', v); }
-function if_state_gt(n, v) { return if_state(n, '>', v); }
-function if_state_eq(n, v) { return if_state(n, '===', v); }
+var IF_BLOCK = 1,
+    WHILE_BLOCK = 2,
+    SIMPLE_BLOCK = 0,
+    DO_BLOCK = 4;
 
-function if_state(b, o, state) {
-  return {
-    type: 'IfStatement', 
-    test: {
-     type: 'BinaryExpression',
-     right: { type: 'Literal', value: state },
-     left: { type: 'Identifier', name: 'state' },
-     operator: o, y: 0
-    }, consequent: toBody(b), alternate: null, y: 0
-  }; 
-}
-
-var TRUE = { type: 'Literal', value: true };
-
-function do_while_nocond(n) {
-  return {
-    type: 'DoWhileStatement',
-    test: TRUE, body: toBody(b), y: 0
-  };
-}
-
-function while_nocond(n) {
-  return {
-    type: 'WhileStatement', y: 0,
-    test: TRUE, body: toBody(b)
-  };
-}
-
-function set_state(v) { 
-  return {
-    type: 'ExpressionStatement',
-    expression: {
-     type: 'AssignmentExpression',
-     right: { type: 'Literal', value: v },
-     left: { type: 'Identifier', name: 'state' },
-     operator: '=',
-     y: 0
-    }, y: 0
-  };
-}
-
-function withErrorGuard(b, n) {
-  var next = n.next();
-  if (next)
-    return [set_state(-next.min)].concat(b);
-
-  return b;
-}
-
-function toIfTest(n) {
-  var cond = n.partitions[0];
-  var a = null, c = [set_state(n.owner.consequent.min)];
-
-  if (n.owner.alternate)
-    a = [set_state(n.owner.alternate.min)];
-  else {
-    var next = n.owner.next();
-    a = [set_state(next?next.min:-1)];
-  }
-  return synth_if_node(cond,c,a,0,0);
-}
-
-function toLoopTest(n) {
-  return synth_if_node(
-     n.partitions[0], [set_state(n.next().min)], [{ type: 'BreakStatement', label: null }], 0, 0);
-}
- 
 ;
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
 function isIDHead(c) {
@@ -981,6 +913,54 @@ this.isScopeObj = function() {
 
 }]  ],
 [Emitter.prototype, [function(){
+this.if_state_geq = function(v) { return this.if_state('>=', v); };
+this.if_state_lt  = function(v) { return this.if_state('<', v); };
+this.if_state_leq = function(v) { return this.if_state('<=', v); };
+this.if_state_gt  = function(v) { return this.if_state('>', v); };
+this.if_state_eq  = function(v) { return this.if_state('===', v); };
+
+this.if_state = function(o, state) {
+  this.block_stack.push(IF_BLOCK);
+  this.write('if (state '+o+' '+state+') {');
+  this.indent(); 
+};
+
+this.do_while_nocond = function(n) {
+  this.block_stack.push(DO_BLOCK);
+  this.write('do {');
+  this.indent();
+};
+
+this.while_nocond = function(n) {
+   this.block_stack.push(WHILE_BLOCK);
+   this.write('while (true) {');
+   this.indent();
+};
+
+this.set_state = function(v) { 
+  this.write('state');
+  this.write('=');
+  this.write(''+v);
+  this.write(';');
+};
+
+this.withErrorGuard = function(b, n) {
+  var next = n.next();
+  if (next)
+    this.set_state(-next.min);
+};
+
+this.end_block = function() {
+  ASSERT.call(this, this.block_stack.length>0);
+  this.unindent();
+  this.newlineIndent(); 
+  this.write('}');
+  if (this.block_stack.pop()===DO_BLOCK)
+    this.write(' while (true);');
+};
+
+},
+function(){
 this.write = function(lexeme) {
    if ( this.wrap ) {
        var lineLengthIncludingIndentation = 
@@ -1724,6 +1704,21 @@ this.emitContainerStatement = function(n) {
   }
 };
 
+this.writeLabels = function(n) {
+  var label = n.label;
+  if (label === null)
+    return false;
+  
+  label = label.head;
+
+  while (label !== null) {
+    this.write(label.name+': ');
+    label = label.next;
+  }
+
+  return true;
+};
+
 function describeContainer(container) {
    var next = container.next();
    var str = "";
@@ -1777,29 +1772,56 @@ this.emitters['IfContainer'] = function(n) {
   var cc = this.currentContainer;
   this.currentContainer = n;
 
-  var containerStr = describeContainer(n);
-  this.write('<'+containerStr+'>');
-  this.indent();
-  this.newlineIndent();
-  this.emit(n.test);
+  if (this.writeLabels(n))
+    this.newlineIndent();
 
+  this.if_state_leq(n.max-1);
+  this.write(' // main if');
+  var list = n.partitions, e = 0;
+  while (true) {
+    var current = list[e++];
+    if (current === n.test) 
+      break;
+    this.newlineIndent();
+    this.emit(current);
+  }
   this.newlineIndent();
-  this.write('<consequent>');
-  this.indent();
+  this.if_state_eq(n.test.min);
+    this.newlineIndent();
+    this.write('if (');
+    this.emit(n.test.partitions[0]);
+    this.write(') /* test */');
+    var next = n.consequent;
+    this.set_state(next.min);
+    this.newlineIndent();
+    this.write('else ');
+    next = n.alternate || n.next(); 
+    this.set_state(next?next.min:-12);
+  this.end_block();
+    
+  this.newlineIndent();
+  if (n.consequent.hasMany()) this.if_state_leq(n.consequent.max-1);
+     this.write(' // consequent');
+     this.newlineIndent();
      this.emit(n.consequent);
-  this.unindent(); this.newlineIndent();
-  this.write('</consequent>');
- 
+  if (n.hasMany()) this.end_block();
+  
   if ( n.alternate ) {
     this.newlineIndent();
-    this.write('<alternate>');
-    this.indent();
-      this.emit(n.alternate);
-    this.unindent(); this.newlineIndent();
-    this.write('</alternate>');
+    this.write('else ');
+    if (n.alternate.hasMany()) {
+      this.write('{');
+      this.indent();
+      this.newlineIndent();
+    }
+    this.emit(n.alternate);
+    if (n.alternate.hasMany()) {
+      this.unindent(); 
+      this.newlineIndent();
+      this.write('}');
+    }
   }
-  this.unindent();  this.newlineIndent();
-  this.write('</'+containerStr+'>');
+  this.end_block();
 };
 
 this.emitters['WhileContainer'] = function(n) {
@@ -1824,24 +1846,18 @@ this.emitters['WhileContainer'] = function(n) {
   this.currentContainer = cc;
 };
 
+// TODO: pack non-test, non-synth SimpleContainers together in a switch (if fit)
 this.emitters['SimpleContainer'] = function(n) {
   // TODO: won't work exactly, even though it works correctly, with things like
   // `a: (yield) * (yield)` ; it has no side-effects, but should be nevertheless corrected 
   this.fixupContainerLabels(n);  
   
-
-  var state = n.min, b = null;
-  if (n.isIfTestSeg())
-    b = [toIfTest(n)];
-  else if (n.isLoopTestSeg())
-    b = [toLoopTest(n)];
-  else
-    b = n.partitions;
-
-  if (!n.isSynthContinuePartition())
-    b = withErrorGuard(b, n);
-
-  return this.emit(if_state_eq(b, state));
+  this.if_state_eq(n.min);
+  this.newlineIndent();
+  var next = n.next();
+  this.set_state(next?-next.min:-12);
+  this._emitBlock(n.partitions); 
+  this.end_block();
 }; 
  
 this.emitters['LabeledContainer'] = function(n) {
@@ -1932,7 +1948,7 @@ this.emitters['SwitchContainer'] = function(n) {
 this.emitters['CustomContainer'] = function(n) {
   var list = n.partitions, e = 0;
   while (e < list.length) {
-    this.newlineIndent();
+    if (e>0) this.newlineIndent();
     this.emit(list[e++]);
   }
 };
@@ -7799,6 +7815,13 @@ this.isSimple = function() {
   return this.type === 'SimpleContainer';
 };
 
+this.hasMany = function() {
+  return !this.isSimple() &&
+         this.type !== 'IfContainer' &&
+         !this.isLoop() &&
+         this.partitions.length > 1;
+};
+
 // TODO: do it just once in the constructor
 this.addErrorGuard = function() {
   var next = this.next();
@@ -8477,7 +8500,6 @@ this.removeDecl = function(decl) {
 
 
 }]  ],
-null,
 null,
 null,
 null,
