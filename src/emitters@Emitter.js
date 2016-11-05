@@ -733,22 +733,49 @@ this.emitters['WhileContainer'] = function(n) {
   this.fixupContainerLabels(n);
   var cc = this.currentContainer;
   this.currentContainer = n;
-  var containerStr = describeContainer(n);
-  this.write( '<'+containerStr+'>' );
-  this.indent();
-  this.newlineIndent();
-  this.write(listLabels(n));
 
+  this.if_state_leq(n.max-1); this.newlineIndent();
+  this.while_nocond();
+
+  var current = null;
   var list = n.partitions, e = 0;
   while (e < list.length) {
+    current = list[e++];
+    if (current === n.test)
+       break;
     this.newlineIndent();
-    this.emit(list[e]);
-    e++ ;
+    this.emit(current);
   }
-  this.unindent();
-  this.newlineIndent(); 
-  this.write('</'+containerStr+'>');
-  this.currentContainer = cc;
+  this.newlineIndent();
+  this.if_state_eq(n.test.min);
+    this.newlineIndent();
+    this.write('if');
+    this.write('(');
+    this.emit(n.test.partitions[0]);
+    this.write(')'); this.space();
+    this.set_state(n.test.next().min);
+    this.newlineIndent();
+    this.write('else'); this.space(); this.write('{'); this.space();
+      var next = n.next();
+      this.set_state(next?next.min:-12);
+      this.space();
+      this.write('break;');
+      this.space();
+    this.write('}');
+  this.end_block();
+
+  while (e < list.length-1) {
+    this.newlineIndent();
+    this.emit(list[e++]);
+  }
+
+  this.newlineIndent();
+  this.if_state_eq(list[e].min);
+  this.newlineIndent();
+  this.set_state(n.min);
+  this.end_block();
+
+  this.end_block(); this.end_block(); this.currentContainer = cc;
 };
 
 // TODO: pack non-test, non-synth SimpleContainers together in a switch (if fit)
