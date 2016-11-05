@@ -47,7 +47,11 @@ this.hasMany = function() {
   return !this.isSimple() &&
          this.type !== 'IfContainer' &&
          !this.isLoop() &&
-         this.partitions.length > 1;
+         ( this.partitions.length > 1 || 
+           ( this.partitions.length === 1 &&
+             this.partitions[0].type === 'BlockContainer'
+           )
+         );
 };
 
 // TODO: do it just once in the constructor

@@ -709,7 +709,7 @@ this.emitters['IfContainer'] = function(n) {
      this.write(' // consequent');
      this.newlineIndent();
      this.emit(n.consequent);
-  if (n.hasMany()) this.end_block();
+  if (n.consequent.hasMany()) this.end_block();
   
   if ( n.alternate ) {
     this.newlineIndent();
@@ -787,7 +787,7 @@ this.emitters['LabeledContainer'] = function(n) {
 this.emitters['BlockContainer'] = function(n) {
   this.fixupContainerLabels(n);
   var list = n.partitions, e = 0;
-  this.write('{');
+  this.write('{ // start');
   this.indent();
   this.newlineIndent();
   this.write(listLabels(n));
@@ -797,7 +797,7 @@ this.emitters['BlockContainer'] = function(n) {
   }
   this.unindent();
   this.newlineIndent();
-  this.write('}');
+  this.write('} // finish');
 };
 
 this.emitters['TryContainer'] = function(n) {
