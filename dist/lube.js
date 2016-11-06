@@ -257,6 +257,8 @@ var Scope = function(parent, type) {
 
   if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
     this.type = SCOPE_TYPE_LEXICAL_LOOP;    
+
+  this.catchVar = ""; // TODO: find another way maybe?
 }
 
 Scope.createFunc = function(parent, decl, funcParams) {
@@ -961,7 +963,7 @@ this.end_block = function() {
 
 },
 function(){
-this.write = function(lexeme) {
+this.write = this.w = function(lexeme) {
    if ( this.wrap ) {
        var lineLengthIncludingIndentation = 
           this.currentLineLengthIncludingIndentation +
@@ -976,10 +978,10 @@ this.write = function(lexeme) {
    else this.wrap = true;
 
    this.code += lexeme;
-
+   return this;
 };
 
-this.space = function() { this.code += ' '; };
+this.space = this.s = function() { this.code += ' '; return this; };
 
 this.enterSynth = function() {
    this.synthStack.push(this.synth);
@@ -1850,7 +1852,7 @@ this.emitters['WhileContainer'] = function(n) {
     this.write(')'); this.space();
     this.set_state(n.test.next().min);
     this.newlineIndent();
-    this.write('else'); this.space(); this.write('{'); this.space();
+    this.w('else').s().w('{').s();
       var next = n.next();
       this.set_state(next?next.min:-12);
       this.space();
@@ -1924,22 +1926,43 @@ this.emitters['BlockContainer'] = function(n) {
 
 this.emitters['TryContainer'] = function(n) {
   this.fixupContainerLabels(n);
-  var containerStr = describeContainer(n);
-  this.write('<'+containerStr+'>');
-  this.indent(); this.newlineIndent();
-     this.write('<main>');
-     this.indent();
+  var cc = this.currentContainer;
+  this.currentContainer = n;
+
+  this.if_state_leq(n.max-1); this.newlineIndent();
+  this.while_nocond(); this.newlineIndent();
+  this.w('try').s().w('{');
+  this.indent(); this.newlineIndent(); 
+     this.if_state_leq(n.block.max-1); this.newlineIndent();
         this.emit(n.block);
-     this.unindent(); this.newlineIndent();
-     this.write('</main>');
+     this.end_block();
      if (n.handler) {
        this.newlineIndent();
-       this.write('<catch>');
-       this.indent();
-          this.emit(n.handler);
-       this.unindent();this.newlineIndent();
-       this.write('</catch>');
+       this.w('else').s();
+       this.if_state_leq(n.handler.max-1); this.newlineIndent();
+         this.emit(n.handler);
+       this.end_block();
      }
+  this.unindent(); this.newlineIndent();
+  this.write('}');
+
+  this.newlineIndent();
+
+  var c = n.handler;
+  var catchVar = 'err';
+  this.w('catch').s().w('(').w(catchVar).w(')').s().w('{');
+  this.indent(); this.newlineIndent();
+  if (c) {
+    this.if_state_leq(n.block.max-1); this.newlineIndent();
+    this.w(c.catchVar).s().w('=').s().w(catchVar).w(';');
+    this.newlineIndent();
+    this.set_state(c.min); this.newlineIndent();
+    this.w('continue').w(';');
+    this.end_block();
+  }
+  this.unindent(); this.newlineIndent();
+  this.w('}');
+
      if (n.finalizer) {
        this.newlineIndent();
        this.write('<finally>');
@@ -1948,8 +1971,8 @@ this.emitters['TryContainer'] = function(n) {
        this.unindent(); this.newlineIndent();
        this.write('</finally>');
      }
-  this.unindent(); this.newlineIndent();
-  this.write('</'+containerStr+'>');
+  this.end_block();
+  this.end_block();
 };
   
 this.emitters['SwitchContainer'] = function(n) {
@@ -8205,20 +8228,21 @@ pushList['TryStatement'] = function(n) {
 
    if (n.handler) {
       var catchContainer = new Partitioner(container, {type:'CustomContainer'});
+      var temp = this.emitter.scope.allocateTemp();
+      catchContainer.catchVar = temp;
       if (n.handler.param.type !== 'Identifier') {
-         var temp = synth_id_node(this.emitter.scope.allocateTemp());
-         tryContainer.errorVar = temp;
          catchContainer.push( { type: 'ExpressionStatement', expression: {
             type: 'AssignmentExpression',
             y: y(n.handler.param),
             left: n.handler.param,
             right: temp
          }, y: y(n.handler.param) } );
-         this.emitter.scope.releaseTemp(temp.name);
          // n.handler.param = temp;
       }
+      this.emitter.scope.releaseTemp(temp);
       catchContainer.pushAll(n.handler.body.body);
       container.handler = catchContainer;
+      catchContainer.idx = tryContainer.idx; // TODO: find a better way to track "next" (or eliminate it altogether maybe?)
       container.max = catchContainer.max; 
    }  
    else
@@ -8267,6 +8291,7 @@ pushList['SwitchStatement'] = function(n) {
    this.max = switchContainer.max;
 };
    
+pushList['NoExpression'] = function() { return; };
 
 }]  ],
 [RefMode.prototype, [function(){
@@ -8455,6 +8480,7 @@ this.newSynthName = function(baseName) {
   var num = 0, func = this.funcScope;
   var name = baseName;
   for (;;num++, name = baseName + "" + num) {
+     if (name === this.catchVar) continue;
      if (func.findDeclInScope(name)) continue; // must not be in the surrounding func scope's defined names, 
      if (func.findRefInScope(name)) continue; // must not be in the surrounding func scope's referenced names;
      if (!this.isFunc()) { // furthermore, if we're not allocating in a func scope,
@@ -8493,7 +8519,9 @@ this.allocateTemp = function() {
   if (this.tempStack.length) 
     temp = this.tempStack.pop();
   else {
-    temp = this.funcScope.declSynth('temp');
+    do {
+      temp = this.funcScope.declSynth('temp');
+    } while (temp === this.catchVar);
   }
   return temp;
 };

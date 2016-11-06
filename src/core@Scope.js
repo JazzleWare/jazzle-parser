@@ -148,6 +148,7 @@ this.newSynthName = function(baseName) {
   var num = 0, func = this.funcScope;
   var name = baseName;
   for (;;num++, name = baseName + "" + num) {
+     if (name === this.catchVar) continue;
      if (func.findDeclInScope(name)) continue; // must not be in the surrounding func scope's defined names, 
      if (func.findRefInScope(name)) continue; // must not be in the surrounding func scope's referenced names;
      if (!this.isFunc()) { // furthermore, if we're not allocating in a func scope,
@@ -186,7 +187,9 @@ this.allocateTemp = function() {
   if (this.tempStack.length) 
     temp = this.tempStack.pop();
   else {
-    temp = this.funcScope.declSynth('temp');
+    do {
+      temp = this.funcScope.declSynth('temp');
+    } while (temp === this.catchVar);
   }
   return temp;
 };

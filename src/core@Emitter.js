@@ -1,4 +1,4 @@
-this.write = function(lexeme) {
+this.write = this.w = function(lexeme) {
    if ( this.wrap ) {
        var lineLengthIncludingIndentation = 
           this.currentLineLengthIncludingIndentation +
@@ -13,10 +13,10 @@ this.write = function(lexeme) {
    else this.wrap = true;
 
    this.code += lexeme;
-
+   return this;
 };
 
-this.space = function() { this.code += ' '; };
+this.space = this.s = function() { this.code += ' '; return this; };
 
 this.enterSynth = function() {
    this.synthStack.push(this.synth);

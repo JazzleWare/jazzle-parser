@@ -755,7 +755,7 @@ this.emitters['WhileContainer'] = function(n) {
     this.write(')'); this.space();
     this.set_state(n.test.next().min);
     this.newlineIndent();
-    this.write('else'); this.space(); this.write('{'); this.space();
+    this.w('else').s().w('{').s();
       var next = n.next();
       this.set_state(next?next.min:-12);
       this.space();
@@ -829,22 +829,43 @@ this.emitters['BlockContainer'] = function(n) {
 
 this.emitters['TryContainer'] = function(n) {
   this.fixupContainerLabels(n);
-  var containerStr = describeContainer(n);
-  this.write('<'+containerStr+'>');
-  this.indent(); this.newlineIndent();
-     this.write('<main>');
-     this.indent();
+  var cc = this.currentContainer;
+  this.currentContainer = n;
+
+  this.if_state_leq(n.max-1); this.newlineIndent();
+  this.while_nocond(); this.newlineIndent();
+  this.w('try').s().w('{');
+  this.indent(); this.newlineIndent(); 
+     this.if_state_leq(n.block.max-1); this.newlineIndent();
         this.emit(n.block);
-     this.unindent(); this.newlineIndent();
-     this.write('</main>');
+     this.end_block();
      if (n.handler) {
        this.newlineIndent();
-       this.write('<catch>');
-       this.indent();
-          this.emit(n.handler);
-       this.unindent();this.newlineIndent();
-       this.write('</catch>');
+       this.w('else').s();
+       this.if_state_leq(n.handler.max-1); this.newlineIndent();
+         this.emit(n.handler);
+       this.end_block();
      }
+  this.unindent(); this.newlineIndent();
+  this.write('}');
+
+  this.newlineIndent();
+
+  var c = n.handler;
+  var catchVar = 'err';
+  this.w('catch').s().w('(').w(catchVar).w(')').s().w('{');
+  this.indent(); this.newlineIndent();
+  if (c) {
+    this.if_state_leq(n.block.max-1); this.newlineIndent();
+    this.w(c.catchVar).s().w('=').s().w(catchVar).w(';');
+    this.newlineIndent();
+    this.set_state(c.min); this.newlineIndent();
+    this.w('continue').w(';');
+    this.end_block();
+  }
+  this.unindent(); this.newlineIndent();
+  this.w('}');
+
      if (n.finalizer) {
        this.newlineIndent();
        this.write('<finally>');
@@ -853,8 +874,8 @@ this.emitters['TryContainer'] = function(n) {
        this.unindent(); this.newlineIndent();
        this.write('</finally>');
      }
-  this.unindent(); this.newlineIndent();
-  this.write('</'+containerStr+'>');
+  this.end_block();
+  this.end_block();
 };
   
 this.emitters['SwitchContainer'] = function(n) {

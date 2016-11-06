@@ -19,6 +19,8 @@ var Scope = function(parent, type) {
 
   if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
     this.type = SCOPE_TYPE_LEXICAL_LOOP;    
+
+  this.catchVar = ""; // TODO: find another way maybe?
 }
 
 Scope.createFunc = function(parent, decl, funcParams) {

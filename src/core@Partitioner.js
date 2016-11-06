@@ -406,20 +406,21 @@ pushList['TryStatement'] = function(n) {
 
    if (n.handler) {
       var catchContainer = new Partitioner(container, {type:'CustomContainer'});
+      var temp = this.emitter.scope.allocateTemp();
+      catchContainer.catchVar = temp;
       if (n.handler.param.type !== 'Identifier') {
-         var temp = synth_id_node(this.emitter.scope.allocateTemp());
-         tryContainer.errorVar = temp;
          catchContainer.push( { type: 'ExpressionStatement', expression: {
             type: 'AssignmentExpression',
             y: y(n.handler.param),
             left: n.handler.param,
             right: temp
          }, y: y(n.handler.param) } );
-         this.emitter.scope.releaseTemp(temp.name);
          // n.handler.param = temp;
       }
+      this.emitter.scope.releaseTemp(temp);
       catchContainer.pushAll(n.handler.body.body);
       container.handler = catchContainer;
+      catchContainer.idx = tryContainer.idx; // TODO: find a better way to track "next" (or eliminate it altogether maybe?)
       container.max = catchContainer.max; 
    }  
    else
@@ -468,3 +469,4 @@ pushList['SwitchStatement'] = function(n) {
    this.max = switchContainer.max;
 };
    
+pushList['NoExpression'] = function() { return; };
