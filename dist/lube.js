@@ -1965,11 +1965,11 @@ this.emitters['TryContainer'] = function(n) {
 
      if (n.finalizer) {
        this.newlineIndent();
-       this.write('<finally>');
+       this.write('finally {');
        this.indent();
           this.emit(n.finalizer);
        this.unindent(); this.newlineIndent();
-       this.write('</finally>');
+       this.write('}');
      }
   this.end_block();
   this.end_block();
