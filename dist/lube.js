@@ -1996,8 +1996,13 @@ this.emitters['TryContainer'] = function(n) {
 
            var rt = list[e];
            this.n().if_state_eq(rt.min);
-             this.n().wm('if',' ','(','rt','==','1',')',' ','return','','rv',';');
-             this.n().wm('if',' ','(','rt','==','-1',')',' ','throw','','rv',';');
+             this.n().wm('if',' ','(','rt','==','1',')',' ','{');
+             this.set_state('done');
+             this.wm('return','','rv',';', '}');
+
+             this.n().wm('if',' ','(','rt','==','-1',')',' ','{');
+             this.set_state('done');
+             this.wm('throw','','rv',';','}');
 
              var next = fin.next(); this.n().set_state(next?next.min:-12);
            this.end_block();
