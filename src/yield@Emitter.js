@@ -205,15 +205,8 @@ this.transformAssignment = transformerList['AssignmentExpression'] = function(n,
 
    // in case the original assignment's left hand side is of the following types,
    // the transformed assignment will still be an assignment (rather than a synthetisized expression)
-   switch (lefttype) { 
-     case 'Identifier': 
-     case 'MemberExpression':
-        assigValue.y = 0; 
-        return assigValue;
-
-     default:
-        return vMode ? assigValue : NOEXPRESSION;
-   }
+   
+        return ( vMode || assigValue.type === 'AssignmentExpression' )  ? assigValue : NOEXPRESSION;
 };
 
 this.evaluateAssignee = function( assignee, b, yc ) {

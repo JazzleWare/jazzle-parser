@@ -963,7 +963,7 @@ this.end_block = function() {
 
 },
 function(){
-this.write = this.w = function(lexeme) {
+this.write = function(lexeme) {
    if ( this.wrap ) {
        var lineLengthIncludingIndentation = 
           this.currentLineLengthIncludingIndentation +
@@ -981,7 +981,7 @@ this.write = this.w = function(lexeme) {
    return this;
 };
 
-this.space = this.s = function() { this.code += ' '; return this; };
+this.space = function() { this.code += ' '; return this; };
 
 this.enterSynth = function() {
    this.synthStack.push(this.synth);
@@ -1092,6 +1092,24 @@ this.endCode = function() {
   return c;
 };
 
+this.i = function() { this.indent(); return this; };
+this.s = function() { this.space(); return this; };
+this.n = function() { this.newlineIndent(); return this; };
+this.w = function(lexeme) { this.write(lexeme); return this; };
+this.sw = function(lexeme) { this.space(); return this.w(lexeme); };
+this.u = function() { this.unindent(); return this; };
+this.wm = function() {
+   var l = arguments.length, e = 0, n = "";
+   while (e < l) {
+      n = arguments[e++];
+      if (n === ' ') this.space();
+      else if (n === '') { this.wrap = false; this.space(); }
+      else this.write(n);
+   }
+  
+   return this;
+};
+this.e = function(n, prec, flags) { this.emit(n, prec, flags); return this; };
 
 },
 function(){
@@ -1933,15 +1951,15 @@ this.emitters['TryContainer'] = function(n) {
   this.while_nocond(); this.newlineIndent();
   this.w('try').s().w('{');
   this.indent(); this.newlineIndent(); 
-     this.if_state_leq(n.block.max-1); this.newlineIndent();
+  if (n.block.hasMany()) { this.if_state_leq(n.block.max-1); this.newlineIndent(); }
         this.emit(n.block);
-     this.end_block();
+  if (n.block.hasMany()) this.end_block();
      if (n.handler) {
        this.newlineIndent();
        this.w('else').s();
-       this.if_state_leq(n.handler.max-1); this.newlineIndent();
+       if (n.handler.hasMany()) { this.if_state_leq(n.handler.max-1); this.newlineIndent(); }
          this.emit(n.handler);
-       this.end_block();
+       if (n.handler.hasMany()) this.end_block();
      }
   this.unindent(); this.newlineIndent();
   this.write('}');
@@ -1964,12 +1982,27 @@ this.emitters['TryContainer'] = function(n) {
   this.w('}');
 
      if (n.finalizer) {
-       this.newlineIndent();
-       this.write('finally {');
-       this.indent();
-          this.emit(n.finalizer);
-       this.unindent(); this.newlineIndent();
-       this.write('}');
+       this.n().w('finally').sw('{').i();
+         this.n().wm('if',' ','(','y','==','0',')','{').i();
+           var fin = n.finalizer;
+           this.n().wm('if',' ','(',
+                       'state','<',fin.min+"",'||',
+                       'state','>',fin.max-1,')',' ');
+           this.set_state(fin.min);
+
+           var list = fin.partitions, e = 0;
+           while (e < list.length - 1)
+             this.n().e(list[e++]);
+
+           var rt = list[e];
+           this.n().if_state_eq(rt.min);
+             this.n().wm('if',' ','(','rt','==','1',')',' ','return','','rv',';');
+             this.n().wm('if',' ','(','rt','==','-1',')',' ','throw','','rv',';');
+
+             var next = fin.next(); this.n().set_state(next?next.min:-12);
+           this.end_block();
+         this.u().n().w('}');
+        this.u().n().w('}');             
      }
   this.end_block();
   this.end_block();
@@ -2213,15 +2246,8 @@ this.transformAssignment = transformerList['AssignmentExpression'] = function(n,
 
    // in case the original assignment's left hand side is of the following types,
    // the transformed assignment will still be an assignment (rather than a synthetisized expression)
-   switch (lefttype) { 
-     case 'Identifier': 
-     case 'MemberExpression':
-        assigValue.y = 0; 
-        return assigValue;
-
-     default:
-        return vMode ? assigValue : NOEXPRESSION;
-   }
+   
+        return ( vMode || assigValue.type === 'AssignmentExpression' )  ? assigValue : NOEXPRESSION;
 };
 
 this.evaluateAssignee = function( assignee, b, yc ) {
@@ -8235,7 +8261,7 @@ pushList['TryStatement'] = function(n) {
             type: 'AssignmentExpression',
             y: y(n.handler.param),
             left: n.handler.param,
-            right: temp
+            right: synth_id_node(temp)
          }, y: y(n.handler.param) } );
          // n.handler.param = temp;
       }
@@ -8252,6 +8278,7 @@ pushList['TryStatement'] = function(n) {
       this.mainContainer.hasFinally = true;
       var finallyContainer = new Partitioner(container, {type:'CustomContainer'});
       finallyContainer.pushAll(n.finalizer.body);
+      finallyContainer.partitions.push(new Partitioner(finallyContainer, null));
       container.finalizer = finallyContainer;
       container. partitions.push(finallyContainer);
       container.max = finallyContainer.max;

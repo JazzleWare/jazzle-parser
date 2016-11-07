@@ -836,15 +836,15 @@ this.emitters['TryContainer'] = function(n) {
   this.while_nocond(); this.newlineIndent();
   this.w('try').s().w('{');
   this.indent(); this.newlineIndent(); 
-     this.if_state_leq(n.block.max-1); this.newlineIndent();
+  if (n.block.hasMany()) { this.if_state_leq(n.block.max-1); this.newlineIndent(); }
         this.emit(n.block);
-     this.end_block();
+  if (n.block.hasMany()) this.end_block();
      if (n.handler) {
        this.newlineIndent();
        this.w('else').s();
-       this.if_state_leq(n.handler.max-1); this.newlineIndent();
+       if (n.handler.hasMany()) { this.if_state_leq(n.handler.max-1); this.newlineIndent(); }
          this.emit(n.handler);
-       this.end_block();
+       if (n.handler.hasMany()) this.end_block();
      }
   this.unindent(); this.newlineIndent();
   this.write('}');
@@ -867,12 +867,27 @@ this.emitters['TryContainer'] = function(n) {
   this.w('}');
 
      if (n.finalizer) {
-       this.newlineIndent();
-       this.write('finally {');
-       this.indent();
-          this.emit(n.finalizer);
-       this.unindent(); this.newlineIndent();
-       this.write('}');
+       this.n().w('finally').sw('{').i();
+         this.n().wm('if',' ','(','y','==','0',')','{').i();
+           var fin = n.finalizer;
+           this.n().wm('if',' ','(',
+                       'state','<',fin.min+"",'||',
+                       'state','>',fin.max-1,')',' ');
+           this.set_state(fin.min);
+
+           var list = fin.partitions, e = 0;
+           while (e < list.length - 1)
+             this.n().e(list[e++]);
+
+           var rt = list[e];
+           this.n().if_state_eq(rt.min);
+             this.n().wm('if',' ','(','rt','==','1',')',' ','return','','rv',';');
+             this.n().wm('if',' ','(','rt','==','-1',')',' ','throw','','rv',';');
+
+             var next = fin.next(); this.n().set_state(next?next.min:-12);
+           this.end_block();
+         this.u().n().w('}');
+        this.u().n().w('}');             
      }
   this.end_block();
   this.end_block();

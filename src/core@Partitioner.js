@@ -413,7 +413,7 @@ pushList['TryStatement'] = function(n) {
             type: 'AssignmentExpression',
             y: y(n.handler.param),
             left: n.handler.param,
-            right: temp
+            right: synth_id_node(temp)
          }, y: y(n.handler.param) } );
          // n.handler.param = temp;
       }
@@ -430,6 +430,7 @@ pushList['TryStatement'] = function(n) {
       this.mainContainer.hasFinally = true;
       var finallyContainer = new Partitioner(container, {type:'CustomContainer'});
       finallyContainer.pushAll(n.finalizer.body);
+      finallyContainer.partitions.push(new Partitioner(finallyContainer, null));
       container.finalizer = finallyContainer;
       container. partitions.push(finallyContainer);
       container.max = finallyContainer.max;

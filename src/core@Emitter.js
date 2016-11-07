@@ -1,4 +1,4 @@
-this.write = this.w = function(lexeme) {
+this.write = function(lexeme) {
    if ( this.wrap ) {
        var lineLengthIncludingIndentation = 
           this.currentLineLengthIncludingIndentation +
@@ -16,7 +16,7 @@ this.write = this.w = function(lexeme) {
    return this;
 };
 
-this.space = this.s = function() { this.code += ' '; return this; };
+this.space = function() { this.code += ' '; return this; };
 
 this.enterSynth = function() {
    this.synthStack.push(this.synth);
@@ -127,3 +127,21 @@ this.endCode = function() {
   return c;
 };
 
+this.i = function() { this.indent(); return this; };
+this.s = function() { this.space(); return this; };
+this.n = function() { this.newlineIndent(); return this; };
+this.w = function(lexeme) { this.write(lexeme); return this; };
+this.sw = function(lexeme) { this.space(); return this.w(lexeme); };
+this.u = function() { this.unindent(); return this; };
+this.wm = function() {
+   var l = arguments.length, e = 0, n = "";
+   while (e < l) {
+      n = arguments[e++];
+      if (n === ' ') this.space();
+      else if (n === '') { this.wrap = false; this.space(); }
+      else this.write(n);
+   }
+  
+   return this;
+};
+this.e = function(n, prec, flags) { this.emit(n, prec, flags); return this; };
