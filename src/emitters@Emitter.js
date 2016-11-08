@@ -1,19 +1,11 @@
 this._emitBlock = function(list) {
    var e = 0 ;
-   while ( e < list.length ) {
-      this.newlineIndent();
-      this.emit(list[e]);
-      e++;
-   }
+   while ( e < list.length ) this.n().e(list[e++]);
 };
  
 this._emitElse = function(blockOrExpr) {
-  if ( blockOrExpr.type === 'ExpressionStatement' ) {
-    this.indent();
-    this.newlineIndent();
-    this.emit(blockOrExpr);
-    this.unindent();
-  }
+  if ( blockOrExpr.type === 'ExpressionStatement' ) 
+    this.i().n().e(blockOrExpr).u();
   else
     this.emit(blockOrExpr);
 };
@@ -32,9 +24,7 @@ this._emitBody = function(blockOrExpr) {
 };
 
 this._paren = function(n) {
-  this.write('(');
-  this.emit(n, PREC_WITH_NO_OP, EMIT_VAL);
-  this.write(')');
+  this.w('(').e(n, PREC_WITH_NO_OP, EMIT_VAL).w(')');
 };
 
 this._emitCallArgs = function(list) {
@@ -101,14 +91,11 @@ function isSimpleCh(ch) {
 }
    
 this.emitters['IfStatement'] = function(n) {
-   this.write('if (');
-   this.emit(n.test);
-   this.write(')');
+   this.w('if (').e(n.test).w(')');
    this._emitBody(n.consequent);
 
    if (n.alternate) {   
-     this.newlineIndent();    
-     this.write('else ');
+     this.n().w('else ');
      this._emitElse (n.alternate);
    }
 };
@@ -141,17 +128,11 @@ this._emitNonComplexExpr = function(n, prec, flags) {
 this.emitters['MemberExpression'] = function(n) {
   this._emitNonComplexExpr (n.object);
 
-  if ( n.computed ) {
-    this.write('[');
-    this.emit(n.property, PREC_WITH_NO_OP, EMIT_VAL);
-    this.write(']');
-  }
+  if ( n.computed )
+    this.w('[').e(n.property, PREC_WITH_NO_OP, EMIT_VAL).w(']');
 
-  else {
-    this.write('.');
-    this.emit(n.property);
-
-  }
+  else
+    this.w('.').e(n.property);
 };
 
 this.emitters['NewExpression'] = function(n) {
@@ -501,12 +482,17 @@ this._emitAssignment = function(assig, isStatement) {
 };
 
 this.emitters['YieldExpression'] = function(n) {
-  this.write('yield');
+  this.wm('y','=','1',';');
   if (n.argument !== null) {
-    this.wrap = false;
-    this.space();
-    this.emit(n.argument);
+    this.n().wm('yv','=');
+    this._emitNonSeqExpr(n.argument);
+    this.write(';');
   }
+  var next = this.currentContainer.next();
+  this.n().wm('nex','=',next?next.min:-12,';');
+  this.n().wm('return','','_y','(');
+  if (n.argument !== null) this.w('yv');
+  this.wm(')',';');
 }; 
       
 this.emitters['NoExpression'] = function(n) { return; };
@@ -784,12 +770,25 @@ this.emitters['SimpleContainer'] = function(n) {
   // `a: (yield) * (yield)` ; it has no side-effects, but should be nevertheless corrected 
   this.fixupContainerLabels(n);  
   
+  var cc = this.currentContainer;
+  this.currentContainer = n;
+
   this.if_state_eq(n.min);
-  this.newlineIndent();
+
   var next = n.next();
-  this.set_state(next?-next.min:-12);
-  this._emitBlock(n.partitions); 
+  var list = n.partitions;
+  var e = 0;
+  
+  while (e < list.length-1)
+    this.n().emit(list[e++]); 
+
+  var last = list[e];
+  this.n().emit(last);
+  if (last.type !== 'YieldExpression')
+    this.n().wm('state','=', next?next.min:-12,';');
+
   this.end_block();
+  this.currentContainer = cc;
 }; 
  
 this.emitters['LabeledContainer'] = function(n) {
@@ -854,46 +853,47 @@ this.emitters['TryContainer'] = function(n) {
   var c = n.handler;
   var catchVar = 'err';
   this.w('catch').s().w('(').w(catchVar).w(')').s().w('{');
-  this.indent(); this.newlineIndent();
+  this.indent();
   if (c) {
-    this.if_state_leq(n.block.max-1); this.newlineIndent();
-    this.w(c.catchVar).s().w('=').s().w(catchVar).w(';');
-    this.newlineIndent();
-    this.set_state(c.min); this.newlineIndent();
-    this.w('continue').w(';');
+    this.n().if_state_leq(n.block.max-1);
+    this.n().w(c.catchVar).s().w('=').s().w(catchVar).w(';');
+    this.n().set_state(c.min);
+    this.n().wm('y','=','1',';');
+    this.n().w('continue').w(';');
     this.end_block();
+    this.u().n();
   }
-  this.unindent(); this.newlineIndent();
+  else this.unindent();
   this.w('}');
 
-     if (n.finalizer) {
-       this.n().w('finally').sw('{').i();
-         this.n().wm('if',' ','(','y','==','0',')','{').i();
-           var fin = n.finalizer;
-           this.n().wm('if',' ','(',
-                       'state','<',fin.min+"",'||',
-                       'state','>',fin.max-1,')',' ');
-           this.set_state(fin.min);
+  if (n.finalizer) {
+    this.n().w('finally').sw('{').i();
+      this.n().wm('if',' ','(','y','==','0',')','{').i();
+        var fin = n.finalizer;
+        this.n().wm('if',' ','(',
+                    'state','<',fin.min+"",'||',
+                    'state','>',fin.max-1,')',' ');
+        this.set_state(fin.min);
 
-           var list = fin.partitions, e = 0;
-           while (e < list.length - 1)
-             this.n().e(list[e++]);
+        var list = fin.partitions, e = 0;
+        while (e < list.length - 1)
+          this.n().e(list[e++]);
 
-           var rt = list[e];
-           this.n().if_state_eq(rt.min);
-             this.n().wm('if',' ','(','rt','==','1',')',' ','{');
-             this.set_state('done');
-             this.wm('return','','rv',';', '}');
+        var rt = list[e];
+        this.n().if_state_eq(rt.min);
+          this.n().wm('if',' ','(','rt','==','1',')',' ','{');
+          this.set_state('done');
+          this.wm('return','','rv',';', '}');
 
-             this.n().wm('if',' ','(','rt','==','-1',')',' ','{');
-             this.set_state('done');
-             this.wm('throw','','rv',';','}');
+          this.n().wm('if',' ','(','rt','==','-1',')',' ','{');
+          this.set_state('done');
+          this.wm('throw','','rv',';','}');
 
-             var next = fin.next(); this.n().set_state(next?next.min:-12);
-           this.end_block();
-         this.u().n().w('}');
-        this.u().n().w('}');             
-     }
+          var next = fin.next(); this.n().set_state(next?next.min:-12);
+        this.end_block();
+      this.u().n().w('}');
+     this.u().n().w('}');             
+  }
   this.end_block();
   this.end_block();
 };

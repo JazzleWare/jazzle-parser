@@ -98,5 +98,7 @@ function Partitioner(owner, details) {
 
    else
      this.mainContainer = this.owner.mainContainer;
+
+   this.customNext = null;
 }
 

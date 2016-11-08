@@ -1,0 +1,47 @@
+try { while (false) (yield)(); }
+catch (e) { yield }
+finally { yield }
+
+<container:try a to h>
+  <main a to e>
+    <container:while a to e>
+      <seg:test a>false</seg>
+      <seg b>yield</seg>
+      <seg c>sent()</seg>
+      <seg:loop e></seg>
+    </container>
+  </main>
+  <catch f>
+    <var>temp</var>
+    <seg f>yield</seg>
+  </catch>
+  <finally g to h>
+    <seg g>yield</seg>
+    <seg:rt h></seg>
+  </finally>
+</container>
+
+if state <= h {
+  while true {
+    try {
+      if state <= e {
+        if state <= e {
+          while true {
+            if state == a { if false { state = b } else { state = g; break } }
+            if state == b { y=1; nex=c; return }
+            if state == c { sent(); state=d }
+            if state == e { state=a } } } }
+      else if state <= f {
+        if state == f { y=0; y=1; nex=g; return } } }
+    catch (err) {
+      if state <= e { temp=err; y=0; state=f; continue }
+      rv=err; rt=-1; state=g; throw rv }
+    finally {
+      if y == 0 {
+        if state<g||state>h: state=g
+        if state == g { y=1; nex=h; return }
+        if state == h {
+          if rt == 1 { nex=<finish>; return _r(rv) }
+          if rt == -1 { nex=<finish>; throw rv }
+          state=<finish> } } }
+    break } }

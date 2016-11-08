@@ -47,11 +47,8 @@ this.hasMany = function() {
   return !this.isSimple() &&
          this.type !== 'IfContainer' &&
          !this.isLoop() &&
-         ( this.partitions.length > 1 || 
-           ( this.partitions.length === 1 &&
-             this.partitions[0].type === 'BlockContainer'
-           )
-         );
+         ( this.max - this.min !== 1 || 
+           this.partitions[0].type === 'BlockContainer' );
 };
 
 // TODO: do it just once in the constructor
@@ -141,6 +138,7 @@ this.exitScope = function() {
 };
 
 this.next = function() {   
+  if ( this.customNext ) return this.customNext;
   if ( this.owner === null ) return null;
   if ( this.idx < this.owner.partitions.length - 1 )
     return this.owner.partitions[this.idx+1];
@@ -401,7 +399,6 @@ pushList['TryStatement'] = function(n) {
    var tryContainer = new Partitioner(container, {type:'CustomContainer'});
    tryContainer.pushAll(n.block.body);
    container.block = tryContainer;
-   container.partitions.push(tryContainer);
    container.max = tryContainer.max;
 
    if (n.handler) {
@@ -420,8 +417,8 @@ pushList['TryStatement'] = function(n) {
       this.emitter.scope.releaseTemp(temp);
       catchContainer.pushAll(n.handler.body.body);
       container.handler = catchContainer;
-      catchContainer.idx = tryContainer.idx; // TODO: find a better way to track "next" (or eliminate it altogether maybe?)
       container.max = catchContainer.max; 
+      tryContainer.customNext = catchContainer;
    }  
    else
       n.handler = null;
@@ -431,9 +428,13 @@ pushList['TryStatement'] = function(n) {
       var finallyContainer = new Partitioner(container, {type:'CustomContainer'});
       finallyContainer.pushAll(n.finalizer.body);
       finallyContainer.partitions.push(new Partitioner(finallyContainer, null));
+      finallyContainer.max++;
       container.finalizer = finallyContainer;
-      container. partitions.push(finallyContainer);
       container.max = finallyContainer.max;
+      if (n.handler)
+        n.handler.customNext = finallyContainer;
+      else
+        n.block.customNext = finallyContainer;
    }
    else
       n.finalizer = null;
