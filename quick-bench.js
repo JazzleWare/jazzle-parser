@@ -15,11 +15,16 @@ try {
 } catch ( e ) {} 
 
 try {
-   var pLube = require( './dist/lube.js' );
-   parsers.jsRube = function( src, withLoc ) {
+   var pLube = require( './dist/jazzle.js' );
+   parsers.jazzle = function( src, withLoc ) {
       return new pLube.Parser(src).parseProgram();
    }
-} catch ( e ) {}
+} catch ( e ) {
+   var pLube = require( './dist/jazzle_error.js' );
+   parsers.jazzle = function( src, withLoc ) {
+      return new pLube.Parser(src).parseProgram();
+   }
+}
 
 try {
    var pShift = require( 'shift-parser' );
@@ -39,7 +44,7 @@ function readFile(filePath) {
    }
 }
 
-var SOURCES_ROOT = './bench-sources';
+var SOURCES_ROOT = './bench/sources';
 var sources = {};
 
 var files = fs .readdirSync ( SOURCES_ROOT );
@@ -82,14 +87,14 @@ function randJEAP() {
    return str;
 }
    
-var parserNames = { e: 'esprima', a: 'acorn', j: 'jsRube', p: 'shift' };
+var parserNames = { e: 'esprima', a: 'acorn', j: 'jazzle', p: 'shift' };
 
 for ( sourceName in sources ) {
  var l = 1;
  while ( l-- ) {
-     if ( parsers.esprima ) {
+     if ( parsers.esprima && parsers.jazzle ) {
           var comp =  util.compare(parsers.esprima(sources[sourceName],!false),
-                                  parsers.jsRube(sources[sourceName],!false));
+                                  parsers.jazzle(sources[sourceName],!false));
           if ( comp ) {
             console.log( util.obj2str(comp) );
             throw new Error( 'Incompatible Parsing for ' + sourceName );

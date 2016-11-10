@@ -27,6 +27,10 @@ var Parser = function (src, isModule) {
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
+
+  this.isInArgList = false;
+  this.argNames = null;
+
   this.tight = !!isModule ;
 
   this.parenYS = null;
@@ -50,10 +54,8 @@ var Parser = function (src, isModule) {
   this.firstEA = null;
   this.firstEAContainer = null;
   this.defaultEA = null;
+  this.inComplexArgs = false;
 
   this.first__proto__ = false;
-  this.y = 0;
-
-  this.scope = null;
 };
 

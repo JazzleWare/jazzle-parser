@@ -80,14 +80,14 @@ var SCOPE_METH        = SCOPE_FUNCTION << 1;
 var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 
-var CONTEXT_FOR = 1,
-    CONTEXT_ELEM = CONTEXT_FOR << 1 ,
-    CONTEXT_NONE = 0,
-    CONTEXT_PARAM = CONTEXT_ELEM << 1,
-    CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
-    CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
-    CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1, 
-    CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
+var  CONTEXT_FOR = 1,
+     CONTEXT_ELEM = CONTEXT_FOR << 1 ,
+     CONTEXT_NONE = 0,
+     CONTEXT_PARAM = CONTEXT_ELEM << 1,
+     CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
+     CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
+     CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1, 
+     CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
 
 var INTBITLEN = (function() { var i = 0;
   while ( 0 < (1 << (i++)))
@@ -95,6 +95,7 @@ var INTBITLEN = (function() { var i = 0;
 
   return i;
 }());
+
 
 var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
@@ -120,58 +121,4 @@ var NUMBER_TYPE = typeof 0;
 var EMIT_CONTEXT_NEW = 1,
     EMIT_CONTEXT_STATEMENT = 2,
     EMIT_CONTEXT_NONE = 0;
-
-var IS_REF = 1,
-    IS_VAL = 2,
-    NOT_VAL = 0;
-
-var NOEXPRESSION = { type: 'NoExpression' };
-
-var START_BLOCK = { type: 'StartBlock' }, FINISH_BLOCK = { type: 'FinishBlock' };
-
-function ASSERT(cond, message) { if (!cond) throw new Error(message); }
-
-var SIMPLE_PARTITION = 0;
-var CONTAINER_PARTITION = 1;
-
-function y(n) {
-  switch (n.type) {
-    case 'ThisExpression':
-    case 'Literal':
-    case 'FunctionExpression':
-    case 'Identifier':
-    case 'SynthesizedExpr':
-       return 0;
-
-    default:
-       return n.y;
-  }  
-}
-
-var HAS = {}.hasOwnProperty;
-
-var EMIT_LEFT = 1,
-    EMIT_STMT_HEAD = 2,
-    EMIT_NEW_HEAD = 8,
-    EMIT_VAL = 16;
-
-var ACCESS_FORWARD = 1, ACCESS_EXISTING = 2;
-
-var VAR = 'var', LET = 'let';
-
-var SCOPE_TYPE_FUNCTION_EXPRESSION = 1,
-    SCOPE_TYPE_FUNCTION_DECLARATION = 2|SCOPE_TYPE_FUNCTION_EXPRESSION;
-var SCOPE_TYPE_LEXICAL_SIMPLE = 8,
-    SCOPE_TYPE_LEXICAL_LOOP = 16|SCOPE_TYPE_LEXICAL_SIMPLE;
-var SCOPE_TYPE_MAIN = SCOPE_TYPE_FUNCTION_EXPRESSION;
-
-var DECL_MODE_VAR = 1,
-    DECL_MODE_LET = 2,
-    DECL_MODE_NONE = 0,
-    DECL_MODE_FUNCTION_PARAMS = 4;
-
-var IF_BLOCK = 1,
-    WHILE_BLOCK = 2,
-    SIMPLE_BLOCK = 0,
-    DO_BLOCK = 4;
 

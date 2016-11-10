@@ -11,9 +11,11 @@ this.readNumberLiteral = function (peek) {
     switch (b) { // check out what the next is
       case CHAR_X: case CHAR_x:
          c++;
-         if (c >= len) this['num.with.no.digits']('hex', c);
+         if (c >= len && this['num.with.no.digits']('hex', c) )
+           return this.errorHandlerOutput;
          b = src.charCodeAt(c);
-         if ( ! isHex(b)) this['num.with.first.not.valid']('hex', c);
+         if ( ! isHex(b) && this['num.with.first.not.valid']('hex', c)  )
+           return this.errorHandlerOutput ;
          c++;
          while ( c < len && isHex( b = src.charCodeAt(c) ) )
              c++ ;
@@ -23,9 +25,11 @@ this.readNumberLiteral = function (peek) {
 
       case CHAR_B: case CHAR_b:
         ++c;
-        if (c >= len ) this['num.with.no.digits']('bin',c);
+        if (c >= len && this['num.with.no.digits']('bin',c) )
+          return this.errorHandlerOutput ;
         b = src.charCodeAt(c);
-        if ( b !== CHAR_0 && b !== CHAR_1) this['num.with.first.not.valid']('bin',c);
+        if ( b !== CHAR_0 && b !== CHAR_1 && this['num.with.first.not.valid']('bin',c) )
+          return this.errorHandlerOutput ;
         val = b - CHAR_0; 
         ++c;
         while ( c < len &&
@@ -41,9 +45,11 @@ this.readNumberLiteral = function (peek) {
 
       case CHAR_O: case CHAR_o:
         ++c;
-        if (c >= len ) this['num.with.no.digits']('oct',c); 
+        if (c >= len && this['num.with.no.digits']('oct',c) )
+          return this.errorHandlerOutput ; 
         b = src.charCodeAt(c);
-        if ( (b < CHAR_0 || b >= CHAR_8) ) this['num.with.first.not.valid']('oct',c) ;
+        if ( (b < CHAR_0 || b >= CHAR_8) && this['num.with.first.not.valid']('oct',c)  )
+          return this.errorHandlerOutput ;
 
         val = b - CHAR_0 ;
         ++c; 

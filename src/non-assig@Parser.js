@@ -4,36 +4,30 @@ this.parseExpr = function (context) {
   var lastExpr;
   if ( this.lttype === ',' ) {
     context &= CONTEXT_FOR;
-    var y = this.y;
+
     var e = [core(head)] ;
     do {
       this.next() ;
       lastExpr = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
-      y += this.y;
       e.push(core(lastExpr));
     } while (this.lttype === ',' ) ;
 
-    this.y = y;
     return  { type: 'SequenceExpression', expressions: e, start: head.start, end: lastExpr.end,
-              loc: { start : head.loc.start, end : lastExpr.loc.end}, y: y };
+              loc: { start : head.loc.start, end : lastExpr.loc.end} };
   }
 
   return head ;
 };
 
 this .parseCond = function(cond,context ) {
-    var y = this.y;
     this.next();
     var seq = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
-    y += this.y;
-    if ( !this.expectType_soft (':') )
-      this['cond.colon']();
+    if ( !this.expectType_soft (':') && this['cond.colon'](cond,context,seq) )
+      return this.errorHandlerOutput;
 
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
-    y += this.y;
-    this.y = y;
     return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
-             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt), y: y };
+             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt) };
 };
 
 this .parseUnaryExpression = function(context ) {
@@ -54,7 +48,7 @@ this .parseUnaryExpression = function(context ) {
   var arg = this. parseNonSeqExpr(PREC_U,context|CONTEXT_UNASSIGNABLE_CONTAINER );
 
   return { type: 'UnaryExpression', operator: u, start: startc, end: arg.end,
-           loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg), y: this.y };
+           loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg) };
 };
 
 this .parseUpdateExpression = function(arg, context) {
@@ -69,21 +63,23 @@ this .parseUpdateExpression = function(arg, context) {
        arg = this. parseExprHead(context|CONTEXT_UNASSIGNABLE_CONTAINER );
        this.assert(arg); // TODO: this must have error handling
 
-       if ( !this.ensureSimpAssig_soft (core(arg)) )
-         this['incdec.pre.not.simple.assig'](c,loc,arg);
+       if ( !this.ensureSimpAssig_soft (core(arg)) &&
+            this['incdec.pre.not.simple.assig'](c,loc,arg) )
+         return this.errorHandlerOutput;
 
        return { type: 'UpdateExpression', argument: core(arg), start: c, operator: u,
-                prefix: !false, end: arg.end, loc: { start: loc, end: arg.loc.end }, y: this.y };
+                prefix: !false, end: arg.end, loc: { start: loc, end: arg.loc.end } };
     }
 
-    if ( !this.ensureSimpAssig_soft(core(arg)) )
-       this['incdec.post.not.simple.assig'](arg);
+    if ( !this.ensureSimpAssig_soft(core(arg)) &&
+          this['incdec.post.not.simple.assig'](arg) )
+      return this.errorHandlerOutput;
 
     c  = this.c;
     loc = { start: arg.loc.start, end: { line: this.li, column: this.col } };
     this.next() ;
     return { type: 'UpdateExpression', argument: core(arg), start: arg.start, operator: u,
-             prefix: false, end: c, loc: loc, y: this.y };
+             prefix: false, end: c, loc: loc };
 
 };
 
@@ -130,32 +126,28 @@ this .parseO = function(context ) {
 this.parseNonSeqExpr = function (prec, context  ) {
     var firstUnassignable = null, firstParen = null;
 
-    this.y = 0;
     var head = this. parseExprHead(context);
-    var y = this.y;
 
     if ( head === null ) {
          switch ( this.lttype ) {
            case 'u':
            case '-':
               head = this. parseUnaryExpression(context & CONTEXT_FOR );
-              y += this.y;
               break ;
 
            case '--':
               head = this. parseUpdateExpression(null, context&CONTEXT_FOR );
-              y += this.y;
               break ;
 
            case 'yield':
               if (prec !== PREC_WITH_NO_OP) // make sure there is no other expression before it 
-                return this['yield.as.an.id']();
+                return this['yield.as.an.id'](context,prec) ;
 
               return this.parseYield(context); // everything that comes belongs to it
    
            default:
               if (!(context & CONTEXT_NULLABLE) )
-                return this['nexpr.null.head']();
+                return this['nexpr.null.head'](context,prec);
                
               return null;
          }
@@ -170,18 +162,19 @@ this.parseNonSeqExpr = function (prec, context  ) {
        op = this. parseO( context );
        if ( op && isAssignment(this.prec) ) {
          this.firstUnassignable = firstUnassignable;
-         if ( prec === PREC_WITH_NO_OP ) {
+         if ( prec === PREC_WITH_NO_OP )
             head =  this. parseAssignment(head, context );
-            y = this.y;
-         }
+         
          else
-            this['assig.not.first']();
+            head = this['assig.not.first'](
+                 { c:context, u:firstUnassignable, h: head, paren: firstParen, prec: prec });
 
          break ;
        }
        else {
-         if ( this.unsatisfiedArg ) 
-           this['arrow.paren.no.arrow'](); 
+         if ( this.unsatisfiedArg && 
+              this['arrow.paren.no.arrow']({c:context, u:firstUnassignable, h: head, p:firstParen, prec: prec}) )
+           return this.errorHandlerOutput; 
 
          if ( this.firstEA )
             if( !(context & CONTEXT_ELEM_OR_PARAM) || op )
@@ -206,7 +199,6 @@ this.parseNonSeqExpr = function (prec, context  ) {
           if ( prec === PREC_WITH_NO_OP ) {
             head = this. parseCond(head, context&CONTEXT_FOR );
           }
-          y = this.y;
           break ;
        }
 
@@ -217,7 +209,6 @@ this.parseNonSeqExpr = function (prec, context  ) {
        var currentPrec = this. prec;
        this.next();
        var right = this.parseNonSeqExpr(currentPrec, (context & CONTEXT_FOR)|CONTEXT_UNASSIGNABLE_CONTAINER );
-       y += this.y;
        head = { type: !isBin(currentPrec )  ? 'LogicalExpression' :   'BinaryExpression',
                 operator: o,
                 start: head.start,
@@ -227,8 +218,7 @@ this.parseNonSeqExpr = function (prec, context  ) {
                    end: right.loc.end
                 },
                 left: core(head),
-                right: core(right),
-                y: y
+                right: core(right)
               };
     }
   
@@ -237,7 +227,6 @@ this.parseNonSeqExpr = function (prec, context  ) {
       this.firstUnassignable = firstUnassignable;
     }
 
-    this.y = y;
     return head;
 };
 

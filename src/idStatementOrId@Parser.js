@@ -34,7 +34,7 @@ this. parseIdStatementOrId = function ( context ) {
              if ( this.canBeStatement && this.v >= 5 )
                return this.parseLet(CONTEXT_NONE);
 
-             if (this.tight ) this['strict.let.is.id']();
+             if (this.tight ) this['strict.let.is.id'](context);
 
              pendingExprHead = this.id();
              break SWITCH;
@@ -87,7 +87,7 @@ this. parseIdStatementOrId = function ( context ) {
         case 'catch': this.notId ()  ;
         case 'class': return this.parseClass(CONTEXT_NONE ) ;
         case 'const':
-            if (this.v<5) this['const.not.in.v5']() ;
+            if (this.v<5) this['const.not.in.v5'](context) ;
             return this.parseVariableDeclaration(CONTEXT_NONE);
 
         case 'throw': return this.parseThrowStatement();
@@ -129,12 +129,14 @@ this. parseIdStatementOrId = function ( context ) {
             return null;
 
         case 'export': 
-            if ( this.isScript ) this['export.not.in.module']();
+            if ( this.isScript && this['export.not.in.module'](context) )
+              return this.errorHandlerOutput;
 
             return this.parseExport() ;
 
         case 'import':
-            if ( this.isScript ) this['import.not.in.module'](context);
+            if ( this.isScript && this['import.not.in.module'](context) )
+              return this.errorHandlerOutput;
 
             return this.parseImport();
 

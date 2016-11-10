@@ -1,44 +1,36 @@
-var Scope = function(parent, type) {
-  this.type = type;
+  
+function Scope(parentScope, scopeMode, catchVars) {
+   if ( scopeMode & SCOPE_LOOP )
+     this.assert(!(scopeMode & SCOPE_FUNC));
 
-  if (!parent) 
-    ASSERT.call(this.isFunc(), 'sub-scopes must have a parent');
+   if ( !parentScope )
+     this.assert( scopeMode === SCOPE_FUNC );
+   
+   this.parentScope = parentScope || null;
+   if ( scopeMode & SCOPE_CATCH ) {
+     this.assert( catchVars ); 
+     this.catchVars = {};
+     var e = 0;
+     while ( e < catchVars.length ) {
+        this.catchVars[name(catchVars[e])] = !false;
+        e++ ;
+     }
+   }
+   else
+     this.catchVars = null;
 
-  this.parent = parent;
-  this.funcScope = 
-     this.isFunc() ? this : this.parent.funcScope;
+   this.unresolved = {};
+   this.defined = {};
 
-  this.definedNames = {};
-  this.unresolvedNames = {};
+   if ( scopeMode === SCOPE_FUNC )
+      this.surroundingFunc = this;
+   
+   else
+      this.surroundingFunc = this.parentScope.surroundingFunc;
+ 
+   this.tempReleased = scopeMode === SCOPE_FUNC ? [] : null;
 
-  this.wrappedDeclList = null;
-  this.wrappedDeclNames = null;
-  this.scopeObjVar = null;
-
-  this.tempStack = this.isFunc() ? [] : null;
-
-  if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
-    this.type = SCOPE_TYPE_LEXICAL_LOOP;    
-
-  this.catchVar = ""; // TODO: find another way maybe?
+   this.scopeMode = scopeMode;
 }
 
-Scope.createFunc = function(parent, decl, funcParams) {
-  var scope = new Scope(parent, decl ?
-       SCOPE_TYPE_FUNCTION_DECLARATION :
-       SCOPE_TYPE_FUNCTION_EXPRESSION );
-  if (funcParams) 
-    for (var name in funcParams) {
-      if (!HAS.call(funcParams, name)) continue; 
-      scope.define(funcParams[name].name, VAR);
-    }
-  return scope;
-};
-
-Scope.createLexical = function(parent, loop) {
-   return new Scope(parent, !loop ?
-        SCOPE_TYPE_LEXICAL_SIMPLE :
-        SCOPE_TYPE_LEXICAL_LOOP);
-};
-
-
+       

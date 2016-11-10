@@ -161,7 +161,7 @@ this.next = function () {
             mustBeAnID = 1;
             peek = l.charCodeAt(++ this.c);
             if (peek !== CHAR_u )
-               return this['id.u.not.after.slash']();
+                return this['id.u.not.after.slash']();
             
             else
                peek = this.peekUSeq();
@@ -478,7 +478,7 @@ this.expectID = function (n) {
 };
 
 this.expectType_soft = function (n)  {
-  if (this.lttype === n ) {
+  if (this.lttype === n, 'expected ' + n + '; got ' + this.lttype  ) {
       this.next();
       return !false;
   }

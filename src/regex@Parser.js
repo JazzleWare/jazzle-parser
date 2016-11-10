@@ -87,8 +87,9 @@ this.parseRegExpLiteral = function() {
        c++ ;
      }
 
-     if ( src.charCodeAt(c) !== CHAR_DIV ) 
-       this['regex.unfinished'](startc,startLoc,c);
+     if ( src.charCodeAt(c) !== CHAR_DIV && 
+          this['regex.unfinished'](startc,startLoc,c) )
+       return this.errorHandlerOutput ;
 
      var flags = 0;
      var flagCount = 0;
@@ -146,8 +147,9 @@ this.parseRegExpLiteral = function() {
      else
         val = verifyRegex( patternString, flagsString ) ;
 
-     if ( !val )
-       this['regex.not.valid'](startc,startLoc,flagsString,patternString);
+     if ( !val &&
+        this['regex.not.valid'](startc,startLoc,flagsString,patternString) )
+       return this.errorHandlerOutput;
 
      this.col += (c-this.c);
      var regex = { type: 'Literal', regex: { pattern: patternString, flags: flagsString },

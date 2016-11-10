@@ -11,13 +11,11 @@ function Emitter(indenter) {
    this.emitContext = EMIT_CONTEXT_NONE;
    this.prec = PREC_WITH_NO_OP;
    this.isLeft = false;
+   this.wrapStack = [];
    this.codeStack = [];
    this.wrap = !false;
    this.scope = new Scope(null, SCOPE_FUNC);
-   this.labelNames = {};
-   this.unresolvedLabel = null;
-   this.currentContainer = null;
-   this.block_stack = [];
+
 }
 
 Emitter.prototype.emitters = {};

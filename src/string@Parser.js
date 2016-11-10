@@ -27,14 +27,15 @@ this.readStrLiteral = function (start) {
      case CHAR_LINE_FEED :
      case 0x2028 :
      case 0x2029 :
-            this['str.newline'](c);
+           if ( this['str.newline'](c,startC,v,v_start) )
+             return this.errorHandlerOutput ;
     }
     c++;
   }
 
   if ( v_start !== c ) { v += l.slice(v_start,c ) ; }
-  if (!(c < e && (l.charCodeAt(c)) === start) )
-    this['str.unfinished'](c);
+  if (!(c < e && (l.charCodeAt(c)) === start) &&
+       this['str.unfinished'](c,v) ) return this.errorHandlerOutput;
 
   this.c = c + 1 ;
   this.col += (this. c - startC   )  ;

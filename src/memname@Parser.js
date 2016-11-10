@@ -4,11 +4,13 @@ this .memberExpr = function() {
       startLoc = this.locOn(1);
   this.next() ;
   var e = this.parseExpr(CONTEXT_NONE);
-  if (!e) this['prop.dyna.no.expr'](startc,startLoc);
+  if (!e && this['prop.dyna.no.expr'](startc,startLoc) )
+    return this.errorHandlerOutput ;
 
   var n = { type: PAREN, expr: e, start: startc, end: this.c, loc: { start: startLoc, end: this.loc() } } ;
-  if ( !this.expectType_soft (']') )
-        this['prop.dyna.is.unfinished'](n);
+  if ( !this.expectType_soft (']') &&
+        this['prop.dyna.is.unfinished'](n) )
+    return this.errorHandlerOutput ;
  
   return n;
 };

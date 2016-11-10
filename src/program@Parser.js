@@ -1,9 +1,7 @@
 this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
-  this.scope = new ParserScope(this, null, SCOPE_TYPE_MAIN);
   this.next();
-  
   var list = this.blck(); 
   var endLoc = null;
   if (list.length) {
@@ -22,8 +20,9 @@ this.parseProgram = function () {
   var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
            loc: { start: startLoc, end: endLoc } };
 
-  if ( !this.expectType_soft ('eof') )
-    this['program.unfinished'](n);
+  if ( !this.expectType_soft ('eof') &&
+        this['program.unfinished'](n) )
+    return this.errorHandlerOutput ;
 
   return n;
 };

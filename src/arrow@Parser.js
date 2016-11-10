@@ -45,7 +45,7 @@ this. asArrowFuncArg = function(arg  ) {
            if ( arg === this.firstParen && this.parenParamError() )
               return this.errorHandlerOutput ;
 
-           return this.scope.parserDeclare(arg);
+           return this.addArg(arg);
 
         case 'ArrayExpression':
            if ( arg === this.firstParen && this.parenParamError() ) 
@@ -132,16 +132,17 @@ this. asArrowFuncArg = function(arg  ) {
     }
 };
 
+
 this . parseArrowFunctionExpression = function(arg,context)   {
 
   if ( this.unsatisfiedArg )
        this.unsatisfiedArg = null;
 
+  var prevArgNames = this.argNames;
+  this.argNames = {};
+
   var tight = this.tight;
 
-  this.enterFuncScope(false);
-  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
-  this.enterComplex();
   switch ( arg.type ) {
     case 'Identifier':
        this.asArrowFuncArg(arg, 0)  ;
@@ -178,10 +179,12 @@ this . parseArrowFunctionExpression = function(arg,context)   {
   else
     nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context) ;
 
-  var params = core(arg);
-  this.tight = tight;
+  this.argNames = prevArgNames;
+  this.scopeFlags = scopeFlags;
 
-  this.exitScope();
+  var params = core(arg);
+
+  this.tight = tight;
 
   return { type: 'ArrowFunctionExpression',
            params: params ?  params.type === 'SequenceExpression' ? params.expressions : [params] : [] ,

@@ -7,12 +7,9 @@ this.parseNewHead = function () {
   }
 
   var head, elem, inner;
-  var y = 0; // newHead is itself an exprHead; an exprHead is always called at the start of a nonSeqExpr,
-             // where this.y is set 0
   switch (this  .lttype) {
     case 'Identifier':
        head = this.parseIdStatementOrId (CONTEXT_NONE);
-       this.scope.reference(head.name);
        break;
 
     case '[':
@@ -40,11 +37,13 @@ this.parseNewHead = function () {
        break ;
 
     default:
-       this['new.head.is.not.valid'](startc, startLoc);
-
+       head = this['new.head.is.not.valid'](startc, startLoc);
+       if ( head.type === ERR_RESUME ) {
+           head = head.val ;
+           break ;
+       }
+       return head.val;
   }
-
-  y = this.y;
 
   var inner = core( head ) ;
   while ( !false ) {
@@ -53,53 +52,56 @@ this.parseNewHead = function () {
           this.next();
           elem = this.memberID();
           head =   {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false, y: y };
+                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };
           inner = head;
           continue;
 
        case '[':
           this.next() ;
           elem = this.parseExpr(CONTEXT_NONE) ;
-          y += this.y;
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false, y: y };
+                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false };
           inner = head ;
-          if ( !this.expectType_soft (']') )
-            this['mem.unfinished'](startc,startLoc);
+          if ( !this.expectType_soft (']') ) {
+            head = this['mem.unfinished'](startc,startLoc,head)  ;
+            if (head .type === ERR_RESUME)
+              head = head.val;
+     
+            else
+              return head.val;
+          }
  
           continue;
 
        case '(':
           elem = this. parseArgList();
-          y += this.y;
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
-                    loc: { start: startLoc, end: this.loc() }, arguments: elem, y: y };
-          if ( !this. expectType_soft (')') )
-            this['new.args.is.unfinished'](startc,startLoc);
+                    loc: { start: startLoc, end: this.loc() }, arguments: elem };
+          if ( !this. expectType_soft (')') ) {
+            inner = this['new.args.is.unfinished'](startc,startLoc,inner) ;
+            if ( inner.type === ERR_RESUME )
+              inner = inner.val;
+            else
+              return inner.val;
+          }
 
-          this.y = y;
           return inner;
 
        case '`' :
-           this.y = 0;
            elem = this.parseTemplateLiteral () ;
-           y += this.y;
            head = {
                 type : 'TaggedTemplateExpression' ,
                 quasi :elem ,
                 start: head.start,
                  end: elem.end,
                 loc : { start: head.loc.start, end: elem.loc.end },
-                tag : inner,
-                y: y
+                tag : inner
             };
             inner = head;
             continue ;
 
-        default:
-            this.y = y;
-            return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
-                 loc: { start: startLoc, end: head.loc.end }, arguments : [], y: y };
+        default: return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
+                 loc: { start: startLoc, end: head.loc.end }, arguments : [] };
 
      }
   }

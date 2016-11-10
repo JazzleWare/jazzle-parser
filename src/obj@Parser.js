@@ -21,8 +21,6 @@ this.parseObjectExpression = function (context) {
   else
     context = context & CONTEXT_PARAM|CONTEXT_ELEM;
 
-  var y = 0;
-
   do {
      this.next();
      this.unsatisfiedAssignment = null;
@@ -32,7 +30,6 @@ this.parseObjectExpression = function (context) {
      this.firstElemWithYS = null;
 
      elem = this.parseProperty(null,context);
-
      if ( !first__proto__ && this.first__proto__ )
           first__proto__ =  this.first__proto__ ;
 
@@ -46,8 +43,6 @@ this.parseObjectExpression = function (context) {
 
      if ( elem ) {
        list.push(elem);
-       y += this.y;
-
        if (!unsatisfiedAssignment && this.unsatisfiedAssignment ) {
            if (!( context & CONTEXT_ELEM)  ) this['assig.unsatisfied']() ;
            unsatisfiedAssignment =  this.unsatisfiedAssignment ;
@@ -68,12 +63,13 @@ this.parseObjectExpression = function (context) {
 
   } while ( this.lttype === ',' );
 
-  this.y = y;
   elem = { properties: list, type: 'ObjectExpression', start: startc,
-     end: this.c , loc: { start: startLoc, end: this.loc() }, y: y };
+     end: this.c , loc: { start: startLoc, end: this.loc() }};
 
-  if ( ! this.expectType_soft ('}') )
-    this['obj.unfinished'](elem);
+  if ( ! this.expectType_soft ('}') && this['obj.unfinished']({
+    obj: elem, asig: firstUnassignable, ea: firstEA,
+    firstElemWithYS: firstElemWithYS, u: unsatisfiedAssignment, ys: firstYS }) )
+    return this.errorHandlerOutput;
 
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
   if ( firstParen ) this.firstParen = firstParen;
@@ -96,7 +92,7 @@ this.parseProperty = function (name, context) {
   var __proto__ = false, first__proto__ = this.first__proto__ ;
   var val = null;
   
-  var y = 0;
+
   SWITCH:
   if ( name === null ) switch ( this.lttype  ) {
       case 'op':
@@ -123,9 +119,7 @@ this.parseProperty = function (name, context) {
             break SWITCH;
 
       case '[':
-            this.y = 0;
             name = this.memberExpr();
-            y += this.y;
             break SWITCH;
 
       default: return null;
@@ -135,30 +129,31 @@ this.parseProperty = function (name, context) {
 
   switch (this.lttype) {
       case ':':
-         if ( __proto__ && first__proto__ ) this['obj.proto.has.dup'](name, first__proto__ ) ;
+         if ( __proto__ && first__proto__ ) this['obj.proto.has.dup']() ;
 
          this.next();
-         this.y = 0;
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
-         y += this.y;
          val = { type: 'Property', start: name.start, key: core(name), end: val.end,
                   kind: 'init', loc: { start: name.loc.start, end: val.loc.end }, computed: name.type === PAREN ,
-                  method: false, shorthand: false, value: core(val), y: y };
+                  method: false, shorthand: false, value: core(val) };
          if ( __proto__ )
             this.first__proto__ = val;
 
-         this.y = y;
          return val;
 
       case '(':
          return this.parseMeth(name, OBJ_MEM);
 
       default:
-          if (name.type !== 'Identifier' ) this['obj.prop.assig.not.id'](name);
+          if (name.type !== 'Identifier' && this['obj.prop.assig.not.id'](name,context) )
+            return this.errorHandlerOutput ;
 
           if ( this.lttype === 'op' ) {
-             if (this.ltraw !== '=' ) this['obj.prop.assig.not.assigop'](name);
-             if (!(context & CONTEXT_ELEM) ) this['obj.prop.assig.not.allowed'](name);
+             if (this.ltraw !== '=' && this['obj.prop.assig.not.assigop'](name,context) )
+               return this.errorHandlerOutput  ;
+
+             if (!(context & CONTEXT_ELEM) && this['obj.prop.assig.not.allowed'](name,context) )
+               return this.errorHandlerOutput ;
 
              val = this.parseAssig(name);
              this.unsatisfiedAssignment = val;
@@ -168,7 +163,7 @@ this.parseProperty = function (name, context) {
 
           return { type: 'Property', key: name, start: val.start, end: val.end,
                     loc: val.loc, kind: 'init',  shorthand: !false, method: false,
-                   value: val, computed: false, y: 0 };
+                   value: val, computed: false };
   }
 
        return n   ;
