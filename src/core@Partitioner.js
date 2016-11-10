@@ -89,17 +89,7 @@ this.prettyString = function(emitter) {
                     ' [' + this.min + ' to ' + (this.max-1) +']>');
      emitter.indent();
      while (e < list.length) {
-         if ( list[e]===START_BLOCK ) {
-           emitter.newlineIndent();
-           emitter.write('<B>') ;
-           emitter.indent();
-         }
-         else if ( list[e]===FINISH_BLOCK ) {
-           emitter.unindent();
-           emitter.newlineIndent();
-           emitter.write('</B>');
-         }
-         else list[e].prettyString(emitter);
+         list[e].prettyString(emitter);
          e++ ;
      }
      emitter.unindent();
@@ -428,6 +418,12 @@ pushList['TryStatement'] = function(n) {
    if (n.finalizer) {
       this.mainContainer.hasFinally = true;
       var finallyContainer = new Partitioner(container, {type:'CustomContainer'});
+
+      // TODO: the way all try's are currently tracked requires the ownerTry be set before anything is pushed to the current
+      // container.
+      // Not sure how big of an issue it might be, but try tracking (among other things) might need a thorough rethink
+      finallyContainer.ownerTry = container.ownerTry;
+
       finallyContainer.pushAll(n.finalizer.body);
       finallyContainer.partitions.push(new Partitioner(finallyContainer, null));
       finallyContainer.max++;
