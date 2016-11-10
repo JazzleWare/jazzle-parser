@@ -100,5 +100,10 @@ function Partitioner(owner, details) {
      this.mainContainer = this.owner.mainContainer;
 
    this.customNext = null;
+
+   this.depth = this.owner ? this.owner.depth+1 : 0;
+   this.ownerTry = null;
+   if (this.owner)
+     this.ownerTry = this.owner.type === 'TryContainer' ? this.owner : this.owner.ownerTry;
 }
 

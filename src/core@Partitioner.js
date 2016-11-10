@@ -51,13 +51,6 @@ this.hasMany = function() {
            this.partitions[0].type === 'BlockContainer' );
 };
 
-// TODO: do it just once in the constructor
-this.addErrorGuard = function() {
-  var next = this.next();
-  if (next)
-    this.partitions = [set_state(-next.min)].concat(this.partitions);
-};
-
 this.addStmt = function(n) {
   this.scanStmt(n);
   this.statements.push(n);
@@ -71,6 +64,15 @@ this.scanStmt = function(n) {
 
 this.isContainer = function() {
   return !this.isSimple();
+};
+
+this.ownerFinallyTry = function() {
+  var ownerTry = this.ownerTry;
+  while (ownerTry) {
+    if (ownerTry.finalizer) break;
+    ownerTry = ownerTry.ownerTry;
+  }
+  return ownerTry;
 };
 
 var pushList = {};
