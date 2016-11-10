@@ -2,7 +2,11 @@ this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
   this.next();
+  this.scopeFlags = SCOPE_BLOCK;
+
+  this.directive = DIRECTIVE_FUNC; 
   var list = this.blck(); 
+ 
   var endLoc = null;
   if (list.length) {
     var firstStatement = list[0];
@@ -21,7 +25,7 @@ this.parseProgram = function () {
            loc: { start: startLoc, end: endLoc } };
 
   if ( !this.expectType_soft ('eof') &&
-        this['program.unfinished'](n) )
+        this.err('program.unfinished',n) )
     return this.errorHandlerOutput ;
 
   return n;

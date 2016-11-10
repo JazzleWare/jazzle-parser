@@ -13,13 +13,17 @@ this. parseClass = function(context) {
   var canBeStatement = this.canBeStatement, name = null;
   this.next () ;
 
-  if ( canBeStatement && context !== CONTEXT_DEFAULT  ) {
-     if ( this.lttype !== 'Identifier' ) {
-       if ( this.noNameError() ) return this.errorHandlerOutput;
-     }
-     else
-       name = this. validateID(null);
+  if ( canBeStatement ) {
+     if (!(this.scopeFlags & SCOPE_BLOCK))
+       this.err('class.decl.not.in.block', startc, startLoc);
 
+     if ( context !== CONTEXT_DEFAULT ) {
+       if ( this.lttype !== 'Identifier' ) {
+         if ( this.noNameError() ) return this.errorHandlerOutput;
+       }
+       else
+         name = this. validateID(null);
+     }
      this.canBeStatement = false;
   }
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
@@ -28,7 +32,7 @@ this. parseClass = function(context) {
   var classExtends = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
      this.next();
-     classExtends = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE);
+     classExtends = this.parseExprHead(CONTEXT_NONE);
   }
 
   var list = [];
@@ -78,7 +82,16 @@ this. parseClass = function(context) {
                break SWITCH;
           }
           case '[': elem = this.parseMeth(this.memberExpr(), CLASS_MEM); break;
-          case 'Literal': elem = this.parseMeth(this.numstr(), CLASS_MEM); break ;
+          case 'Literal':
+             if ( this.ltval === 'constructor') {
+                if ( foundConstructor && this.ctorMultiError() )
+                  return this.errorHandlerOutput;
+
+                if (!isStatic) foundConstructor = true;
+             }
+                 
+             elem = this.parseMeth(this.numstr(), CLASS_MEM);
+             break ;
 
           case ';': this.next(); continue;
           case 'op': 
@@ -92,6 +105,18 @@ this. parseClass = function(context) {
       if ( isStatic ) {
         if ( elem.kind === 'constructor' ) 
           elem.kind   =  "method"; 
+
+        var elemName = "";
+        if ( !elem.computed ) switch (elem.key.type) {
+           case 'Identifier':
+              elemName = elem.key.name;
+              break;
+           case 'Literal':
+              if (typeof elem.key.value === STRING_TYPE)
+                elemName = elem.key.value;
+        }
+        if (elemName === 'prototype')
+          this.err('class.has.static.prototype');
 
         elem.start = startcStatic;
         elem.loc.start = startLocStatic;
@@ -126,16 +151,16 @@ this.parseSuper  = function   () {
    switch ( this.lttype ) {
         case '(':
           if ( !( this.scopeFlags & SCOPE_CONSTRUCTOR ) &&
-                  this['class.super.call']() ) return this.errorHandlerOutput;
+                  this.err('class.super.call') ) return this.errorHandlerOutput;
           break ;
         case '.':
         case '[':
            if ( !(this.scopeFlags & SCOPE_METH) &&
-                  this['class.super.mem']() ) return this.errorHandlerOutput ;
+                  this.err('class.super.mem') ) return this.errorHandlerOutput ;
            break ;
         
        default:
-          if ( this['class.super.lone']() )
+          if ( this.err('class.super.lone') )
             return this.errorHandlerOutput ; 
    }
 

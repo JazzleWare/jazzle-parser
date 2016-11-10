@@ -40,7 +40,7 @@ this .parseGen = function(isClass ) {
   switch ( this.lttype ) {
      case 'Identifier':
         if (isClass && this.ltval === 'constructor' &&
-            this['class.mem.name.is.ctor']('gen',startc,startLoc) )
+            this.err('class.mem.name.is.ctor','gen',startc,startLoc) )
           return this.errorHandlerOutput;
 
         name = this.memberID();
@@ -52,13 +52,13 @@ this .parseGen = function(isClass ) {
 
      case 'Literal' :
         if ( isClass && this.ltval === 'constructor' &&
-             this['class.mem.name.is.ctor']('gen',startc,startLc) )
+             this.err('class.mem.name.is.ctor','gen',startc,startLc) )
           return this.errorHandlerOutput ;
         name = this.numstr();
         break ;
 
      default:
-        return this['class.or.obj.mem.name'](isClass,startc,startLoc);
+        return this.err('class.or.obj.mem.name',isClass,startc,startLoc);
   }
 
   var val = null;
@@ -119,7 +119,7 @@ this . parseSetGet= function(isClass) {
   }
   
   if ( strName === 'constructor' &&
-       this['class.mem.name.is.ctor'](kind, startc, startLoc) )
+       this.err('class.mem.name.is.ctor',kind, startc, startLoc) )
     return this.errorHandlerOutput ;
 
   val = this.parseFunc ( CONTEXT_NONE , ARGLIST_AND_BODY|METH_FUNCTION, kind === 'set' ? 1 : 0 )

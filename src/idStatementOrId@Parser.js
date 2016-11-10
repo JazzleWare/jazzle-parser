@@ -34,7 +34,7 @@ this. parseIdStatementOrId = function ( context ) {
              if ( this.canBeStatement && this.v >= 5 )
                return this.parseLet(CONTEXT_NONE);
 
-             if (this.tight ) this['strict.let.is.id'](context);
+             if (this.tight ) this.err('strict.let.is.id',context);
 
              pendingExprHead = this.id();
              break SWITCH;
@@ -49,19 +49,19 @@ this. parseIdStatementOrId = function ( context ) {
 
     case 4: switch (id) {
         case 'null':
-            pendingExprHead = this.idLit(null);
+            pendingExprHead = this.parseNull();
             break SWITCH;
         case 'void':
             if ( this.canBeStatement )
                this.canBeStatement = false;
             this.lttype = 'u'; 
-            this.isVDT = !false;
+            this.isVDT = VDT_VOID;
             return null;
         case 'this':
             pendingExprHead = this. parseThis();
             break SWITCH;
         case 'true':
-            pendingExprHead = this.idLit(!false);
+            pendingExprHead = this.parseTrue();
             break SWITCH;
         case 'case':
             if ( this.canBeStatement ) {
@@ -87,25 +87,29 @@ this. parseIdStatementOrId = function ( context ) {
         case 'catch': this.notId ()  ;
         case 'class': return this.parseClass(CONTEXT_NONE ) ;
         case 'const':
-            if (this.v<5) this['const.not.in.v5'](context) ;
+            if (this.v<5) this.err('const.not.in.v5',context) ;
             return this.parseVariableDeclaration(CONTEXT_NONE);
 
         case 'throw': return this.parseThrowStatement();
         case 'while': return this.parseWhileStatement();
         case 'yield': 
              if ( this.scopeFlags & SCOPE_YIELD ) {
+                if (this.scopeFlags & SCOPE_ARGS)
+                  this.err('yield.args');
+
                 if ( this.canBeStatement )
                      this.canBeStatement = false;
 
                 this.lttype = 'yield';
                 return null;
              }
+             else if (this.tight) this.errorReservedID(null);
 
              pendingExprHead = this.id();
              break SWITCH;
                  
         case 'false':
-                pendingExprHead = this.idLit(false);
+                pendingExprHead = this.parseFalse();
                 break  SWITCH;
         case 'final':
         case 'float':
@@ -125,23 +129,25 @@ this. parseIdStatementOrId = function ( context ) {
             if ( this.canBeStatement )
                this.canBeStatement = false ;
             this.lttype = 'u'; 
-            this.isVDT = !false;
+            this.isVDT = id === 'delete' ? VDT_DELETE : VDT_VOID;
             return null;
 
         case 'export': 
-            if ( this.isScript && this['export.not.in.module'](context) )
+            if ( this.isScript && this.err('export.not.in.module',context) )
               return this.errorHandlerOutput;
 
             return this.parseExport() ;
 
         case 'import':
-            if ( this.isScript && this['import.not.in.module'](context) )
+            if ( this.isScript && this.err('import.not.in.module',context) )
               return this.errorHandlerOutput;
 
             return this.parseImport();
 
         case 'return': return this.parseReturnStatement();
         case 'switch': return this.parseSwitchStatement();
+        case 'public':
+            if (this.tight) this.errorReservedID();
         case 'double': case 'native': case 'throws':
             if ( this. v <= 5 ) this.errorReservedID();
 

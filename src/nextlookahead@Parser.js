@@ -161,7 +161,7 @@ this.next = function () {
             mustBeAnID = 1;
             peek = l.charCodeAt(++ this.c);
             if (peek !== CHAR_u )
-                return this['id.u.not.after.slash']();
+                return this.err('id.u.not.after.slash');
             
             else
                peek = this.peekUSeq();
@@ -174,8 +174,8 @@ this.next = function () {
         if (mustBeAnID) {
            if (!isIDHead(mustBeAnID === 1 ? peek :
                   ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
-              if ( mustBeAnID === 1 ) return this['id.esc.must.be.idhead'](peek);
-              else return this['id.multi.must.be.idhead'](peek,r);
+              if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead',peek);
+              else return this.err('id.multi.must.be.idhead',peek,r);
             }
             this.readAnIdentifierToken( mustBeAnID === 2 ?
                 String.fromCharCode( peek, r ) :
@@ -478,7 +478,7 @@ this.expectID = function (n) {
 };
 
 this.expectType_soft = function (n)  {
-  if (this.lttype === n, 'expected ' + n + '; got ' + this.lttype  ) {
+  if (this.lttype === n ) {
       this.next();
       return !false;
   }

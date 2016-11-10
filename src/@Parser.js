@@ -12,7 +12,7 @@ var Parser = function (src, isModule) {
   this.lttype= "";
   this.ltraw = "" ;
   this.prec = 0 ;
-  this.isVDT = false;
+  this.isVDT = VDT_NONE;
 
   this.labels = {};
 
@@ -54,8 +54,11 @@ var Parser = function (src, isModule) {
   this.firstEA = null;
   this.firstEAContainer = null;
   this.defaultEA = null;
-  this.inComplexArgs = false;
+  this.inComplexArgs = ICA_NONE;
 
   this.first__proto__ = false;
+  this.firstNonTailRest = null;
+
+  this.directive = DIRECTIVE_NONE;
 };
 

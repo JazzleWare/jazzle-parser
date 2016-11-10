@@ -3,6 +3,7 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
+       if (this.tight) this.assert(!arguments_or_eval(id.name));
        if ( this.isInArgList ) 
           this.addArg(id);
  
@@ -25,7 +26,7 @@ this. parseArrayPattern = function() {
       list = [];
 
   if ( this.isInArgList ) {
-     this.inComplexArgs = !false;
+     this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
   }
 
   this.next();
@@ -55,7 +56,7 @@ this. parseArrayPattern = function() {
            start: startc, end: this.c, elements : list};
 
   if ( !this. expectType_soft ( ']' ) &&
-        this['pat.array.is.unfinished'](elem) )
+        this.err('pat.array.is.unfinished',elem) )
     return this.errorHandlerOutput ;
 
   return elem;
@@ -71,7 +72,7 @@ this.parseObjectPattern  = function() {
     var name = null;
 
     if ( this.isInArgList ) {
-         this.inComplexArgs = !false;
+         this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
     }
 
     LOOP:
@@ -85,7 +86,7 @@ this.parseObjectPattern  = function() {
               this.next();
               val = this.parsePattern()
             }
-            else { sh = !false; val = name; }
+            else { this.validateID(name.name); sh = !false; val = name; }
             break ;
 
          case '[':
@@ -119,7 +120,7 @@ this.parseObjectPattern  = function() {
               end: this.c,
               properties: list };
 
-    if ( ! this.expectType_soft ('}') && this['pat.obj.is.unfinished'](n) )
+    if ( ! this.expectType_soft ('}') && this.err('pat.obj.is.unfinished',n) )
       return this.errorHandlerOutput ;
 
     return n;
@@ -139,8 +140,15 @@ this.parseRestElement = function() {
 
    this.next ();
    var e = this.parsePattern();
-   if (!e && this['rest.has.no.arg'](starc, startLoc) )
-     return this.errorHandlerOutput ;
+
+   if (!e) {
+      if (this.err('rest.has.no.arg',starc, startLoc))
+       return this.errorHandlerOutput ;
+   }
+   else if ( e.type !== 'Identifier' ) {
+      if (this.err('rest.arg.not.id', startc, startLoc, e) )
+        return this.errorHandlerOutput;
+   }
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
 };

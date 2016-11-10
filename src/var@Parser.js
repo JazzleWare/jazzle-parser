@@ -1,6 +1,6 @@
 this . parseVariableDeclaration = function(context) {
      if ( ! this.canBeStatement &&
-            this['not.stmt']('var',context) )
+            this.err('not.stmt','var',context) )
        return this.errorHandlerOutput;
 
      this.canBeStatement = false;
@@ -9,26 +9,63 @@ this . parseVariableDeclaration = function(context) {
      var elem = null;
 
      this.next () ;
+
+     var lexical = kind !== 'var';
+     var isInArgList = false, inComplexArgs = 0, argNames = null;
+
+     if ( lexical ) {
+       isInArgList = this.isInArgList;
+       this.isInArgList = true;
+       inComplexArgs = this.inComplexArgs ;
+       this.inComplexArgs = ICA_LEXICAL;
+       argNames = this.argNames;
+       this.argNames = {};
+     }
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
        if (kind !== 'let' && 
-           this['var.has.no.declarators'](startc,startLoc,kind,elem,context  ) )
+           this.err('var.has.no.declarators',startc,startLoc,kind,elem,context,isInArgsList,inComplexArgs,argNames  ) )
          return this.errorHandlerOutput;
+
+       if ( lexical ) {
+         this.isInArgsList = isInArgList;
+         this.inComplexArgs = inComplexArgs;
+         this.argNames = argNames;
+       }
 
        return null; 
      }
 
      var list = [elem];
-     if ( !this.unsatisfiedAssignment ) // parseVariableDeclarator sets it when it finds an uninitialized BindingPattern
+     var isConst = kind === 'const';
+     
+     if (isConst) {
+        if (!(this.scopeFlags & SCOPE_BLOCK))
+          this.err('let.decl.not.in.block');
+     }
+
+     if ( isConst && elem.init === null ) {
+       this.assert(context & CONTEXT_FOR);
+       this.unsatisfiedAssignment = elem;
+     }
+
+     if (!this.unsatisfiedAssignment) // parseVariableDeclarator sets it when it finds an uninitialized BindingPattern
           while ( this.lttype === ',' ) {
             this.next();     
             elem = this.parseVariableDeclarator(context);
             if (!elem &&
-                 this['var.has.an.empty.declarator'](startc,startLoc,kind,list,context ) )
+                 this.err('var.has.an.empty.declarator',startc,startLoc,kind,list,context,isInArgList,inComplexArgs,argNames ) )
               return this.erroHandlerOutput ;
 
+            if (isConst) this.assert(elem.init !== null);
             list.push(elem);
           }
+
+     if ( lexical ) {
+       this.isInArgsList = isInArgList;
+       this.inComplexArgs = inComplexArgs;
+       this.argNames = argNames;
+     }
 
      var lastItem = list[list.length-1];
      var endI = 0, endLoc = null;
@@ -38,7 +75,7 @@ this . parseVariableDeclaration = function(context) {
        endLoc = this.semiLoc();
        if (  !endLoc ) {
           if ( this.newLineBeforeLookAhead ) endLoc =  lastItem.loc.end; 
-          else if ( this['no.semi']('var', [startc,startLoc,kind,list,endI] ) )
+          else if ( this.err('no.semi','var', [startc,startLoc,kind,list,endI] ) )
              return this.errorHandlerOutput;
        }
      }
@@ -68,7 +105,7 @@ this . parseVariableDeclarator = function(context) {
   }
   else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
        if (!( context & CONTEXT_FOR) )  // bail out in case it is not a 'for' loop's init
-         this['var.decl.neither.of.in'](head,init,context) ;
+         this.err('var.decl.neither.of.in',head,init,context) ;
 
        if( !this.unsatisfiedAssignment )
          this.unsatisfiedAssignment  =  head;     // an 'in' or 'of' will satisfy it

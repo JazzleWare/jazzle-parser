@@ -22,7 +22,7 @@ this.parseExpr = function (context) {
 this .parseCond = function(cond,context ) {
     this.next();
     var seq = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
-    if ( !this.expectType_soft (':') && this['cond.colon'](cond,context,seq) )
+    if ( !this.expectType_soft (':') && this.err('cond.colon',cond,context,seq) )
       return this.errorHandlerOutput;
 
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
@@ -32,8 +32,9 @@ this .parseCond = function(cond,context ) {
 
 this .parseUnaryExpression = function(context ) {
   var u = null, startLoc = null, startc = 0;
-  if ( this.isVDT ) {
-    this.isVDT = false;
+  var isVDT = this.isVDT;
+  if ( isVDT ) {
+    this.isVDT = VDT_NONE;
     u = this.ltval;
     startLoc = this.locBegin();
     startc = this.c0;
@@ -45,7 +46,11 @@ this .parseUnaryExpression = function(context ) {
   }
 
   this.next();
+
   var arg = this. parseNonSeqExpr(PREC_U,context|CONTEXT_UNASSIGNABLE_CONTAINER );
+
+  if (this.tight && isVDT === VDT_DELETE && core(arg).type !== 'MemberExpression')
+    this.err('delete.arg.not.a.mem', startc, startLoc, arg);
 
   return { type: 'UnaryExpression', operator: u, start: startc, end: arg.end,
            loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg) };
@@ -64,7 +69,7 @@ this .parseUpdateExpression = function(arg, context) {
        this.assert(arg); // TODO: this must have error handling
 
        if ( !this.ensureSimpAssig_soft (core(arg)) &&
-            this['incdec.pre.not.simple.assig'](c,loc,arg) )
+            this.err('incdec.pre.not.simple.assig',c,loc,arg) )
          return this.errorHandlerOutput;
 
        return { type: 'UpdateExpression', argument: core(arg), start: c, operator: u,
@@ -72,7 +77,7 @@ this .parseUpdateExpression = function(arg, context) {
     }
 
     if ( !this.ensureSimpAssig_soft(core(arg)) &&
-          this['incdec.post.not.simple.assig'](arg) )
+          this.err('incdec.post.not.simple.assig',arg) )
       return this.errorHandlerOutput;
 
     c  = this.c;
@@ -141,13 +146,13 @@ this.parseNonSeqExpr = function (prec, context  ) {
 
            case 'yield':
               if (prec !== PREC_WITH_NO_OP) // make sure there is no other expression before it 
-                return this['yield.as.an.id'](context,prec) ;
+                return this.err('yield.as.an.id',context,prec) ;
 
               return this.parseYield(context); // everything that comes belongs to it
    
            default:
               if (!(context & CONTEXT_NULLABLE) )
-                return this['nexpr.null.head'](context,prec);
+                return this.err('nexpr.null.head',context,prec);
                
               return null;
          }
@@ -166,23 +171,23 @@ this.parseNonSeqExpr = function (prec, context  ) {
             head =  this. parseAssignment(head, context );
          
          else
-            head = this['assig.not.first'](
+            head = this.err('assig.not.first',
                  { c:context, u:firstUnassignable, h: head, paren: firstParen, prec: prec });
 
          break ;
        }
        else {
          if ( this.unsatisfiedArg && 
-              this['arrow.paren.no.arrow']({c:context, u:firstUnassignable, h: head, p:firstParen, prec: prec}) )
+              this.err('arrow.paren.no.arrow',{c:context, u:firstUnassignable, h: head, p:firstParen, prec: prec}) )
            return this.errorHandlerOutput; 
 
          if ( this.firstEA )
             if( !(context & CONTEXT_ELEM_OR_PARAM) || op )
-              this['assig.to.eval.or.arguments']();
+              this.err('assig.to.eval.or.arguments');
 
          if ( this.unsatisfiedAssignment ) {
             if ( !(prec===PREC_WITH_NO_OP && (context & CONTEXT_ELEM_OR_PARAM ) ) )
-              this['assignable.unsatisfied']();
+              this.err('assignable.unsatisfied');
 
             else break ;
          }

@@ -31,7 +31,7 @@ this.readMultiComment = function () {
 //          default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
         }
 
-   if ( this[ 'comment.multi.unfinished' ]() )
+   if ( this.err( 'comment.multi.unfinished' ) )
      return this.errorHandlerOutput ;
 };
 

@@ -6,6 +6,3 @@ this.parse = function(src, isModule ) {
 this.Parser = 
 Parser;  
 
-this.Scope = Scope;
-this.Emitter = Emitter;
-

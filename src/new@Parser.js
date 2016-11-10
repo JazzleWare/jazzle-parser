@@ -37,7 +37,7 @@ this.parseNewHead = function () {
        break ;
 
     default:
-       head = this['new.head.is.not.valid'](startc, startLoc);
+       head = this.err('new.head.is.not.valid',startc, startLoc);
        if ( head.type === ERR_RESUME ) {
            head = head.val ;
            break ;
@@ -50,6 +50,9 @@ this.parseNewHead = function () {
     switch (this. lttype) {
        case '.':
           this.next();
+          if (this.lttype !== 'Identifier')
+            this.err('mem.name.not.id');
+
           elem = this.memberID();
           head =   {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
                       loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };
@@ -63,7 +66,7 @@ this.parseNewHead = function () {
                     loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false };
           inner = head ;
           if ( !this.expectType_soft (']') ) {
-            head = this['mem.unfinished'](startc,startLoc,head)  ;
+            head = this.err('mem.unfinished',startc,startLoc,head)  ;
             if (head .type === ERR_RESUME)
               head = head.val;
      
@@ -78,7 +81,7 @@ this.parseNewHead = function () {
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
                     loc: { start: startLoc, end: this.loc() }, arguments: elem };
           if ( !this. expectType_soft (')') ) {
-            inner = this['new.args.is.unfinished'](startc,startLoc,inner) ;
+            inner = this.err('new.args.is.unfinished',startc,startLoc,inner) ;
             if ( inner.type === ERR_RESUME )
               inner = inner.val;
             else
