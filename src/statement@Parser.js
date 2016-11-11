@@ -612,6 +612,9 @@ this. parseCatchClause = function () {
    this.argNames = {};   
    // #end
    var catParam = this.parsePattern();
+   if (this.lttype === 'op' && this.ltraw === '=')
+     this.err('catch.param.has.default.val');
+
    // #if V
    this.scope.setDeclMode(DECL_MODE_NONE);
    // #end

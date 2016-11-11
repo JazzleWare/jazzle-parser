@@ -16,6 +16,12 @@ this . parseFor = function() {
 
   var scopeFlags = this.scopeFlags;
 
+  this.scopeFlags = SCOPE_BLOCK;
+
+  // #if V
+  this.enterLexicalScope(true);
+  // #end
+
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
      case 'var':
         this.canBeStatement = !false;
@@ -39,6 +45,7 @@ this . parseFor = function() {
         head = this. parseVariableDeclaration(CONTEXT_FOR);
            break ;
   }
+  this.scopeFlags = scopeFlags;
 
   if ( head === null ) {
        headIsExpr = !false;
@@ -90,6 +97,7 @@ this . parseFor = function() {
           this.scopeFlags = scopeFlags;
 
           this.foundStatement = !false;
+          this.exitScope();
           return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
             start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody/* ,y:-1*/ };
 
@@ -133,6 +141,8 @@ this . parseFor = function() {
   this.scopeFlags = scopeFlags;
 
   this.foundStatement = !false;
+
+  this.exitScope();
   return { type: 'ForStatement', init: head && core(head), start : startc, end: nbody.end,
          test: afterHead && core(afterHead),
          loc: { start: startLoc, end: nbody.loc.end },

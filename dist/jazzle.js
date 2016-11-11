@@ -2889,6 +2889,8 @@ this. asArrowFuncArg = function(arg) {
            if ( arg === this.firstParen && this.parenParamError() )
               return this.errorHandlerOutput ;
 
+           if (this.tight)
+             this.assert(!arguments_or_eval(arg.name));
            return this.scope.parserDeclare(arg);
 
         case 'ArrayExpression':
@@ -4124,6 +4126,10 @@ this . parseFor = function() {
 
   var scopeFlags = this.scopeFlags;
 
+  this.scopeFlags = SCOPE_BLOCK;
+
+  this.enterLexicalScope(true);
+
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
      case 'var':
         this.canBeStatement = !false;
@@ -4147,6 +4153,7 @@ this . parseFor = function() {
         head = this. parseVariableDeclaration(CONTEXT_FOR);
            break ;
   }
+  this.scopeFlags = scopeFlags;
 
   if ( head === null ) {
        headIsExpr = !false;
@@ -4198,6 +4205,7 @@ this . parseFor = function() {
           this.scopeFlags = scopeFlags;
 
           this.foundStatement = !false;
+          this.exitScope();
           return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
             start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody/* ,y:-1*/ };
 
@@ -4241,6 +4249,8 @@ this . parseFor = function() {
   this.scopeFlags = scopeFlags;
 
   this.foundStatement = !false;
+
+  this.exitScope();
   return { type: 'ForStatement', init: head && core(head), start : startc, end: nbody.end,
          test: afterHead && core(afterHead),
          loc: { start: startLoc, end: nbody.loc.end },
@@ -7557,6 +7567,9 @@ this. parseCatchClause = function () {
 
    this.scope.setDeclMode(DECL_MODE_LET);
    var catParam = this.parsePattern();
+   if (this.lttype === 'op' && this.ltraw === '=')
+     this.err('catch.param.has.default.val');
+
    this.scope.setDeclMode(DECL_MODE_NONE);
    if (catParam === null)
      this.err('catch.has.no.param');
@@ -8001,14 +8014,14 @@ this . parseVariableDeclaration = function(context) {
      }
 
      var list = [elem];
-     var isConst = kind === 'const';
      
-     if (isConst) {
+     if (lexical) {
         if (!(this.scopeFlags & SCOPE_BLOCK))
           this.err('let.decl.not.in.block');
      }
 
-     if ( isConst && elem.init === null ) {
+     var isConst = kind === 'const';
+     if ( isConst  && elem.init === null ) {
        this.assert(context & CONTEXT_FOR);
        this.unsatisfiedAssignment = elem;
      }
@@ -8160,6 +8173,9 @@ ParserScope.prototype.parserDeclare = function(id) {
        break;
 
      case DECL_MODE_LET:
+       if (id.name === 'let') 
+         this.err('let.decl.not.in.block', id) ;
+
        this.declare(id.name, LET);
        break;
 

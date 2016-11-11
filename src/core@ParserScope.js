@@ -42,6 +42,9 @@ ParserScope.prototype.parserDeclare = function(id) {
        break;
 
      case DECL_MODE_LET:
+       if (id.name === 'let') 
+         this.err('let.decl.not.in.block', id) ;
+
        this.declare(id.name, LET);
        break;
 

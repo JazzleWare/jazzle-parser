@@ -41,14 +41,14 @@ this . parseVariableDeclaration = function(context) {
      }
 
      var list = [elem];
-     var isConst = kind === 'const';
      
-     if (isConst) {
+     if (lexical) {
         if (!(this.scopeFlags & SCOPE_BLOCK))
           this.err('let.decl.not.in.block');
      }
 
-     if ( isConst && elem.init === null ) {
+     var isConst = kind === 'const';
+     if ( isConst  && elem.init === null ) {
        this.assert(context & CONTEXT_FOR);
        this.unsatisfiedAssignment = elem;
      }
