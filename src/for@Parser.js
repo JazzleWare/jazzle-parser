@@ -91,7 +91,7 @@ this . parseFor = function() {
 
           this.foundStatement = !false;
           return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
-            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
+            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody/* ,y:-1*/ };
 
        default:
           return this.err('for.iter.not.of.in',startc, startLoc,head);
@@ -137,7 +137,7 @@ this . parseFor = function() {
          test: afterHead && core(afterHead),
          loc: { start: startLoc, end: nbody.loc.end },
           update: tail && core(tail),
-         body: nbody };
+         body: nbody/* ,y:-1*/ };
 };
 
 

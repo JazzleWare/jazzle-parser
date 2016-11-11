@@ -118,13 +118,56 @@ var CLASS_MEM = 1;
 var STATIC_MEM =  5;
 
 var STRING_TYPE = typeof "string";
+var NUMBER_TYPE = typeof 0;
+var HAS = {}.hasOwnProperty;
 
+function ASSERT(cond, message) { if (!cond) throw new Error(message); }
+
+// #if V
+var EMIT_CONTEXT_NEW = 1,
+    EMIT_CONTEXT_STATEMENT = 2,
+    EMIT_CONTEXT_NONE = 0;
+
+var IS_REF = 1,
+    IS_VAL = 2,
+    NOT_VAL = 0;
+
+var NOEXPRESSION = { type: 'NoExpression' };
+
+var SIMPLE_PARTITION = 0;
+var CONTAINER_PARTITION = 1;
+
+var EMIT_LEFT = 1,
+    EMIT_STMT_HEAD = 2,
+    EMIT_NEW_HEAD = 8,
+    EMIT_VAL = 16;
+
+var ACCESS_FORWARD = 1, ACCESS_EXISTING = 2;
+
+var VAR = 'var', LET = 'let';
+
+var SCOPE_TYPE_FUNCTION_EXPRESSION = 1,
+    SCOPE_TYPE_FUNCTION_DECLARATION = 2|SCOPE_TYPE_FUNCTION_EXPRESSION;
+var SCOPE_TYPE_LEXICAL_SIMPLE = 8,
+    SCOPE_TYPE_LEXICAL_LOOP = 16|SCOPE_TYPE_LEXICAL_SIMPLE;
+var SCOPE_TYPE_MAIN = SCOPE_TYPE_FUNCTION_EXPRESSION;
+
+var DECL_MODE_VAR = 1,
+    DECL_MODE_LET = 2,
+    DECL_MODE_NONE = 0,
+    DECL_MODE_FUNCTION_PARAMS = 4;
+
+var IF_BLOCK = 1,
+    WHILE_BLOCK = 2,
+    SIMPLE_BLOCK = 0,
+    DO_BLOCK = 4;
+// #else
 var ICA_CATCH = 1,
     ICA_LEXICAL = 2,
     ICA_NONE = 0,
     ICA_ARROW = 4,
     ICA_FUNCTION = 8;
-
+// #end
 var VDT_VOID = 1;
 var VDT_TYPEOF = 2;
 var VDT_NONE = 0;

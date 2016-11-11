@@ -13,6 +13,9 @@ this . parseVariableDeclaration = function(context) {
      var lexical = kind !== 'var';
      var isInArgList = false, inComplexArgs = 0, argNames = null;
 
+     // #if V
+     // setDeclModeByName(kind);
+     /* #else */
      if ( lexical ) {
        isInArgList = this.isInArgList;
        this.isInArgList = true;
@@ -21,18 +24,19 @@ this . parseVariableDeclaration = function(context) {
        argNames = this.argNames;
        this.argNames = {};
      }
+     /* #end */
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
        if (kind !== 'let' && 
            this.err('var.has.no.declarators',startc,startLoc,kind,elem,context,isInArgsList,inComplexArgs,argNames  ) )
          return this.errorHandlerOutput;
-
+       // #if !V
        if ( lexical ) {
          this.isInArgsList = isInArgList;
          this.inComplexArgs = inComplexArgs;
          this.argNames = argNames;
        }
-
+       // #end
        return null; 
      }
 
@@ -60,13 +64,13 @@ this . parseVariableDeclaration = function(context) {
             if (isConst) this.assert(elem.init !== null);
             list.push(elem);
           }
-
+     // #if !V
      if ( lexical ) {
        this.isInArgsList = isInArgList;
        this.inComplexArgs = inComplexArgs;
        this.argNames = argNames;
      }
-
+     // #end
      var lastItem = list[list.length-1];
      var endI = 0, endLoc = null;
 
@@ -87,7 +91,7 @@ this . parseVariableDeclaration = function(context) {
      this.foundStatement  = !false ;
 
      return { declarations: list, type: 'VariableDeclaration', start: startc, end: endI,
-              loc: { start: startLoc, end: endLoc }, kind: kind };
+              loc: { start: startLoc, end: endLoc }, kind: kind /* ,y:-1*/};
 };
 
 this . parseVariableDeclarator = function(context) {
@@ -113,6 +117,6 @@ this . parseVariableDeclarator = function(context) {
 
   var initOrHead = init || head;
   return { type: 'VariableDeclarator', id: head, start: head.start, end: initOrHead.end,
-           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init) };
+           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init)/* ,y:-1*/ };
 };
 

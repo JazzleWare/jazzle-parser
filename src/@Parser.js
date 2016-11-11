@@ -28,8 +28,10 @@ var Parser = function (src, isModule) {
   this.foundStatement = false;
   this.scopeFlags = 0;
 
+  // #if !V
   this.isInArgList = false;
   this.argNames = null;
+  // #end
 
   this.tight = !!isModule ;
 
@@ -54,10 +56,17 @@ var Parser = function (src, isModule) {
   this.firstEA = null;
   this.firstEAContainer = null;
   this.defaultEA = null;
+
+  // #if !V
   this.inComplexArgs = ICA_NONE;
+  // #end
 
   this.first__proto__ = false;
   this.firstNonTailRest = null;
+
+  // #if V
+  this.scope = null;
+  // #end  
 
   this.directive = DIRECTIVE_NONE;
 };

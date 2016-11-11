@@ -14,6 +14,18 @@ function hex(number) {
   return str;
 }
 
+// #if V
+/* 
+function hex2(number) {
+  var str = "";
+  str = hexD[number&0xf] + str
+  str = hexD[(number>>=4)&0xf] + str ;
+  
+  return str;
+}
+*/
+// #end
+
 function fromRunLenCodes(runLenArray, bitm) {
   bitm = bitm || [];
   var bit = runLenArray[0];
@@ -61,4 +73,22 @@ function toNum (n) {
          (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
 };
 
+// #if V
+/*
+function createObj(fromPrototype) {
+  function Obj() {}
+  Obj.prototype = fromPrototype;
+  return new Obj();
+}
 
+function toBody(b) {
+  if (b.length > 1)
+    return { type: 'BlockStatement', body: b };
+
+  if (b.length === 1)
+    return b[0];
+
+  return { type: 'EmptyStatement' };
+}
+*/
+// #end

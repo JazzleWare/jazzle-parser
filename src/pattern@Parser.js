@@ -3,10 +3,14 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
+       // #if V
+       this.scope.parserDeclare(id);
+       // #end
        if (this.tight) this.assert(!arguments_or_eval(id.name));
+       // #if !V
        if ( this.isInArgList ) 
           this.addArg(id);
- 
+       // #end
        return id;
 
     case '[':
@@ -25,9 +29,13 @@ this. parseArrayPattern = function() {
       elem = null,
       list = [];
 
+  // #if V
+  enterComplex(this);
+  // #else
   if ( this.isInArgList ) {
      this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
   }
+  // #end  
 
   this.next();
   while ( !false ) {
@@ -53,7 +61,7 @@ this. parseArrayPattern = function() {
   } 
 
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list};
+           start: startc, end: this.c, elements : list/* ,y:-1*/};
 
   if ( !this. expectType_soft ( ']' ) &&
         this.err('pat.array.is.unfinished',elem) )
@@ -71,9 +79,13 @@ this.parseObjectPattern  = function() {
     var val = null;
     var name = null;
 
+    // #if V
+    enterComplex(this);
+    // #else
     if ( this.isInArgList ) {
          this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
     }
+    // #end
 
     LOOP:
     do {
@@ -110,7 +122,7 @@ this.parseObjectPattern  = function() {
       list.push({ type: 'Property', start: name.start, key: core(name), end: val.end,
                   loc: { start: name.loc.start, end: val.loc.end },
                  kind: 'init', computed: name.type === PAREN, value: val,
-               method: false, shorthand: sh });
+               method: false, shorthand: sh/* ,y:-1*/ });
 
     } while ( this.lttype === ',' );
 
@@ -118,7 +130,7 @@ this.parseObjectPattern  = function() {
              loc: { start: startLoc, end: this.loc() },
              start: startc,
               end: this.c,
-              properties: list };
+              properties: list/* ,y:-1*/ };
 
     if ( ! this.expectType_soft ('}') && this.err('pat.obj.is.unfinished',n) )
       return this.errorHandlerOutput ;
@@ -130,7 +142,7 @@ this .parseAssig = function (head) {
     this.next() ;
     var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
     return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
-           right: core(e), loc: { start: head.loc.start, end: e.loc.end } };
+           right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
 };
 
 

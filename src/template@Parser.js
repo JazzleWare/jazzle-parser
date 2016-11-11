@@ -31,7 +31,7 @@ this . parseTemplateLiteral = function() {
               // a lookahead before starting to parse an actual expression
               this.next(); 
                            
-              templExpressions.push( this.parseExpr(CONTEXT_NONE) );
+              templExpressions.push( core(this.parseExpr(CONTEXT_NONE)) );
               if ( this. lttype !== '}')
                 this.err('templ.expr.is.unfinished') ;
 
@@ -111,7 +111,7 @@ this . parseTemplateLiteral = function() {
   this.col ++ ;
 
   var n = { type: 'TemplateLiteral', start: startc, quasis: templStr, end: c,
-       expressions: templExpressions , loc: { start: startLoc, end : this.loc() } };
+       expressions: templExpressions , loc: { start: startLoc, end : this.loc() } /* ,y:-1*/};
 
   this.c = c;
   this.next(); // prepare the next token  

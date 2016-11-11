@@ -13,7 +13,7 @@ this.parseExpr = function (context) {
     } while (this.lttype === ',' ) ;
 
     return  { type: 'SequenceExpression', expressions: e, start: head.start, end: lastExpr.end,
-              loc: { start : head.loc.start, end : lastExpr.loc.end} };
+              loc: { start : head.loc.start, end : lastExpr.loc.end}/* ,y:-1*/ };
   }
 
   return head ;
@@ -27,7 +27,7 @@ this .parseCond = function(cond,context ) {
 
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
     return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
-             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt) };
+             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt) /* ,y:-1*/};
 };
 
 this .parseUnaryExpression = function(context ) {
@@ -223,7 +223,7 @@ this.parseNonSeqExpr = function (prec, context  ) {
                    end: right.loc.end
                 },
                 left: core(head),
-                right: core(right)
+                right: core(right)/* ,y:-1*/
               };
     }
   
