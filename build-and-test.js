@@ -3,7 +3,7 @@
 var fs = require( 'fs' );
 var util = require( 'util' );
 var src = './src';
-var dist = './dist/lube.js';
+var dist = './dist/jazzle';
 
 var buildMacro = require('./bm.js').buildMacro;
 
@@ -35,8 +35,7 @@ Builder.prototype.setExports = function(strExports) {
    this.strExports = strExports;
 };
 
-Builder.prototype.write = function(output) {
-   console.log("WRITING MODULES");
+Builder.prototype.build = function() {
    this.  write_string(  '(function(){\n"use strict";\n' );
    
    var e = 0;
@@ -60,18 +59,25 @@ Builder.prototype.write = function(output) {
    }
 
    this. write_string(  ']);\n' + this.strExports + ';}).call (this)' );
-   
+};  
+
+Builder.prototype.write = function(output) {
+   console.log("WRITING MODULES");
    fs .writeSync(output, this.str, 0, this.str.length);
    fs .closeSync(output);
 
    console.log("FINISHED ALL.");
 };
 
+Builder.prototype.writeFileString = function(str) {
+  var fragments = buildMacro.callOn(str), e = 0;
+  while (e < fragments.length) this.write_string(fragments[e++]);
+};
+
 Builder.prototype.writeModule = function(  module ) {
    console.log( "--WRITING MODULE", module.name );
    this. write_string(  ';\n');
-   var fragments = buildMacro.callOn(fs.readFileSync( module.path ));
-   var e = 0; while (e < fragments.length) this. write_string(fragments[e++]); 
+   this. writeFileString(  fs .readFileSync( module.path ) );
    console.log( "--FINISHED MODULE" );
 };          
   
@@ -94,7 +100,7 @@ Builder.prototype.writeSubmodules = function(module) {
      console.log( "----WRITING SUBMODULE", module.submodules[e] );
      if ( e ) this. write_string( ',\n' );
      this.write_string( 'function(){\n' );
-     this. write_string(  fs .readFileSync(module.submodules[e] ) );
+     this.writeFileString( fs .readFileSync(module.submodules[e] ) );
      this.write_string( '\n}')   ;
  
      console.log( "----FINISHED", module.submodules[e] );
@@ -109,7 +115,7 @@ Builder.prototype.writeSubmodules = function(module) {
 Builder.prototype.write_string = function ( str) {
   this.str += str;
 
-}
+};
 
 var builder = new Builder();
 var files = fs .readdirSync(src);
@@ -138,20 +144,27 @@ while ( e < files.length ) {
   e ++ ;
 }
 
-builder.write(fs .openSync(dist, 'w+'));
+var exports = {};
 
-var TestSession = require( './test/test.js' ).TestSession, util = require( './util.js' ) ;
-
+console.log("BUILD STARTED");
+builder.build();
+console.log("TESTING.....");
 try {
-   var testSession =  new TestSession();
-   var ignoreList = util.contents( '.ignore' ).toString().split(/\r\n|\n/);
-   var e = 0;
-   while ( e < ignoreList.length )
-      testSession.ignore[ignoreList[e++]] = !false;
-  
-   testSession .startAt( './test/tests' );
-} catch ( err ) {
-  console.log( err.type === 'err' ? "Error: " + err.message + "\nStack:\n" + err.stack :
-                util.obj2str( err.val ) );
+   new Function(builder.str).call(exports);
+   var summary = require('./test-runner.js').runTestSuite('test/tests',exports.Parser);
+   if (summary.pass - summary.skipPass !== summary.passAsExpected) {
+      console.log("SOME TESTS WEREN'T PASSED.");
+//      dist += '_incomplete-tests'; 
+   }
+   console.log("TESTING COMPLETE.");
+
 }
+catch (e) {
+   console.log("ERROR:\n", e);
+// dist += ".error";  
+// builder.write(fs .openSync(dist+'.js', 'w+'));
+}
+
+builder.write(fs .openSync(dist+'.js', 'w+'));
+console.log("BUILDING COMPLETE.");
 

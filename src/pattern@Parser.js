@@ -30,7 +30,7 @@ this. parseArrayPattern = function() {
       list = [];
 
   // #if V
-  enterComplex(this);
+  this.enterComplex();
   // #else
   if ( this.isInArgList ) {
      this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
@@ -80,7 +80,7 @@ this.parseObjectPattern  = function() {
     var name = null;
 
     // #if V
-    enterComplex(this);
+    this.enterComplex();
     // #else
     if ( this.isInArgList ) {
          this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;

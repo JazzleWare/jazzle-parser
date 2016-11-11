@@ -14,8 +14,8 @@ this . parseVariableDeclaration = function(context) {
      var isInArgList = false, inComplexArgs = 0, argNames = null;
 
      // #if V
-     // setDeclModeByName(kind);
-     /* #else */
+     this.setDeclModeByName(kind);
+     // #else
      if ( lexical ) {
        isInArgList = this.isInArgList;
        this.isInArgList = true;
@@ -24,7 +24,7 @@ this . parseVariableDeclaration = function(context) {
        argNames = this.argNames;
        this.argNames = {};
      }
-     /* #end */
+     // #end
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
        if (kind !== 'let' && 

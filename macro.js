@@ -47,7 +47,6 @@ macro.callOn = function(str) {
     var ifComment = findSpecialComment(str, s, 'if');
     var holds = false;
     if (!ifComment) break;
-    console.log("STR <" + str + ">");
     if (s !== ifComment.lineStart) fragments.push(str.slice(s,ifComment.lineStart));
 
     var cond = readCond(str, ifComment);
@@ -55,17 +54,18 @@ macro.callOn = function(str) {
 
     if (cond.n) holds = !holds;
     var current = ifComment;
+
+    var end = findSpecialComment(str, current.lineEnd, 'end');
+    if (!end) throw new Error("Unfinished macro at "+current.lineEnd);
+
     var elseComment = findSpecialComment(str, ifComment.lineEnd, 'else');
-    if (elseComment) {
+    if (elseComment && elseComment.lineStart < end.lineStart) {
       if (holds) {
         fragments.push(str.slice(ifComment.lineEnd, elseComment.lineStart));
         holds = false;
       }
       else { current = elseComment; holds = true; }
     }
-    var end = findSpecialComment(str, current.lineEnd, 'end');
-
-    if (!end) throw new Error("Unfinished macro at "+current.lineEnd);
     if (holds) fragments.push(str.slice(current.lineEnd, end.lineStart));
     s = end.lineEnd;
   }

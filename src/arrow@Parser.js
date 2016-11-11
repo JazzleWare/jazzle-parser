@@ -161,7 +161,7 @@ this . parseArrowFunctionExpression = function(arg,context)   {
   var tight = this.tight;
   // #if V
   this.enterFuncScope(false);
-  this.scope.setDeclareMode(DECL_MODE_FUNCTION_PARAMS);
+  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
   this.enterComplex();
   // #end
 
