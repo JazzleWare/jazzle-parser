@@ -1,19 +1,22 @@
-this.write = function(line) {
+this.write = function(lexeme) {
    if ( this.wrap ) {
        var lineLengthIncludingIndentation = 
           this.currentLineLengthIncludingIndentation +
-          line.length;
+          lexeme.length;
        
        if ( this.maxLineLength &&
             lineLengthIncludingIndentation > this.maxLineLength )
          this.indentForWrap();
 
-       this.currentLineLengthIncludingIndentation += line.length; 
+       this.currentLineLengthIncludingIndentation += lexeme.length; 
    } 
+   else this.wrap = true;
 
-   this.code += line;
-
+   this.code += lexeme;
+   return this;
 };
+
+this.space = function() { this.code += ' '; return this; };
 
 this.enterSynth = function() {
    this.synthStack.push(this.synth);
@@ -21,7 +24,7 @@ this.enterSynth = function() {
 };
 
 this.exitSynth = function() {
-   this.assert(this.synthStack.length>=1);
+   ASSERT.call(this, this.synthStack.length>=1);
    this.synth = this.pop(); 
 };
 
@@ -35,7 +38,7 @@ this.indent = function() {
 };
 
 this.unindent = function() {
-   this.assert(this.currentIndentLevel > 0);
+   ASSERT.call(this, this.currentIndentLevel > 0);
    this.currentIndentStr = this.indentStrCache[--this.currentIndentLevel];
    this.currentLineLengthIncludingIndentation = this.currentIndentStr.length;
 };
@@ -62,21 +65,55 @@ this.indentForWrap = function() {
 
 };
 
-this.assert = function(cond, message) {
-  if (!cond) throw new Error(message);
+function isLoop(n) {
+   var t = n.type;
 
-};
+   switch (t) {
+      case 'ForOfStatement':
+      case 'ForInStatement':
+      case 'ForStatement':
+      case 'DoWhileStatement':
+      case 'WhileStatement':
+         return true;
 
-var has = Object.hasOwnProperty;
-
-this.emit = function(n) {
+      default:
+         return false;
+   }
+}
+     
+this.emit = function(n, prec, flags) {
   if ( !n )
     return;
 
-  this.assert(has.call(this.emitters, n.type),
+  var abt = null, act = null, loop = isLoop(n);
+  if (this.currentContainer) {
+    if (loop) {
+      abt = this.currentContainer.abt;
+      this.currentContainer.abt = this.currentContainer.ebt;
+      act = this.currentContainer.act;
+      this.currentContainer.act = this.currentContainer.ect;
+    }
+    else if (n.type === 'SwitchStatement') {
+      abt = this.currentContainer.abt;
+      this.currentContainer.abt = this.currentContainer.ebt;
+    }
+  }
+  if (arguments.length < 2) prec = PREC_WITH_NO_OP;
+  if (arguments.length < 3) flags = 0;
+
+  ASSERT.call(this, HAS.call(this.emitters, n.type),
       'No emitter for ' + n.type );
   var emitter = this.emitters[n.type];
-  return emitter.call(this, n);
+  var r = emitter.call(this, n, prec, flags);
+  
+  if (this.currentContainer) {
+    if (loop) {
+      this.currentContainer.abt = abt;
+      this.currentContainer.act = act;
+    }
+    else if (n.type === 'SwitchStatement')
+      this.currentContainer.abt = abt;
+  }
 };
 
 this.startCode = function() {
@@ -90,19 +127,21 @@ this.endCode = function() {
   return c;
 };
 
-this.disallowWrap = function() {
-   this.wrapStack.push(this.wrap);
-   this.wrap = false;
+this.i = function() { this.indent(); return this; };
+this.s = function() { this.space(); return this; };
+this.n = function() { this.newlineIndent(); return this; };
+this.w = function(lexeme) { this.write(lexeme); return this; };
+this.sw = function(lexeme) { this.space(); return this.w(lexeme); };
+this.u = function() { this.unindent(); return this; };
+this.wm = function() {
+   var l = arguments.length, e = 0, n = "";
+   while (e < l) {
+      n = arguments[e++];
+      if (n === ' ') this.space();
+      else if (n === '') { this.wrap = false; this.space(); }
+      else this.write(n);
+   }
+  
+   return this;
 };
-
-this.restoreWrap = function() {
-   this.wrap = this.wrapStack.pop();
-
-};
-
-this.writeMulti = function() {
-  var e = 0;
-  while (e < arguments.length) 
-    this.write(arguments[e++]);
-};
-
+this.e = function(n, prec, flags) { this.emit(n, prec, flags); return this; };

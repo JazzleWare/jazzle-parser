@@ -5,6 +5,8 @@ var util = require( 'util' );
 var src = './src';
 var dist = './dist/lube.js';
 
+var buildMacro = require('./bm.js').buildMacro;
+
 function Builder() {
 
    this.moduleNames = {};
@@ -68,7 +70,8 @@ Builder.prototype.write = function(output) {
 Builder.prototype.writeModule = function(  module ) {
    console.log( "--WRITING MODULE", module.name );
    this. write_string(  ';\n');
-   this. write_string(  fs .readFileSync( module.path ) );
+   var fragments = buildMacro.callOn(fs.readFileSync( module.path ));
+   var e = 0; while (e < fragments.length) this. write_string(fragments[e++]); 
    console.log( "--FINISHED MODULE" );
 };          
   

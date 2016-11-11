@@ -15,7 +15,6 @@ function hex(number) {
 }
 
 // #if V
-/* 
 function hex2(number) {
   var str = "";
   str = hexD[number&0xf] + str
@@ -23,7 +22,6 @@ function hex2(number) {
   
   return str;
 }
-*/
 // #end
 
 function fromRunLenCodes(runLenArray, bitm) {
@@ -74,7 +72,6 @@ function toNum (n) {
 };
 
 // #if V
-/*
 function createObj(fromPrototype) {
   function Obj() {}
   Obj.prototype = fromPrototype;
@@ -90,5 +87,4 @@ function toBody(b) {
 
   return { type: 'EmptyStatement' };
 }
-*/
 // #end
