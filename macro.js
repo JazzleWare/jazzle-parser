@@ -1,5 +1,6 @@
 function Macro() {
   this.def = {};
+  this.preprocessors = [];
 }
 
 var macro = Macro.prototype;
@@ -42,6 +43,10 @@ macro.callOn = function(str) {
   var e = -1;
   var s = 0;
   var fragments = [];
+
+  var list = this.preprocessors, i = 0;
+  while (i < list.length)
+    str = list[i++].call(this, str);
 
   while (true) {
     var ifComment = findSpecialComment(str, s, 'if');

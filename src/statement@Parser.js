@@ -119,7 +119,7 @@ this.parseIfStatement = function () {
 
   this.fixupLabels(false);
   // #if V
-  /* this.enterLexicalScope(false); */
+  this.enterLexicalScope(false); 
   // #end
 
   var startc = this.c0,
@@ -146,7 +146,7 @@ this.parseIfStatement = function () {
   }
 
   // #if V
-  /* this.exitScope(); */
+  this.exitScope(); 
   // #end
 
   this.foundStatement = !false;
@@ -156,7 +156,7 @@ this.parseIfStatement = function () {
 
 this.parseWhileStatement = function () {
    // #if V
-   // this.enterLexicalScope(true);
+   this.enterLexicalScope(true);
    // #end
    if ( ! this.ensureStmt_soft () &&
           this.err('not.stmt','while') )
@@ -184,17 +184,17 @@ this.parseWhileStatement = function () {
    this.foundStatement = !false;
 
    // #if V
-   /* this.exitScope(); */
+   this.exitScope();
    // #end
    return { type: 'WhileStatement', test: cond, start: startc, end: nbody.end,
-       loc: { start: startLoc, end: nbody.loc.end }, body:nbody };
+       loc: { start: startLoc, end: nbody.loc.end }, body:nbody/* ,y:-1*/ };
 };
 
 this.parseBlckStatement = function () {
   this.fixupLabels(false);
 
   // #if V
-  /* this.enterLexicalScope(false); */
+  this.enterLexicalScope(false); 
   // #end
   var startc = this.c - 1,
       startLoc = this.locOn(1);
@@ -210,7 +210,7 @@ this.parseBlckStatement = function () {
     return this.errorHandlerOutput ;
 
   // #if V
-  /* this.exitScope(); */
+  this.exitScope(); 
   // #end
   this.scopeFlags = scopeFlags;
   return n;
@@ -222,7 +222,7 @@ this.parseDoWhileStatement = function () {
     return this.errorHandlerOutput ;
 
   // #if V
-  /* this.enterLexicalScope(true); */
+  this.enterLexicalScope(true); 
   // #end
   this.fixupLabels(!false);
 
@@ -258,7 +258,7 @@ this.parseDoWhileStatement = function () {
  this.foundStatement = !false;
 
  // #if V
- /* this.exitScope(); */
+ this.exitScope(); 
  // #end
  return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
           body: nbody, loc: { start: startLoc, end: { line: li, column: col } } /* ,y:-1*/} ;
@@ -383,7 +383,7 @@ this.parseSwitchStatement = function () {
     return this.errorHandlerOutput ;
 
   // #if V
-  /* this.enterLexicalScope(false); */
+  this.enterLexicalScope(false); 
   // #end
   this.scopeFlags |=  (SCOPE_BREAK|SCOPE_BLOCK);
   while ( elem = this.parseSwitchCase()) {
@@ -402,7 +402,7 @@ this.parseSwitchStatement = function () {
         this.err('switch.unfinished',n) )
     return this.errorHandlerOutput ;
   // #if V
-  /* this.exitScope(); */
+  this.exitScope(); 
   // End
   return n;
 };
@@ -556,11 +556,11 @@ this.parseTryStatement = function () {
   this.next() ;
 
   // #if V
-  /* this.enterLexicalScope(false); */
+  this.enterLexicalScope(false); 
   // #end
   var tryBlock = this.parseBlockStatement_dependent();
   // #if V
-  /* this.exitScope(); */
+  this.exitScope(); 
   // #end
   var finBlock = null, catBlock  = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'catch')
@@ -569,11 +569,11 @@ this.parseTryStatement = function () {
   if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
      this.next();
      // #if V
-     /* this.enterLexicalScope(false); */
+     this.enterLexicalScope(false); 
      // #end
      finBlock = this.parseBlockStatement_dependent();
      // #if V
-     /* this.exitScope(); */
+     this.exitScope(); 
      // #end
   }
 

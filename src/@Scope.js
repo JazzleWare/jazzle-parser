@@ -9,6 +9,7 @@ var Scope = function(parent, type) {
      this.isFunc() ? this : this.parent.funcScope;
 
   this.definedNames = {};
+  // #if V
   this.unresolvedNames = {};
 
   this.wrappedDeclList = null;
@@ -21,17 +22,13 @@ var Scope = function(parent, type) {
     this.type = SCOPE_TYPE_LEXICAL_LOOP;    
 
   this.catchVar = ""; // TODO: find another way maybe?
+  // #end
 }
 
-Scope.createFunc = function(parent, decl, funcParams) {
+Scope.createFunc = function(parent, decl) {
   var scope = new Scope(parent, decl ?
        SCOPE_TYPE_FUNCTION_DECLARATION :
        SCOPE_TYPE_FUNCTION_EXPRESSION );
-  if (funcParams) 
-    for (var name in funcParams) {
-      if (!HAS.call(funcParams, name)) continue; 
-      scope.define(funcParams[name].name, VAR);
-    }
   return scope;
 };
 
@@ -40,5 +37,3 @@ Scope.createLexical = function(parent, loop) {
         SCOPE_TYPE_LEXICAL_SIMPLE :
         SCOPE_TYPE_LEXICAL_LOOP);
 };
-
-

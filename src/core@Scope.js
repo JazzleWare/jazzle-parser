@@ -1,3 +1,4 @@
+// #if V
 this.reference = function(name, fromScope) {
   if (!fromScope) fromScope = this;
   var decl = this.findDeclInScope(name), ref = null;
@@ -23,16 +24,18 @@ this.reference = function(name, fromScope) {
     else ref.direct |= ACCESS_FORWARD;
   }
 };
-
+// #end
 this.declare = function(name, declType) {
   return declare[declType].call(this, name);
 };
 
+// #if V
 this.findRefInScope = function(name) {
   name += '%';
   return HAS.call(this.unresolvedNames, name) ?
             this.unresolvedNames[name] : null;
 };
+// #end
 
 this.err = function(errType, errParams) {
    if (errType === 'exists.in.current') {
@@ -52,20 +55,36 @@ var declare = {};
 
 declare[VAR] = function(name) {
    var func = this.funcScope;
+   // #if V
    var decl = new Decl(VAR, name, func, name);
+   // #end
    var scope = this;
-   scope.insertDecl(name, decl);
+   scope.insertDecl(name
+   // #if V
+   , decl
+   // #end
+   );
    while (scope !== func) {
      scope = scope.parent;
-     scope.insertDecl(name, decl);
+     scope.insertDecl(name
+     // #if V
+     , decl
+     // #end
+     );
    }
+   // #if V
    return decl;
+   // #end
 };
 
 declare[LET] = function(name) {
+   // #if V
    var decl = new Decl(LET, name, this, name);
    this.insertDecl(name, decl);
    return decl;
+   // #else
+   this.insertDecl(name);
+   // #end
 };
 
 this.insertDecl = function(name, decl) {
@@ -75,6 +94,7 @@ this.insertDecl = function(name, decl) {
     if (decl.type === VAR && existingDecl.type === VAR) // if a var decl is overriding a var decl of the same name,
       return; // no matter what scope we are in, it's not a problem.
      
+    // #if V
     if ( 
          ( // but
            this === func && // if we are in func scope
@@ -84,7 +104,10 @@ this.insertDecl = function(name, decl) {
        ) // then raise an error
        this.err('exists.in.current',{
            newDecl:decl, existingDecl:existingDecl});
+    // #end
   }
+
+  // #if V
   if (this !== func) {
     this.insertDecl0(true, name, decl);
     if (decl.type !== VAR && !decl.scope.isFunc()) {
@@ -99,8 +122,12 @@ this.insertDecl = function(name, decl) {
       this.insertDecl0(false, synthName, existingDecl);
     } 
   }
+  // #else
+  this.insertDecl0(name);
+  // #end
 };
 
+// #if V
 this.insertDecl0 = function(isOwn, name, decl) {
   name += '%';
   this.definedNames[name] = decl;
@@ -111,6 +138,11 @@ this.insertDecl0 = function(isOwn, name, decl) {
     }
     else decl.refMode = new RefMode();
 };
+// #else
+this.insertDecl0 = function(name) {
+  this.definedNames[name+'%'] = true;
+};
+// #end
 
 this.findDeclInScope = function(name) {
   name += '%';
@@ -119,6 +151,7 @@ this.findDeclInScope = function(name) {
 };
 
 this.finish = function() {
+  // #if V
   var parent = this.parent;
   if (!parent) return;
 
@@ -138,8 +171,10 @@ this.finish = function() {
     if (!n.needsScopeVar()) continue;
     this.addChildLexicalDeclaration(n);
   }
+  // #end
 };
     
+// #if V
 this.insertRef = function(name, ref) {
   this.unresolvedNames[name+'%'] = ref;
 };
@@ -204,12 +239,14 @@ this.declSynth = function(name) {
   this.declare(synthName, VAR);
   return synthName;
 };
+// #end
 
 this.isLoop = function() { return this.type === SCOPE_TYPE_LEXICAL_LOOP; };
 this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
 this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
 this.isDeclaration = function() { return this.type === SCOPE_TYPE_FUNCTION_DECLARATION; };
 
+// #if V
 this.addChildLexicalDeclaration = function(decl) {
    ASSERT.call(this, this.isLoop(), 'only a loop scope can currently have a scope var');
    this.makeScopeObj();
@@ -224,4 +261,4 @@ this.removeDecl = function(decl) {
    delete this.definedNames[decl.synthName+'%'];
    return decl;
 };
-
+// #end
