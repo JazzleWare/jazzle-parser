@@ -84,12 +84,10 @@ this.readNumberLiteral = function (peek) {
         else {
           b = this.c ;
           this.c = c ;
-          if ( this.frac(b) ) return;
-          else  {
+          if ( !this.frac(b) ) {
              this.ltval = 0;
              this.ltraw = '0';
           }
-          return  ;
         }
     }
   }
@@ -104,8 +102,8 @@ this.readNumberLiteral = function (peek) {
       this.c = c;
     }
   }
-  
-  if ( ( c < len && isIDHead(src.charCodeAt(c))) ) this.err('num.idhead.tail') ; // needless
+  // needless as it will be an error nevertheless, but it is still requir'd
+  if ( ( this.c < len && isIDHead(src.charCodeAt(this.c))) ) this.err('num.idhead.tail') ; 
 };
 
 this . frac = function(n) {

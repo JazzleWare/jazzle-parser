@@ -352,6 +352,10 @@ var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 var SCOPE_ARGS = SCOPE_CONSTRUCTOR << 1;
 var SCOPE_BLOCK = SCOPE_ARGS << 1;
+var SCOPE_IF = SCOPE_BLOCK << 1;
+
+var SCOPE_WITH_FUNC_DECL = SCOPE_IF|SCOPE_BLOCK;
+var CLEAR_IB = ~SCOPE_WITH_FUNC_DECL;
 
 var  CONTEXT_FOR = 1,
      CONTEXT_ELEM = CONTEXT_FOR << 1 ,
@@ -417,7 +421,6 @@ var DIRECTIVE_TOP = 1,
     DIRECTIVE_NONE = 0,
     DIRECTIVE_MODULE = DIRECTIVE_TOP,
     DIRECTIVE_SCRIPT = DIRECTIVE_MODULE;
-
 ;
 function y(n) {
   var y = yList[n.type].call(n);
@@ -3796,6 +3799,8 @@ this.parseImport = function() {
 },
 function(){
 this.err = function(errorType, errorTok, args) {
+   throw new Error("Error: " + errorType + "\n" + this.src.substr(this.c-120,120) + ">>>>" + this.src.charAt(this.c) + "<<<<" + this.src.substr(this.c, 120));
+
    if ( has.call(this.errorHandlers, errorType) )
      return this.handleError(this.errorHandlers[errorType], errorTok, args );
 
@@ -4158,7 +4163,7 @@ this . parseFor = function() {
                  this.err('for.iter.no.end.paren',start,startLoc,head,afterHead) )
             return this.errorHandlerOutput ;
 
-          this.scopeFlags &= ~SCOPE_BLOCK;
+          this.scopeFlags &= CLEAR_IB;
           this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
           nbody = this.parseStatement(!false);
           if ( !nbody && this.err('null.stmt','for.iter',
@@ -4202,7 +4207,7 @@ this . parseFor = function() {
          this.err('for.simple.no.end.paren',startc,startLoc,head,afterHead,tail) )
     return this.errorHandlerOutput ;
 
-  this.scopeFlags &= ~SCOPE_BLOCK;
+  this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
   nbody = this.parseStatement(! false);
   if ( !nbody && this.err('null.stmt','for.simple',
@@ -4289,12 +4294,10 @@ this .parseFunc = function(context, argListMode, argLen ) {
   var prevYS = this.firstYS ;
   var prevNonSimpArg = this.firstNonSimpArg;
 
-  if ( !this.canBeStatement ) {
-    if ( !(this.scopeFlags & SCOPE_BLOCK) )
-      this.err('func.decl.not.in.block', startc, startLoc);
- 
+  if ( !this.canBeStatement ) 
     this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
-  }
+  else if ( !(this.scopeFlags & SCOPE_WITH_FUNC_DECL) )
+      this.err('func.decl.not.in.block', startc, startLoc);
 
   var isGen = false;
 
@@ -4433,7 +4436,7 @@ this . makeStrict  = function() {
 
    var a = null, argNames = this.scope.paramNames;
    for (a in argNames) {
-     if (argNames[a] !== nul)
+     if (argNames[a] !== null)
        this.err('func.args.has.dup',this.argNames[argName]);
      a = a.substring(0,a.length-1);
      ASSERT.call(this, !arguments_or_eval(a));
@@ -5767,12 +5770,10 @@ this.readNumberLiteral = function (peek) {
         else {
           b = this.c ;
           this.c = c ;
-          if ( this.frac(b) ) return;
-          else  {
+          if ( !this.frac(b) ) {
              this.ltval = 0;
              this.ltraw = '0';
           }
-          return  ;
         }
     }
   }
@@ -5787,8 +5788,8 @@ this.readNumberLiteral = function (peek) {
       this.c = c;
     }
   }
-  
-  if ( ( c < len && isIDHead(src.charCodeAt(c))) ) this.err('num.idhead.tail') ; // needless
+  // needless as it will be an error nevertheless, but it is still requir'd
+  if ( ( this.c < len && isIDHead(src.charCodeAt(this.c))) ) this.err('num.idhead.tail') ; 
 };
 
 this . frac = function(n) {
@@ -7090,8 +7091,8 @@ this.parseIfStatement = function () {
     return this.errorHandlerOutput ;
 
   var scopeFlags = this.scopeFlags ;
-  this.scopeFlags &= ~SCOPE_BLOCK;
-  this.scopeFlags |= SCOPE_BREAK; 
+  this.scopeFlags &= CLEAR_IB;
+  this.scopeFlags |= SCOPE_IF;
   var nbody = this. parseStatement (false);
   this.scopeFlags = scopeFlags ;
   var alt = null;
@@ -7128,7 +7129,7 @@ this.parseWhileStatement = function () {
      return this.errorHandlerOutput;
 
    var scopeFlags = this.scopeFlags;
-   this.scopeFlags &= ~SCOPE_BLOCK;
+   this.scopeFlags &= CLEAR_IB;
    this.scopeFlags |= (SCOPE_CONTINUE|SCOPE_BREAK );
    var nbody = this.parseStatement(false);
    this.scopeFlags = scopeFlags ;
@@ -7173,7 +7174,7 @@ this.parseDoWhileStatement = function () {
       startLoc = this.locBegin() ;
   this.next() ;
   var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= ~SCOPE_BLOCK;
+  this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= (SCOPE_BREAK| SCOPE_CONTINUE);
   var nbody = this.parseStatement (!false) ;
   this.scopeFlags = scopeFlags;
@@ -7579,7 +7580,7 @@ this . parseWithStatement = function() {
 
    var scopeFlags = this.scopeFlags;
 
-   this.scopeFlags &= ~SCOPE_BLOCK;
+   this.scopeFlags &= CLEAR_IB;
    var nbody = this.parseStatement(!false);
    this.scopeFlags = scopeFlags;
    

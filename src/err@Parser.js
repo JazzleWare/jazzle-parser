@@ -1,4 +1,6 @@
 this.err = function(errorType, errorTok, args) {
+   throw new Error("Error: " + errorType + "\n" + this.src.substr(this.c-120,120) + ">>>>" + this.src.charAt(this.c) + "<<<<" + this.src.substr(this.c, 120));
+
    if ( has.call(this.errorHandlers, errorType) )
      return this.handleError(this.errorHandlers[errorType], errorTok, args );
 

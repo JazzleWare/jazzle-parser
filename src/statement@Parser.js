@@ -133,8 +133,8 @@ this.parseIfStatement = function () {
     return this.errorHandlerOutput ;
 
   var scopeFlags = this.scopeFlags ;
-  this.scopeFlags &= ~SCOPE_BLOCK;
-  this.scopeFlags |= SCOPE_BREAK; 
+  this.scopeFlags &= CLEAR_IB;
+  this.scopeFlags |= SCOPE_IF;
   var nbody = this. parseStatement (false);
   this.scopeFlags = scopeFlags ;
   var alt = null;
@@ -171,7 +171,7 @@ this.parseWhileStatement = function () {
      return this.errorHandlerOutput;
 
    var scopeFlags = this.scopeFlags;
-   this.scopeFlags &= ~SCOPE_BLOCK;
+   this.scopeFlags &= CLEAR_IB;
    this.scopeFlags |= (SCOPE_CONTINUE|SCOPE_BREAK );
    var nbody = this.parseStatement(false);
    this.scopeFlags = scopeFlags ;
@@ -216,7 +216,7 @@ this.parseDoWhileStatement = function () {
       startLoc = this.locBegin() ;
   this.next() ;
   var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= ~SCOPE_BLOCK;
+  this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= (SCOPE_BREAK| SCOPE_CONTINUE);
   var nbody = this.parseStatement (!false) ;
   this.scopeFlags = scopeFlags;
@@ -622,7 +622,7 @@ this . parseWithStatement = function() {
 
    var scopeFlags = this.scopeFlags;
 
-   this.scopeFlags &= ~SCOPE_BLOCK;
+   this.scopeFlags &= CLEAR_IB;
    var nbody = this.parseStatement(!false);
    this.scopeFlags = scopeFlags;
    

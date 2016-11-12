@@ -62,12 +62,10 @@ this .parseFunc = function(context, argListMode, argLen ) {
   var prevYS = this.firstYS ;
   var prevNonSimpArg = this.firstNonSimpArg;
 
-  if ( !this.canBeStatement ) {
-    if ( !(this.scopeFlags & SCOPE_BLOCK) )
-      this.err('func.decl.not.in.block', startc, startLoc);
- 
+  if ( !this.canBeStatement ) 
     this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
-  }
+  else if ( !(this.scopeFlags & SCOPE_WITH_FUNC_DECL) )
+      this.err('func.decl.not.in.block', startc, startLoc);
 
   var isGen = false;
 
@@ -206,7 +204,7 @@ this . makeStrict  = function() {
 
    var a = null, argNames = this.scope.paramNames;
    for (a in argNames) {
-     if (argNames[a] !== nul)
+     if (argNames[a] !== null)
        this.err('func.args.has.dup',this.argNames[argName]);
      a = a.substring(0,a.length-1);
      ASSERT.call(this, !arguments_or_eval(a));

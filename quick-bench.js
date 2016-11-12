@@ -44,7 +44,7 @@ function readFile(filePath) {
    }
 }
 
-var SOURCES_ROOT = './bench/sources';
+var SOURCES_ROOT = './bench-sources';
 var sources = {};
 
 var files = fs .readdirSync ( SOURCES_ROOT );
