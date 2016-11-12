@@ -2,10 +2,11 @@ var macro = require('./macro.js');
 var Macro = macro.Macro;
 var buildMacro = new Macro();
  module.exports.buildMacro = buildMacro;
-buildMacro.define('V');
+if (false) {
+  buildMacro.define('V');
 
-buildMacro.preprocessors.push(function(str) {
-  str = str.toString();
-  return str.replace(/\/\*\s*(,y:-1)\s*\*\//g, " $1");
-});
-
+  buildMacro.preprocessors.push(function(str) {
+    str = str.toString();
+    return str.replace(/\/\*\s*(,y:-1)\s*\*\//g, " $1");
+  });
+}

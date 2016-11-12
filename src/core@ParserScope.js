@@ -43,13 +43,28 @@ ParserScope.prototype.parserDeclare = function(id) {
 
      case DECL_MODE_LET:
        if (id.name === 'let') 
-         this.err('let.decl.not.in.block', id) ;
+         this.err('let.decl.has.let', id) ;
+       
+       if (!(this.parser.scopeFlags & SCOPE_BLOCK))
+         this.err('let.decl.not.in.block');
 
+       // #if V
        this.declare(id.name, LET);
+       // #else
+       if ( this.findDeclInScope(id.name) !== DECL_MODE_NONE)
+         this.err('exists.in.current');
+       this.insertDeclWithID(id);
+       // #end  
        break;
 
      case DECL_MODE_VAR:
+       // #if V
        this.declare(id.name, VAR);
+       // #else
+       if ( this.findDeclInScope(id.name) !== DECL_MODE_NONE)
+         this.err('exists.in.current');
+       this.insertDeclWithID(id);
+       // #end
        break;
 
      default:
@@ -60,6 +75,13 @@ ParserScope.prototype.parserDeclare = function(id) {
 ParserScope.prototype.mustNotHaveAnyDupeParams = function() {
   return this.strict || this.isInComplexArgs;
 };
+
+// #if !V
+ParserScope.prototype.insertDeclWithID = function(id) {
+  var name = id.name + '%';
+  this.definedNames[name] = this.declMode; this.paramNames[name] = id;
+};
+// #end
 
 ParserScope.prototype.err = function(errType, errParams) {
   return this.parser.err(errType, errParams);

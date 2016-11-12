@@ -1,9 +1,7 @@
 this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
-  // #if V
   this.scope = new ParserScope(this, null, SCOPE_TYPE_MAIN);
-  // #end
   this.next();
   this.scopeFlags = SCOPE_BLOCK;
 

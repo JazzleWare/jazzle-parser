@@ -3,14 +3,8 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
-       // #if V
        this.scope.parserDeclare(id);
-       // #end
        if (this.tight) this.assert(!arguments_or_eval(id.name));
-       // #if !V
-       if ( this.isInArgList ) 
-          this.addArg(id);
-       // #end
        return id;
 
     case '[':
@@ -29,13 +23,7 @@ this. parseArrayPattern = function() {
       elem = null,
       list = [];
 
-  // #if V
   this.enterComplex();
-  // #else
-  if ( this.isInArgList ) {
-     this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
-  }
-  // #end  
 
   this.next();
   while ( !false ) {
@@ -79,14 +67,8 @@ this.parseObjectPattern  = function() {
     var val = null;
     var name = null;
 
-    // #if V
     this.enterComplex();
-    // #else
-    if ( this.isInArgList ) {
-         this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
-    }
-    // #end
-
+    
     LOOP:
     do {
       sh = false;

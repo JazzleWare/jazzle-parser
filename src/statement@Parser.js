@@ -118,9 +118,7 @@ this.parseIfStatement = function () {
     return this.errorHandlerOutput;
 
   this.fixupLabels(false);
-  // #if V
   this.enterLexicalScope(false); 
-  // #end
 
   var startc = this.c0,
       startLoc  = this.locBegin();
@@ -145,9 +143,7 @@ this.parseIfStatement = function () {
      alt = this.parseStatement(false);
   }
 
-  // #if V
   this.exitScope(); 
-  // #end
 
   this.foundStatement = !false;
   return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,
@@ -155,9 +151,7 @@ this.parseIfStatement = function () {
 };
 
 this.parseWhileStatement = function () {
-   // #if V
    this.enterLexicalScope(true);
-   // #end
    if ( ! this.ensureStmt_soft () &&
           this.err('not.stmt','while') )
      return this.errorHandlerOutput;
@@ -183,9 +177,7 @@ this.parseWhileStatement = function () {
    this.scopeFlags = scopeFlags ;
    this.foundStatement = !false;
 
-   // #if V
    this.exitScope();
-   // #end
    return { type: 'WhileStatement', test: cond, start: startc, end: nbody.end,
        loc: { start: startLoc, end: nbody.loc.end }, body:nbody/* ,y:-1*/ };
 };
@@ -193,9 +185,7 @@ this.parseWhileStatement = function () {
 this.parseBlckStatement = function () {
   this.fixupLabels(false);
 
-  // #if V
   this.enterLexicalScope(false); 
-  // #end
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
@@ -209,9 +199,7 @@ this.parseBlckStatement = function () {
         this.err('block.unfinished',n) )
     return this.errorHandlerOutput ;
 
-  // #if V
   this.exitScope(); 
-  // #end
   this.scopeFlags = scopeFlags;
   return n;
 };
@@ -221,9 +209,7 @@ this.parseDoWhileStatement = function () {
         this.err('not.stmt','do-while') )
     return this.errorHandlerOutput ;
 
-  // #if V
   this.enterLexicalScope(true); 
-  // #end
   this.fixupLabels(!false);
 
   var startc = this.c0,
@@ -257,9 +243,7 @@ this.parseDoWhileStatement = function () {
 
  this.foundStatement = !false;
 
- // #if V
  this.exitScope(); 
- // #end
  return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
           body: nbody, loc: { start: startLoc, end: { line: li, column: col } } /* ,y:-1*/} ;
 };
@@ -382,9 +366,7 @@ this.parseSwitchStatement = function () {
         this.err('switch.has.no.opening.curly',startc,stratLoc) )
     return this.errorHandlerOutput ;
 
-  // #if V
   this.enterLexicalScope(false); 
-  // #end
   this.scopeFlags |=  (SCOPE_BREAK|SCOPE_BLOCK);
   while ( elem = this.parseSwitchCase()) {
     if (elem.test === null) {
@@ -396,14 +378,13 @@ this.parseSwitchStatement = function () {
 
   this.scopeFlags = scopeFlags ;
   this.foundStatement = !false;
+  this.exitScope(); 
   var n = { type: 'SwitchStatement', cases: cases, start: startc, discriminant: switchExpr,
             end: this.c, loc: { start: startLoc, end: this.loc() } /* ,y:-1*/};
   if ( !this.expectType_soft ('}' ) &&
         this.err('switch.unfinished',n) )
     return this.errorHandlerOutput ;
-  // #if V
-  this.exitScope(); 
-  // End
+
   return n;
 };
 
@@ -555,26 +536,18 @@ this.parseTryStatement = function () {
 
   this.next() ;
 
-  // #if V
   this.enterLexicalScope(false); 
-  // #end
   var tryBlock = this.parseBlockStatement_dependent();
-  // #if V
   this.exitScope(); 
-  // #end
   var finBlock = null, catBlock  = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'catch')
     catBlock = this.parseCatchClause();
 
   if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
      this.next();
-     // #if V
      this.enterLexicalScope(false); 
-     // #end
      finBlock = this.parseBlockStatement_dependent();
-     // #if V
      this.exitScope(); 
-     // #end
   }
 
   var finOrCat = finBlock || catBlock;
@@ -593,48 +566,27 @@ this. parseCatchClause = function () {
 
    this.next();
 
-   // #if V
    this.enterLexicalScope(false);
-   // #end
    if ( !this.expectType_soft ('(') &&
         this.err('catch.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput ;
 
-   // #if V
    this.scope.setDeclMode(DECL_MODE_LET);
-   // #else
-   var isInArgList = this.isInArgList,
-       inComplexArgs = this.inComplexArgs,
-       argNames = this.argNames;
-   
-   this.isInArgList = true;
-   this.inComplexArgs = ICA_CATCH;
-   this.argNames = {};   
-   // #end
    var catParam = this.parsePattern();
    if (this.lttype === 'op' && this.ltraw === '=')
      this.err('catch.param.has.default.val');
 
-   // #if V
    this.scope.setDeclMode(DECL_MODE_NONE);
-   // #end
    if (catParam === null)
      this.err('catch.has.no.param');
 
-   // #if !V
-   this.isInArgList = isInArgList;
-   this.inComplexArgs = inComplexArgs;
-   this.argNames = this.argNames;
-   // #end
    if ( !this.expectType_soft (')') &&
          this.err('catch.has.no.end.paren' , startc,startLoc,catParam)  )
      return this.errorHandlerOutput    ;
 
    var catBlock = this.parseBlockStatement_dependent();
 
-   // #if V
    this.exitScope();
-   // #end
    return {
        type: 'CatchClause',
         loc: { start: startLoc, end: catBlock.loc.end },
@@ -652,9 +604,7 @@ this . parseWithStatement = function() {
 
    if ( this.tight) this.err('with.strict')  ;
 
-   // #if V
    this.enterLexicalScope(false);
-   // #end
    this.fixupLabels(false);
 
    var startc = this.c0,
@@ -678,9 +628,7 @@ this . parseWithStatement = function() {
    
    this.foundStatement = !false;
 
-   // #if V
    this.exitScope();
-   // #end
    return  {
        type: 'WithStatement',
        loc: { start: startLoc, end: nbody.loc.end },

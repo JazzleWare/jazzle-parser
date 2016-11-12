@@ -94,7 +94,6 @@ this.insertDecl = function(name, decl) {
     if (decl.type === VAR && existingDecl.type === VAR) // if a var decl is overriding a var decl of the same name,
       return; // no matter what scope we are in, it's not a problem.
      
-    // #if V
     if ( 
          ( // but
            this === func && // if we are in func scope
@@ -104,10 +103,8 @@ this.insertDecl = function(name, decl) {
        ) // then raise an error
        this.err('exists.in.current',{
            newDecl:decl, existingDecl:existingDecl});
-    // #end
   }
 
-  // #if V
   if (this !== func) {
     this.insertDecl0(true, name, decl);
     if (decl.type !== VAR && !decl.scope.isFunc()) {
@@ -122,12 +119,9 @@ this.insertDecl = function(name, decl) {
       this.insertDecl0(false, synthName, existingDecl);
     } 
   }
-  // #else
   this.insertDecl0(name);
-  // #end
 };
 
-// #if V
 this.insertDecl0 = function(isOwn, name, decl) {
   name += '%';
   this.definedNames[name] = decl;
@@ -138,16 +132,17 @@ this.insertDecl0 = function(isOwn, name, decl) {
     }
     else decl.refMode = new RefMode();
 };
-// #else
-this.insertDecl0 = function(name) {
-  this.definedNames[name+'%'] = true;
-};
-// #end
 
 this.findDeclInScope = function(name) {
   name += '%';
   return HAS.call(this.definedNames, name) ? 
-     this.definedNames[name] : null;
+     this.definedNames[name] :
+     // #if V 
+     null
+     // #else
+     DECL_MODE_NONE
+     // #end
+     ;
 };
 
 this.finish = function() {

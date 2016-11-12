@@ -18,9 +18,7 @@ this . parseFor = function() {
 
   this.scopeFlags = SCOPE_BLOCK;
 
-  // #if V
   this.enterLexicalScope(true);
-  // #end
 
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
      case 'var':

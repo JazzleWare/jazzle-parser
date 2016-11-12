@@ -8,8 +8,10 @@ function ParserScope(ownerParser, parent, type) {
    this.isInComplexArgs = false;
    this.parser = ownerParser;
    this.strict = this.parser.tight;
-
+   
+   // #if V
    if (this.isFunc())
+   // #end
      this.paramNames = {};
 
    this.synth = false;
