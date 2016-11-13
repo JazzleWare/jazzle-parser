@@ -15,26 +15,44 @@ macro.isOn = function(sym) {
 };
 
 function findSpecialComment(str, offset, name) {
+  console.log('str=' + str, 'on=' + offset, 'name=' + name);
+  var comment0 = '/* #'+name;
+  var offset0 = str.indexOf(comment0, offset);
   var comment = '// #'+name;
   offset = str.indexOf(comment, offset);
-  if (offset === -1)
+  var l = true;
+  if ( offset0 !== -1 && ( offset === -1 || offset0 < offset ) ) {
+    comment = comment0;
+    offset = offset0;
+    l = false;
+    console.log('<<finding non-line; offset=' + offset + '>>');
+  }
+  else if (offset === -1 && offset0 === -1)
     return null;
-  var newline = str.lastIndexOf('\n', offset);
-  if (newline === -1)
-    newline = 0;
+ 
+  var lineStart = l ? str.lastIndexOf('\n', offset) : offset;
+  if (lineStart === -1)
+    lineStart = 0;
 
-  var nextNewline = str.indexOf('\n', offset+1);
+  var lineEnd = str.indexOf(l ? '\n' : '*/', offset+1);
 
-  if (nextNewline === -1)
-    nextNewline = str.length;
+  if (lineEnd === -1) {
+    if (!l) throw new Error ('Unfinished comment on ' + lineStart);
+    lineEnd = str.length;
+  }
+  else if (!l) lineEnd += 2;
   
-  return { lineStart: newline, name: name, nameStart: offset, lineEnd: nextNewline, nameEnd: offset+comment.length, fullComment: comment };
+  console.log('line.s='+lineStart, 'name='+name, 'name.s='+offset, 'lineEnd=' + lineEnd );
+
+  return { lineStart: lineStart, name: name, nameStart: offset, lineEnd: lineEnd, nameEnd: offset+comment.length, fullComment: comment, line: l };
 };
 
 function readCond(str, sp) {
+  console.log("cond", str, "n", sp);
+
   var not = false;
   var l = str.slice(sp.nameEnd, sp.lineEnd);
-  l = /^\s*([^\s]*)\s*$/.exec(l)[1];
+  l = (sp.line ? /^\s*([^\s]*)\s*$/ : /\s*([^\s]*)\s*\*\/$/).exec(l)[1];
   if (l.charAt(0)==='!') { not = true; l = l.slice(1); }
   return { n: not, name: l };
 }

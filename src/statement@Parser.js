@@ -571,7 +571,7 @@ this. parseCatchClause = function () {
         this.err('catch.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput ;
 
-   this.scope.setDeclMode(DECL_MODE_LET);
+   this.scope.setDeclMode(DECL_MODE_CATCH_PARAMS);
    var catParam = this.parsePattern();
    if (this.lttype === 'op' && this.ltraw === '=')
      this.err('catch.param.has.default.val');

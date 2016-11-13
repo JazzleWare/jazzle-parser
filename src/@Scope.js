@@ -19,10 +19,11 @@ var Scope = function(parent, type) {
   this.tempStack = this.isFunc() ? [] : null;
 
   if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
-    this.type = SCOPE_TYPE_LEXICAL_LOOP;    
+    this.type |= SCOPE_TYPE_LEXICAL_LOOP;    
 
-  this.catchVar = ""; // TODO: find another way maybe?
+  this.catchVar = null;
   // #end
+  this.catchVarName = ""; // TODO: find another way maybe?
 }
 
 Scope.createFunc = function(parent, decl) {

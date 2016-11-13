@@ -49,6 +49,9 @@ LabelRef.synth = function(baseName) {
 };
 
 ;
+function LiquidNames() { this.names = {}; }
+
+;
 var Parser = function (src, isModule) {
 
   this.src = src;
@@ -254,6 +257,7 @@ var Scope = function(parent, type) {
      this.isFunc() ? this : this.parent.funcScope;
 
   this.definedNames = {};
+  this.catchVarName = ""; // TODO: find another way maybe?
 }
 
 Scope.createFunc = function(parent, decl) {
@@ -401,15 +405,19 @@ function ASSERT(cond, message) { if (!cond) throw new Error(message); }
 var VAR = 'var', LET = 'let';
 
 var SCOPE_TYPE_FUNCTION_EXPRESSION = 1,
-    SCOPE_TYPE_FUNCTION_DECLARATION = 2|SCOPE_TYPE_FUNCTION_EXPRESSION;
-var SCOPE_TYPE_LEXICAL_SIMPLE = 8,
+    SCOPE_TYPE_FUNCTION_DECLARATION = 2|(SCOPE_TYPE_FUNCTION_EXPRESSION<<1);
+var SCOPE_TYPE_LEXICAL_SIMPLE = SCOPE_TYPE_FUNCTION_EXPRESSION<<2,
     SCOPE_TYPE_LEXICAL_LOOP = 16|SCOPE_TYPE_LEXICAL_SIMPLE;
 var SCOPE_TYPE_MAIN = SCOPE_TYPE_FUNCTION_EXPRESSION;
+var SCOPE_TYPE_CATCH = 32|SCOPE_TYPE_LEXICAL_SIMPLE,
+    SCOPE_TYPE_COMPLEXCATCH = 64|SCOPE_TYPE_CATCH,
+    SCOPE_TYPE_SIMPLECATCH = 128|SCOPE_TYPE_CATCH;
 
 var DECL_MODE_VAR = 1,
     DECL_MODE_LET = 2,
     DECL_MODE_NONE = 0,
-    DECL_MODE_FUNCTION_PARAMS = 4;
+    DECL_MODE_FUNCTION_PARAMS = 4,
+    DECL_MODE_CATCH_PARAMS = 8;
 
 var VDT_VOID = 1;
 var VDT_TYPEOF = 2;
@@ -2691,6 +2699,48 @@ this.transformGenerator = function(n, vMode) {
 this.isSynth = function() { return this.baseName !== ""; };
 
 }]  ],
+[LiquidNames.prototype, [function(){
+this.add = function(name) {
+  var entry = this.get(name);
+  ASSERT.call(this, entry === null || entry.realName !== name, 'the liquid global "'+name+'" already exists');
+  this.names[name+'%'] = { realName: name, nonce: 0 };
+  if (entry !== null) this.refresh(entry.realName);
+};
+
+this.get = function(name) {
+  var entry = getOwn(name);
+  return entry;
+};
+
+this.refresh = function(name) {
+  var entry = this.get(name);
+  var n = entry.nonce + 1;
+  var baseName = entry.realName;
+  while (true) {
+    name = baseName + n;
+    if (!HAS.call(this.names, name)) break;
+    n++;
+  }
+  entry.nonce = n;
+  this.names[name+'%'] = entry;
+}; 
+
+this.getName = function(name) {
+  var entry = this.get(name);
+  ASSERT.call(this, entry !== null, 'name not found: "' + name + '"');
+  return entry.realName + entry.nonce;
+};
+
+this.rename = function(name) {
+  var entry = this.get(name);
+  if (entry.realName !== name)
+    delete this.names[name+'%'];
+
+  this.refresh(entry.realName);
+};
+
+
+}]  ],
 [Parser.prototype, [function(){
 this.parseArrayExpression = function (context ) {
   var startc = this.c - 1,
@@ -3799,7 +3849,7 @@ this.parseImport = function() {
 },
 function(){
 this.err = function(errorType, errorTok, args) {
-   throw new Error("Error: " + errorType + "\n" + this.src.substr(this.c-120,120) + ">>>>" + this.src.charAt(this.c) + "<<<<" + this.src.substr(this.c, 120));
+   throw new Error("Error: " + errorType + "\n" + this.src.substr(this.c-120,120) + ">>>>" + this.src.charAt(this.c+1) + "<<<<" + this.src.substr(this.c, 120));
 
    if ( has.call(this.errorHandlers, errorType) )
      return this.handleError(this.errorHandlers[errorType], errorTok, args );
@@ -7529,7 +7579,7 @@ this. parseCatchClause = function () {
         this.err('catch.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput ;
 
-   this.scope.setDeclMode(DECL_MODE_LET);
+   this.scope.setDeclMode(DECL_MODE_CATCH_PARAMS);
    var catParam = this.parsePattern();
    if (this.lttype === 'op' && this.ltraw === '=')
      this.err('catch.param.has.default.val');
@@ -8126,9 +8176,25 @@ ParserScope.prototype.makeComplex = function() {
 };
 
 ParserScope.prototype.parserDeclare = function(id) {
+   var existing = DECL_MODE_NONE;
    switch (this.declMode) {
      case DECL_MODE_FUNCTION_PARAMS:
        this.addParam(id);
+       break;
+
+     case DECL_MODE_CATCH_PARAMS:
+       if ( this.findDeclInScope(id.name) !== DECL_MODE_NONE)
+         this.err('exists.in.current');
+       
+       this.insertDeclWithIDAndMode(id, DECL_MODE_LET); // TODO: must-fix
+       break;
+
+     case DECL_MODE_VAR:
+       existing = this.findDeclInScope(id.name);
+       if ( existing !== DECL_MODE_NONE && existing !== DECL_MODE_VAR)
+         this.err('exists.in.current');
+
+       this.insertDeclWithID(id);
        break;
 
      case DECL_MODE_LET:
@@ -8143,11 +8209,6 @@ ParserScope.prototype.parserDeclare = function(id) {
        this.insertDeclWithID(id);
        break;
 
-     case DECL_MODE_VAR:
-       if ( this.findDeclInScope(id.name) !== DECL_MODE_NONE)
-         this.err('exists.in.current');
-       this.insertDeclWithID(id);
-       break;
 
      default:
        ASSERT.call(this, false, 'default mode is not defined');
@@ -8159,6 +8220,10 @@ ParserScope.prototype.mustNotHaveAnyDupeParams = function() {
 };
 
 ParserScope.prototype.insertDeclWithID = function(id) {
+  return this.insertDeclWithIDAndMode(id, this.declMode);
+};
+
+ParserScope.prototype.insertDeclWithIDAndMode = function(id,mode) {
   var name = id.name + '%';
   this.definedNames[name] = this.declMode; this.paramNames[name] = id;
 };
@@ -8725,18 +8790,32 @@ this.err = function(errType, errParams) {
      ASSERT.call(this, false, errType + '; PARAMS='+errParams);
 };
 
+this.hoistNameToScope = function(
+  name, 
+  targetScope
+  ) { 
+   var scope = this;
+   while (scope !== targetScope) {
+     scope = scope.parent;
+     ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+name+'"'); 
+     scope.insertDecl(name
+     );
+   }
+};
+   
 var declare = {};
 
 declare[VAR] = function(name) {
    var func = this.funcScope;
    var scope = this;
-   scope.insertDecl(name
+// scope.insertDecl(name
+////#if V
+// , decl
+////#end
+// );
+   this.hoistNameToScope(name, func
    );
-   while (scope !== func) {
-     scope = scope.parent;
-     scope.insertDecl(name
-     );
-   }
+
 };
 
 declare[LET] = function(name) {
@@ -8775,9 +8854,9 @@ this.insertDecl = function(name, decl) {
       this.insertDecl0(false, synthName, existingDecl);
     } 
   }
-  this.insertDecl0(name);
 };
 
+// TODO: looks like `isOwn` is not necessary
 this.insertDecl0 = function(isOwn, name, decl) {
   name += '%';
   this.definedNames[name] = decl;
@@ -8801,10 +8880,50 @@ this.finish = function() {
 };
     
 
-this.isLoop = function() { return this.type === SCOPE_TYPE_LEXICAL_LOOP; };
+this.isLoop = function() { return this.type & SCOPE_TYPE_LEXICAL_LOOP; };
 this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
 this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
 this.isDeclaration = function() { return this.type === SCOPE_TYPE_FUNCTION_DECLARATION; };
+this.isCatch = function() { return this.type & SCOPE_TYPE_CATCH; };
+this.isComplexCatch = function() { return this.type & SCOPE_TYPE_COMPLEXCATCH; };
+this.isSimpleCatch = function() { return this.type & SCOPE_TYPE_SIMPLECATCH; };
+
+
+/* consider this contrived example:
+   function a() {
+     var v = null, v1 = null;
+     while (false) {
+       let v = 12; // synthName=v2
+       function b() {
+         try { throw 'e' }
+         catch (v2) {
+            // prints the value of v, i.e 12, because v's emit name is v2 -- and this behaviour is *not* what we want
+            // this means for every name referenced in a catch scope, we have to ensure
+            // emit name for that name does not clash with (i.e, is not the same as) the catch variable; if it is, though,
+            // the catch variable must be renamed.
+            // this might look like a simple rename-as-you-go scheme like the one we are currently using on non-catch scopes;
+            // BUT it is not that simple, because:
+            // a) the catch variable's name can not be determined until the very end of the catch scope, where all names that could
+            // have caused a rename have been visited.
+            // b) a 'let'-var's name is calculated taking the currently accessible catch-var names (along with their synth names)
+            // into account; the problem is, those catch-vars might change their synth names due to the reasons detailed above;
+            // even though this renaming is in turn done taking the currently accessible synth names
+            // into account to prevent name clashes, unnecessary renames look to abound in the process.
+
+            // one solution is to save the catch when the catch scope begins, and add it to the list of the catch scope's defined
+            // names only at the end of the scope
+            console.log(v);
+          }
+       }
+     }
+   }
+*/
+this.setCatchVar = function(name) {
+  ASSERT.call(this, this.isCatch(), 'only a catch scope can have a catch variable');
+  ASSERT.call(this, this.catchVar === "", 'scope has already got a catch var: ' + this.catchVarName);
+  this.catchVarName = name;
+};
+
 
 
 }]  ],

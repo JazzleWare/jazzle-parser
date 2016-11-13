@@ -1,6 +1,7 @@
 // #if V
 this.reference = function(name, fromScope) {
   if (!fromScope) fromScope = this;
+
   var decl = this.findDeclInScope(name), ref = null;
   if (decl && !decl.scope.isFunc() && this.isFunc()) { // the decl is synthetic, and must be renamed
     decl.rename();
@@ -51,6 +52,25 @@ this.err = function(errType, errParams) {
      ASSERT.call(this, false, errType + '; PARAMS='+errParams);
 };
 
+this.hoistNameToScope = function(
+  name, 
+  targetScope
+  // #if V
+  , decl
+  // #end
+  ) { 
+   var scope = this;
+   while (scope !== targetScope) {
+     scope = scope.parent;
+     ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+name+'"'); 
+     scope.insertDecl(name
+     // #if V
+     , decl
+     // #end
+     );
+   }
+};
+   
 var declare = {};
 
 declare[VAR] = function(name) {
@@ -59,19 +79,17 @@ declare[VAR] = function(name) {
    var decl = new Decl(VAR, name, func, name);
    // #end
    var scope = this;
-   scope.insertDecl(name
-   // #if V
-   , decl
-   // #end
-   );
-   while (scope !== func) {
-     scope = scope.parent;
-     scope.insertDecl(name
+// scope.insertDecl(name
+////#if V
+// , decl
+////#end
+// );
+   this.hoistNameToScope(name, func
      // #if V
      , decl
      // #end
-     );
-   }
+   );
+
    // #if V
    return decl;
    // #end
@@ -119,9 +137,9 @@ this.insertDecl = function(name, decl) {
       this.insertDecl0(false, synthName, existingDecl);
     } 
   }
-  this.insertDecl0(name);
 };
 
+// TODO: looks like `isOwn` is not necessary
 this.insertDecl0 = function(isOwn, name, decl) {
   name += '%';
   this.definedNames[name] = decl;
@@ -166,6 +184,8 @@ this.finish = function() {
     if (!n.needsScopeVar()) continue;
     this.addChildLexicalDeclaration(n);
   }
+
+  if (this.isCatch()) this.finishWithActuallyDeclaringTheCatchVar();
   // #end
 };
     
@@ -234,12 +254,17 @@ this.declSynth = function(name) {
   this.declare(synthName, VAR);
   return synthName;
 };
+
+this.addLiquidGlobal = function(name) { this.liquidGlobals.add(name); };
 // #end
 
-this.isLoop = function() { return this.type === SCOPE_TYPE_LEXICAL_LOOP; };
+this.isLoop = function() { return this.type & SCOPE_TYPE_LEXICAL_LOOP; };
 this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
 this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
 this.isDeclaration = function() { return this.type === SCOPE_TYPE_FUNCTION_DECLARATION; };
+this.isCatch = function() { return this.type & SCOPE_TYPE_CATCH; };
+this.isComplexCatch = function() { return this.type & SCOPE_TYPE_COMPLEXCATCH; };
+this.isSimpleCatch = function() { return this.type & SCOPE_TYPE_SIMPLECATCH; };
 
 // #if V
 this.addChildLexicalDeclaration = function(decl) {
@@ -257,3 +282,48 @@ this.removeDecl = function(decl) {
    return decl;
 };
 // #end
+
+/* consider this contrived example:
+   function a() {
+     var v = null, v1 = null;
+     while (false) {
+       let v = 12; // synthName=v2
+       function b() {
+         try { throw 'e' }
+         catch (v2) {
+            // prints the value of v, i.e 12, because v's emit name is v2 -- and this behaviour is *not* what we want
+            // this means for every name referenced in a catch scope, we have to ensure
+            // emit name for that name does not clash with (i.e, is not the same as) the catch variable; if it is, though,
+            // the catch variable must be renamed.
+            // this might look like a simple rename-as-you-go scheme like the one we are currently using on non-catch scopes;
+            // BUT it is not that simple, because:
+            // a) the catch variable's name can not be determined until the very end of the catch scope, where all names that could
+            // have caused a rename have been visited.
+            // b) a 'let'-var's name is calculated taking the currently accessible catch-var names (along with their synth names)
+            // into account; the problem is, those catch-vars might change their synth names due to the reasons detailed above;
+            // even though this renaming is in turn done taking the currently accessible synth names
+            // into account to prevent name clashes, unnecessary renames look to abound in the process.
+
+            // one solution is to save the catch when the catch scope begins, and add it to the list of the catch scope's defined
+            // names only at the end of the scope
+            console.log(v);
+          }
+       }
+     }
+   }
+*/
+this.setCatchVar = function(name) {
+  ASSERT.call(this, this.isCatch(), 'only a catch scope can have a catch variable');
+  ASSERT.call(this, this.catchVar === "", 'scope has already got a catch var: ' + this.catchVarName);
+  this.catchVarName = name;
+};
+
+// #if V
+this.finishWithActuallyDeclaringTheCatchVar = function() {
+  var synthName = this.newSynthName(this.catchVarName);
+  var decl = new Decl(LET, this.catchVarName, this, synthName);
+  this.insertDecl0(true, this.catchVarName, decl) ;
+};
+
+// #end
+

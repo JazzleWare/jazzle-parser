@@ -1,0 +1,2 @@
+function LiquidNames() { this.names = {}; }
+

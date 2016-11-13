@@ -36,9 +36,29 @@ ParserScope.prototype.makeComplex = function() {
 };
 
 ParserScope.prototype.parserDeclare = function(id) {
+   var existing = DECL_MODE_NONE;
    switch (this.declMode) {
      case DECL_MODE_FUNCTION_PARAMS:
        this.addParam(id);
+       break;
+
+     case DECL_MODE_CATCH_PARAMS:
+       if ( this.findDeclInScope(id.name) !== DECL_MODE_NONE)
+         this.err('exists.in.current');
+       
+       this.insertDeclWithIDAndMode(id, DECL_MODE_LET); // TODO: must-fix
+       break;
+
+     case DECL_MODE_VAR:
+       // #if V
+       this.declare(id.name, VAR);
+       // #else
+       existing = this.findDeclInScope(id.name);
+       if ( existing !== DECL_MODE_NONE && existing !== DECL_MODE_VAR)
+         this.err('exists.in.current');
+
+       this.insertDeclWithID(id);
+       // #end
        break;
 
      case DECL_MODE_LET:
@@ -57,15 +77,6 @@ ParserScope.prototype.parserDeclare = function(id) {
        // #end  
        break;
 
-     case DECL_MODE_VAR:
-       // #if V
-       this.declare(id.name, VAR);
-       // #else
-       if ( this.findDeclInScope(id.name) !== DECL_MODE_NONE)
-         this.err('exists.in.current');
-       this.insertDeclWithID(id);
-       // #end
-       break;
 
      default:
        ASSERT.call(this, false, 'default mode is not defined');
@@ -78,6 +89,10 @@ ParserScope.prototype.mustNotHaveAnyDupeParams = function() {
 
 // #if !V
 ParserScope.prototype.insertDeclWithID = function(id) {
+  return this.insertDeclWithIDAndMode(id, this.declMode);
+};
+
+ParserScope.prototype.insertDeclWithIDAndMode = function(id,mode) {
   var name = id.name + '%';
   this.definedNames[name] = this.declMode; this.paramNames[name] = id;
 };
