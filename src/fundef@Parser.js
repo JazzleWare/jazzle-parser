@@ -141,6 +141,8 @@ this .parseFunc = function(context, argListMode, argLen ) {
    
   if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
 
+  this.labels = {};
+
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
             id: currentFuncName,

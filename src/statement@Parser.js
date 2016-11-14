@@ -300,10 +300,6 @@ this.parseBreakStatement = function () {
      return this.errorHandlerOutput ;
 
    this.fixupLabels(false);
-   if (!(this.scopeFlags & SCOPE_BREAK) &&
-         this.err('break.not.in.breakable') )
-     return this.errorHandlerOutput ;
-
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;
 
@@ -327,6 +323,10 @@ this.parseBreakStatement = function () {
        return { type: 'BreakStatement', label: label, start: startc, end: semi || label.end,
            loc: { start: startLoc, end: semiLoc || label.loc.end } };
    }
+   else if (!(this.scopeFlags & SCOPE_BREAK) &&
+         this.err('break.not.in.breakable') )
+     return this.errorHandlerOutput ;
+
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
    if ( !semiLoc && !this.newLineBeforeLookAhead &&
