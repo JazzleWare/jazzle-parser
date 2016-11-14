@@ -86,7 +86,7 @@ declare[DECL_MODE_VAR] = function(id, declType) {
    // #end
 };
 
-declare[DECL_MODE_CATCH_PARAMS] =
+declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
 declare[DECL_MODE_LET] = function(id, declType) {
    // #if V
    var decl = new Decl(declType, id.name, this, id.name);
@@ -97,6 +97,16 @@ declare[DECL_MODE_LET] = function(id, declType) {
    // #end
 };
 
+declare[DECL_MODE_CATCH_PARAMS] = function(id, declType) {
+  var name = id.name + '%';
+  // #if V
+  this.insertDecl(id, new Decl( DECL_MODE_CATCH_PARAMS, id.name, this, id.name)); 
+  this.catchVarName = id.name;
+  // #else
+  this.insertDecl(id);
+  // #end
+};
+ 
 // returns false if the variable was not inserted
 // in the current scope because of having
 // the same name as a catch var in the scope
@@ -134,7 +144,7 @@ this.insertDecl = function(id /* #if V */, decl /* #end */) {
   if (this !== func) {
     this.insertDecl0(true, id.name, decl);
     this.insertID(id);
-    if ( !(decl.type & DECL_MODE_VAR) && !decl.scope.isFunc()) { // non-func-scope-let-declarations
+    if ( decl.syntheticUnlessInAFunc() && !decl.scope.isFunc()) { // non-func-scope-let-declarations
       decl.rename();
     }
   }
@@ -303,6 +313,7 @@ this.removeDecl = function(decl) {
        function b() {
          try { throw 'e' }
          catch (v2) {
+            console.log(v);
             // prints the value of v, i.e 12, because v's emit name is v2 -- and this behaviour is *not* what we want
             // this means for every name referenced in a catch scope, we have to ensure
             // emit name for that name does not clash with (i.e, is not the same as) the catch variable; if it is, though,
@@ -316,9 +327,8 @@ this.removeDecl = function(decl) {
             // even though this renaming is in turn done taking the currently accessible synth names
             // into account to prevent name clashes, unnecessary renames look to abound in the process.
 
-            // one solution is to save the catch when the catch scope begins, and add it to the list of the catch scope's defined
+            // one solution is to save the catch var when the catch scope begins, and add it to the list of the catch scope's defined
             // names only at the end of the scope
-            console.log(v);
           }
        }
      }
@@ -333,9 +343,11 @@ this.setCatchVar = function(name) {
 };
 
 this.finishWithActuallyDeclaringTheCatchVar = function() {
+  if ( this.catchVarName === "" ) return;
+
   var synthName = this.newSynthName(this.catchVarName);
-  var decl = new Decl(DECL_MODE_LET, this.catchVarName, this, synthName);
-  this.insertDecl0(true, this.catchVarName, decl) ;
+  var decl = this.findDeclInScope(this.catchVarName);
+  decl.synthName = synthName;
 };
 
 // #end

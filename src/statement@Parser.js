@@ -560,13 +560,17 @@ this.parseTryStatement = function () {
             handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end } /* ,y:-1*/};
 };
 
+this.enterCatchScope = function() {
+  this.scope = this.scope.spawnCatch();
+};
+
 this. parseCatchClause = function () {
    var startc = this.c0,
        startLoc = this.locBegin();
 
    this.next();
 
-   this.enterLexicalScope(false);
+   this.enterCatchScope();
    if ( !this.expectType_soft ('(') &&
         this.err('catch.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput ;

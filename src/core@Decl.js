@@ -19,3 +19,7 @@ this.isScopeObj = function() {
    return this === this.scope.scopeObjVar;
 };
 
+this.syntheticUnlessInAFunc = function() {
+  return this.type & DECL_MODE_LET;
+};
+
