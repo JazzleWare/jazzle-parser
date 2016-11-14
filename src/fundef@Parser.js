@@ -202,11 +202,13 @@ this . makeStrict  = function() {
 
    this.tight = !false;
 
-   var a = null, argNames = this.scope.paramNames;
+   var a = null, argNames = this.scope.definedNames;
    for (a in argNames) {
-     if (argNames[a] !== null)
-       this.err('func.args.has.dup',this.argNames[argName]);
+     var declType = argNames[a] /* #if V */ .type /* #end */ ;
      a = a.substring(0,a.length-1);
+     if (declType&DECL_DUPE)
+       this.err('func.args.has.dup',a);
+
      ASSERT.call(this, !arguments_or_eval(a));
      this.validateID(a);
    }

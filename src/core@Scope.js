@@ -21,13 +21,16 @@ this.reference = function(name, fromScope) {
       ref = new RefMode();
       this.insertRef(name, ref);
     }
-    if (this !== fromScope) ref.updateForwardRefWith(name, fromScope);
-    else ref.direct |= ACCESS_FORWARD;
+    if (this !== fromScope)
+      ref.updateForwardRefWith(name, fromScope);
+    else
+      ref.direct |= ACCESS_FORWARD;
   }
 };
 // #end
+
 this.declare = function(name, declType) {
-  return declare[declType].call(this, name);
+  return declare[declType].call(this, name, declType);
 };
 
 // #if V
@@ -52,93 +55,110 @@ this.err = function(errType, errParams) {
      ASSERT.call(this, false, errType + '; PARAMS='+errParams);
 };
 
-this.hoistNameToScope = function(
-  name, 
-  targetScope
-  // #if V
-  , decl
-  // #end
-  ) { 
+this.hoistIdToScope = function(id, targetScope /* #if V */, decl /* #end */ ) { 
    var scope = this;
-   while (scope !== targetScope) {
+   while (true) {
+     ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
+     if ( !scope.insertDecl(id /* #if V */, decl /* #end */ ) )
+       break;
+
+     if (scope === targetScope)
+       break;
+
      scope = scope.parent;
-     ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+name+'"'); 
-     scope.insertDecl(name
-     // #if V
-     , decl
-     // #end
-     );
    }
 };
    
 var declare = {};
 
-declare[VAR] = function(name) {
+
+declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNC_NAME] =
+declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
    // #if V
-   var decl = new Decl(VAR, name, func, name);
+   var decl = new Decl(declType, id.name, func, id.name);
    // #end
-   var scope = this;
-// scope.insertDecl(name
-////#if V
-// , decl
-////#end
-// );
-   this.hoistNameToScope(name, func
-     // #if V
-     , decl
-     // #end
-   );
+
+   this.hoistIdToScope(id, func /* #if V */ , decl /* #end */ );
 
    // #if V
    return decl;
    // #end
 };
 
-declare[LET] = function(name) {
+declare[DECL_MODE_CATCH_PARAMS] =
+declare[DECL_MODE_LET] = function(id, declType) {
    // #if V
-   var decl = new Decl(LET, name, this, name);
-   this.insertDecl(name, decl);
+   var decl = new Decl(declType, id.name, this, id.name);
+   this.insertDecl(id, decl);
    return decl;
    // #else
-   this.insertDecl(name);
+   this.insertDecl(id);
    // #end
 };
 
-this.insertDecl = function(name, decl) {
-  var existingDecl = this.findDeclInScope(name);
+// returns false if the variable was not inserted
+// in the current scope because of having
+// the same name as a catch var in the scope
+// (this implies the scope must be a catch scope for this to happen)
+this.insertDecl = function(id /* #if V */, decl /* #end */) {
+
+  var declType = /* #if V */ decl.type; /* #else */ this.declMode; /* #end */
+  var existingDecl = this.findDeclInScope(id.name);
   var func = this.funcScope;
-  if (existingDecl !== null) {
-    if (decl.type === VAR && existingDecl.type === VAR) // if a var decl is overriding a var decl of the same name,
-      return; // no matter what scope we are in, it's not a problem.
+
+  if (existingDecl !== DECL_NOT_FOUND) {
+    var existingType = existingDecl/* #if V */.type/* #end */;
+
+    // if a var name in a catch scope has the same name as a catch var,
+    // it will not get hoisted any further; please note the '===' below -- `function l() {}`
+    if ((declType === DECL_MODE_VAR) && (existingType & DECL_MODE_CATCH_PARAMS))
+       return false;
+
+    // if a var decl is overriding a var decl of the same name, no matter what scope we are in,
+    // it's not a problem.
+    if ((declType & DECL_MODE_VAR) && (existingType & DECL_MODE_VAR))
+      return true; 
      
-    if ( 
-         ( // but
-           this === func && // if we are in func scope
-           existingDecl.scope === func // and what we are trying to override is real (i.e., not synthesized)
-         ) ||
-         this !== func // or we are in a lexical scope, trying to override a let with a var or vice versa, 
-       ) // then raise an error
-       this.err('exists.in.current',{
-           newDecl:decl, existingDecl:existingDecl});
+    // #if V
+    // but if we are in func scope and what we are trying to override is real (i.e., not synthesized),
+    // or we are in a lexical scope, trying to override a let with a var or vice versa, then raise an error
+    if ( ( this === func && existingDecl.scope === func ) || this !== func)
+        this.err('exists.in.current',{id: id});
+    // #else
+    this.err('exists.in.current', { id: id });
+    // #end
   }
 
+  // #if V
   if (this !== func) {
-    this.insertDecl0(true, name, decl);
-    if (decl.type !== VAR && !decl.scope.isFunc()) {
+    this.insertDecl0(true, id.name, decl);
+    this.insertID(id);
+    if ( !(decl.type & DECL_MODE_VAR) && !decl.scope.isFunc()) { // non-func-scope-let-declarations
       decl.rename();
     }
   }
   else {
-    this.insertDecl0(true, name, decl);
+    this.insertDecl0(true, id.name, decl);
+    this.insertID(id);
     if (existingDecl !== null) { // if there is a synthesized declaration of the same name, rename it
-      var synthName = existingDecl.scope.newSynthName(name);
+      var synthName = existingDecl.scope.newSynthName(id.name);
       existingDecl.synthName = synthName;
       this.insertDecl0(false, synthName, existingDecl);
     } 
-  }
+  } 
+  // #else
+  this.insertDecl0(id);
+  // #end
+
+  return true;
 };
 
+this.insertID = function(id) {
+  this.idNames[id.name+'%'] = id;
+};
+
+// #if V
 // TODO: looks like `isOwn` is not necessary
 this.insertDecl0 = function(isOwn, name, decl) {
   name += '%';
@@ -150,17 +170,12 @@ this.insertDecl0 = function(isOwn, name, decl) {
     }
     else decl.refMode = new RefMode();
 };
+// #end
 
 this.findDeclInScope = function(name) {
   name += '%';
   return HAS.call(this.definedNames, name) ? 
-     this.definedNames[name] :
-     // #if V 
-     null
-     // #else
-     DECL_MODE_NONE
-     // #end
-     ;
+     this.definedNames[name] : DECL_NOT_FOUND;
 };
 
 this.finish = function() {
@@ -181,8 +196,8 @@ this.finish = function() {
   for (var name in this.definedNames) {
     if (!HAS.call(this.definedNames, name)) continue;
     var n = this.definedNames[name];
-    if (!n.needsScopeVar()) continue;
-    this.addChildLexicalDeclaration(n);
+    if (n.needsScopeVar())
+      this.addChildLexicalDeclaration(n);
   }
 
   if (this.isCatch()) this.finishWithActuallyDeclaringTheCatchVar();
@@ -198,7 +213,6 @@ this.newSynthName = function(baseName) {
   var num = 0, func = this.funcScope;
   var name = baseName;
   for (;;num++, name = baseName + "" + num) {
-     if (name === this.catchVar) continue;
      if (func.findDeclInScope(name)) continue; // must not be in the surrounding func scope's defined names, 
      if (func.findRefInScope(name)) continue; // must not be in the surrounding func scope's referenced names;
      if (!this.isFunc()) { // furthermore, if we're not allocating in a func scope,
@@ -227,7 +241,7 @@ this.newSynthName = function(baseName) {
 this.makeScopeObj = function() {
   if (this.scopeObjVar !== null) return;
   var scopeName = this.newSynthName('scope');
-  this.scopeObjVar = this.declare(scopeName, LET);
+  this.scopeObjVar = this.declare(scopeName, DECL_MODE_LET);
   this.wrappedDeclList = [];
   this.wrappedDeclNames = {};
 };   
@@ -251,7 +265,7 @@ this.releaseTemp = function(tempName) {
 this.declSynth = function(name) {
   ASSERT.call(this, this.isFunc());
   var synthName = this.newSynthName(name);
-  this.declare(synthName, VAR);
+  this.declare(synthName, DECL_MODE_VAR);
   return synthName;
 };
 
@@ -262,9 +276,7 @@ this.isLoop = function() { return this.type & SCOPE_TYPE_LEXICAL_LOOP; };
 this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
 this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
 this.isDeclaration = function() { return this.type === SCOPE_TYPE_FUNCTION_DECLARATION; };
-this.isCatch = function() { return this.type & SCOPE_TYPE_CATCH; };
-this.isComplexCatch = function() { return this.type & SCOPE_TYPE_COMPLEXCATCH; };
-this.isSimpleCatch = function() { return this.type & SCOPE_TYPE_SIMPLECATCH; };
+this.isCatch = function() { return (this.type & SCOPE_TYPE_CATCH) === SCOPE_TYPE_CATCH; };
 
 // #if V
 this.addChildLexicalDeclaration = function(decl) {
@@ -312,16 +324,17 @@ this.removeDecl = function(decl) {
      }
    }
 */
+
+// #if V
 this.setCatchVar = function(name) {
   ASSERT.call(this, this.isCatch(), 'only a catch scope can have a catch variable');
   ASSERT.call(this, this.catchVar === "", 'scope has already got a catch var: ' + this.catchVarName);
   this.catchVarName = name;
 };
 
-// #if V
 this.finishWithActuallyDeclaringTheCatchVar = function() {
   var synthName = this.newSynthName(this.catchVarName);
-  var decl = new Decl(LET, this.catchVarName, this, synthName);
+  var decl = new Decl(DECL_MODE_LET, this.catchVarName, this, synthName);
   this.insertDecl0(true, this.catchVarName, decl) ;
 };
 

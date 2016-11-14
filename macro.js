@@ -15,7 +15,6 @@ macro.isOn = function(sym) {
 };
 
 function findSpecialComment(str, offset, name) {
-  console.log('str=' + str, 'on=' + offset, 'name=' + name);
   var comment0 = '/* #'+name;
   var offset0 = str.indexOf(comment0, offset);
   var comment = '// #'+name;
@@ -25,7 +24,6 @@ function findSpecialComment(str, offset, name) {
     comment = comment0;
     offset = offset0;
     l = false;
-    console.log('<<finding non-line; offset=' + offset + '>>');
   }
   else if (offset === -1 && offset0 === -1)
     return null;
@@ -42,14 +40,10 @@ function findSpecialComment(str, offset, name) {
   }
   else if (!l) lineEnd += 2;
   
-  console.log('line.s='+lineStart, 'name='+name, 'name.s='+offset, 'lineEnd=' + lineEnd );
-
   return { lineStart: lineStart, name: name, nameStart: offset, lineEnd: lineEnd, nameEnd: offset+comment.length, fullComment: comment, line: l };
 };
 
 function readCond(str, sp) {
-  console.log("cond", str, "n", sp);
-
   var not = false;
   var l = str.slice(sp.nameEnd, sp.lineEnd);
   l = (sp.line ? /^\s*([^\s]*)\s*$/ : /\s*([^\s]*)\s*\*\/$/).exec(l)[1];

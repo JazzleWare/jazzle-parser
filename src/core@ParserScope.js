@@ -1,23 +1,29 @@
-
 ParserScope.prototype = createObj(Scope.prototype);
 
 ParserScope.prototype.spawnFunc = function(fundecl) {
   return new ParserScope(
-       this.parser,
-       this,
-       fundecl ?
-         SCOPE_TYPE_FUNCTION_DECLARATION :
-         SCOPE_TYPE_FUNCTION_EXPRESSION
+    this.parser,
+    this,
+    fundecl ?
+      SCOPE_TYPE_FUNCTION_DECLARATION :
+      SCOPE_TYPE_FUNCTION_EXPRESSION
   );
 };
 
 ParserScope.prototype.spawnLexical = function(loop) {
   return new ParserScope(
-       this.parser,
-       this,
-       !loop ?
-        SCOPE_TYPE_LEXICAL_SIMPLE :
-        SCOPE_TYPE_LEXICAL_LOOP );
+    this.parser,
+    this,
+    !loop ?
+     SCOPE_TYPE_LEXICAL_SIMPLE :
+     SCOPE_TYPE_LEXICAL_LOOP );
+};
+
+ParserScope.prototype.spawnCatch = function() {
+  return new ParserScope(
+    this.parser,
+    this,
+    SCOPE_TYPE_CATCH );
 };
 
 ParserScope.prototype.setDeclMode = function(mode) {
@@ -25,62 +31,36 @@ ParserScope.prototype.setDeclMode = function(mode) {
 };
 
 ParserScope.prototype.makeComplex = function() {
+  // complex params are treated as let by the emitter
+  if (this.declMode & DECL_MODE_CATCH_PARAMS) {
+    this.declMode |= DECL_MODE_LET; 
+    return;
+  }
+
   ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
   if (this.mustNotHaveAnyDupeParams()) return;
-  for (var a in this.paramNames) {
-     if (!HAS.call(this.paramNames, a)) continue;
-     a = this.paramNames[a];
-     if (a !== null) this.parser.err('func.args.has.dup', a);
+  for (var a in this.definedNames) {
+     if (!HAS.call(this.definedNames, a)) continue;
+     if (this.definedNames[a]/* #if V */.type/* #end */ & DECL_DUPE) this.parser.err('func.args.has.dup', a);
   }
   this.isInComplexArgs = true;
 };
 
 ParserScope.prototype.parserDeclare = function(id) {
-   var existing = DECL_MODE_NONE;
-   switch (this.declMode) {
-     case DECL_MODE_FUNCTION_PARAMS:
-       this.addParam(id);
-       break;
-
-     case DECL_MODE_CATCH_PARAMS:
-       if ( this.findDeclInScope(id.name) !== DECL_MODE_NONE)
-         this.err('exists.in.current');
-       
-       this.insertDeclWithIDAndMode(id, DECL_MODE_LET); // TODO: must-fix
-       break;
-
-     case DECL_MODE_VAR:
-       // #if V
-       this.declare(id.name, VAR);
-       // #else
-       existing = this.findDeclInScope(id.name);
-       if ( existing !== DECL_MODE_NONE && existing !== DECL_MODE_VAR)
-         this.err('exists.in.current');
-
-       this.insertDeclWithID(id);
-       // #end
-       break;
-
-     case DECL_MODE_LET:
-       if (id.name === 'let') 
-         this.err('let.decl.has.let', id) ;
-       
-       if (!(this.parser.scopeFlags & SCOPE_BLOCK))
-         this.err('let.decl.not.in.block');
-
-       // #if V
-       this.declare(id.name, LET);
-       // #else
-       if ( this.findDeclInScope(id.name) !== DECL_MODE_NONE)
-         this.err('exists.in.current');
-       this.insertDeclWithID(id);
-       // #end  
-       break;
-
-
-     default:
-       ASSERT.call(this, false, 'default mode is not defined');
+   ASSERT.call(this, this.declMode !== DECL_MODE_NONE, 'Unknown declMode');
+   if (this.declMode === DECL_MODE_FUNCTION_PARAMS) {
+     if (!this.addParam(id)) // if it was not added, i.e., it is a duplicate
+       return;
    }
+   else if (this.declMode === DECL_MODE_LET) {
+     if ( !(this.parser.scopeFlags & SCOPE_BLOCK) )
+       this.err('let.decl.not.in.block', id );
+
+     if ( id.name === 'let' )
+       this.err('lexical.name.is.let');
+   }
+
+   this.declare(id, this.declMode);
 };
 
 ParserScope.prototype.mustNotHaveAnyDupeParams = function() {
@@ -88,13 +68,10 @@ ParserScope.prototype.mustNotHaveAnyDupeParams = function() {
 };
 
 // #if !V
-ParserScope.prototype.insertDeclWithID = function(id) {
-  return this.insertDeclWithIDAndMode(id, this.declMode);
-};
-
-ParserScope.prototype.insertDeclWithIDAndMode = function(id,mode) {
+ParserScope.prototype.insertDecl0 = function(id) {
   var name = id.name + '%';
-  this.definedNames[name] = this.declMode; this.paramNames[name] = id;
+  this.insertID(id);
+  this.definedNames[name] = this.declMode;
 };
 // #end
 
@@ -103,27 +80,33 @@ ParserScope.prototype.err = function(errType, errParams) {
 };
  
 ParserScope.prototype.hasParam = function(name) {
-  return HAS.call(this.paramNames, name+'%');
+  return HAS.call(this.idNames, name+'%');
 };
 
 ParserScope.prototype.addParam = function(id) {
   ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
   var name = id.name + '%';
-  if ( HAS.call(this.paramNames, name) ) {
+  if ( HAS.call(this.definedNames, name) ) {
     if (this.mustNotHaveAnyDupeParams())
       this.err('func.args.has.dup', id);
 
-    if (this.paramNames[name] === null)
-      this.paramNames[name] = id ;
+    // TODO: all these check will be avoided with a dedicated 'dupes' dictionary,
+    // but then again, that might be too much.
+    if (!(this.definedNames[name]/* #if V */.type/* #end */ & DECL_DUPE)) {
+      this.insertID(id);
+      this.definedNames[name]/* #if V */.type/* #end */ |= DECL_DUPE ;
+    }
+
+    return false;
   }
-  else
-    this.paramNames[name] = null;
+
+  return true;
 };
 
 ParserScope.prototype.ensureParamIsNotDupe = function(id) {
    var name = id.name + '%';
 
-   if (HAS.call(this.paramNames, name) && this.paramNames[name])
+   if (HAS.call(this.idNames, name) && this.idNames[name])
      this.parser.err('func.args.has.dup', id );
 };
 

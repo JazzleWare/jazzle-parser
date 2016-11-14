@@ -1,7 +1,7 @@
 this.funcDecl = function() { return this.scope === this.scope.funcScope; };
 
 this.needsScopeVar = function() {
-   return this.type === LET &&
+   return this.type & DECL_MODE_LET &&
           this.scope.isLoop() &&
           this.refMode.indirect; 
 };

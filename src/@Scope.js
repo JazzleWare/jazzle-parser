@@ -1,4 +1,4 @@
-var Scope = function(parent, type) {
+function Scope(parent, type) {
   this.type = type;
 
   if (!parent) 
@@ -22,8 +22,8 @@ var Scope = function(parent, type) {
     this.type |= SCOPE_TYPE_LEXICAL_LOOP;    
 
   this.catchVar = null;
+  this.catchVarName = ""; 
   // #end
-  this.catchVarName = ""; // TODO: find another way maybe?
 }
 
 Scope.createFunc = function(parent, decl) {
