@@ -8267,7 +8267,7 @@ ParserScope.prototype.addParam = function(id) {
     if (this.mustNotHaveAnyDupeParams())
       this.err('func.args.has.dup', id);
 
-    // TODO: all these check will be avoided with a dedicated 'dupes' dictionary,
+    // TODO: this can be avoided with a dedicated 'dupes' dictionary,
     // but then again, that might be too much.
     if (!(this.definedNames[name].type & DECL_DUPE)) {
       this.insertID(id);
@@ -8815,7 +8815,12 @@ this.reference = function(name, fromScope) {
   }
   if (decl) {
     ref = decl.refMode;
-    if (this !== fromScope) ref.updateExistingRefWith(name, fromScope);
+    if (this !== fromScope) {
+      ref.updateExistingRefWith(name, fromScope);
+      // a catch scope is never forward-accessed, even when referenced from within a function declaration 
+      if (decl.type & DECL_MODE_CATCH_PARAMS) 
+        if (ref.indirect) ref.indirect = ACCESS_EXISTING;
+    }
     else ref.direct |= ACCESS_EXISTING;
   }
   else {

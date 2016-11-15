@@ -13,7 +13,12 @@ this.reference = function(name, fromScope) {
   }
   if (decl) {
     ref = decl.refMode;
-    if (this !== fromScope) ref.updateExistingRefWith(name, fromScope);
+    if (this !== fromScope) {
+      ref.updateExistingRefWith(name, fromScope);
+      // a catch scope is never forward-accessed, even when referenced from within a function declaration 
+      if (decl.type & DECL_MODE_CATCH_PARAMS) 
+        if (ref.indirect) ref.indirect = ACCESS_EXISTING;
+    }
     else ref.direct |= ACCESS_EXISTING;
   }
   else {

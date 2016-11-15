@@ -90,7 +90,7 @@ ParserScope.prototype.addParam = function(id) {
     if (this.mustNotHaveAnyDupeParams())
       this.err('func.args.has.dup', id);
 
-    // TODO: all these check will be avoided with a dedicated 'dupes' dictionary,
+    // TODO: this can be avoided with a dedicated 'dupes' dictionary,
     // but then again, that might be too much.
     if (!(this.definedNames[name]/* #if V */.type/* #end */ & DECL_DUPE)) {
       this.insertID(id);
