@@ -1,7 +1,8 @@
 this.enterFuncScope = function(decl) { this.scope = this.scope.spawnFunc(decl); };
 
 this.enterComplex = function() {
-   if (this.scope.declMode === DECL_MODE_FUNCTION_PARAMS)
+   if (this.scope.declMode === DECL_MODE_FUNCTION_PARAMS ||
+       this.scope.declMode & DECL_MODE_CATCH_PARAMS)
      this.scope.makeComplex();
 };
 

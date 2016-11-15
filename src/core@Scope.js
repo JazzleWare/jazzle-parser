@@ -4,7 +4,8 @@ this.reference = function(name, fromScope) {
 
   var decl = this.findDeclInScope(name), ref = null;
   if (decl && !decl.scope.isFunc() && this.isFunc()) { // the decl is synthetic, and must be renamed
-    decl.rename();
+    this.insertDecl0(false, decl.synthName, null); // clear the current synthetic decl
+    this.synthesize(decl); // then refresh that synthetic decl
     decl = null;
     // TODO: the name should be deleted altogether (i.e., `delete this.definedNames[name+'%']`),
     // but looks like setting it to null will do
@@ -69,6 +70,15 @@ this.hoistIdToScope = function(id, targetScope /* #if V */, decl /* #end */ ) {
    }
 };
    
+// #if V
+this.synthesize = function(decl) {
+  ASSERT.call(this, this.isFunc(), 'scopes other than the function scope are not allowed to synthesize a declaration');
+  var synthName = decl.scope.newSynthName(decl.name);
+  this.definedNames[synthName+'%'] = decl;
+  decl.synthName = synthName;
+};
+// #end
+
 var declare = {};
 
 
@@ -141,20 +151,16 @@ this.insertDecl = function(id /* #if V */, decl /* #end */) {
   }
 
   // #if V
+  this.insertDecl0(true, id.name, decl);
+  this.insertID(id);
   if (this !== func) {
-    this.insertDecl0(true, id.name, decl);
-    this.insertID(id);
     if ( decl.syntheticUnlessInAFunc() && !decl.scope.isFunc()) { // non-func-scope-let-declarations
-      decl.rename();
+      decl.scope.funcScope.synthesize(decl);
     }
   }
   else {
-    this.insertDecl0(true, id.name, decl);
-    this.insertID(id);
     if (existingDecl !== null) { // if there is a synthesized declaration of the same name, rename it
-      var synthName = existingDecl.scope.newSynthName(id.name);
-      existingDecl.synthName = synthName;
-      this.insertDecl0(false, synthName, existingDecl);
+      this.synthesize(existingDecl);
     } 
   } 
   // #else
@@ -170,10 +176,10 @@ this.insertID = function(id) {
 
 // #if V
 // TODO: looks like `isOwn` is not necessary
-this.insertDecl0 = function(isOwn, name, decl) {
+this.insertDecl0 = function(isFresh, name, decl) {
   name += '%';
   this.definedNames[name] = decl;
-  if (isOwn)
+  if (isFresh)
     if (HAS.call(this.unresolvedNames, name)) {
       decl.refMode = this.unresolvedNames[name];
       this.unresolvedNames[name] = null;
@@ -251,7 +257,10 @@ this.newSynthName = function(baseName) {
 this.makeScopeObj = function() {
   if (this.scopeObjVar !== null) return;
   var scopeName = this.newSynthName('scope');
-  this.scopeObjVar = this.declare(scopeName, DECL_MODE_LET);
+  var scopeObjVar = new Decl(DECL_MODE_LET, scopeName, this, scopeName);
+  this.insertDecl0(false, scopeName, scopeObjVar); // TODO: not necessary?
+  this.funcScope.insertDecl0(false, scopeName, scopeObjVar);
+  this.scopeObjVar = scopeObjVar;
   this.wrappedDeclList = [];
   this.wrappedDeclNames = {};
 };   
