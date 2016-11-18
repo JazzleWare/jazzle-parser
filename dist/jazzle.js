@@ -235,9 +235,8 @@ function Partitioner(owner, details) { // TODO: break it up into smaller and mor
    this.customNext = null;
 
    this.depth = this.owner ? this.owner.depth+1 : 0;
-   this.ownerTry = null;
-   if (this.owner)
-     this.ownerTry = this.owner.type === 'TryContainer' ? this.owner : this.owner.ownerTry;
+
+   this.currentSurroundingFinally = this.owner && this.owner.currentSurroundingFinally;
 
    // TODO: find a cleaner alternative
    if (this.owner && this.owner.type === 'LabeledContainer') {
@@ -1551,51 +1550,38 @@ this.emitters['BreakStatement'] = function(n) {
   if (!this.currentContainer)
     return this.emitBreakWithLabelName(label ? label.name : "");
 
-  var target = null, entry = label ? this.resolveContainerLabel(label.name) : null;
-  this.write('break');
-  if (entry) {
-    target = entry.target;
-    i = entry.i;
-    this.write(' [target=' + target.type + ' i='+i+'] ' + label.name + '(real label)');
+  var target = null, i = -1, containerLabel = null, labelName = "";
+
+  if (label)
+    labelName = label.name;
+  else if ( this.currentContainer.abt !== this.currentContainer.ebt)
+    labelName = this.currentContainer.ebt.getLabelName();
+
+  if (labelName !== "")
+    containerLabel = this.resolveContainerLabel(labelName);
+
+  if (containerLabel === null) // not breaking from a container
+    return this.emitBreakWithLabelName(labelName);
+     
+  var curOwnerFinally = n.ownerFinally();
+  var targetOwnerFinally = target.ownerFinally();
+  
+  // we are actually breaking out of a yield container,                                   
+  // but we are not going to get trapped by a finally while breaking;
+  // the following means: the finally around the current break is the finally
+  // around our target, which means there is no finally between the break and its target
+  if (curOwnerFinally === targetOwnerFinally)
+    return this.emitBreakWithLabelName(labelName);
+
+  // if csf != tsf, csf can't be null, because if it is, tsf must be null too -- a contradiction
+  var nextOwnerFinally = curOwnerFinally.ownerFinally();
+  while (nextOwnerFinally !== targetOwnerFinally) {
+    curOwnerFinally.registerExit();
+    curOwnerFinally = nextOwnerFinally;
+    nextOwnerFinally = curOwnerFinally.ownerFinally();
   }
-  else if (!label) {
-    target = this.currentContainer.ebt;
-    this.write( ' [target=' + (target?target.type:'<null>'));
-    if (this.currentContainer.abt !== target) {
-      i = this.resolveContainerLabel(this.currentContainer.ebt.getLabelName()).i;
-      this.write(' i=' + i + '] ' + this.currentContainer.ebt.getLabelName() + '(synth label)');
-    }
-    else this.write(' i=<not-needed>]');
-  }
-  else 
-    this.write(' target=<not-yield-container> i=<not-needed>] ' + label.name);
-
-  this.write(';');
-
-//if (!this.currentContainer)
-//  return this.emitBreakWithName(label ? label.name : "");
-
-//var targetObj = label ? 
-//  this.resolveContainerLabel(label.name) : 
-//  this.currentContainer.ebt.synthLabel;
-
-//// we are not breaking out of a yield container
-//if (!target)
-//  return this.emitBreakWithName(label ? label.name : "" );
-
-//var curParentFinally = this.currentContainer.parentFinally();
-//var targetParentFinally = target.parentFinally();
-
-//// we are actually breaking out of a yield container,
-//// but we are not going to get trapped by a finally while breaking;
-//// the following means: the finally around the current break is the finally
-//// around our target, which means there is no finally between the break and its target
-//if (curParentFinally === targetParentFinally)
-//  return this.emitBreakWithName(label ? label.name : "" );
-
-//var nextParentFinally = curParentFinally.parentFinally();
-//while ( nextParentFinally !== targetParentFinally) {
-    
+  
+  curOwnerFinally.registerBreak(containerLabel.i, containerLabel.target, labelName);
 };
 
 this.emitters['ContinueStatement'] = function(n) {
@@ -8458,12 +8444,11 @@ this.isContainer = function() {
 };
 
 this.ownerFinally = function() {
-  var ownerTry = this.ownerTry;
-  while (ownerTry) {
-    if (ownerTry.finalizer) break;
-    ownerTry = ownerTry.ownerTry;
-  }
-  return ownerTry && ownerTry.finalizer;
+  return (
+    this.currentSurroundingFinally &&
+    this.currentSurroundingFinally.targetFinally
+  );
+
 };
 
 var pushList = {};
@@ -8785,8 +8770,18 @@ pushList['ForStatement'] = function(n) {
 };
      
 pushList['TryStatement'] = function(n) {
+
    this.close_current_active_partition();
+
+   var prevSurroundingFinally = null;
+   var currentSurroundingFinally = null;
+
    var container = new Partitioner(this, n);
+
+   if (n.finalizer) {
+      prevSurroundingFinally = container.currentSurroundingFinally;
+      currentSurroundingFinally = container.currentSurroundingFinally = { targetFinally: null };
+   }
 
    var tryContainer = new Partitioner(container, {type:'CustomContainer'});
    tryContainer.pushAll(n.block.body);
@@ -8816,18 +8811,14 @@ pushList['TryStatement'] = function(n) {
       n.handler = null;
 
    if (n.finalizer) {
+      container.currentSurroundingFinally = prevSurroundingFinally;
       this.mainContainer.hasFinally = true;
-      var finallyContainer = new Partitioner(container, {type:'CustomContainer'});
-
-      // TODO: the way all try's are currently tracked requires the ownerTry be set before anything is pushed to the current
-      // container.
-      // Not sure how big of an issue it might be, but try tracking (among other things) might need a thorough rethink
-      finallyContainer.ownerTry = container.ownerTry;
-
+      var finallyContainer = new Partitioner(container, {type:'CustomContainer'});      
+      
       finallyContainer.pushAll(n.finalizer.body);
       finallyContainer.partitions.push(new Partitioner(finallyContainer, null));
       finallyContainer.max++;
-      container.finalizer = finallyContainer;
+      container.finalizer = currentSurroundingFinally.targetFinally = finallyContainer;
       container.max = finallyContainer.max;
       if (n.handler)
         n.handler.customNext = finallyContainer;

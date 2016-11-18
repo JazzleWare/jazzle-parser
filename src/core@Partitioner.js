@@ -67,12 +67,11 @@ this.isContainer = function() {
 };
 
 this.ownerFinally = function() {
-  var ownerTry = this.ownerTry;
-  while (ownerTry) {
-    if (ownerTry.finalizer) break;
-    ownerTry = ownerTry.ownerTry;
-  }
-  return ownerTry && ownerTry.finalizer;
+  return (
+    this.currentSurroundingFinally &&
+    this.currentSurroundingFinally.targetFinally
+  );
+
 };
 
 var pushList = {};
@@ -394,8 +393,18 @@ pushList['ForStatement'] = function(n) {
 };
      
 pushList['TryStatement'] = function(n) {
+
    this.close_current_active_partition();
+
+   var prevSurroundingFinally = null;
+   var currentSurroundingFinally = null;
+
    var container = new Partitioner(this, n);
+
+   if (n.finalizer) {
+      prevSurroundingFinally = container.currentSurroundingFinally;
+      currentSurroundingFinally = container.currentSurroundingFinally = { targetFinally: null };
+   }
 
    var tryContainer = new Partitioner(container, {type:'CustomContainer'});
    tryContainer.pushAll(n.block.body);
@@ -425,18 +434,14 @@ pushList['TryStatement'] = function(n) {
       n.handler = null;
 
    if (n.finalizer) {
+      container.currentSurroundingFinally = prevSurroundingFinally;
       this.mainContainer.hasFinally = true;
-      var finallyContainer = new Partitioner(container, {type:'CustomContainer'});
-
-      // TODO: the way all try's are currently tracked requires the ownerTry be set before anything is pushed to the current
-      // container.
-      // Not sure how big of an issue it might be, but try tracking (among other things) might need a thorough rethink
-      finallyContainer.ownerTry = container.ownerTry;
-
+      var finallyContainer = new Partitioner(container, {type:'CustomContainer'});      
+      
       finallyContainer.pushAll(n.finalizer.body);
       finallyContainer.partitions.push(new Partitioner(finallyContainer, null));
       finallyContainer.max++;
-      container.finalizer = finallyContainer;
+      container.finalizer = currentSurroundingFinally.targetFinally = finallyContainer;
       container.max = finallyContainer.max;
       if (n.handler)
         n.handler.customNext = finallyContainer;

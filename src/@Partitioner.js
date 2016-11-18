@@ -102,9 +102,8 @@ function Partitioner(owner, details) { // TODO: break it up into smaller and mor
    this.customNext = null;
 
    this.depth = this.owner ? this.owner.depth+1 : 0;
-   this.ownerTry = null;
-   if (this.owner)
-     this.ownerTry = this.owner.type === 'TryContainer' ? this.owner : this.owner.ownerTry;
+
+   this.currentSurroundingFinally = this.owner && this.owner.currentSurroundingFinally;
 
    // TODO: find a cleaner alternative
    if (this.owner && this.owner.type === 'LabeledContainer') {

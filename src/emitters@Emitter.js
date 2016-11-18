@@ -283,51 +283,38 @@ this.emitters['BreakStatement'] = function(n) {
   if (!this.currentContainer)
     return this.emitBreakWithLabelName(label ? label.name : "");
 
-  var target = null, entry = label ? this.resolveContainerLabel(label.name) : null;
-  this.write('break');
-  if (entry) {
-    target = entry.target;
-    i = entry.i;
-    this.write(' [target=' + target.type + ' i='+i+'] ' + label.name + '(real label)');
+  var target = null, i = -1, containerLabel = null, labelName = "";
+
+  if (label)
+    labelName = label.name;
+  else if ( this.currentContainer.abt !== this.currentContainer.ebt)
+    labelName = this.currentContainer.ebt.getLabelName();
+
+  if (labelName !== "")
+    containerLabel = this.resolveContainerLabel(labelName);
+
+  if (containerLabel === null) // not breaking from a container
+    return this.emitBreakWithLabelName(labelName);
+     
+  var curOwnerFinally = n.ownerFinally();
+  var targetOwnerFinally = target.ownerFinally();
+  
+  // we are actually breaking out of a yield container,                                   
+  // but we are not going to get trapped by a finally while breaking;
+  // the following means: the finally around the current break is the finally
+  // around our target, which means there is no finally between the break and its target
+  if (curOwnerFinally === targetOwnerFinally)
+    return this.emitBreakWithLabelName(labelName);
+
+  // if csf != tsf, csf can't be null, because if it is, tsf must be null too -- a contradiction
+  var nextOwnerFinally = curOwnerFinally.ownerFinally();
+  while (nextOwnerFinally !== targetOwnerFinally) {
+    curOwnerFinally.registerExit();
+    curOwnerFinally = nextOwnerFinally;
+    nextOwnerFinally = curOwnerFinally.ownerFinally();
   }
-  else if (!label) {
-    target = this.currentContainer.ebt;
-    this.write( ' [target=' + (target?target.type:'<null>'));
-    if (this.currentContainer.abt !== target) {
-      i = this.resolveContainerLabel(this.currentContainer.ebt.getLabelName()).i;
-      this.write(' i=' + i + '] ' + this.currentContainer.ebt.getLabelName() + '(synth label)');
-    }
-    else this.write(' i=<not-needed>]');
-  }
-  else 
-    this.write(' [target=<not-yield-container> i=<not-needed>] ' + label.name);
-
-  this.write(';');
-
-//if (!this.currentContainer)
-//  return this.emitBreakWithName(label ? label.name : "");
-
-//var targetObj = label ? 
-//  this.resolveContainerLabel(label.name) : 
-//  this.currentContainer.ebt.synthLabel;
-
-//// we are not breaking out of a yield container
-//if (!target)
-//  return this.emitBreakWithName(label ? label.name : "" );
-
-//var curParentFinally = this.currentContainer.parentFinally();
-//var targetParentFinally = target.parentFinally();
-
-//// we are actually breaking out of a yield container,
-//// but we are not going to get trapped by a finally while breaking;
-//// the following means: the finally around the current break is the finally
-//// around our target, which means there is no finally between the break and its target
-//if (curParentFinally === targetParentFinally)
-//  return this.emitBreakWithName(label ? label.name : "" );
-
-//var nextParentFinally = curParentFinally.parentFinally();
-//while ( nextParentFinally !== targetParentFinally) {
-    
+  
+  curOwnerFinally.registerBreak(containerLabel.i, containerLabel.target, labelName);
 };
 
 this.emitters['ContinueStatement'] = function(n) {
