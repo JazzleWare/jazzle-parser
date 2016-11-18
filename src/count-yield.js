@@ -1,4 +1,7 @@
 function y(n) {
+  if (n === null)
+    return 0;
+
   var y = yList[n.type].call(n);
   if (y === -1) return 0;
   return y;

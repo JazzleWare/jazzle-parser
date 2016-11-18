@@ -145,3 +145,8 @@ this.wm = function() {
    return this;
 };
 this.e = function(n, prec, flags) { this.emit(n, prec, flags); return this; };
+this.setwrap = function(wrap) {
+  this.wrap = wrap;
+  return this;
+};
+

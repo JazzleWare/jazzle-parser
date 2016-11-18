@@ -10,7 +10,7 @@ function Decl(type, name, scope, synthName) {
 }
 
 ;
-function Emitter(indenter) {
+function Emitter(indenter, mainScope) {
    this.code = "";
    this.currentIndentLevel = 0;
    this.currentIndentStr = "";
@@ -25,11 +25,14 @@ function Emitter(indenter) {
    this.isLeft = false;
    this.codeStack = [];
    this.wrap = !false;
-   this.scope = new Scope(null, SCOPE_FUNC);
+
+   // TODO: dummy scope until things become stable enough
+   this.scope = mainScope || new Scope(null, SCOPE_FUNC); 
    this.labelNames = {};
    this.unresolvedLabel = null;
    this.currentContainer = null;
    this.block_stack = [];
+   this.labelID = 0;
 }
 
 Emitter.prototype.emitters = {};
@@ -128,7 +131,7 @@ function ParserScope(ownerParser, parent, type) {
 }
 
 ;
-function Partitioner(owner, details) {
+function Partitioner(owner, details) { // TODO: break it up into smaller and more streamlined pieces
 
    this.owner = owner;
    this.label = null;
@@ -235,6 +238,18 @@ function Partitioner(owner, details) {
    this.ownerTry = null;
    if (this.owner)
      this.ownerTry = this.owner.type === 'TryContainer' ? this.owner : this.owner.ownerTry;
+
+   // TODO: find a cleaner alternative
+   if (this.owner && this.owner.type === 'LabeledContainer') {
+     if (this.type === 'LabeledContainer') {
+       this.label = {
+          name: "", // don't use the name in this.details, as using the this.detail thing is going to be deprecated a few commits later, hopefully
+          head: this.owner.label.head,
+          next: null };
+       this.owner.label.next = this.label;
+     }
+     else this.label = this.owner.label;
+   }
 }
 
 ;
@@ -445,6 +460,9 @@ var DIRECTIVE_TOP = 1,
     DIRECTIVE_SCRIPT = DIRECTIVE_MODULE;
 ;
 function y(n) {
+  if (n === null)
+    return 0;
+
   var y = yList[n.type].call(n);
   if (y === -1) return 0;
   return y;
@@ -1240,6 +1258,11 @@ this.wm = function() {
    return this;
 };
 this.e = function(n, prec, flags) { this.emit(n, prec, flags); return this; };
+this.setwrap = function(wrap) {
+  this.wrap = wrap;
+  return this;
+};
+
 
 },
 function(){
@@ -1388,8 +1411,7 @@ this.emitters['NewExpression'] = function(n) {
    this.write(')');
 };
 
-this.emitters['Identifier'] = function(n) {
-   var name = n.name;
+this.emitNameString = function(name) {
    var e = 0;
    if ( name.length && name.charCodeAt(0) === CHAR_MODULO )
      e++ ;
@@ -1411,7 +1433,9 @@ this.emitters['Identifier'] = function(n) {
 
    this.write(nameString);
 };
- 
+
+this.emitters['Identifier'] = function(n) { return this.emitNameString(n.name); };
+
 this.emitters['WhileStatement'] = function(n) {
   this.write('while (');
   this.emit(n.test);
@@ -1498,17 +1522,80 @@ this.emitters['LabeledStatement'] = function(n) {
 
 };
 
+this.emitBreakWithLabelName = function(labelName) {
+  this.w('break'+(this.currentContainer?"":' [--simple--]'));
+  var targetName = labelName;
+  
+  if (targetName === "") {
+    var cc = this.currentContainer;
+    if (cc && cc.abt !== cc.ebt)
+      targetName = cc.ebt.synthLabel.name;
+  }
+
+  if (targetName !== "")
+    this.setwrap(false).s().emitNameString(targetName);
+
+  this.w(';');
+};
+  
+this.resolveContainerLabel = function(labelName) {
+  labelName += '%';
+  if (HAS.call(this.labelNames, labelName))
+    return this.labelNames[labelName];
+
+  return null;
+};
+
 this.emitters['BreakStatement'] = function(n) {
-   this.write('break');
-   if ( n.label !== null ) {
-     this.wrap = false;
-     this.space();
-     this.emit(n.label);
-   }
-   else if (!this.inActualBreakTarget()) {
-     this.write(' ['+this.currentContainer.ebt.synthLabel.synthName+']');
-   }
-   this.write(';');
+  var label = n.label, i = -1;
+  if (!this.currentContainer)
+    return this.emitBreakWithLabelName(label ? label.name : "");
+
+  var target = null, entry = label ? this.resolveContainerLabel(label.name) : null;
+  this.write('break');
+  if (entry) {
+    target = entry.target;
+    i = entry.i;
+    this.write(' [target=' + target.type + ' i='+i+'] ' + label.name + '(real label)');
+  }
+  else if (!label) {
+    target = this.currentContainer.ebt;
+    this.write( ' [target=' + (target?target.type:'<null>'));
+    if (this.currentContainer.abt !== target) {
+      i = this.resolveContainerLabel(this.currentContainer.ebt.getLabelName()).i;
+      this.write(' i=' + i + '] ' + this.currentContainer.ebt.getLabelName() + '(synth label)');
+    }
+    else this.write(' i=<not-needed>]');
+  }
+  else 
+    this.write(' target=<not-yield-container> i=<not-needed>] ' + label.name);
+
+  this.write(';');
+
+//if (!this.currentContainer)
+//  return this.emitBreakWithName(label ? label.name : "");
+
+//var targetObj = label ? 
+//  this.resolveContainerLabel(label.name) : 
+//  this.currentContainer.ebt.synthLabel;
+
+//// we are not breaking out of a yield container
+//if (!target)
+//  return this.emitBreakWithName(label ? label.name : "" );
+
+//var curParentFinally = this.currentContainer.parentFinally();
+//var targetParentFinally = target.parentFinally();
+
+//// we are actually breaking out of a yield container,
+//// but we are not going to get trapped by a finally while breaking;
+//// the following means: the finally around the current break is the finally
+//// around our target, which means there is no finally between the break and its target
+//if (curParentFinally === targetParentFinally)
+//  return this.emitBreakWithName(label ? label.name : "" );
+
+//var nextParentFinally = curParentFinally.parentFinally();
+//while ( nextParentFinally !== targetParentFinally) {
+    
 };
 
 this.emitters['ContinueStatement'] = function(n) {
@@ -1518,7 +1605,7 @@ this.emitters['ContinueStatement'] = function(n) {
      this.space();
      this.emit(n.label);
    }
-   else if (!this.inActualContinueTarget()) {
+   else if (!this.inExptectedContinueTarget()) {
      this.write(' ['+this.currentContainer.ect.synthLabel.synthName+']');
    }
    this.write(';');
@@ -1763,7 +1850,7 @@ this._emitGenerator = function(n) {
 
 this.addLabel = function(name) {
    this.labelNames[name+'%'] = this.unresolvedLabel ||
-       ( this.unresolvedLabel = { target:null } );
+       ( this.unresolvedLabel = { target:null, i: ++this.labelID } );
 };
 
 this.removeLabel = function(name) {
@@ -1782,7 +1869,7 @@ this.emitBreak = function(n) {
   this.write('break');
   if (n.label !== null)
     this.write(' '+n.label.name);
-  else if (!this.inActualBreakTarget())
+  else if (!this.inExptectedBreakTarget())
     this.write(' ['+this.currentContainer.ebt.synthLabel.synthName+']');
   this.write(';');
 };
@@ -1800,7 +1887,7 @@ this.emitContinue = function(n) {
   this.write('continue');
   if (n.label !== null)
     this.write(' '+n.label.name);
-  else if (!this.inActualContinueTarget())
+  else if (!this.inExptectedContinueTarget())
     this.write(' ['+this.currentContainer.ect.synthLabel.synthName+']');
   this.write(';');
 };
@@ -1814,12 +1901,12 @@ this.emitYield = function(n) {
    this.write(';');
 };
 
-this.inActualBreakTarget = function() {
+this.inExptectedBreakTarget = function() {
    return this.currentContainer === null ||
           this.currentContainer.abt === this.currentContainer.ebt;
 };
 
-this.inActualContinueTarget = function() {
+this.inExptectedContinueTarget = function() {
    return this.currentContainer === null ||
           this.currentContainer.act === this.currentContainer.ect;
 };
@@ -1838,6 +1925,16 @@ this.emitContainerStatement = function(n) {
      case 'YieldExpression': return this.emitYield(n);
      default: return this.emit(n);
   }
+};
+
+this.addSynthLabel = function(n) {
+  if (n.synthLabel)
+    return this.addLabel(n.synthLabel.synthName);
+};
+
+this.removeSynthLabel = function(n) {
+  if (n.synthLabel)
+    return this.removeLabel(n.synthLabel.synthName);
 };
 
 this.writeLabels = function(n) {
@@ -1961,6 +2058,7 @@ this.emitters['IfContainer'] = function(n) {
 };
 
 this.emitters['WhileContainer'] = function(n) {
+  this.addSynthLabel(n);
   this.fixupContainerLabels(n);
   var cc = this.currentContainer;
   this.currentContainer = n;
@@ -2000,12 +2098,13 @@ this.emitters['WhileContainer'] = function(n) {
     this.emit(list[e++]);
   }
 
+  this.removeSynthLabel(n);
   this.newlineIndent();
   this.if_state_eq(list[e].min);
   this.newlineIndent();
   this.set_state(n.min);
   this.end_block();
-
+ 
   this.end_block(); this.end_block(); this.currentContainer = cc;
 };
 
@@ -2044,12 +2143,12 @@ this.emitters['LabeledContainer'] = function(n) {
 //this.newlineIndent();
   var statement = n.partitions[0];
 
-  if (statement.type === 'LabeledContainer') {
-    statement.label.head = n.label.head;
-    n.label.next = statement.label;
-  }
-  else
-    statement.label = n.label.head;
+//if (statement.type === 'LabeledContainer') {
+//  statement.label.head = n.label.head;
+//  n.label.next = statement.label;
+//}
+//else
+//  statement.label = n.label.head;
 
   this.emit(statement);
   this.removeLabel(name);
@@ -7564,7 +7663,7 @@ this. parseBlockStatement_dependent = function() {
     this.scopeFlags |= SCOPE_BLOCK;
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() } };
+        loc: { start: startLoc, end: this.loc() }  ,y:-1 };
     if ( ! this.expectType_soft ('}') &&
          this.err('block.dependent.is.unfinished' , n)  )
       return this.errorHandlerOutput;
@@ -8358,13 +8457,13 @@ this.isContainer = function() {
   return !this.isSimple();
 };
 
-this.ownerFinallyTry = function() {
+this.ownerFinally = function() {
   var ownerTry = this.ownerTry;
   while (ownerTry) {
     if (ownerTry.finalizer) break;
     ownerTry = ownerTry.ownerTry;
   }
-  return ownerTry;
+  return ownerTry && ownerTry.finalizer;
 };
 
 var pushList = {};
@@ -8460,9 +8559,18 @@ this.synthLabelName = function(baseName) {
 };
 
 this.useSynthLabel = function() {
+   if (this.label)
+     return;
+
    this.synthLabel = LabelRef.synth(this.type);
    this.synthLabel.synthName = this.synthLabelName(this.synthLabel.baseName);
    this.addLabel(this.synthLabel.synthName, this.synthLabel);
+};
+
+this.getLabelName = function() {
+  var labelName = this.label ? this.label.name : this.synthLabel ? this.synthLabel.synthName : "";
+  ASSERT.call(this, labelName !== "", 'no label for [' + this.type + ']');
+  return labelName;
 };
 
 this.removeContainerLabel = function() {
@@ -8738,9 +8846,13 @@ pushList['LabeledStatement'] = function(n) {
    if (y(n) > 0) {
      this.close_current_active_partition();
      var container = new Partitioner(this, n);
-     var name = n.label.name + '%';
-     container.label = { name: n.label.name, head: null, next: null };
-     container.label.head = container.label;
+     if (!container.label) {
+       container.label = { name: "", head: null, next: null };
+       container.label.head = container.label;
+     }
+     
+     container.label.name = n.label.name
+
      container.push(n.body);
      this.partitions.push(container);
      this.max = container.max;
@@ -9061,7 +9173,7 @@ this.releaseTemp = function(tempName) {
 this.declSynth = function(name) {
   ASSERT.call(this, this.isFunc());
   var synthName = this.newSynthName(name);
-  this.declare(synthName, DECL_MODE_VAR);
+  this.declare(synth_id_node(synthName), DECL_MODE_VAR);
   return synthName;
 };
 

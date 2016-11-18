@@ -1,4 +1,4 @@
-function Partitioner(owner, details) {
+function Partitioner(owner, details) { // TODO: break it up into smaller and more streamlined pieces
 
    this.owner = owner;
    this.label = null;
@@ -105,5 +105,17 @@ function Partitioner(owner, details) {
    this.ownerTry = null;
    if (this.owner)
      this.ownerTry = this.owner.type === 'TryContainer' ? this.owner : this.owner.ownerTry;
+
+   // TODO: find a cleaner alternative
+   if (this.owner && this.owner.type === 'LabeledContainer') {
+     if (this.type === 'LabeledContainer') {
+       this.label = {
+          name: "", // don't use the name in this.details, as using the this.detail thing is going to be deprecated a few commits later, hopefully
+          head: this.owner.label.head,
+          next: null };
+       this.owner.label.next = this.label;
+     }
+     else this.label = this.owner.label;
+   }
 }
 

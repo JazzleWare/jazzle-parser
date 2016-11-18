@@ -289,7 +289,7 @@ this.releaseTemp = function(tempName) {
 this.declSynth = function(name) {
   ASSERT.call(this, this.isFunc());
   var synthName = this.newSynthName(name);
-  this.declare(synthName, DECL_MODE_VAR);
+  this.declare(synth_id_node(synthName), DECL_MODE_VAR);
   return synthName;
 };
 

@@ -66,13 +66,13 @@ this.isContainer = function() {
   return !this.isSimple();
 };
 
-this.ownerFinallyTry = function() {
+this.ownerFinally = function() {
   var ownerTry = this.ownerTry;
   while (ownerTry) {
     if (ownerTry.finalizer) break;
     ownerTry = ownerTry.ownerTry;
   }
-  return ownerTry;
+  return ownerTry && ownerTry.finalizer;
 };
 
 var pushList = {};
@@ -168,9 +168,18 @@ this.synthLabelName = function(baseName) {
 };
 
 this.useSynthLabel = function() {
+   if (this.label)
+     return;
+
    this.synthLabel = LabelRef.synth(this.type);
    this.synthLabel.synthName = this.synthLabelName(this.synthLabel.baseName);
    this.addLabel(this.synthLabel.synthName, this.synthLabel);
+};
+
+this.getLabelName = function() {
+  var labelName = this.label ? this.label.name : this.synthLabel ? this.synthLabel.synthName : "";
+  ASSERT.call(this, labelName !== "", 'no label for [' + this.type + ']');
+  return labelName;
 };
 
 this.removeContainerLabel = function() {
@@ -446,9 +455,13 @@ pushList['LabeledStatement'] = function(n) {
    if (y(n) > 0) {
      this.close_current_active_partition();
      var container = new Partitioner(this, n);
-     var name = n.label.name + '%';
-     container.label = { name: n.label.name, head: null, next: null };
-     container.label.head = container.label;
+     if (!container.label) {
+       container.label = { name: "", head: null, next: null };
+       container.label.head = container.label;
+     }
+     
+     container.label.name = n.label.name
+
      container.push(n.body);
      this.partitions.push(container);
      this.max = container.max;

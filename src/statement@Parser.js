@@ -516,7 +516,7 @@ this. parseBlockStatement_dependent = function() {
     this.scopeFlags |= SCOPE_BLOCK;
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() } };
+        loc: { start: startLoc, end: this.loc() } /* ,y:-1*/ };
     if ( ! this.expectType_soft ('}') &&
          this.err('block.dependent.is.unfinished' , n)  )
       return this.errorHandlerOutput;

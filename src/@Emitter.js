@@ -1,4 +1,4 @@
-function Emitter(indenter) {
+function Emitter(indenter, mainScope) {
    this.code = "";
    this.currentIndentLevel = 0;
    this.currentIndentStr = "";
@@ -13,11 +13,14 @@ function Emitter(indenter) {
    this.isLeft = false;
    this.codeStack = [];
    this.wrap = !false;
-   this.scope = new Scope(null, SCOPE_FUNC);
+
+   // TODO: dummy scope until things become stable enough
+   this.scope = mainScope || new Scope(null, SCOPE_FUNC); 
    this.labelNames = {};
    this.unresolvedLabel = null;
    this.currentContainer = null;
    this.block_stack = [];
+   this.labelID = 0;
 }
 
 Emitter.prototype.emitters = {};
