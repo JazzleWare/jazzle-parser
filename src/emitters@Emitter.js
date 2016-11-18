@@ -296,8 +296,8 @@ this.emitters['BreakStatement'] = function(n) {
   if (containerLabel === null) // not breaking from a container
     return this.emitBreakWithLabelName(labelName);
      
-  var curOwnerFinally = n.ownerFinally();
-  var targetOwnerFinally = target.ownerFinally();
+  var curOwnerFinally = this.currentContainer.ownerFinally();
+  var targetOwnerFinally = containerLabel.target.ownerFinally();
   
   // we are actually breaking out of a yield container,                                   
   // but we are not going to get trapped by a finally while breaking;
@@ -306,6 +306,7 @@ this.emitters['BreakStatement'] = function(n) {
   if (curOwnerFinally === targetOwnerFinally)
     return this.emitBreakWithLabelName(labelName);
 
+  this.w('return',';');
   // if csf != tsf, csf can't be null, because if it is, tsf must be null too -- a contradiction
   var nextOwnerFinally = curOwnerFinally.ownerFinally();
   while (nextOwnerFinally !== targetOwnerFinally) {
@@ -314,7 +315,7 @@ this.emitters['BreakStatement'] = function(n) {
     nextOwnerFinally = curOwnerFinally.ownerFinally();
   }
   
-  curOwnerFinally.registerBreak(containerLabel.i, containerLabel.target, labelName);
+  curOwnerFinally.registerContinueBreak(containerLabel.i, containerLabel.target, labelName);
 };
 
 this.emitters['ContinueStatement'] = function(n) {
@@ -671,6 +672,31 @@ this.writeLabels = function(n) {
   return true;
 };
 
+this.writeEscapeEntries = function(escapeEntries) {
+  this.n().wm('if',' ','(','rt','===',ESCAPE_THROW,')',' ','throw','','rv',';');
+
+  if (escapeEntries === null) return;
+
+  if (HAS.call(escapeEntries, ESCAPE_RETURN))
+    this.n().wm('if',' ','(','rt','===',ESCAPE_RETURN,')',' ','return','','rv',';');
+
+  for (var entry in escapeEntries) {
+    if (entry < 0 || !HAS.call(escapeEntries, entry) ) continue;
+    var jumpInfo = escapeEntries[entry];
+    var breakTarget = jumpInfo.container.next();
+    this.n().wm('if',' ','(','rt','===',entry,')',' ','{')
+      .i().n()
+        // TODO: check whether actually emitting jumpInfo.name is necessary
+        .wm('if',' ','(','rv',')',' ','{','state','=',jumpInfo.container.min,';',' ','continue','',jumpInfo.name,';','}').n()
+        .wm('else',' ','{','state','=',breakTarget?breakTarget.min:-12,';','break','',jumpInfo.name,';','}')
+      .u().n()
+    .w('}');
+  }
+
+  if (HAS.call(escapeEntries, ESCAPE_EXIT_FINALLY))
+    this.n().wm('if',' ','(','rt',')',' ','return',';');
+};  
+  
 function describeContainer(container) {
    var next = container.next();
    var str = "";
@@ -944,14 +970,7 @@ this.emitters['TryContainer'] = function(n) {
 
         var rt = list[e];
         this.n().if_state_eq(rt.min);
-          this.n().wm('if',' ','(','rt','==','1',')',' ','{');
-          this.set_state('done');
-          this.wm('return','','rv',';', '}');
-
-          this.n().wm('if',' ','(','rt','==','-1',')',' ','{');
-          this.set_state('done');
-          this.wm('throw','','rv',';','}');
-
+          this.writeEscapeEntries(n.finalizer.escapeEntries);
           var next = fin.next(); this.n().set_state(next?next.min:-12);
         this.end_block();
       this.u().n().w('}');

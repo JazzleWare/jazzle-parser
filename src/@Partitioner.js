@@ -116,5 +116,7 @@ function Partitioner(owner, details) { // TODO: break it up into smaller and mor
      }
      else this.label = this.owner.label;
    }
+
+   this.escapeEntries = null;
 }
 

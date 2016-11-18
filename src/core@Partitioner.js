@@ -77,6 +77,27 @@ this.ownerFinally = function() {
 var pushList = {};
 var scanList = {};
   
+this.registerExit = function() {
+  if (!this.escapeEntries)
+    this.escapeEntries = {};
+
+  this.escapeEntries[ESCAPE_EXIT_FINALLY] = null;
+};
+
+this.registerReturn = function() {
+  if (!this.escapeEntries)
+    this.escapeEntries = {};
+
+  this.escapeEntries[ESCAPE_RETURN] = null;
+};
+
+this.registerContinueBreak = function(id, container, name) {
+  if (!this.escapeEntries)
+    this.escapeEntries = {};
+
+  this.escapeEntries[id] = { container: container, name: name };
+};
+
 this.prettyString = function(emitter) {
    if (!emitter) emitter = new Emitter();
     

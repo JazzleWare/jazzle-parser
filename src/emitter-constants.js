@@ -23,4 +23,6 @@ var IF_BLOCK = 1,
     SIMPLE_BLOCK = 0,
     DO_BLOCK = 4;
 
-
+var ESCAPE_THROW = -1,
+    ESCAPE_RETURN = -2,
+    ESCAPE_EXIT_FINALLY = -8;
