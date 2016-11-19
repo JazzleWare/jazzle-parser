@@ -306,7 +306,7 @@ this.emitters['BreakStatement'] = function(n) {
   if (curOwnerFinally === targetOwnerFinally)
     return this.emitBreakWithLabelName(labelName);
 
-  this.w('return',';');
+  this.wm('return',';');
   // if csf != tsf, csf can't be null, because if it is, tsf must be null too -- a contradiction
   var nextOwnerFinally = curOwnerFinally.ownerFinally();
   while (nextOwnerFinally !== targetOwnerFinally) {

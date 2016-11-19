@@ -1,2 +1,5 @@
-function LiquidNames() { this.names = {}; }
+function LiquidNames() {
+  this.nameMap = {};
+  this.nameList = [];
+}
 

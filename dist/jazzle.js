@@ -52,7 +52,10 @@ LabelRef.synth = function(baseName) {
 };
 
 ;
-function LiquidNames() { this.names = {}; }
+function LiquidNames() {
+  this.nameMap = {};
+  this.nameList = [];
+}
 
 ;
 var Parser = function (src, isModule) {
@@ -1028,13 +1031,18 @@ function createObj(fromPrototype) {
   return new Obj();
 }
 
-function getOwn(obj, name, notHave) {
+function getOwnN(obj, name, notHave) {
   return HAS.call(obj, name) ? obj[name] : notHave;
 }
 
-function getOwnN(obj, name) {
-  return getOwn(obj, name, null);
+function getOwn(obj, name) {
+  return getOwnN(obj, name, null);
 }
+
+function hasOwn(obj, name) {
+  return HAS.call(obj, name);
+}
+
 ;
  (function(){
        var i = 0;
@@ -1577,7 +1585,7 @@ this.emitters['BreakStatement'] = function(n) {
   if (curOwnerFinally === targetOwnerFinally)
     return this.emitBreakWithLabelName(labelName);
 
-  this.w('return',';');
+  this.wm('return',';');
   // if csf != tsf, csf can't be null, because if it is, tsf must be null too -- a contradiction
   var nextOwnerFinally = curOwnerFinally.ownerFinally();
   while (nextOwnerFinally !== targetOwnerFinally) {
@@ -2839,44 +2847,76 @@ this.isSynth = function() { return this.baseName !== ""; };
 
 }]  ],
 [LiquidNames.prototype, [function(){
-this.add = function(name) {
-  var entry = this.get(name);
-  ASSERT.call(this, entry === null || entry.realName !== name, 'the liquid global "'+name+'" already exists');
-  this.names[name+'%'] = { realName: name, nonce: 0 };
-  if (entry !== null) this.refresh(entry.realName);
-};
-
-this.get = function(name) {
-  var entry = getOwn(name);
-  return entry;
-};
-
-this.refresh = function(name) {
-  var entry = this.get(name);
-  var n = entry.nonce + 1;
-  var baseName = entry.realName;
-  while (true) {
-    name = baseName + n;
-    if (!HAS.call(this.names, name)) break;
-    n++;
+this.mustNotHaveReal = function(name) {
+  var entry = this.findName(name);
+  if (entry === null) {
+    this.insert(name, newEntry(name, -1));
+    return;
   }
-  entry.nonce = n;
-  this.names[name+'%'] = entry;
-}; 
+  if (entry.nonce === -1)
+    return;
 
-this.getName = function(name) {
-  var entry = this.get(name);
-  ASSERT.call(this, entry !== null, 'name not found: "' + name + '"');
-  return entry.realName + entry.nonce;
+  // if the entry is synthetic, i.e., it is not a "real" entry
+  if (entry.realName !== name) {
+    this.refresh(entry);
+    this.insert(name, newEntry(name, -1));
+  }
+  else {
+    // the name is already in our liquid name list; 
+    // if it is still real (nonce is 0), rename it
+    if (entry.nonce === 0)
+      this.refresh(entry);
+  }
 };
 
-this.rename = function(name) {
-  var entry = this.get(name);
-  if (entry.realName !== name)
-    delete this.names[name+'%'];
-
-  this.refresh(entry.realName);
+this.addNewLiquidName = function(name) {
+  var entry = this.findName(name), e = null;
+  if (entry === null) {
+    this.insert(name, e = newEntry(name, 0));
+    this.nameList.push(e);
+    return;
+  }
+  if (entry.nonce === -1) {
+    entry.nonce = 0;
+    this.refresh(entry);
+    this.nameList.push(entry);
+    return;
+  }
+  if (entry.realName !== name) {
+    this.insert(name, e = newEntry(name, 0));
+    this.refresh(entry);
+    this.nameList.push(e);
+    return;
+  }
+  ASSERT.call(this, false, 'name is in the list: "' + name + '"');
 };
+
+this.findName = function(name) {
+  return getOwn(this.nameMap, name+'%');
+};
+
+this.insert = function(name, entry) { this.nameMap[name+'%'] = entry; };
+
+this.hasName = function(name) {
+  return hasOwn(this.nameMap, name+'%');
+};
+
+this.refresh = function(entry) { 
+  var baseName = entry.realName,
+      nonce = entry.nonce,
+      name = "";
+  while (true) {
+    ++nonce;
+    name = baseName + nonce;
+    if (!this.hasName(name)) break;
+  }
+  entry.nonce = nonce;
+  this.insert(name, entry);
+};
+
+function newEntry(realName, nonce) {
+  return { realName: realName, nonce: nonce };
+}
 
 
 }]  ],
@@ -8725,8 +8765,8 @@ scanList['WhileStatement'] = function(n) {
    this.act = act; this.ect = ect;   
 };
 
-scanList['BreakStatement'] = function(n) { this.verifyBreakTarget(); };
-scanList['ContinueStatement'] = function(n) { this.verifyContinueTarget(); };
+scanList['BreakStatement'] = function(n) { n.label === null && this.verifyBreakTarget(); };
+scanList['ContinueStatement'] = function(n) { n.label === null && this.verifyContinueTarget(); };
 
 function synth_do_while(cond, body) {
    return { type: 'DoWhileStatement', test: cond, body: BLOCK(body) };

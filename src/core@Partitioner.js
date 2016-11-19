@@ -325,8 +325,8 @@ scanList['WhileStatement'] = function(n) {
    this.act = act; this.ect = ect;   
 };
 
-scanList['BreakStatement'] = function(n) { this.verifyBreakTarget(); };
-scanList['ContinueStatement'] = function(n) { this.verifyContinueTarget(); };
+scanList['BreakStatement'] = function(n) { n.label === null && this.verifyBreakTarget(); };
+scanList['ContinueStatement'] = function(n) { n.label === null && this.verifyContinueTarget(); };
 
 function synth_do_while(cond, body) {
    return { type: 'DoWhileStatement', test: cond, body: BLOCK(body) };

@@ -75,10 +75,15 @@ function createObj(fromPrototype) {
   return new Obj();
 }
 
-function getOwn(obj, name, notHave) {
+function getOwnN(obj, name, notHave) {
   return HAS.call(obj, name) ? obj[name] : notHave;
 }
 
-function getOwnN(obj, name) {
-  return getOwn(obj, name, null);
+function getOwn(obj, name) {
+  return getOwnN(obj, name, null);
 }
+
+function hasOwn(obj, name) {
+  return HAS.call(obj, name);
+}
+
