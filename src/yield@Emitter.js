@@ -1,6 +1,75 @@
-var has = {}.hasOwnProperty;
-var transformerList = {};
-
+// one quick note about temp allocation
+// a "temp" is a temporaty variable; "f.a.t", or "first available temp", is the temp
+// that will be returned by a call to allocateTemp. temp allocation is totally
+// unaware what it's going to be used for; still, something like `(yield || (yield * yield)) * 12` is emitted like so:
+// ```
+//   yield
+//   if ( !(a = sent) ) {
+//     yield
+//     a = sent
+//     yield
+//     a = a * sent
+//   }
+//   a * 12
+// ```
+// the reason is not the temp allocator; rather, it is the result of a simple protocol all
+// yield trasformers are supposed to conform to: the f.a.t at the start of a transform must be equal to the f.a.t at its end;
+// the above example, then, is transformed like:
+//
+// TRANSFORM PROCESS                                     ACTUAL OUTPUT
+// --------------------------------------------          -------------
+// transform(<(yield || (yield * yield))*12>) {
+//   f.a.t: a
+//   &l = transform(<yield>, true) {
+//     f.a.t: a
+//     yield .............................................. yield
+//     <return sent>                                        |
+//     f.a.t: a                                             |
+//   }                                                      |
+//                                                          |
+//   <isvalue> -> <save(&l)>=#a                             |
+//   &cond = &l ........................................... if (! (a=sent) ) {
+//   <isvalue> -> <free(#a)>                                |
+//                                                          |
+//   &r = transform(<yield * yield>, true) {                |
+//     f.a.t: a                                             |
+//     &l = transform(<yield>, true) {                      |
+//       f.a.t: a                                           |
+//       yield .............................................|  yield
+//       <return sent>                                      |
+//       f.a.t: a                                           |
+//     }                                                    |
+//     <y(&r)> -> <save(&l)>=#a                             |  a = sent
+//     &r = transform(<yield>, true) {                      |
+//       f.a.t: b                                           |
+//       yield .............................................|  yield
+//       <return sent>                                      |
+//       f.a.t: b                                           |
+//     }                                                    |
+//     <free(#a)>                                           |
+//     <return &l * &r>=a * sent                            |
+//     f.a.t: a                                             |
+//   }                                                      |
+//                                                          |
+//   <isvalue> -> <save(&r)>=#a                             |  a = a * sent
+//   <isvalue> -> <free(#a)>                                }
+//   if (&cond) {                                           |
+//     &r                                                   a * 12
+//   }                                                      |
+//   <isvalue> -> (                                         |
+//     <save(&r)>=#a->omitted                               |
+//     <return &r>                                          |
+//     <free(#a)>                                           |
+//   }                                                      |
+//                                                          |
+//   f.a.t: a                                               |
+//   <return no-expression>                                 |
+//   f.a.t: a                                               |
+// }                                                        |
+                                                            
+var has = {}.hasOwnProperty;                                
+var transformerList = {};                                   
+                                                            
 function isComplexAssignment(n) { 
    if (n.type === 'ExpressionStatement')
      n = n.expression;

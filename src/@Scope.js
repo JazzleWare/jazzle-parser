@@ -21,8 +21,11 @@ function Scope(parent, type) {
   if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
     this.type |= SCOPE_TYPE_LEXICAL_LOOP;    
 
-  this.catchVar = null;
+  this.catchVarIsSynth = false;
   this.catchVarName = ""; 
+
+  this.globalLiquidNames = this.parent ? this.parent.globalLiquidNames : new LiquidNames();
+  this.localLiquidNames = null;
   // #end
 }
 

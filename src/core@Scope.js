@@ -104,6 +104,9 @@ declare[DECL_MODE_VAR] = function(id, declType) {
 declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
 declare[DECL_MODE_LET] = function(id, declType) {
    // #if V
+   if (declType & DECL_TYPE_CATCH_PARAMS)
+     this.catchVarIsSynth = true;
+
    var decl = new Decl(declType, id.name, this, id.name);
    this.insertDecl(id, decl);
    return decl;
@@ -115,6 +118,7 @@ declare[DECL_MODE_LET] = function(id, declType) {
 declare[DECL_MODE_CATCH_PARAMS] = function(id, declType) {
   var name = id.name + '%';
   // #if V
+  this.catchVarIsSynth = false; 
   this.insertDecl(id, new Decl( DECL_MODE_CATCH_PARAMS, id.name, this, id.name)); 
   this.catchVarName = id.name;
   // #else
@@ -136,8 +140,8 @@ this.insertDecl = function(id /* #if V */, decl /* #end */) {
     var existingType = existingDecl/* #if V */.type/* #end */;
 
     // if a var name in a catch scope has the same name as a catch var,
-    // it will not get hoisted any further; please note the '===' below -- `function l() {}`
-    if ((declType === DECL_MODE_VAR) && (existingType & DECL_MODE_CATCH_PARAMS))
+    // it will not get hoisted any further
+    if ((declType & DECL_MODE_VAR) && (existingType & DECL_MODE_CATCH_PARAMS))
        return false;
 
     // if a var decl is overriding a var decl of the same name, no matter what scope we are in,
@@ -292,8 +296,6 @@ this.declSynth = function(name) {
   this.declare(synth_id_node(synthName), DECL_MODE_VAR);
   return synthName;
 };
-
-this.addLiquidGlobal = function(name) { this.liquidGlobals.add(name); };
 // #end
 
 this.isLoop = function() { return this.type & SCOPE_TYPE_LEXICAL_LOOP; };
@@ -317,7 +319,6 @@ this.removeDecl = function(decl) {
    delete this.definedNames[decl.synthName+'%'];
    return decl;
 };
-// #end
 
 /* consider this contrived example:
    function a() {
@@ -343,13 +344,24 @@ this.removeDecl = function(decl) {
 
             // one solution is to save the catch var when the catch scope begins, and add it to the list of the catch scope's defined
             // names only at the end of the scope
+
+            // another solution is to keep track of every catch variable in function scope, and at the same time renaming
+            // any synthesized name that clashes with a catch var name each time a catch var is added to the catch var list;
+            // but this solution renames a synthesized name even when it is not in the same scope as the catch var,
+            // like so:
+            //   var v, v1;
+            //   {
+            //     let v = 12; // synthName=v2
+            //     try {}
+            //
+            //     catch (v2) {} // renames previous v2 to something else 
+            //   }
           }
        }
      }
    }
 */
 
-// #if V
 this.setCatchVar = function(name) {
   ASSERT.call(this, this.isCatch(), 'only a catch scope can have a catch variable');
   ASSERT.call(this, this.catchVar === "", 'scope has already got a catch var: ' + this.catchVarName);
@@ -357,12 +369,51 @@ this.setCatchVar = function(name) {
 };
 
 this.finishWithActuallyDeclaringTheCatchVar = function() {
+  // catch var names of catch scopes with non-simple catch params are calculated in the emit phase
   if ( this.catchVarName === "" ) return;
 
+  // TODO: this.insertDecl0(true, synthName, decl), maybe?
   var synthName = this.newSynthName(this.catchVarName);
   var decl = this.findDeclInScope(this.catchVarName);
   decl.synthName = synthName;
 };
 
+function getOrCreate(l, name) {
+  var entry = l.findName(name);
+  if (!entry)
+    entry = l.addNewLiquidName(name);
+   
+  return entry;
+};
+
+this.getOrCreateLocalLiquidName = function(name) {
+  var entry = null;
+  if ( !this.funcScope.localLiquidNames )
+    this.funcScope.localLiquidNames = new LiquidNames();
+  
+  return getOrCreate(this.funcScope.localLiquidNames, name);
+};
+
+// if a name is either referenced at func scope, directly or indirectly,
+// or it is a func scope binding, real or synth, it must be passed to this method
+this.updateLiquidNamesWith = function(name) {
+  if (this.funcScope.globalLiquidNames)
+    this.funcScope.globalLiquidNames.mustNotHaveReal(name);
+  if (this.funcScope.localLiquidNames)
+    this.funcScope.localLiquidNames.mustNotHaveReal(name);
+};
+
+this.setLocalLiquidNames = function(nameArray) {
+  ASSERT.call(this, this.isFunc(), 'func scopes are the only scopes that can currently have local liquid names' );
+  ASSERT.call(this, this.localLiquidNames === null, 'scope has a local liquid name set already' );
+  this.localLiquidNames = new LiquidNames(nameArray);
+};
+
+this.getOrCreateGlobalLiquidName = function(name) {
+  if (!this.funcScope.globalLiquidNames)
+    this.funcScope.globalLiquidNames = new LiquidNames();
+
+  return getOrCreate(this.funcScope.globalLiquidNames, name);
+};  
 // #end
 

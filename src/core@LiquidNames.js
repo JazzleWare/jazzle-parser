@@ -25,19 +25,19 @@ this.addNewLiquidName = function(name) {
   if (entry === null) {
     this.insert(name, e = newEntry(name, 0));
     this.nameList.push(e);
-    return;
+    return e;
   }
   if (entry.nonce === -1) {
     entry.nonce = 0;
     this.refresh(entry);
     this.nameList.push(entry);
-    return;
+    return entry;
   }
   if (entry.realName !== name) {
     this.insert(name, e = newEntry(name, 0));
     this.refresh(entry);
     this.nameList.push(e);
-    return;
+    return e;
   }
   ASSERT.call(this, false, 'name is in the list: "' + name + '"');
 };
@@ -66,6 +66,6 @@ this.refresh = function(entry) {
 };
 
 function newEntry(realName, nonce) {
-  return { realName: realName, nonce: nonce };
+  return { type: 'LiquidName', realName: realName, nonce: nonce };
 }
 

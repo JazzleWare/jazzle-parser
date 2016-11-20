@@ -1,0 +1,69 @@
+a() ? yield && yield : yield || yield
+if (a()) <t(yield && yield, true)>
+else <t(yield || yield, true)>
+
+if (a()) {
+  if (<t(yield, true)>)
+    <t(yield, true)>
+}
+else {
+  if (!<t(yield, true)>)
+    <t(yield, true)>
+}
+
+  &cond = (a())
+  &body = (
+    yield
+    <alloc>=#t
+    &cond1 = (#t = sent)
+    <free(#t)>
+    &body1 = (
+      yield
+      <alloc>=#t
+      #t = sent
+      <free(#t)>
+    )
+    if &cond1: &body1
+  )
+  &elsebody = (
+    yield
+    <alloc>=#t
+    &cond2 = !(#t = sent)
+    <free(#t)>
+    &body2 = (
+      yield
+      <alloc>=#t
+      #t = sent
+      <free(#t)>
+    )
+    if &cond2: &body2
+  )
+  if &cond: &body
+  else: &elsebody
+
+a() ? yield * yield : yield || yield
+&cond = a()
+&body = (
+  &l = yield
+  &r = yield
+  yield -> &l = sent
+  <y(&r) {
+    <save &l -> #t>
+      yield -> &r = sent
+    <free(#t)>
+  }>
+  <save &l * &r>=#t
+)
+&elsebody = (
+  &l = yield
+  &r = yield
+  yield -> &l = sent
+  &cond = <save &l>->#t
+  <free(#t)>
+  &body = (
+    yield -> &r = sent
+    <save &r>->#t
+  )
+  <free(#t)>
+)
+
