@@ -29,6 +29,8 @@ all-errors.list
 let
 yield*/*
 *.outline
+*outline*
+*Outline*
 diff
 
 
