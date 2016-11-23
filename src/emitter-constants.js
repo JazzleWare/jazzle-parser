@@ -7,6 +7,7 @@ var IS_REF = 1,
     NOT_VAL = 0;
 
 var NOEXPRESSION = { type: 'NoExpression' };
+var NOEXPR = NOEXPRESSION;
 
 var SIMPLE_PARTITION = 0;
 var CONTAINER_PARTITION = 1;

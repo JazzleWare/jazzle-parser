@@ -44,7 +44,7 @@ function isspecial(n, kind) {
 }
 
 function getExprKey(kv) {
-  return kv.computed ? kv.key : synth_str_lit(kv.key.name);
+  return kv.computed ? kv.key : synth_lit_str(kv.key.name);
 }
 
 function push_checked(n, list) {

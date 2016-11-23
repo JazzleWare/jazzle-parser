@@ -20,6 +20,8 @@ this.transform = this.tr = function(n, list, isVal) {
     case 'Literal':
     case 'This':
     case 'Super':
+    case 'ArrIterGet':
+    case 'ObjIterGet':
       return n;
     default:
       return transform[n.type].call(this, n, list, isVal);
@@ -40,7 +42,14 @@ this.save = function(n, list) {
 };
 
 var transformAssig = {};
+transform['SyntheticAssignment'] =
 transform['AssignmentExpression'] = function(n, list, isVal) {
+  if (n.type !== 'SyntheticAssignment') {
+    var rightTemp = n.left.type !== 'Identifier' ? this.allocTemp() : null;
+    this.evalLeft(n.left, n.right, list);
+    rightTemp && this.rl(rightTemp);
+  }
+
   return transformAssig[n.left.type].call(this, n, list, isVal);
 };
 
@@ -53,8 +62,8 @@ transform['AssignmentExpression'] = function(n, list, isVal) {
 // saving the current expression that is using 'sent' in a temp, and further replacing that expression with
 // the temp it is saved in.
 var evalLeft = {};
-this.evalLeft = function(n, list) {
-  return evalLeft[n.type].call(this, n, list);
+this.evalLeft = function(left, right, list) {
+  return evalLeft[left.type].call(this, left, right, list);
 };
 
 evalLeft['Identifier'] = function(left, right, list) {
@@ -73,13 +82,13 @@ evalLeft['MemberExpression'] = function(left, right, list) {
   if (left.computed) {
     left.property = this.tr(left.property, list, true);
     if (right === null || this.y(right))
-      left.property = this.save(left.property);
+      left.property = this.save(left.property, list);
   }
 };
 
 transformAssig['MemberExpression'] = function(n, list, isVal) {
   var left = n.left;
-  this.evalLeft(left, n.right, list);
+  // this.evalLeft(left, n.right, list);
   // var t = {}, n = 12; t[n] = (t = {}, n = 12, t[n] = n), you know
   this.rlit(left.property);
   this.rlit(left.object);
@@ -111,11 +120,8 @@ assigPattern['ObjectPattern'] = function(left, right, list) {
   while (e < elems.length) {
     var elem = elems[e];
     this.trad(
-      synth_assig(elem.value,
-        synth_call(
-          synth_mem(right, synth_id('get'), false),
-          [getExprKey(elem)]
-        )
+      synth_assig_explicit(elem.value,
+        synth_call_objIter_get(right, getExprKey(elem))
       ), list, false
     );
     e++;
@@ -123,14 +129,14 @@ assigPattern['ObjectPattern'] = function(left, right, list) {
 };
 
 transformAssig['ObjectPattern'] = function(n, list, isVal) {
-  var iterVal = this.allocTemp();
-  this.evalLeft(n.left, /* TODO: unnecessary */n.right, list);
-  this.rl(iterVal);
-  n.right = this.tr(n, list, true);
-  iterVal = this.save(wrapObjIter(n.right), list);
-  this.assigPattern(n.left, iterVal, list);
-  this.rl(iterVal);
-  return isVal ? iterVal(iterVal) : NOEXPR;
+  // var iterVal = this.allocTemp();
+  // this.evalLeft(n.left, /* TODO: unnecessary */n.right, list);
+  // this.rl(iterVal);
+  n.right = this.tr(n.right, list, true);
+  var iter = this.save(wrapObjIter(n.right), list);
+  this.assigPattern(n.left, iter, list);
+  this.rl(iter);
+  return isVal ? iterVal(iter) : NOEXPR;
 };
 
 evalLeft['ArrayPattern'] = function(left, right, list) {
@@ -143,11 +149,8 @@ assigPattern['ArrayPattern'] = function(left, right, list) {
   var elems = left.elements, e = 0;
   while (e < elems.length) {
     this.trad(
-      synth_assig(elems[e],
-        synth_call(
-          synth_mem(right, synth_id('get')),
-          []
-        )
+      synth_assig_explicit(elems[e],
+        synth_call_arrIter_get(right)
       ), list, false
     );
     e++;
@@ -155,14 +158,14 @@ assigPattern['ArrayPattern'] = function(left, right, list) {
 };
 
 transformAssig['ArrayPattern'] = function(n, list, isVal) {
-  var iterVal = this.allocTemp();
-  this.evalLeft(n.left, /* TODO: unnecessary */n.right, list);
-  this.rl(iterVal);
+  // var iterVal = this.allocTemp();
+  // this.evalLeft(n.left, /* TODO: unnecessary */n.right, list);
+  // this.rl(iterVal);
   n.right = this.tr(n.right, list, true);
-  iterVal = this.save(wrapArrIter(n.right), list);
-  this.assigPattern(n.left, iterVal, list);
-  this.rl(iterVal);
-  return isVal ? iterVal(iterVal) : NOEXPR;
+  var iter = this.save(wrapArrIter(n.right), list);
+  this.assigPattern(n.left, iter, list);
+  this.rl(iter);
+  return isVal ? iterVal(iter) : NOEXPR;
 }; 
 
 evalLeft['AssignmentPattern'] = function(left, right, list) {
@@ -174,10 +177,10 @@ transformAssig['AssignmentPattern'] = function(n, list, isVal) {
   var l = [], left = n.left;
   this.trad(left.right, l, true);
   return this.transform(
-    synth_assig(left.left,
+    synth_assig_explicit(left.left,
       synth_cond(
         wrapInUnornull( 
-          synth_assig(temp,
+          synth_assig_explicit(temp,
             n.right // not transformed -- it's merely a synth call in the form of either #t.get() or #t.get('<string>')
           )
         ),

@@ -22,7 +22,7 @@ function synth_mem(obj, prop, c) {
 }
 
 function synth_call(callee, args) {
-  return { type: 'CallExpression', y: -1, callee: callee, args: args || [] };
+  return { type: 'CallExpression', y: -1, callee: callee, arguments: args || [] };
 }
 
 function synth_stmt(stmts) {
@@ -40,5 +40,26 @@ function synth_if(cond, c, a) {
  
 function synth_cond(cond, c, a) {
   return { type: 'ConditionalExpression', consequent: c, y: -1, test: cond, alternate: a };
+}
+
+// TODO: maybe generalize synth_call_arrIter_get and synth_call_objIter_get to some 'LeaveUntransformed' type
+function synth_call_arrIter_get(iter) {
+  var arrIter_get = synth_call(
+    synth_mem(iter, synth_id('get')), []);
+  arrIter_get.type = 'ArrIterGet';
+  return arrIter_get;
+}
+
+function synth_call_objIter_get(iter, k) {
+  var objIter_get = synth_call(
+    synth_mem(iter, synth_id('get')), [k]);
+  objIter_get.type = 'ObjIterGet';
+  return objIter_get;
+}
+
+function synth_assig_explicit(left, right, o) {
+  var assig = synth_assig(left, right, o);
+  assig.type = 'SyntheticAssignment';
+  return assig;
 }
 

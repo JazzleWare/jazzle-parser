@@ -224,7 +224,7 @@ this._emitString = function(str) {
 this.emitters['ExpressionStatement'] = function(n) {
    if (n.expression.type === 'AssignmentExpression' )
      this.emit(
-        this._transformAssignment(n.expression, NOT_VAL), PREC_WITH_NO_OP, EMIT_STMT_HEAD
+        n.expression, PREC_WITH_NO_OP, EMIT_STMT_HEAD
      );
    else {
      this.emit(n.expression, PREC_WITH_NO_OP, EMIT_STMT_HEAD);
@@ -376,6 +376,7 @@ this.emitters['SequenceStatement'] = function(n) {
   }
 };
 
+this.emitters['SyntheticAssignment'] =
 this.emitters['AssignmentExpression'] = function(n, prec, flags) {
    var hasParen = prec !== PREC_WITH_NO_OP;
    if (hasParen) this.write('(');
@@ -383,14 +384,12 @@ this.emitters['AssignmentExpression'] = function(n, prec, flags) {
       case 'Identifier': 
       case 'MemberExpression':
       case 'SynthesizedExpr':
-         if (y(n) === 0) {
            this.emit(n.left);
            this.write(' ' + n.operator + ' ');
            this._emitNonSeqExpr(n.right, PREC_WITH_NO_OP, flags & EMIT_VAL);
            break ;
-         }
       default:
-         this.emit( this._transformAssignment(n, flags & EMIT_VAL), PREC_WITH_NO_OP, flags & EMIT_VAL);
+         this.emit( n, PREC_WITH_NO_OP, flags & EMIT_VAL);
    }
    if (hasParen) this.write(')');
 };
@@ -400,6 +399,8 @@ this.emitters['Program'] = function(n) {
 
 };
 
+this.emitters['ArrIterGet'] =
+this.emitters['ObjIterGet'] =
 this.emitters['CallExpression'] = function(n, prec, flags) {
    var hasParen = flags & EMIT_NEW_HEAD;
    if (hasParen) this.write('(');
@@ -1006,5 +1007,10 @@ this.emitters['CustomContainer'] = function(n) {
     if (e>0) this.newlineIndent();
     this.emit(list[e++]);
   }
+};
+
+this.emitters['SpecialIdentifier'] = function(n) {
+  var id = { type: 'Identifier', name: isTemp(n) ? n.name : n.kind };
+  return this.emit(id);
 };
 

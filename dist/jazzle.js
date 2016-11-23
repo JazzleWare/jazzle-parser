@@ -666,6 +666,7 @@ var IS_REF = 1,
     NOT_VAL = 0;
 
 var NOEXPRESSION = { type: 'NoExpression' };
+var NOEXPR = NOEXPRESSION;
 
 var SIMPLE_PARTITION = 0;
 var CONTAINER_PARTITION = 1;
@@ -931,7 +932,7 @@ function synth_mem(obj, prop, c) {
 }
 
 function synth_call(callee, args) {
-  return { type: 'CallExpression', y: -1, callee: callee, args: args || [] };
+  return { type: 'CallExpression', y: -1, callee: callee, arguments: args || [] };
 }
 
 function synth_stmt(stmts) {
@@ -949,6 +950,27 @@ function synth_if(cond, c, a) {
  
 function synth_cond(cond, c, a) {
   return { type: 'ConditionalExpression', consequent: c, y: -1, test: cond, alternate: a };
+}
+
+// TODO: maybe generalize synth_call_arrIter_get and synth_call_objIter_get to some 'LeaveUntransformed' type
+function synth_call_arrIter_get(iter) {
+  var arrIter_get = synth_call(
+    synth_mem(iter, synth_id('get')), []);
+  arrIter_get.type = 'ArrIterGet';
+  return arrIter_get;
+}
+
+function synth_call_objIter_get(iter, k) {
+  var objIter_get = synth_call(
+    synth_mem(iter, synth_id('get')), [k]);
+  objIter_get.type = 'ObjIterGet';
+  return objIter_get;
+}
+
+function synth_assig_explicit(left, right, o) {
+  var assig = synth_assig(left, right, o);
+  assig.type = 'SyntheticAssignment';
+  return assig;
 }
 
 ;
@@ -998,7 +1020,7 @@ function isspecial(n, kind) {
 }
 
 function getExprKey(kv) {
-  return kv.computed ? kv.key : synth_str_lit(kv.key.name);
+  return kv.computed ? kv.key : synth_lit_str(kv.key.name);
 }
 
 function push_checked(n, list) {
@@ -1642,7 +1664,7 @@ this._emitString = function(str) {
 this.emitters['ExpressionStatement'] = function(n) {
    if (n.expression.type === 'AssignmentExpression' )
      this.emit(
-        this._transformAssignment(n.expression, NOT_VAL), PREC_WITH_NO_OP, EMIT_STMT_HEAD
+        n.expression, PREC_WITH_NO_OP, EMIT_STMT_HEAD
      );
    else {
      this.emit(n.expression, PREC_WITH_NO_OP, EMIT_STMT_HEAD);
@@ -1794,6 +1816,7 @@ this.emitters['SequenceStatement'] = function(n) {
   }
 };
 
+this.emitters['SyntheticAssignment'] =
 this.emitters['AssignmentExpression'] = function(n, prec, flags) {
    var hasParen = prec !== PREC_WITH_NO_OP;
    if (hasParen) this.write('(');
@@ -1801,14 +1824,12 @@ this.emitters['AssignmentExpression'] = function(n, prec, flags) {
       case 'Identifier': 
       case 'MemberExpression':
       case 'SynthesizedExpr':
-         if (y(n) === 0) {
            this.emit(n.left);
            this.write(' ' + n.operator + ' ');
            this._emitNonSeqExpr(n.right, PREC_WITH_NO_OP, flags & EMIT_VAL);
            break ;
-         }
       default:
-         this.emit( this._transformAssignment(n, flags & EMIT_VAL), PREC_WITH_NO_OP, flags & EMIT_VAL);
+         this.emit( n, PREC_WITH_NO_OP, flags & EMIT_VAL);
    }
    if (hasParen) this.write(')');
 };
@@ -1818,6 +1839,8 @@ this.emitters['Program'] = function(n) {
 
 };
 
+this.emitters['ArrIterGet'] =
+this.emitters['ObjIterGet'] =
 this.emitters['CallExpression'] = function(n, prec, flags) {
    var hasParen = flags & EMIT_NEW_HEAD;
    if (hasParen) this.write('(');
@@ -2424,6 +2447,11 @@ this.emitters['CustomContainer'] = function(n) {
     if (e>0) this.newlineIndent();
     this.emit(list[e++]);
   }
+};
+
+this.emitters['SpecialIdentifier'] = function(n) {
+  var id = { type: 'Identifier', name: isTemp(n) ? n.name : n.kind };
+  return this.emit(id);
 };
 
 
@@ -9606,6 +9634,8 @@ this.transform = this.tr = function(n, list, isVal) {
     case 'Literal':
     case 'This':
     case 'Super':
+    case 'ArrIterGet':
+    case 'ObjIterGet':
       return n;
     default:
       return transform[n.type].call(this, n, list, isVal);
@@ -9626,7 +9656,14 @@ this.save = function(n, list) {
 };
 
 var transformAssig = {};
+transform['SyntheticAssignment'] =
 transform['AssignmentExpression'] = function(n, list, isVal) {
+  if (n.type !== 'SyntheticAssignment') {
+    var rightTemp = n.left.type !== 'Identifier' ? this.allocTemp() : null;
+    this.evalLeft(n.left, n.right, list);
+    rightTemp && this.rl(rightTemp);
+  }
+
   return transformAssig[n.left.type].call(this, n, list, isVal);
 };
 
@@ -9639,8 +9676,8 @@ transform['AssignmentExpression'] = function(n, list, isVal) {
 // saving the current expression that is using 'sent' in a temp, and further replacing that expression with
 // the temp it is saved in.
 var evalLeft = {};
-this.evalLeft = function(n, list) {
-  return evalLeft[n.type].call(this, n, list);
+this.evalLeft = function(left, right, list) {
+  return evalLeft[left.type].call(this, left, right, list);
 };
 
 evalLeft['Identifier'] = function(left, right, list) {
@@ -9659,13 +9696,13 @@ evalLeft['MemberExpression'] = function(left, right, list) {
   if (left.computed) {
     left.property = this.tr(left.property, list, true);
     if (right === null || this.y(right))
-      left.property = this.save(left.property);
+      left.property = this.save(left.property, list);
   }
 };
 
 transformAssig['MemberExpression'] = function(n, list, isVal) {
   var left = n.left;
-  this.evalLeft(left, n.right, list);
+  // this.evalLeft(left, n.right, list);
   // var t = {}, n = 12; t[n] = (t = {}, n = 12, t[n] = n), you know
   this.rlit(left.property);
   this.rlit(left.object);
@@ -9697,11 +9734,8 @@ assigPattern['ObjectPattern'] = function(left, right, list) {
   while (e < elems.length) {
     var elem = elems[e];
     this.trad(
-      synth_assig(elem.value,
-        synth_call(
-          synth_mem(right, synth_id('get'), false),
-          [getExprKey(elem)]
-        )
+      synth_assig_explicit(elem.value,
+        synth_call_objIter_get(right, getExprKey(elem))
       ), list, false
     );
     e++;
@@ -9709,14 +9743,14 @@ assigPattern['ObjectPattern'] = function(left, right, list) {
 };
 
 transformAssig['ObjectPattern'] = function(n, list, isVal) {
-  var iterVal = this.allocTemp();
-  this.evalLeft(n.left, /* TODO: unnecessary */n.right, list);
-  this.rl(iterVal);
-  n.right = this.tr(n, list, true);
-  iterVal = this.save(wrapObjIter(n.right), list);
-  this.assigPattern(n.left, iterVal, list);
-  this.rl(iterVal);
-  return isVal ? iterVal(iterVal) : NOEXPR;
+  // var iterVal = this.allocTemp();
+  // this.evalLeft(n.left, /* TODO: unnecessary */n.right, list);
+  // this.rl(iterVal);
+  n.right = this.tr(n.right, list, true);
+  var iter = this.save(wrapObjIter(n.right), list);
+  this.assigPattern(n.left, iter, list);
+  this.rl(iter);
+  return isVal ? iterVal(iter) : NOEXPR;
 };
 
 evalLeft['ArrayPattern'] = function(left, right, list) {
@@ -9729,11 +9763,8 @@ assigPattern['ArrayPattern'] = function(left, right, list) {
   var elems = left.elements, e = 0;
   while (e < elems.length) {
     this.trad(
-      synth_assig(elems[e],
-        synth_call(
-          synth_mem(right, synth_id('get')),
-          []
-        )
+      synth_assig_explicit(elems[e],
+        synth_call_arrIter_get(right)
       ), list, false
     );
     e++;
@@ -9741,14 +9772,14 @@ assigPattern['ArrayPattern'] = function(left, right, list) {
 };
 
 transformAssig['ArrayPattern'] = function(n, list, isVal) {
-  var iterVal = this.allocTemp();
-  this.evalLeft(n.left, /* TODO: unnecessary */n.right, list);
-  this.rl(iterVal);
+  // var iterVal = this.allocTemp();
+  // this.evalLeft(n.left, /* TODO: unnecessary */n.right, list);
+  // this.rl(iterVal);
   n.right = this.tr(n.right, list, true);
-  iterVal = this.save(wrapArrIter(n.right), list);
-  this.assigPattern(n.left, iterVal, list);
-  this.rl(iterVal);
-  return isVal ? iterVal(iterVal) : NOEXPR;
+  var iter = this.save(wrapArrIter(n.right), list);
+  this.assigPattern(n.left, iter, list);
+  this.rl(iter);
+  return isVal ? iterVal(iter) : NOEXPR;
 }; 
 
 evalLeft['AssignmentPattern'] = function(left, right, list) {
@@ -9760,10 +9791,10 @@ transformAssig['AssignmentPattern'] = function(n, list, isVal) {
   var l = [], left = n.left;
   this.trad(left.right, l, true);
   return this.transform(
-    synth_assig(left.left,
+    synth_assig_explicit(left.left,
       synth_cond(
         wrapInUnornull( 
-          synth_assig(temp,
+          synth_assig_explicit(temp,
             n.right // not transformed -- it's merely a synth call in the form of either #t.get() or #t.get('<string>')
           )
         ),
