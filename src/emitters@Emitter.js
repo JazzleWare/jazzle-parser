@@ -535,17 +535,20 @@ this._emitAssignment = function(assig, isStatement) {
 };
 
 this.emitters['YieldExpression'] = function(n) {
-  this.wm('y','=','1',';');
-  if (n.argument !== null) {
-    this.n().wm('yv','=');
-    this._emitNonSeqExpr(n.argument);
-    this.write(';');
-  }
-  var next = this.currentContainer.next();
-  this.n().wm('nex','=',next?next.min:-12,';');
-  this.n().wm('return','','_y','(');
-  if (n.argument !== null) this.w('yv');
-  this.wm(')',';');
+//this.wm('y','=','1',';');
+//if (n.argument !== null) {
+//  this.n().wm('yv','=');
+//  this._emitNonSeqExpr(n.argument);
+//  this.write(';');
+//}
+//var next = this.currentContainer.next();
+//this.n().wm('nex','=',next?next.min:-12,';');
+//this.n().wm('return','','_y','(');
+//if (n.argument !== null) this.w('yv');
+//this.wm(')',';');
+  this.w('yield');
+  n.argument && this.setwrap(false).s().e(n.argument);
+  this.w(';');
 }; 
       
 this.emitters['NoExpression'] = function(n) { return; };

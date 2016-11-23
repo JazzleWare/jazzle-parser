@@ -1975,17 +1975,20 @@ this._emitAssignment = function(assig, isStatement) {
 };
 
 this.emitters['YieldExpression'] = function(n) {
-  this.wm('y','=','1',';');
-  if (n.argument !== null) {
-    this.n().wm('yv','=');
-    this._emitNonSeqExpr(n.argument);
-    this.write(';');
-  }
-  var next = this.currentContainer.next();
-  this.n().wm('nex','=',next?next.min:-12,';');
-  this.n().wm('return','','_y','(');
-  if (n.argument !== null) this.w('yv');
-  this.wm(')',';');
+//this.wm('y','=','1',';');
+//if (n.argument !== null) {
+//  this.n().wm('yv','=');
+//  this._emitNonSeqExpr(n.argument);
+//  this.write(';');
+//}
+//var next = this.currentContainer.next();
+//this.n().wm('nex','=',next?next.min:-12,';');
+//this.n().wm('return','','_y','(');
+//if (n.argument !== null) this.w('yv');
+//this.wm(')',';');
+  this.w('yield');
+  n.argument && this.setwrap(false).s().e(n.argument);
+  this.w(';');
 }; 
       
 this.emitters['NoExpression'] = function(n) { return; };
@@ -9690,7 +9693,7 @@ transformAssig['Identifier'] = function(n, list, isVal) {
 };
 
 evalLeft['MemberExpression'] = function(left, right, list) {
-  left.object = this.tr(left.object);
+  left.object = this.tr(left.object, list, true);
   if (right === null || this.y(right))
     left.object = this.save(left.object, list);
   if (left.computed) {
@@ -9804,6 +9807,13 @@ transformAssig['AssignmentPattern'] = function(n, list, isVal) {
     ), list, isVal
   );
 };
+
+transform['YieldExpression'] = function(n, list, isVal) {
+  if (n.argument)
+    n.argument = this.tr(n.argument, list, true);
+  push_checked(n, list);
+  return isVal ? sentVal() : NOEXPR;
+}
 
 
 }]  ],

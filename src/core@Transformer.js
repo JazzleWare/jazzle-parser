@@ -76,7 +76,7 @@ transformAssig['Identifier'] = function(n, list, isVal) {
 };
 
 evalLeft['MemberExpression'] = function(left, right, list) {
-  left.object = this.tr(left.object);
+  left.object = this.tr(left.object, list, true);
   if (right === null || this.y(right))
     left.object = this.save(left.object, list);
   if (left.computed) {
@@ -190,4 +190,11 @@ transformAssig['AssignmentPattern'] = function(n, list, isVal) {
     ), list, isVal
   );
 };
+
+transform['YieldExpression'] = function(n, list, isVal) {
+  if (n.argument)
+    n.argument = this.tr(n.argument, list, true);
+  push_checked(n, list);
+  return isVal ? sentVal() : NOEXPR;
+}
 
