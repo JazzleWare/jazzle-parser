@@ -9,4 +9,5 @@ this.Emitter = Emitter;
 this.Partitioner = Partitioner;
 this.Decl = Decl;
 this.RefMode = RefMode;
+this.Transformer = Transformer;
 

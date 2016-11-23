@@ -52,9 +52,14 @@ LabelRef.synth = function(baseName) {
 };
 
 ;
-function LiquidNames() {
+function LiquidNames(nameArray) {
   this.nameMap = {};
   this.nameList = [];
+  if (nameArray) {
+    var e = 0;
+    while (e < nameArray.length)
+      this.addNewLiquidName(nameArray[e++]);
+  }
 }
 
 ;
@@ -285,8 +290,11 @@ function Scope(parent, type) {
   if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
     this.type |= SCOPE_TYPE_LEXICAL_LOOP;    
 
-  this.catchVar = null;
+  this.catchVarIsSynth = false;
   this.catchVarName = ""; 
+
+  this.globalLiquidNames = this.parent ? this.parent.globalLiquidNames : new LiquidNames();
+  this.localLiquidNames = null;
 }
 
 Scope.createFunc = function(parent, decl) {
@@ -301,6 +309,38 @@ Scope.createLexical = function(parent, loop) {
         SCOPE_TYPE_LEXICAL_SIMPLE :
         SCOPE_TYPE_LEXICAL_LOOP);
 };
+;
+// were it not needed by the AssignmentExpression transform, using a transformer would have been
+// limited to the generator bodies; the only reason a transformer is needed as for now
+// is that the allocation of temps should be limited to the transform phase -- after all, a
+// temp is a variable declaration that had better come at the beginning of a function's body;
+// but this is not the reason a transformer is needed for the whole AST -- because a function's declarations
+// can well come at its very end.
+// a transform on an AssignmentExpression is always needed, but there is a difference between probing a whole AST for
+// AssignmentExpressions before any emitting is done, versus converting them as they are encountered during the emit phase;
+// the latter is obviously faster, but would not work correctly with things like below:
+//
+// actual code: [a=l([b]=12)] = 120
+// emit-phase transform:
+// (transform for [a=l([b]=12), e] = 120) #t = arrIter(120),  a = unornull(#t1 = #t.get()) ? l([b] = 12) : #t1, e = #t.get()
+// (transform for [b] = 12) #t = arrIter(12), b = #t.get, #t.val
+// (combined) #t = arrIter(120), a = unornull( #t1 = #t.get() ) ? l( #t = arrIter(12), b = #t.get(), #t.val ) : #t1, e = #t.get()
+//
+// it's evident from the piece above that `[b] = 12` is transformed after `[a=l([b] = 12)] = 120`, the reason being
+// the fact that l([b] = 12) is transformed _after_ `[a = l([b] = 12)] = 120` is done getting transformed, due to the way
+// transformation works:
+//   transform( [a=l([b]=12)]=120 ): #t = arrIter(120), a = unornull(#t1 = #t.get) ? l([b] = 12) : #t1, #t.val
+// 
+// when the above transform is finished, all temps are released, and the transformed assignment is fed into
+// the emitter; when the emitter encounters l([b] = 12),  it reallocate some of the temps previously alloctated, and that is where
+// the clash is going to happen.
+//
+// doing a rigorous transform on all AST nodes, then, is the best bet, until a more lightweight alternative is found.
+function Transformer() {
+  this.inGen = false; // y is a rather slow function, and its usage must be strictly limited to generators
+  this.currentScope = null;
+}
+
 ;
 var CHAR_1 = char2int('1'),
     CHAR_2 = char2int('2'),
@@ -865,6 +905,105 @@ function synth_binexpr(left, o, right, yc) {
    };
 }
 
+
+;
+function synth_id(name) { 
+  return { type: 'Identifier', name: name }; 
+}
+
+function synth_assig(left, right, o) {
+  // TODO: (isTemp(left) && left.name === right.name) && ASSERT.call(this, false, 'temp has the same name as var: ' + left.name);
+  return (isTemp(left) && left.name === right.name) ? NOEXPR :
+    { type: 'AssignmentExpression', operator: o || '=', left: left, right: right, y: -1 };
+}
+
+function synth_lit_str(value) {
+  ASSERT.call(this, typeof value === typeof "", 'str value not of type string');
+  return { type: 'Literal', value: value };
+}
+
+function synth_do_while(cond, body) {
+  return { type: 'DoWhileStatement', test: cond, body: body, y: -1 };
+}
+
+function synth_mem(obj, prop, c) {
+  return { type: 'MemberExpression', computed: c, y: -1, property: prop, object: obj };
+}
+
+function synth_call(callee, args) {
+  return { type: 'CallExpression', y: -1, callee: callee, args: args || [] };
+}
+
+function synth_stmt(stmts) {
+  return stmts.lenght === 1 ? stmts[0] : synth_block_stmt(stmts);
+}
+ 
+function synth_block_stmt(body) {
+  return { type: 'BlockStatement', body: body, y: -1 };
+}
+
+// TODO: synth_if and synth_cond should become one single function that returns an expression when both consequent and alternate are expressions, and a statement otherwise
+function synth_if(cond, c, a) {
+  return { type: 'IfExpression', consequent: synth_stmt(c), y: -1, test: cond, alternate: a ? synth_stmt(a) : null };
+}
+ 
+function synth_cond(cond, c, a) {
+  return { type: 'ConditionalExpression', consequent: c, y: -1, test: cond, alternate: a };
+}
+
+;
+function sentVal() {
+  return specialId('sentVal'); 
+}
+function isSentVal(id) {
+  return isspecial(id, 'sentVal');
+}
+
+function arrIter() {
+  return specialId('arrIter');
+}
+function wrapArrIter(expr) {
+  return { type: 'CallExpression', callee: arrIter(), arguments: [expr] };
+}
+function isArrIter(id) {
+  return isspecial(id, 'arrIter');
+}
+
+function objIter() {
+  return specialId('objIter');
+}
+function wrapObjIter(expr) {
+  return { type: 'CallExpression', callee: objIter(), arguments: [expr] };
+}
+function isObjIter(id) {
+  return isspecial(id, 'objIter');
+}
+
+function iterVal(id) {
+  return synth_mem(id, synth_id('val'), false);
+}
+
+function newTemp(t) {
+  return { type: 'SpecialIdentifier', kind: 'tempVar', name: t };
+}
+function isTemp(id) {
+  return isspecial(id, 'tempVar');
+}
+
+function specialId(kind) {
+  return { type: 'SpecialIdentifier', kind: kind };
+}
+function isspecial(n, kind) {
+  return n.type === 'SpecialIdentifier' && n.kind === kind;
+}
+
+function getExprKey(kv) {
+  return kv.computed ? kv.key : synth_str_lit(kv.key.name);
+}
+
+function push_checked(n, list) {
+  if (n !== NOEXPR) list.push(n);
+}
 
 ;
 var IDS_ = fromRunLenCodes([0,8472,1,21,1,3948,2],
@@ -2290,9 +2429,78 @@ this.emitters['CustomContainer'] = function(n) {
 
 },
 function(){
-var has = {}.hasOwnProperty;
-var transformerList = {};
-
+// one quick note about temp allocation
+// a "temp" is a temporaty variable; "f.a.t", or "first available temp", is the temp
+// that will be returned by a call to allocateTemp. temp allocation is totally
+// unaware what it's going to be used for; still, something like `(yield || (yield * yield)) * 12` is emitted like so:
+// ```
+//   yield
+//   if ( !(a = sent) ) {
+//     yield
+//     a = sent
+//     yield
+//     a = a * sent
+//   }
+//   a * 12
+// ```
+// the reason is not the temp allocator; rather, it is the result of a simple protocol all
+// yield trasformers are supposed to conform to: the f.a.t at the start of a transform must be equal to the f.a.t at its end;
+// the above example, then, is transformed like:
+//
+// TRANSFORM PROCESS                                     ACTUAL OUTPUT
+// --------------------------------------------          -------------
+// transform(<(yield || (yield * yield))*12>) {
+//   f.a.t: a
+//   &l = transform(<yield>, true) {
+//     f.a.t: a
+//     yield .............................................. yield
+//     <return sent>                                        |
+//     f.a.t: a                                             |
+//   }                                                      |
+//                                                          |
+//   <isvalue> -> <save(&l)>=#a                             |
+//   &cond = &l ........................................... if (! (a=sent) ) {
+//   <isvalue> -> <free(#a)>                                |
+//                                                          |
+//   &r = transform(<yield * yield>, true) {                |
+//     f.a.t: a                                             |
+//     &l = transform(<yield>, true) {                      |
+//       f.a.t: a                                           |
+//       yield .............................................|  yield
+//       <return sent>                                      |
+//       f.a.t: a                                           |
+//     }                                                    |
+//     <y(&r)> -> <save(&l)>=#a                             |  a = sent
+//     &r = transform(<yield>, true) {                      |
+//       f.a.t: b                                           |
+//       yield .............................................|  yield
+//       <return sent>                                      |
+//       f.a.t: b                                           |
+//     }                                                    |
+//     <free(#a)>                                           |
+//     <return &l * &r>=a * sent                            |
+//     f.a.t: a                                             |
+//   }                                                      |
+//                                                          |
+//   <isvalue> -> <save(&r)>=#a                             |  a = a * sent
+//   <isvalue> -> <free(#a)>                                }
+//   if (&cond) {                                           |
+//     &r                                                   a * 12
+//   }                                                      |
+//   <isvalue> -> (                                         |
+//     <save(&r)>=#a->omitted                               |
+//     <return &r>                                          |
+//     <free(#a)>                                           |
+//   }                                                      |
+//                                                          |
+//   f.a.t: a                                               |
+//   <return no-expression>                                 |
+//   f.a.t: a                                               |
+// }                                                        |
+                                                            
+var has = {}.hasOwnProperty;                                
+var transformerList = {};                                   
+                                                            
 function isComplexAssignment(n) { 
    if (n.type === 'ExpressionStatement')
      n = n.expression;
@@ -2874,19 +3082,19 @@ this.addNewLiquidName = function(name) {
   if (entry === null) {
     this.insert(name, e = newEntry(name, 0));
     this.nameList.push(e);
-    return;
+    return e;
   }
   if (entry.nonce === -1) {
     entry.nonce = 0;
     this.refresh(entry);
     this.nameList.push(entry);
-    return;
+    return entry;
   }
   if (entry.realName !== name) {
     this.insert(name, e = newEntry(name, 0));
     this.refresh(entry);
     this.nameList.push(e);
-    return;
+    return e;
   }
   ASSERT.call(this, false, 'name is in the list: "' + name + '"');
 };
@@ -2915,7 +3123,7 @@ this.refresh = function(entry) {
 };
 
 function newEntry(realName, nonce) {
-  return { realName: realName, nonce: nonce };
+  return { type: 'LiquidName', realName: realName, nonce: nonce };
 }
 
 
@@ -9083,6 +9291,9 @@ declare[DECL_MODE_VAR] = function(id, declType) {
 
 declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
 declare[DECL_MODE_LET] = function(id, declType) {
+   if (declType & DECL_MODE_CATCH_PARAMS)
+     this.catchVarIsSynth = true;
+
    var decl = new Decl(declType, id.name, this, id.name);
    this.insertDecl(id, decl);
    return decl;
@@ -9090,6 +9301,7 @@ declare[DECL_MODE_LET] = function(id, declType) {
 
 declare[DECL_MODE_CATCH_PARAMS] = function(id, declType) {
   var name = id.name + '%';
+  this.catchVarIsSynth = false; 
   this.insertDecl(id, new Decl( DECL_MODE_CATCH_PARAMS, id.name, this, id.name)); 
   this.catchVarName = id.name;
 };
@@ -9108,8 +9320,8 @@ this.insertDecl = function(id , decl ) {
     var existingType = existingDecl.type;
 
     // if a var name in a catch scope has the same name as a catch var,
-    // it will not get hoisted any further; please note the '===' below -- `function l() {}`
-    if ((declType === DECL_MODE_VAR) && (existingType & DECL_MODE_CATCH_PARAMS))
+    // it will not get hoisted any further
+    if ((declType & DECL_MODE_VAR) && (existingType & DECL_MODE_CATCH_PARAMS))
        return false;
 
     // if a var decl is overriding a var decl of the same name, no matter what scope we are in,
@@ -9252,8 +9464,6 @@ this.declSynth = function(name) {
   return synthName;
 };
 
-this.addLiquidGlobal = function(name) { this.liquidGlobals.add(name); };
-
 this.isLoop = function() { return this.type & SCOPE_TYPE_LEXICAL_LOOP; };
 this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
 this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
@@ -9299,6 +9509,18 @@ this.removeDecl = function(decl) {
 
             // one solution is to save the catch var when the catch scope begins, and add it to the list of the catch scope's defined
             // names only at the end of the scope
+
+            // another solution is to keep track of every catch variable in function scope, and at the same time renaming
+            // any synthesized name that clashes with a catch var name each time a catch var is added to the catch var list;
+            // but this solution renames a synthesized name even when it is not in the same scope as the catch var,
+            // like so:
+            //   var v, v1;
+            //   {
+            //     let v = 12; // synthName=v2
+            //     try {}
+            //
+            //     catch (v2) {} // renames previous v2 to something else 
+            //   }
           }
        }
      }
@@ -9312,16 +9534,250 @@ this.setCatchVar = function(name) {
 };
 
 this.finishWithActuallyDeclaringTheCatchVar = function() {
+  // catch var names of catch scopes with non-simple catch params are calculated in the emit phase
   if ( this.catchVarName === "" ) return;
 
+  // TODO: this.insertDecl0(true, synthName, decl), maybe?
   var synthName = this.newSynthName(this.catchVarName);
   var decl = this.findDeclInScope(this.catchVarName);
   decl.synthName = synthName;
 };
 
+function getOrCreate(l, name) {
+  var entry = l.findName(name);
+  if (!entry)
+    entry = l.addNewLiquidName(name);
+   
+  return entry;
+};
+
+this.getOrCreateLocalLiquidName = function(name) {
+  var entry = null;
+  if ( !this.funcScope.localLiquidNames )
+    this.funcScope.localLiquidNames = new LiquidNames();
+  
+  return getOrCreate(this.funcScope.localLiquidNames, name);
+};
+
+// if a name is either referenced at func scope, directly or indirectly,
+// or it is a func scope binding, real or synth, it must be passed to this method
+this.updateLiquidNamesWith = function(name) {
+  if (this.funcScope.globalLiquidNames)
+    this.funcScope.globalLiquidNames.mustNotHaveReal(name);
+  if (this.funcScope.localLiquidNames)
+    this.funcScope.localLiquidNames.mustNotHaveReal(name);
+};
+
+this.setLocalLiquidNames = function(nameArray) {
+  ASSERT.call(this, this.isFunc(), 'func scopes are the only scopes that can currently have local liquid names' );
+  ASSERT.call(this, this.localLiquidNames === null, 'scope has a local liquid name set already' );
+  this.localLiquidNames = new LiquidNames(nameArray);
+};
+
+this.getOrCreateGlobalLiquidName = function(name) {
+  if (!this.funcScope.globalLiquidNames)
+    this.funcScope.globalLiquidNames = new LiquidNames();
+
+  return getOrCreate(this.funcScope.globalLiquidNames, name);
+};  
 
 
 }]  ],
+[Transformer.prototype, [function(){
+this.y = function(n) {
+  return this.inGen ? y(n) : 0;
+};
+
+this.allocTemp = function() {
+  var id = synth_id(this.currentScope.allocateTemp());
+  return id;
+};
+
+this.releaseTemp = this.rl = function(id) {
+  this.currentScope.releaseTemp(id.name);
+};
+
+var transform = {};
+
+this.transform = this.tr = function(n, list, isVal) {
+  var ntype = n.type;
+  switch (ntype) {
+    case 'Identifier':
+    case 'Literal':
+    case 'This':
+    case 'Super':
+      return n;
+    default:
+      return transform[n.type].call(this, n, list, isVal);
+  }
+};
+
+this.rlit = function(id) { isTemp(id) && this.rl(id); };
+
+this.trad = function(n, list, isVal) {
+  var tr = this.tr(n, list, isVal);
+  push_checked(tr, list);
+};
+
+this.save = function(n, list) {
+  var temp = this.allocTemp();
+  push_checked(synth_assig(temp, n), list);
+  return temp;
+};
+
+var transformAssig = {};
+transform['AssignmentExpression'] = function(n, list, isVal) {
+  return transformAssig[n.left.type].call(this, n, list, isVal);
+};
+
+// TODO: things like `[a[yield]] = 12` are currently transformed as:
+// `t1 = a; yield; t2 = sent; t = arrIter(12); t1[t2] = t.get()`
+// from an optimal perspective, this should rather be:
+// `t1 = a; yield; t = arrIter(12); t1[sent] = t.get()`
+// generally speaking, an 'occupySent' should exist, and should be used by any expression
+// that makes use of sent; each call to this hypothetical 'occupySent' will then return 'sent',
+// saving the current expression that is using 'sent' in a temp, and further replacing that expression with
+// the temp it is saved in.
+var evalLeft = {};
+this.evalLeft = function(n, list) {
+  return evalLeft[n.type].call(this, n, list);
+};
+
+evalLeft['Identifier'] = function(left, right, list) {
+  return;
+};
+
+transformAssig['Identifier'] = function(n, list, isVal) {
+  n.right = this.tr(n.right, list, true);
+  return n;
+};
+
+evalLeft['MemberExpression'] = function(left, right, list) {
+  left.object = this.tr(left.object);
+  if (right === null || this.y(right))
+    left.object = this.save(left.object, list);
+  if (left.computed) {
+    left.property = this.tr(left.property, list, true);
+    if (right === null || this.y(right))
+      left.property = this.save(left.property);
+  }
+};
+
+transformAssig['MemberExpression'] = function(n, list, isVal) {
+  var left = n.left;
+  this.evalLeft(left, n.right, list);
+  // var t = {}, n = 12; t[n] = (t = {}, n = 12, t[n] = n), you know
+  this.rlit(left.property);
+  this.rlit(left.object);
+  n.right = this.tr(n.right, list, true);
+  return n;
+};
+
+var assigPattern = {};
+this.assigPattern = function(left, right, list) {
+  return assigPattern[left.type].call(this, left, right, list);
+};
+
+this.evalProp = function(elem, list) {
+  if (elem.computed) {
+    elem.key = this.tr(elem.key, list, true);
+    elem.key = this.save(elem.key, list);
+  }
+  this.evalLeft(elem.value, null, list);
+};
+ 
+evalLeft['ObjectPattern'] = function(left, right, list) {
+  var elems = left.properties, e = 0;
+  while (e < elems.length)
+    this.evalProp(elems[e++], list);
+};
+ 
+assigPattern['ObjectPattern'] = function(left, right, list) {
+  var elems = left.properties, e = 0;
+  while (e < elems.length) {
+    var elem = elems[e];
+    this.trad(
+      synth_assig(elem.value,
+        synth_call(
+          synth_mem(right, synth_id('get'), false),
+          [getExprKey(elem)]
+        )
+      ), list, false
+    );
+    e++;
+  }
+};
+
+transformAssig['ObjectPattern'] = function(n, list, isVal) {
+  var iterVal = this.allocTemp();
+  this.evalLeft(n.left, /* TODO: unnecessary */n.right, list);
+  this.rl(iterVal);
+  n.right = this.tr(n, list, true);
+  iterVal = this.save(wrapObjIter(n.right), list);
+  this.assigPattern(n.left, iterVal, list);
+  this.rl(iterVal);
+  return isVal ? iterVal(iterVal) : NOEXPR;
+};
+
+evalLeft['ArrayPattern'] = function(left, right, list) {
+  var elems = left.elements, e = 0;
+  while (e < elems.length)
+    this.evalLeft(elems[e++], null, list);
+};
+
+assigPattern['ArrayPattern'] = function(left, right, list) {
+  var elems = left.elements, e = 0;
+  while (e < elems.length) {
+    this.trad(
+      synth_assig(elems[e],
+        synth_call(
+          synth_mem(right, synth_id('get')),
+          []
+        )
+      ), list, false
+    );
+    e++;
+  }
+};
+
+transformAssig['ArrayPattern'] = function(n, list, isVal) {
+  var iterVal = this.allocTemp();
+  this.evalLeft(n.left, /* TODO: unnecessary */n.right, list);
+  this.rl(iterVal);
+  n.right = this.tr(n.right, list, true);
+  iterVal = this.save(wrapArrIter(n.right), list);
+  this.assigPattern(n.left, iterVal, list);
+  this.rl(iterVal);
+  return isVal ? iterVal(iterVal) : NOEXPR;
+}; 
+
+evalLeft['AssignmentPattern'] = function(left, right, list) {
+  return this.evalLeft(left.left, right, list);
+};
+
+transformAssig['AssignmentPattern'] = function(n, list, isVal) {
+  var temp = this.allocTemp();
+  var l = [], left = n.left;
+  this.trad(left.right, l, true);
+  return this.transform(
+    synth_assig(left.left,
+      synth_cond(
+        wrapInUnornull( 
+          synth_assig(temp,
+            n.right // not transformed -- it's merely a synth call in the form of either #t.get() or #t.get('<string>')
+          )
+        ),
+        synth_seq(l),
+        temp
+      )
+    ), list, isVal
+  );
+};
+
+
+}]  ],
+null,
+null,
 null,
 null,
 null,
@@ -9344,5 +9800,6 @@ this.Emitter = Emitter;
 this.Partitioner = Partitioner;
 this.Decl = Decl;
 this.RefMode = RefMode;
+this.Transformer = Transformer;
 
 ;}).call (this)

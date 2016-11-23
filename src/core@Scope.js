@@ -104,7 +104,7 @@ declare[DECL_MODE_VAR] = function(id, declType) {
 declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
 declare[DECL_MODE_LET] = function(id, declType) {
    // #if V
-   if (declType & DECL_TYPE_CATCH_PARAMS)
+   if (declType & DECL_MODE_CATCH_PARAMS)
      this.catchVarIsSynth = true;
 
    var decl = new Decl(declType, id.name, this, id.name);
