@@ -13,6 +13,8 @@ this.releaseTemp = this.rl = function(id) {
 
 var transform = {};
 
+// TODO: a null list signifying a top-level expression with no yields could possibly make things like 
+// tratl irrelevant
 this.transform = this.tr = function(n, list, isVal) {
   var ntype = n.type;
   switch (ntype) {
@@ -28,11 +30,39 @@ this.transform = this.tr = function(n, list, isVal) {
   }
 };
 
+transform['ExpressionStatement'] = function(n, list, isVal) {
+  n.expression = this.tr(n.expression, list, false);
+  return n.expression ? NOEXPR : n;
+};
+
 this.rlit = function(id) { isTemp(id) && this.rl(id); };
 
 this.trad = function(n, list, isVal) {
   var tr = this.tr(n, list, isVal);
   push_checked(tr, list);
+};
+
+this.trseq = function(n, list, isVal) {
+  var y = this.y(n);
+  var tr = this.tr(n, list, isVal);
+  if (y) 
+    return tr;
+  
+  push_checked(tr, list);
+  return synth_seq(list);
+};
+    
+this.transformTopLevel = this.tratl = function(n, list, isVal) {
+  var y = this.y(n);
+  // observation: expressions that have a yield transform to a single expression, possibly modifying the list as they go
+  if (y) 
+    return this.tr(n, list, isVal);
+
+//ASSERT.call(this, list === null, 'list must be null while transforming a top-level expression');
+  list = [];
+  var tr = this.tr(n, list, isVal);
+  push_checked(tr, list);
+  return synth_seq(list);
 };
 
 this.save = function(n, list) {
@@ -48,6 +78,12 @@ transform['AssignmentExpression'] = function(n, list, isVal) {
     var rightTemp = n.left.type !== 'Identifier' ? this.allocTemp() : null;
     this.evalLeft(n.left, n.right, list);
     rightTemp && this.rl(rightTemp);
+    var y = this.y(n);
+    if (y) {
+      assig = transformAssig[n.left.type].call(this, n, list, isVal); 
+      return assig;
+    }
+    
   }
 
   return transformAssig[n.left.type].call(this, n, list, isVal);
@@ -60,7 +96,8 @@ transform['AssignmentExpression'] = function(n, list, isVal) {
 // generally speaking, an 'occupySent' should exist, and should be used by any expression
 // that makes use of sent; each call to this hypothetical 'occupySent' will then return 'sent',
 // saving the current expression that is using 'sent' in a temp, and further replacing that expression with
-// the temp it is saved in.
+// the temp it is saved in. 
+// observation: if there are no temps needed for its right, the element need no be saved
 var evalLeft = {};
 this.evalLeft = function(left, right, list) {
   return evalLeft[left.type].call(this, left, right, list);
@@ -196,5 +233,6 @@ transform['YieldExpression'] = function(n, list, isVal) {
     n.argument = this.tr(n.argument, list, true);
   push_checked(n, list);
   return isVal ? sentVal() : NOEXPR;
-}
+};
+
 
