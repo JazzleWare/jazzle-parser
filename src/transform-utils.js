@@ -25,6 +25,16 @@ function isObjIter(id) {
   return isspecial(id, 'objIter');
 }
 
+function unornull() {
+  return specialId('unornull');
+}
+function isUnornull(id) {
+  return isspecial(id, 'unornull');
+}
+function wrapInUnornull(expr) {
+  return { type: 'CallExpression', callee: unornull(), arguments: [expr] };
+}
+
 function iterVal(id) {
   return synth_mem(id, synth_id('val'), false);
 }
@@ -49,5 +59,11 @@ function getExprKey(kv) {
 
 function push_checked(n, list) {
   if (n !== NOEXPR) list.push(n);
+}
+
+function push_if_assig(n, list) {
+  if (n && 
+    ( n.type === 'AssignmentExpression' || n.type === 'SyntheticAssignment' ) )
+    list.push(n);
 }
 
