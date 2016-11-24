@@ -21,6 +21,7 @@ this.transform = this.tr = function(n, list, isVal) {
     case 'This':
     case 'Super':
     case 'ArrIterGet':
+    case 'Unornull':
     case 'ObjIterGet':
       return n;
     default:
@@ -213,4 +214,55 @@ transform['YieldExpression'] = function(n, list, isVal) {
 };
 
 transform['LogicalExpression'] = function(n, list, isVal) {
+  n.left = this.tr(n.left, list, true);
+  if (this.y(n.right))
+    return this.transformLogicalExpressionWithYield(n, list, isVal)
+  n.right = this.tr(n.right, list, isVal);
+  return n;
 };
+
+this.transformLogicalExpressionWithYield = function(n, list, isVal) {
+  var ifBody = [],
+      t = null;
+  if (isVal) {
+    t = this.allocTemp();
+    n.left = synth_assig(t, n.left);
+    if (n.operator === '||')
+      n.left = synth_not(n.left); 
+    this.rl(t);
+  }
+  var tr = this.tr(n.right, ifBody, isVal);
+  if (isVal) {
+    t = this.save(tr, ifBody);
+    this.rl(t);
+  }
+  push_checked(synth_if(n.left, ifBody), list);
+  return isVal ? t : NOEXPR;
+};
+
+transform['ConditionalExpression'] = function(n, list, isVal) {
+  n.test = this.transform(n.test, list, true);
+  if (this.y(n.consequent) || this.y(n.alternate))
+    return this.transformConditionalExpressionWithYield(n, list, isVal);
+  n.consequent = this.tr(n.consequent, list, isVal);
+  n.alternate = this.tr(n.alternate, list, isVal);
+  return n;
+};
+
+this.transformConditionalExpressionWithYield = function(n, list, isVal) {
+  var ifBody = [], elseBody = [];
+      t = null;
+  n.consequent = this.tr(n.consequent, ifBody, isVal);
+  if (isVal) {
+    t = this.save(n.consequent, ifBody);
+    this.rl(t);
+  }
+  n.alternate = this.tr(n.alternate, elseBody, isVal);
+  if (isVal) {
+    t = this.save(n.alternate, elseBody);
+    this.rl(t);
+  }
+  push_checked(synth_if(n.test, ifBody, elseBody), list);
+  return isVal ? t : NOEXPR;
+};
+

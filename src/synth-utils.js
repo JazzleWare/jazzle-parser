@@ -35,7 +35,7 @@ function synth_block_stmt(body) {
 
 // TODO: synth_if and synth_cond should become one single function that returns an expression when both consequent and alternate are expressions, and a statement otherwise
 function synth_if(cond, c, a) {
-  return { type: 'IfExpression', consequent: synth_stmt(c), y: -1, test: cond, alternate: a && a.length ? synth_stmt(a) : null };
+  return { type: 'IfStatement', consequent: synth_stmt(c), y: -1, test: cond, alternate: a && a.length ? synth_stmt(a) : null };
 }
  
 function synth_cond(cond, c, a) {
@@ -69,5 +69,9 @@ function synth_seq(list) {
 
   ASSERT.call(this, list.length > 0, 'sequence expressions must not have 0 items');
   return { type: 'SyntheticExprSequence', expressions: list, y: -1 };
+}
+
+function synth_not(expr) {
+  return { type: 'UnaryExpression', operator: '!', y: -1, argument: expr };
 }
 

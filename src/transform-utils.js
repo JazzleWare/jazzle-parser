@@ -32,7 +32,9 @@ function isUnornull(id) {
   return isspecial(id, 'unornull');
 }
 function wrapInUnornull(expr) {
-  return { type: 'CallExpression', callee: unornull(), arguments: [expr] };
+  var n = synth_call(unornull(), [expr]);
+  n.type = 'Unornull';
+  return n;
 }
 
 function iterVal(id) {

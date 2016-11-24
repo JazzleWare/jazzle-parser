@@ -88,7 +88,7 @@ yList['SwitchStatement'] =
 yList['LabeledStatement'] =
   function() { return y(this.body); };
 yList['MemberExpression'] = 
-  function() { return this.y !== -1 ? this.y : this.y = this.computed ? y(this.object) + y(this.key) : y(this.object); };
+  function() { return this.y !== -1 ? this.y : this.y = this.computed ? y(this.object) + y(this.property) : y(this.object); };
 yList['MetaProperty'] =
   function() { return -1; };
 yList['Program'] = yList['BlockStatement']; 

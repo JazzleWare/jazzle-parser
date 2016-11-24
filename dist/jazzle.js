@@ -593,7 +593,7 @@ yList['SwitchStatement'] =
 yList['LabeledStatement'] =
   function() { return y(this.body); };
 yList['MemberExpression'] = 
-  function() { return this.y !== -1 ? this.y : this.y = this.computed ? y(this.object) + y(this.key) : y(this.object); };
+  function() { return this.y !== -1 ? this.y : this.y = this.computed ? y(this.object) + y(this.property) : y(this.object); };
 yList['MetaProperty'] =
   function() { return -1; };
 yList['Program'] = yList['BlockStatement']; 
@@ -945,7 +945,7 @@ function synth_block_stmt(body) {
 
 // TODO: synth_if and synth_cond should become one single function that returns an expression when both consequent and alternate are expressions, and a statement otherwise
 function synth_if(cond, c, a) {
-  return { type: 'IfExpression', consequent: synth_stmt(c), y: -1, test: cond, alternate: a && a.length ? synth_stmt(a) : null };
+  return { type: 'IfStatement', consequent: synth_stmt(c), y: -1, test: cond, alternate: a && a.length ? synth_stmt(a) : null };
 }
  
 function synth_cond(cond, c, a) {
@@ -979,6 +979,10 @@ function synth_seq(list) {
 
   ASSERT.call(this, list.length > 0, 'sequence expressions must not have 0 items');
   return { type: 'SyntheticExprSequence', expressions: list, y: -1 };
+}
+
+function synth_not(expr) {
+  return { type: 'UnaryExpression', operator: '!', y: -1, argument: expr };
 }
 
 ;
@@ -1016,7 +1020,9 @@ function isUnornull(id) {
   return isspecial(id, 'unornull');
 }
 function wrapInUnornull(expr) {
-  return { type: 'CallExpression', callee: unornull(), arguments: [expr] };
+  var n = synth_call(unornull(), [expr]);
+  n.type = 'Unornull';
+  return n;
 }
 
 function iterVal(id) {
@@ -1512,7 +1518,7 @@ function isImplicitSeq(n) {
      }
    }
 
-   return false;
+   return n.type === 'SyntheticExprSequence';
 }
 
 this._emitNonSeqExpr = function(n, prec, flags) {
@@ -1864,6 +1870,7 @@ this.emitters['Program'] = function(n) {
 };
 
 this.emitters['ArrIterGet'] =
+this.emitters['Unornull'] =
 this.emitters['ObjIterGet'] =
 this.emitters['CallExpression'] = function(n, prec, flags) {
    var hasParen = flags & EMIT_NEW_HEAD;
@@ -1925,6 +1932,7 @@ this.emitters['ReturnStatement'] = function(n) {
    this.code += ';';
 };
 
+this.emitters['SyntheticExprSequence'] =
 this.emitters['SequenceExpression'] = function(n, prec, flags) {
   var hasParen = false, list = n.expressions, e = 0;
 
@@ -2012,7 +2020,6 @@ this.emitters['YieldExpression'] = function(n) {
 //this.wm(')',';');
   this.w('yield');
   n.argument && this.setwrap(false).s().e(n.argument);
-  this.w(';');
 }; 
       
 this.emitters['NoExpression'] = function(n) { return; };
@@ -3275,7 +3282,7 @@ this.parseArrayExpression = function (context ) {
   this.firstNonTailRest = firstNonTailRest;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list};
+           start: startc, end: this.c, elements : list  ,y:-1};
 
   this. expectType ( ']' ) ;
 
@@ -9662,6 +9669,7 @@ this.transform = this.tr = function(n, list, isVal) {
     case 'This':
     case 'Super':
     case 'ArrIterGet':
+    case 'Unornull':
     case 'ObjIterGet':
       return n;
     default:
@@ -9854,7 +9862,58 @@ transform['YieldExpression'] = function(n, list, isVal) {
 };
 
 transform['LogicalExpression'] = function(n, list, isVal) {
+  n.left = this.tr(n.left, list, true);
+  if (this.y(n.right))
+    return this.transformLogicalExpressionWithYield(n, list, isVal)
+  n.right = this.tr(n.right, list, isVal);
+  return n;
 };
+
+this.transformLogicalExpressionWithYield = function(n, list, isVal) {
+  var ifBody = [],
+      t = null;
+  if (isVal) {
+    t = this.allocTemp();
+    n.left = synth_assig(t, n.left);
+    if (n.operator === '||')
+      n.left = synth_not(n.left); 
+    this.rl(t);
+  }
+  var tr = this.tr(n.right, ifBody, isVal);
+  if (isVal) {
+    t = this.save(tr, ifBody);
+    this.rl(t);
+  }
+  push_checked(synth_if(n.left, ifBody), list);
+  return isVal ? t : NOEXPR;
+};
+
+transform['ConditionalExpression'] = function(n, list, isVal) {
+  n.test = this.transform(n.test, list, true);
+  if (this.y(n.consequent) || this.y(n.alternate))
+    return this.transformConditionalExpressionWithYield(n, list, isVal);
+  n.consequent = this.tr(n.consequent, list, isVal);
+  n.alternate = this.tr(n.alternate, list, isVal);
+  return n;
+};
+
+this.transformConditionalExpressionWithYield = function(n, list, isVal) {
+  var ifBody = [], elseBody = [];
+      t = null;
+  n.consequent = this.tr(n.consequent, ifBody, isVal);
+  if (isVal) {
+    t = this.save(n.consequent, ifBody);
+    this.rl(t);
+  }
+  n.alternate = this.tr(n.alternate, elseBody, isVal);
+  if (isVal) {
+    t = this.save(n.alternate, elseBody);
+    this.rl(t);
+  }
+  push_checked(synth_if(n.test, ifBody, elseBody), list);
+  return isVal ? t : NOEXPR;
+};
+
 
 }]  ],
 null,

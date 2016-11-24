@@ -89,7 +89,7 @@ this.parseArrayExpression = function (context ) {
   this.firstNonTailRest = firstNonTailRest;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list};
+           start: startc, end: this.c, elements : list /* ,y:-1*/};
 
   this. expectType ( ']' ) ;
 

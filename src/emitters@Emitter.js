@@ -48,7 +48,7 @@ function isImplicitSeq(n) {
      }
    }
 
-   return false;
+   return n.type === 'SyntheticExprSequence';
 }
 
 this._emitNonSeqExpr = function(n, prec, flags) {
@@ -400,6 +400,7 @@ this.emitters['Program'] = function(n) {
 };
 
 this.emitters['ArrIterGet'] =
+this.emitters['Unornull'] =
 this.emitters['ObjIterGet'] =
 this.emitters['CallExpression'] = function(n, prec, flags) {
    var hasParen = flags & EMIT_NEW_HEAD;
@@ -461,6 +462,7 @@ this.emitters['ReturnStatement'] = function(n) {
    this.code += ';';
 };
 
+this.emitters['SyntheticExprSequence'] =
 this.emitters['SequenceExpression'] = function(n, prec, flags) {
   var hasParen = false, list = n.expressions, e = 0;
 
@@ -548,7 +550,6 @@ this.emitters['YieldExpression'] = function(n) {
 //this.wm(')',';');
   this.w('yield');
   n.argument && this.setwrap(false).s().e(n.argument);
-  this.w(';');
 }; 
       
 this.emitters['NoExpression'] = function(n) { return; };
