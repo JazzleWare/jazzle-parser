@@ -234,6 +234,27 @@ this.insertRef = function(name, ref) {
   this.unresolvedNames[name+'%'] = ref;
 };
 
+// TODO: 
+// `var l; { let l; (function() { { let l1; l } }); }`
+// currently becomes:
+// `var l; { var l1; (function() { var l1; l1; }); }`
+// which is not a correct behavior -- the 'l' referenced inside the function resolves
+// to a name which is synthetic, and in fact has already been synthesized with real name 'l' and synth name 'l1';
+// as can be noted, `var l1` should've caused a rename on `let l`, but it has not.
+//
+// it is also worth noting, though, that things like
+// `var l; { let l; { { let l1; l } } }` work as they should;
+// the case just mentioned, for example, becomes:
+// `var l; { var l1; { { let l11; l1 } } }`
+//
+// to know why, let's review the rules of name synthesis:
+//   * it should not be in the surrounding function's list of names
+//   * it should not be in the surrounding function's list of unresolved references
+//   * it should not be the same as the emit name of any of the synthesizer scope's unresolved references
+//
+// the last rule is especially tricky (and is actually inexact in the current implementaion), because there is absolutely
+// no guarantee an unresolved name's emit is known in the scope where newSynthName is called in.
+
 this.newSynthName = function(baseName) {
   var num = 0, func = this.funcScope;
   var name = baseName;
@@ -250,6 +271,11 @@ this.newSynthName = function(baseName) {
        // a lexical scope, and it has satisfied all previous conditions (i.e., it's neither defined nor referenced in the 
        // surrounding func scope, and it has not been referenced in the scope we are synthesizing the name in), then the synthesized
        // name can be the name itself, in this case 'n2'.
+       // the below condition is unnecessary; its sole use is for cases like `var l; { let l = 'l'; let l1 = 'l1' }` --
+       // without the following, it would become `var l; { var l1 = 'l'; var l11 = 'l1' }`
+       // with it, though, it becomes
+       // `var l; { var l2 = 'l'; var l1 = 'l1' }` -- i.e., l1 did not get renamed unnecessarily.
+       // not a very big deal, but still it will keep the final result more similar to the original than if it were not applied. 
 
        // if the current "suffixed" name (i.e., the baseName appended with num)
        // exists in the scope's declarations,
