@@ -8,8 +8,12 @@ function Scope(parent, type) {
   this.funcScope = 
      this.isFunc() ? this : this.parent.funcScope;
 
+  // #if !V
   this.definedNames = {};
+  // #end
+
   // #if V
+  this.definedNames = this.parent ? createObj(this.parent.definedNames) : {};
   this.unresolvedNames = {};
 
   this.wrappedDeclList = null;
@@ -26,6 +30,13 @@ function Scope(parent, type) {
 
   this.globalLiquidNames = this.parent ? this.parent.globalLiquidNames : new LiquidNames();
   this.localLiquidNames = null;
+
+  this.children = [];
+  if (this.parent) this.parent.children.push(this);
+
+  // used when name synthesizing starts
+  this.referencedEmitNames = {};
+
   // #end
 }
 

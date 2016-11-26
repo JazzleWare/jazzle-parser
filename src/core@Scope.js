@@ -3,19 +3,11 @@ this.reference = function(name, fromScope) {
   if (!fromScope) fromScope = this;
 
   var decl = this.findDeclInScope(name), ref = null;
-  if (decl && !decl.scope.isFunc() && this.isFunc()) { // the decl is synthetic, and must be renamed
-    this.insertDecl0(false, decl.synthName, null); // clear the current synthetic decl
-    this.synthesize(decl); // then refresh that synthetic decl
-    decl = null;
-    // TODO: the name should be deleted altogether (i.e., `delete this.definedNames[name+'%']`),
-    // but looks like setting it to null will do
-    this.definedNames[name+'%'] = null;
-  }
   if (decl) {
     ref = decl.refMode;
     if (this !== fromScope) {
       ref.updateExistingRefWith(name, fromScope);
-      // a catch scope is never forward-accessed, even when referenced from within a function declaration 
+      // a catch name is never forward-accessed, even when referenced from within a function declaration 
       if (decl.type & DECL_MODE_CATCH_PARAMS) 
         if (ref.indirect) ref.indirect = ACCESS_EXISTING;
     }
@@ -162,16 +154,6 @@ this.insertDecl = function(id /* #if V */, decl /* #end */) {
   // #if V
   this.insertDecl0(true, id.name, decl);
   this.insertID(id);
-  if (this !== func) {
-    if ( decl.syntheticUnlessInAFunc() && !decl.scope.isFunc()) { // non-func-scope-let-declarations
-      decl.scope.funcScope.synthesize(decl);
-    }
-  }
-  else {
-    if (existingDecl !== null) { // if there is a synthesized declaration of the same name, rename it
-      this.synthesize(existingDecl);
-    } 
-  } 
   // #else
   this.insertDecl0(id);
   // #end
@@ -217,15 +199,6 @@ this.finish = function() {
   }
 
   if (!this.isLoop()) return;
-
-  for (var name in this.definedNames) {
-    if (!HAS.call(this.definedNames, name)) continue;
-    var n = this.definedNames[name];
-    if (n.needsScopeVar())
-      this.addChildLexicalDeclaration(n);
-  }
-
-  if (this.isCatch()) this.finishWithActuallyDeclaringTheCatchVar();
   // #end
 };
     
