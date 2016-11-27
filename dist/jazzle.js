@@ -278,8 +278,14 @@ function Scope(parent, type) {
   this.funcScope = 
      this.isFunc() ? this : this.parent.funcScope;
 
-  this.definedNames = {};
+
+  this.definedNames = this.parent ? createObj(this.parent.definedNames) : {};
   this.unresolvedNames = {};
+
+  // serves the same purpose as the definedNames above, except that it only contains the names in the current scope;
+  // iterating over the definedNames object means iterating over _all_ names available to the current scope;
+  // this is the reason nameList exists -- to keep the track of the names local to this scope
+  this.nameList = []; 
 
   this.wrappedDeclList = null;
   this.wrappedDeclNames = null;
@@ -295,6 +301,15 @@ function Scope(parent, type) {
 
   this.globalLiquidNames = this.parent ? this.parent.globalLiquidNames : new LiquidNames();
   this.localLiquidNames = null;
+
+  this.children = [];
+  if (this.parent) this.parent.children.push(this);
+
+  // used when name synthesizing starts
+  this.referencedEmitNames = null; // <k, v>: (emitName, actualName) -- for the names referenced in the current scope
+  // <k, v>: (emitName, actualName) -- for the name defined in the current scope; only functions are supposed to have one of these 
+  this.definedEmitNames = {}; 
+
 }
 
 Scope.createFunc = function(parent, decl) {
@@ -1533,12 +1548,15 @@ this.emitters['ArrayExpression'] = function(n) {
 };
     
 this.emitters['BlockStatement'] = function(n) {
+   var prevScope = this.currentScope;
+   this.currentScope = n.scope;
    this.write('{');
    this.indent();
    this._emitBlock(n.body);
    this.unindent();
    this.newlineIndent();
    this.write('}');
+   this.currentScope = prevScope;
 };
 
 this.emitters['ForStatement'] = function(n) {
@@ -1636,7 +1654,10 @@ this.emitNameString = function(name) {
    this.write(nameString);
 };
 
-this.emitters['Identifier'] = function(n) { return this.emitNameString(n.name); };
+this.emitters['Identifier'] = function(n) {
+   var entry = this.currentScope.definedNames[n.name+ '%'];
+   return this.emitNameString(entry.synthName); 
+};
 
 this.emitters['WhileStatement'] = function(n) {
   this.write('while (');
@@ -2486,6 +2507,29 @@ this.emitters['CustomContainer'] = function(n) {
 this.emitters['SpecialIdentifier'] = function(n) {
   var id = { type: 'Identifier', name: isTemp(n) ? n.name : n.kind };
   return this.emit(id);
+};
+
+this.emitters['FunctionDeclaration'] = function(n) {
+  this.wm('function',' ').e(n.id).wm('(',')').e(n.body);
+};
+
+this.emitters['VariableDeclaration'] = function(n) {
+  this.wm('var',' ').i();
+  var list = n.declarations, e = 0;
+  while (e < list.length) {
+    if (e) this.n();
+    this.e(list[e++]);
+  }
+  this.u().w(';');
+};
+
+this.emitters['FunctionExpression'] = function(n) {
+  this.wm('function','(',')').e(n.body);
+};
+
+this.emitters['VariableDeclarator'] = function(n) {
+  this.emit(n.id);
+  if (n.init) this.wm(' ','=',' ').e(n.init);
 };
 
 
@@ -4918,7 +4962,7 @@ this.parseFuncBody = function(context) {
   var list = this.blck();
 
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
-           loc: { start: startLoc, end: this.loc() } ,y:-1 };
+           loc: { start: startLoc, end: this.loc() }, scope: this.scope ,y:-1 };
 
   if ( ! this.expectType_soft ( '}' ) &&
          this.err('func.body.is.unfinished',n) )
@@ -4935,15 +4979,15 @@ this . makeStrict  = function() {
 
    this.tight = !false;
 
-   var a = null, argNames = this.scope.definedNames;
-   for (a in argNames) {
-     var declType = argNames[a]  .type  ;
-     a = a.substring(0,a.length-1);
-     if (declType&DECL_DUPE)
-       this.err('func.args.has.dup',a);
+   var a = 0, argNames = this.scope.nameList;
+   while (a < argNames.length) {
+     var decl = argNames[a];
+     if (decl.type&DECL_DUPE)
+       this.err('func.args.has.dup',decl.name);
+     ASSERT.call(this, !arguments_or_eval(decl.name));
+     this.validateID(decl.name);
 
-     ASSERT.call(this, !arguments_or_eval(a));
-     this.validateID(a);
+     a++;
    }
 };
 
@@ -7659,7 +7703,7 @@ this.parseBlckStatement = function () {
   this.scopeFlags |= SCOPE_BLOCK;
 
   var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() }  ,y:-1};
+        loc: { start: startLoc, end: this.loc() }, scope: this.scope  ,y:-1};
 
   if ( !this.expectType_soft ('}' ) &&
         this.err('block.unfinished',n) )
@@ -9262,19 +9306,11 @@ this.reference = function(name, fromScope) {
   if (!fromScope) fromScope = this;
 
   var decl = this.findDeclInScope(name), ref = null;
-  if (decl && !decl.scope.isFunc() && this.isFunc()) { // the decl is synthetic, and must be renamed
-    this.insertDecl0(false, decl.synthName, null); // clear the current synthetic decl
-    this.synthesize(decl); // then refresh that synthetic decl
-    decl = null;
-    // TODO: the name should be deleted altogether (i.e., `delete this.definedNames[name+'%']`),
-    // but looks like setting it to null will do
-    this.definedNames[name+'%'] = null;
-  }
   if (decl) {
     ref = decl.refMode;
     if (this !== fromScope) {
       ref.updateExistingRefWith(name, fromScope);
-      // a catch scope is never forward-accessed, even when referenced from within a function declaration 
+      // a catch name is never forward-accessed, even when referenced from within a function declaration 
       if (decl.type & DECL_MODE_CATCH_PARAMS) 
         if (ref.indirect) ref.indirect = ACCESS_EXISTING;
     }
@@ -9319,6 +9355,7 @@ this.err = function(errType, errParams) {
 
 this.hoistIdToScope = function(id, targetScope , decl  ) { 
    var scope = this;
+    var isFresh = targetScope.findDeclInScope(id.name) === null; 
    while (true) {
      ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
      if ( !scope.insertDecl(id , decl  ) )
@@ -9329,17 +9366,10 @@ this.hoistIdToScope = function(id, targetScope , decl  ) {
 
      scope = scope.parent;
    }
+   if (isFresh) targetScope.nameList.push(decl);
 };
    
-this.synthesize = function(decl) {
-  ASSERT.call(this, this.isFunc(), 'scopes other than the function scope are not allowed to synthesize a declaration');
-  var synthName = decl.scope.newSynthName(decl.name);
-  this.definedNames[synthName+'%'] = decl;
-  decl.synthName = synthName;
-};
-
 var declare = {};
-
 
 declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNC_NAME] =
 declare[DECL_MODE_VAR] = function(id, declType) {
@@ -9358,14 +9388,18 @@ declare[DECL_MODE_LET] = function(id, declType) {
 
    var decl = new Decl(declType, id.name, this, id.name);
    this.insertDecl(id, decl);
+   this.nameList.push(decl);
    return decl;
 };
 
 declare[DECL_MODE_CATCH_PARAMS] = function(id, declType) {
   var name = id.name + '%';
   this.catchVarIsSynth = false; 
-  this.insertDecl(id, new Decl( DECL_MODE_CATCH_PARAMS, id.name, this, id.name)); 
+  var catchVar = new Decl( DECL_MODE_CATCH_PARAMS, id.name, this, id.name);
   this.catchVarName = id.name;
+
+  this.insertDecl(id, catchVar); 
+  this.nameList.push(catchVar);
 };
  
 // returns false if the variable was not inserted
@@ -9391,24 +9425,11 @@ this.insertDecl = function(id , decl ) {
     if ((declType & DECL_MODE_VAR) && (existingType & DECL_MODE_VAR))
       return true; 
      
-    // but if we are in func scope and what we are trying to override is real (i.e., not synthesized),
-    // or we are in a lexical scope, trying to override a let with a var or vice versa, then raise an error
-    if ( ( this === func && existingDecl.scope === func ) || this !== func)
-        this.err('exists.in.current',{id: id});
+    this.err('exists.in.current', { id: id });
   }
 
   this.insertDecl0(true, id.name, decl);
   this.insertID(id);
-  if (this !== func) {
-    if ( decl.syntheticUnlessInAFunc() && !decl.scope.isFunc()) { // non-func-scope-let-declarations
-      decl.scope.funcScope.synthesize(decl);
-    }
-  }
-  else {
-    if (existingDecl !== null) { // if there is a synthesized declaration of the same name, rename it
-      this.synthesize(existingDecl);
-    } 
-  } 
 
   return true;
 };
@@ -9446,17 +9467,6 @@ this.finish = function() {
     if (n === null) continue;
     parent.reference(name.substring(0,name.length-1), this);
   }
-
-  if (!this.isLoop()) return;
-
-  for (var name in this.definedNames) {
-    if (!HAS.call(this.definedNames, name)) continue;
-    var n = this.definedNames[name];
-    if (n.needsScopeVar())
-      this.addChildLexicalDeclaration(n);
-  }
-
-  if (this.isCatch()) this.finishWithActuallyDeclaringTheCatchVar();
 };
     
 this.insertRef = function(name, ref) {
@@ -9464,28 +9474,15 @@ this.insertRef = function(name, ref) {
 };
 
 this.newSynthName = function(baseName) {
-  var num = 0, func = this.funcScope;
+  var num = 0, targetScope = this.funcScope;
   var name = baseName;
   for (;;num++, name = baseName + "" + num) {
-     if (func.findDeclInScope(name)) continue; // must not be in the surrounding func scope's defined names, 
-     if (func.findRefInScope(name)) continue; // must not be in the surrounding func scope's referenced names;
-     if (!this.isFunc()) { // furthermore, if we're not allocating in a func scope,
-       if (this.findRefInScope(name)) continue; // it must not have been referenced in the current scope
-       
-       // this one requires a little more clarification; while a func scope's defined names are "real" names (in the sense
-       // that an entry like 'n' in the func scope's definedNames maps to a variable of the exact same name 'n'), it is not so
-       // for lexical scopes; this gives us the possibility to choose synthesized name with the exact same name as the variable
-       // itself. For example, if we want to find a synthesized approximate name for a name like 'n2' defined inside
-       // a lexical scope, and it has satisfied all previous conditions (i.e., it's neither defined nor referenced in the 
-       // surrounding func scope, and it has not been referenced in the scope we are synthesizing the name in), then the synthesized
-       // name can be the name itself, in this case 'n2'.
+     if (targetScope.findDeclByEmitNameInScope(name))
+       continue; // must not be in the surrounding func scope's defined names, 
 
-       // if the current "suffixed" name (i.e., the baseName appended with num)
-       // exists in the scope's declarations,
-       if (this.findDeclInScope(name)) 
-         // it must not actually be a suffixed name (i.e., it must be the base name,
-         // which has not been appended with a 'num' yet); this the case only when num is 0, obviously.
-         if (name !== baseName) continue; // alternatively, num !== 0 
+     if (targetScope.findRefByEmitNameInScope(name)) continue; // must not be in the surrounding func scope's referenced names;
+     if (this.isLexical()) { // furthermore, if we're not allocating in a func scope,
+       if (this.findRefByEmitNameInScope(name)) continue; // it must not have been referenced in the current scope
      }
      break;
   }
@@ -9540,11 +9537,6 @@ this.addChildLexicalDeclaration = function(decl) {
    this.wrappedDeclList.push(decl);
    this.wrappedDeclNames[decl.name+'%'] = decl;
    decl.synthName = decl.name;
-};
-
-this.removeDecl = function(decl) {
-   delete this.definedNames[decl.synthName+'%'];
-   return decl;
 };
 
 /* consider this contrived example:
@@ -9630,18 +9622,87 @@ this.updateLiquidNamesWith = function(name) {
     this.funcScope.localLiquidNames.mustNotHaveReal(name);
 };
 
-this.setLocalLiquidNames = function(nameArray) {
-  ASSERT.call(this, this.isFunc(), 'func scopes are the only scopes that can currently have local liquid names' );
-  ASSERT.call(this, this.localLiquidNames === null, 'scope has a local liquid name set already' );
-  this.localLiquidNames = new LiquidNames(nameArray);
-};
-
 this.getOrCreateGlobalLiquidName = function(name) {
   if (!this.funcScope.globalLiquidNames)
     this.funcScope.globalLiquidNames = new LiquidNames();
 
   return getOrCreate(this.funcScope.globalLiquidNames, name);
 };  
+
+this.synthesizeNames = function() {
+  var list = null, e = 0;
+  // synthesize everything -- even the real names;
+  // because in the presence of references that cross function boundaries,
+  // the function's name list is of little actual help.
+  // one solution is to have every reference keep track of the scope it was not resolved in; 
+  // the informarion can then be used while calculating the synthetic name for the reference (in case the reference resolves to
+  // a decl that must be synthesized), or when the reference has resolved to a real (i.e., func-scope)
+  // name declaration; in the former case, the name has to be chosen taking the names in the tracking scopes into account;
+  // the latter case, though, is something the opposite -- the tracking scopes must rename the decls in their name lists
+  // so as to avoid possible clashes with the reference's name, recursively applying the rename semantics, i.e., renaming their entries  // keeping the scopes those entries are tracking into account.
+  // the solution is potentially heavy, and complex.
+  //
+  // another solution is to defer the name synthesization until the very end of the very last scope; when there, the top-most
+  // scope will be synthesized first, followed by its descendant scopes,
+  // followed by theirs, and so on, until all scopes are synthesized; this way, every reference's emit name is already known,
+  // as they have already been synthesized in a parent of the current scope; any variable that possibly clashes with that reference's
+  // name will have to be renamed regardless of whether it is a variable that has to be synthesized nevertheless, or of whether it is a  // real name.
+  // this solution is obviously unfaithful to the source's names, potentially at least, but it is way more simple,
+  // way more straightforward, and, arguably, way more lighter, and it is the solution currently used.
+  list = this.nameList;
+  e = 0;
+  while (e < list.length)
+    this.synthesizeDecl(list[e++]);
+
+  list = this.children;
+  if (list.length) {
+    e = 0;
+    while (e < list.length)
+      list[e++].synthesizeNames();
+  }
+};
+
+this.createMappingForUnresolvedNames = function() {
+  ASSERT.call(this, !this.referencedEmitNames, 'this scope has already got a referencedemitNames');
+  this.referencedEmitNames = {};
+
+  for (var name in this.unresolvedNames ) {
+    if (!HAS.call(this.unresolvedNames, name) )
+      continue;
+    if (this.unresolvedNames[name] === null) 
+      continue;
+
+    var resolvedRef = this.definedNames[name]; // will look it up the prototype chain, which is in this case the scope chain
+    this.updateLiquidNamesWith(resolvedRef.synthName);
+    this.referencedEmitNames[resolvedRef.synthName+'%'] = resolvedRef;
+  }
+};
+
+this.findRefByEmitNameInScope = function(name) {
+  if (!this.referencedEmitNames)
+    this.createMappingForUnresolvedNames();
+  name += '%';
+  return HAS.call(this.referencedEmitNames, name) ?
+    this.referencedEmitNames[name] : null;
+};
+
+this.synthesizeDecl = function(decl) {
+  ASSERT.call(this, this === decl.scope, 'a scope can only synthesize its own declarations');
+  var synthName = this.newSynthName(decl.name);
+  decl.synthName = synthName;
+  this.funcScope.insertEmitName(synthName, decl);
+  this.updateLiquidNamesWith(name);
+};
+
+this.insertEmitName = function(name, decl) {
+  this.definedEmitNames[name+'%'] = decl;
+}; 
+
+this.findDeclByEmitNameInScope = function(name) {
+  name += '%';
+  return HAS.call(this.definedEmitNames, name) ? 
+    this.definedEmitNames[name] : null;
+};
 
 
 }]  ],

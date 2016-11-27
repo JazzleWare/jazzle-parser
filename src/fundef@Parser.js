@@ -187,7 +187,7 @@ this.parseFuncBody = function(context) {
   var list = this.blck();
 
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
-           loc: { start: startLoc, end: this.loc() }/* ,y:-1*/ };
+           loc: { start: startLoc, end: this.loc() }, scope: this.scope/* ,y:-1*/ };
 
   if ( ! this.expectType_soft ( '}' ) &&
          this.err('func.body.is.unfinished',n) )
@@ -196,6 +196,28 @@ this.parseFuncBody = function(context) {
   return  n;
 };
 
+// #if V
+this . makeStrict  = function() {
+   if ( this.firstNonSimpArg )
+     return this.err('func.strict.non.simple.param')  ; 
+
+   if ( this.tight ) return;
+
+   this.tight = !false;
+
+   var a = 0, argNames = this.scope.nameList;
+   while (a < argNames.length) {
+     var decl = argNames[a];
+     if (decl.type&DECL_DUPE)
+       this.err('func.args.has.dup',decl.name);
+     ASSERT.call(this, !arguments_or_eval(decl.name));
+     this.validateID(decl.name);
+
+     a++;
+   }
+};
+
+// #else
 this . makeStrict  = function() {
    if ( this.firstNonSimpArg )
      return this.err('func.strict.non.simple.param')  ; 
@@ -206,7 +228,7 @@ this . makeStrict  = function() {
 
    var a = null, argNames = this.scope.definedNames;
    for (a in argNames) {
-     var declType = argNames[a] /* #if V */ .type /* #end */ ;
+     var declType = argNames[a];
      a = a.substring(0,a.length-1);
      if (declType&DECL_DUPE)
        this.err('func.args.has.dup',a);
@@ -215,5 +237,5 @@ this . makeStrict  = function() {
      this.validateID(a);
    }
 };
-
+// #end
 

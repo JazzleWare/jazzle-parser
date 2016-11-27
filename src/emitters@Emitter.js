@@ -63,12 +63,15 @@ this.emitters['ArrayExpression'] = function(n) {
 };
     
 this.emitters['BlockStatement'] = function(n) {
+   var prevScope = this.currentScope;
+   this.currentScope = n.scope;
    this.write('{');
    this.indent();
    this._emitBlock(n.body);
    this.unindent();
    this.newlineIndent();
    this.write('}');
+   this.currentScope = prevScope;
 };
 
 this.emitters['ForStatement'] = function(n) {
@@ -166,7 +169,10 @@ this.emitNameString = function(name) {
    this.write(nameString);
 };
 
-this.emitters['Identifier'] = function(n) { return this.emitNameString(n.name); };
+this.emitters['Identifier'] = function(n) {
+   var entry = this.currentScope.definedNames[n.name+ '%'];
+   return this.emitNameString(entry.synthName); 
+};
 
 this.emitters['WhileStatement'] = function(n) {
   this.write('while (');
@@ -1016,5 +1022,28 @@ this.emitters['CustomContainer'] = function(n) {
 this.emitters['SpecialIdentifier'] = function(n) {
   var id = { type: 'Identifier', name: isTemp(n) ? n.name : n.kind };
   return this.emit(id);
+};
+
+this.emitters['FunctionDeclaration'] = function(n) {
+  this.wm('function',' ').e(n.id).wm('(',')').e(n.body);
+};
+
+this.emitters['VariableDeclaration'] = function(n) {
+  this.wm('var',' ').i();
+  var list = n.declarations, e = 0;
+  while (e < list.length) {
+    if (e) this.n();
+    this.e(list[e++]);
+  }
+  this.u().w(';');
+};
+
+this.emitters['FunctionExpression'] = function(n) {
+  this.wm('function','(',')').e(n.body);
+};
+
+this.emitters['VariableDeclarator'] = function(n) {
+  this.emit(n.id);
+  if (n.init) this.wm(' ','=',' ').e(n.init);
 };
 

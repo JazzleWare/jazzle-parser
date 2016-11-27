@@ -16,6 +16,11 @@ function Scope(parent, type) {
   this.definedNames = this.parent ? createObj(this.parent.definedNames) : {};
   this.unresolvedNames = {};
 
+  // serves the same purpose as the definedNames above, except that it only contains the names in the current scope;
+  // iterating over the definedNames object means iterating over _all_ names available to the current scope;
+  // this is the reason nameList exists -- to keep the track of the names local to this scope
+  this.nameList = []; 
+
   this.wrappedDeclList = null;
   this.wrappedDeclNames = null;
   this.scopeObjVar = null;
@@ -35,7 +40,9 @@ function Scope(parent, type) {
   if (this.parent) this.parent.children.push(this);
 
   // used when name synthesizing starts
-  this.referencedEmitNames = {};
+  this.referencedEmitNames = null; // <k, v>: (emitName, actualName) -- for the names referenced in the current scope
+  // <k, v>: (emitName, actualName) -- for the name defined in the current scope; only functions are supposed to have one of these 
+  this.definedEmitNames = {}; 
 
   // #end
 }
