@@ -9691,7 +9691,7 @@ this.synthesizeDecl = function(decl) {
   var synthName = this.newSynthName(decl.name);
   decl.synthName = synthName;
   this.funcScope.insertEmitName(synthName, decl);
-  this.updateLiquidNamesWith(name);
+  this.updateLiquidNamesWith(synthName);
 };
 
 this.insertEmitName = function(name, decl) {
