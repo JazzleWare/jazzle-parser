@@ -135,7 +135,7 @@ this.emitters['MemberExpression'] = function(n) {
     this.w('[').e(n.property, PREC_WITH_NO_OP, EMIT_VAL).w(']');
 
   else
-    this.w('.').e(n.property);
+    this.w('.').emitNameString(n.property.name);
 };
 
 this.emitters['NewExpression'] = function(n) {
@@ -390,6 +390,7 @@ this.emitters['AssignmentExpression'] = function(n, prec, flags) {
       case 'Identifier': 
       case 'MemberExpression':
       case 'SynthesizedExpr':
+      case 'SpecialIdentifier':
            this.emit(n.left);
            this.write(' ' + n.operator + ' ');
            this._emitNonSeqExpr(n.right, PREC_WITH_NO_OP, flags & EMIT_VAL);
@@ -1020,8 +1021,7 @@ this.emitters['CustomContainer'] = function(n) {
 };
 
 this.emitters['SpecialIdentifier'] = function(n) {
-  var id = { type: 'Identifier', name: isTemp(n) ? n.name : n.kind };
-  return this.emit(id);
+  this.emitNameString( isTemp(n) ? n.name : n.kind );
 };
 
 this.emitters['FunctionDeclaration'] = function(n) {

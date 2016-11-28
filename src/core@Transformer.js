@@ -3,7 +3,7 @@ this.y = function(n) {
 };
 
 this.allocTemp = function() {
-  var id = synth_id(this.currentScope.allocateTemp());
+  var id = newTemp(this.currentScope.allocateTemp());
   return id;
 };
 
@@ -23,6 +23,7 @@ this.transform = this.tr = function(n, list, isVal) {
     case 'ArrIterGet':
     case 'Unornull':
     case 'ObjIterGet':
+    case 'SpecialIdentifier':
       return n;
     default:
       return transform[n.type].call(this, n, list, isVal);

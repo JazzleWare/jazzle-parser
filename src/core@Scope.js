@@ -242,7 +242,9 @@ this.releaseTemp = function(tempName) {
 this.declSynth = function(name) {
   ASSERT.call(this, this.isConcrete());
   var synthName = this.newSynthName(name);
-  this.declare(synth_id_node(synthName), DECL_MODE_VAR);
+  this.definedEmitNames[synthName+'%'] =
+    new Decl(DECL_MODE_VAR, synthName, this, synthName);
+
   return synthName;
 };
 // #end

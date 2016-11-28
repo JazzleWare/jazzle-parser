@@ -1623,7 +1623,7 @@ this.emitters['MemberExpression'] = function(n) {
     this.w('[').e(n.property, PREC_WITH_NO_OP, EMIT_VAL).w(']');
 
   else
-    this.w('.').e(n.property);
+    this.w('.').emitNameString(n.property.name);
 };
 
 this.emitters['NewExpression'] = function(n) {
@@ -1878,6 +1878,7 @@ this.emitters['AssignmentExpression'] = function(n, prec, flags) {
       case 'Identifier': 
       case 'MemberExpression':
       case 'SynthesizedExpr':
+      case 'SpecialIdentifier':
            this.emit(n.left);
            this.write(' ' + n.operator + ' ');
            this._emitNonSeqExpr(n.right, PREC_WITH_NO_OP, flags & EMIT_VAL);
@@ -2508,8 +2509,7 @@ this.emitters['CustomContainer'] = function(n) {
 };
 
 this.emitters['SpecialIdentifier'] = function(n) {
-  var id = { type: 'Identifier', name: isTemp(n) ? n.name : n.kind };
-  return this.emit(id);
+  this.emitNameString( isTemp(n) ? n.name : n.kind );
 };
 
 this.emitters['FunctionDeclaration'] = function(n) {
@@ -9546,7 +9546,9 @@ this.releaseTemp = function(tempName) {
 this.declSynth = function(name) {
   ASSERT.call(this, this.isConcrete());
   var synthName = this.newSynthName(name);
-  this.declare(synth_id_node(synthName), DECL_MODE_VAR);
+  this.definedEmitNames[synthName+'%'] =
+    new Decl(DECL_MODE_VAR, synthName, this, synthName);
+
   return synthName;
 };
 
@@ -9747,7 +9749,7 @@ this.y = function(n) {
 };
 
 this.allocTemp = function() {
-  var id = synth_id(this.currentScope.allocateTemp());
+  var id = newTemp(this.currentScope.allocateTemp());
   return id;
 };
 
@@ -9767,6 +9769,7 @@ this.transform = this.tr = function(n, list, isVal) {
     case 'ArrIterGet':
     case 'Unornull':
     case 'ObjIterGet':
+    case 'SpecialIdentifier':
       return n;
     default:
       return transform[n.type].call(this, n, list, isVal);
