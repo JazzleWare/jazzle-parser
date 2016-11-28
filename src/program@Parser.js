@@ -1,7 +1,13 @@
 this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
-  this.scope = new ParserScope(this, null, SCOPE_TYPE_MAIN);
+  var globalScope = null;
+
+  // #if V
+  globalScope = new Scope(null, SCOPE_TYPE_GLOBAL);
+  //#end
+ 
+  this.scope = new ParserScope(this, globalScope, SCOPE_TYPE_SCRIPT);
   this.next();
   this.scopeFlags = SCOPE_BLOCK;
 
@@ -22,6 +28,7 @@ this.parseProgram = function () {
     endLoc = startLoc = { line: 0, column: 0 };
   }
         
+  alwaysResolveInTheParentScope(this.scope);
   var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
            loc: { start: startLoc, end: endLoc } };
 
@@ -32,4 +39,20 @@ this.parseProgram = function () {
   return n;
 };
 
+function alwaysResolveInTheParentScope(scope) {
+  // #if V
+  var decl = null, ref = null, name = "", refName = "";
+  for ( refName in scope.unresolvedNames) {
+    if (!HAS.call(scope.unresolvedNames, refName))
+      continue;
+    ref = scope.unresolvedNames[refName];
+    if (!ref)
+      continue;
+    name = refName.substring(0, refName.length - 1) ;
+    decl = new Decl(DECL_MODE_VAR, name, scope.parent, name);
+    scope.parent.insertDecl0(true, name, decl);
+    decl.refMode.updateExistingRefWith(name, scope);
+  }
+  // #end
+}
 

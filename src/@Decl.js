@@ -3,6 +3,6 @@ function Decl(type, name, scope, synthName) {
   this.name = name; 
   this.scope = scope;
   this.synthName = synthName;
-  this.ref = null;
+  this.refMode = null;
 }
 

@@ -6,7 +6,7 @@ function Decl(type, name, scope, synthName) {
   this.name = name; 
   this.scope = scope;
   this.synthName = synthName;
-  this.ref = null;
+  this.refMode = null;
 }
 
 ;
@@ -272,11 +272,11 @@ function Scope(parent, type) {
   this.type = type;
 
   if (!parent) 
-    ASSERT.call(this.isFunc(), 'sub-scopes must have a parent');
+    ASSERT.call(this.isConcrete(), 'sub-scopes must have a parent');
 
   this.parent = parent;
   this.funcScope = 
-     this.isFunc() ? this : this.parent.funcScope;
+     this.isConcrete() ? this : this.parent.funcScope;
 
 
   this.definedNames = this.parent ? createObj(this.parent.definedNames) : {};
@@ -291,7 +291,7 @@ function Scope(parent, type) {
   this.wrappedDeclNames = null;
   this.scopeObjVar = null;
 
-  this.tempStack = this.isFunc() ? [] : null;
+  this.tempStack = this.isConcrete() ? [] : null;
 
   if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
     this.type |= SCOPE_TYPE_LEXICAL_LOOP;    
@@ -305,6 +305,8 @@ function Scope(parent, type) {
   this.children = [];
   if (this.parent) this.parent.children.push(this);
 
+  // TODO: replace both with something like 'cachedEmitNames', along with some associated methods like 'cacheEmitNames'
+  //
   // used when name synthesizing starts
   this.referencedEmitNames = null; // <k, v>: (emitName, actualName) -- for the names referenced in the current scope
   // <k, v>: (emitName, actualName) -- for the name defined in the current scope; only functions are supposed to have one of these 
@@ -487,11 +489,12 @@ var HAS = {}.hasOwnProperty;
 function ASSERT(cond, message) { if (!cond) throw new Error(message); }
 
 var SCOPE_TYPE_FUNCTION_EXPRESSION = 1;
-var SCOPE_TYPE_FUNCTION_DECLARATION = 2|SCOPE_TYPE_FUNCTION_EXPRESSION;
-var SCOPE_TYPE_LEXICAL_SIMPLE = SCOPE_TYPE_FUNCTION_EXPRESSION<<2;
-var SCOPE_TYPE_LEXICAL_LOOP = 16|SCOPE_TYPE_LEXICAL_SIMPLE;
-var SCOPE_TYPE_MAIN = SCOPE_TYPE_FUNCTION_EXPRESSION;
-var SCOPE_TYPE_CATCH = 32|SCOPE_TYPE_LEXICAL_SIMPLE;
+var SCOPE_TYPE_FUNCTION_DECLARATION = SCOPE_TYPE_FUNCTION_EXPRESSION|2;
+var SCOPE_TYPE_LEXICAL_SIMPLE = 8;
+var SCOPE_TYPE_LEXICAL_LOOP = SCOPE_TYPE_LEXICAL_SIMPLE|16;
+var SCOPE_TYPE_SCRIPT = 32;
+var SCOPE_TYPE_CATCH = 128;
+var SCOPE_TYPE_GLOBAL = 256;
 
 var DECL_MODE_VAR = 1,
     DECL_MODE_LET = 2,
@@ -7221,7 +7224,12 @@ function(){
 this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
-  this.scope = new ParserScope(this, null, SCOPE_TYPE_MAIN);
+  var globalScope = null;
+
+  globalScope = new Scope(null, SCOPE_TYPE_GLOBAL);
+  //#end
+ 
+  this.scope = new ParserScope(this, globalScope, SCOPE_TYPE_SCRIPT);
   this.next();
   this.scopeFlags = SCOPE_BLOCK;
 
@@ -7242,6 +7250,7 @@ this.parseProgram = function () {
     endLoc = startLoc = { line: 0, column: 0 };
   }
         
+  alwaysResolveInTheParentScope(this.scope);
   var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
            loc: { start: startLoc, end: endLoc } };
 
@@ -7252,6 +7261,21 @@ this.parseProgram = function () {
   return n;
 };
 
+function alwaysResolveInTheParentScope(scope) {
+  // #if V
+  var decl = null, ref = null, name = "", refName = "";
+  for ( refName in scope.unresolvedNames) {
+    if (!HAS.call(scope.unresolvedNames, refName))
+      continue;
+    ref = scope.unresolvedNames[refName];
+    if (!ref)
+      continue;
+    name = refName.substring(0, refName.length - 1) ;
+    decl = new Decl(DECL_MODE_VAR, name, scope.parent, name);
+    scope.parent.insertDecl0(true, name, decl);
+    decl.refMode.updateExistingRefWith(name, scope);
+  }
+}
 
 
 },
@@ -7455,10 +7479,12 @@ this.setDeclModeByName = function(modeName) {
 };
 
 this.exitScope = function() {
+  var scope = this.scope;
   this.scope.finish();
   this.scope = this.scope.parent;
   if (this.scope.synth)
     this.scope = this.scope.parent;
+  return scope;
 };
 
 
@@ -7653,11 +7679,11 @@ this.parseIfStatement = function () {
      alt = this.parseStatement(false);
   }
 
-  this.exitScope(); 
+  var scope = this.exitScope(); 
 
   this.foundStatement = !false;
   return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,
-     loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt  ,y:-1};
+     loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt, scope: scope  ,y:-1};
 };
 
 this.parseWhileStatement = function () {
@@ -7687,9 +7713,9 @@ this.parseWhileStatement = function () {
    this.scopeFlags = scopeFlags ;
    this.foundStatement = !false;
 
-   this.exitScope();
+   var scope = this.exitScope();
    return { type: 'WhileStatement', test: cond, start: startc, end: nbody.end,
-       loc: { start: startLoc, end: nbody.loc.end }, body:nbody ,y:-1 };
+       loc: { start: startLoc, end: nbody.loc.end }, body:nbody, scope: scope ,y:-1 };
 };
 
 this.parseBlckStatement = function () {
@@ -7888,9 +7914,10 @@ this.parseSwitchStatement = function () {
 
   this.scopeFlags = scopeFlags ;
   this.foundStatement = !false;
-  this.exitScope(); 
+
+  var scope = this.exitScope(); 
   var n = { type: 'SwitchStatement', cases: cases, start: startc, discriminant: switchExpr,
-            end: this.c, loc: { start: startLoc, end: this.loc() }  ,y:-1};
+            end: this.c, loc: { start: startLoc, end: this.loc() }, scope: scope  ,y:-1};
   if ( !this.expectType_soft ('}' ) &&
         this.err('switch.unfinished',n) )
     return this.errorHandlerOutput ;
@@ -8026,7 +8053,7 @@ this. parseBlockStatement_dependent = function() {
     this.scopeFlags |= SCOPE_BLOCK;
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() }  ,y:-1 };
+        loc: { start: startLoc, end: this.loc() }, scope: this.scope  ,y:-1 };
     if ( ! this.expectType_soft ('}') &&
          this.err('block.dependent.is.unfinished' , n)  )
       return this.errorHandlerOutput;
@@ -8142,13 +8169,13 @@ this . parseWithStatement = function() {
    
    this.foundStatement = !false;
 
-   this.exitScope();
+   var scope = this.exitScope();
    return  {
        type: 'WithStatement',
        loc: { start: startLoc, end: nbody.loc.end },
        start: startc,
        end: nbody.end,
-       object: obj, body: nbody ,y:-1
+       object: obj, body: nbody, scope: scope ,y:-1
    };
 };
 
@@ -9438,7 +9465,7 @@ this.insertID = function(id) {
   this.idNames[id.name+'%'] = id;
 };
 
-// TODO: looks like `isOwn` is not necessary
+// TODO: looks like `isFresh` is not necessary
 this.insertDecl0 = function(isFresh, name, decl) {
   name += '%';
   this.definedNames[name] = decl;
@@ -9517,7 +9544,7 @@ this.releaseTemp = function(tempName) {
 };
  
 this.declSynth = function(name) {
-  ASSERT.call(this, this.isFunc());
+  ASSERT.call(this, this.isConcrete());
   var synthName = this.newSynthName(name);
   this.declare(synth_id_node(synthName), DECL_MODE_VAR);
   return synthName;
@@ -9528,6 +9555,14 @@ this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
 this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
 this.isDeclaration = function() { return this.type === SCOPE_TYPE_FUNCTION_DECLARATION; };
 this.isCatch = function() { return (this.type & SCOPE_TYPE_CATCH) === SCOPE_TYPE_CATCH; };
+this.isGlobal = function() { return this.type === SCOPE_TYPE_GLOBAL; };
+
+// a scope is concrete if a 'var'-declaration gets hoisted to it
+this.isConcrete = function() {
+  return this.type === SCOPE_TYPE_SCRIPT ||
+         this.type === SCOPE_TYPE_GLOBAL ||
+         this.isFunc();
+};
 
 this.addChildLexicalDeclaration = function(decl) {
    ASSERT.call(this, this.isLoop(), 'only a loop scope can currently have a scope var');

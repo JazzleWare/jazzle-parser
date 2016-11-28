@@ -157,7 +157,7 @@ this.insertID = function(id) {
 };
 
 // #if V
-// TODO: looks like `isOwn` is not necessary
+// TODO: looks like `isFresh` is not necessary
 this.insertDecl0 = function(isFresh, name, decl) {
   name += '%';
   this.definedNames[name] = decl;
@@ -240,7 +240,7 @@ this.releaseTemp = function(tempName) {
 };
  
 this.declSynth = function(name) {
-  ASSERT.call(this, this.isFunc());
+  ASSERT.call(this, this.isConcrete());
   var synthName = this.newSynthName(name);
   this.declare(synth_id_node(synthName), DECL_MODE_VAR);
   return synthName;
@@ -252,6 +252,14 @@ this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
 this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
 this.isDeclaration = function() { return this.type === SCOPE_TYPE_FUNCTION_DECLARATION; };
 this.isCatch = function() { return (this.type & SCOPE_TYPE_CATCH) === SCOPE_TYPE_CATCH; };
+this.isGlobal = function() { return this.type === SCOPE_TYPE_GLOBAL; };
+
+// a scope is concrete if a 'var'-declaration gets hoisted to it
+this.isConcrete = function() {
+  return this.type === SCOPE_TYPE_SCRIPT ||
+         this.type === SCOPE_TYPE_GLOBAL ||
+         this.isFunc();
+};
 
 // #if V
 this.addChildLexicalDeclaration = function(decl) {

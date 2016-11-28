@@ -205,6 +205,7 @@
     if ( _exports.has( expected, 'errors' ) ) delete expected.errors;
     if ( _exports.has( expected, 'comments' ) ) delete expected.comments ;
     delete actual.y;
+    delete actual.scope;
 
     if ( actual.regex ) {
        delete actual.value;

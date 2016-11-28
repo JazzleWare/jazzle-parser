@@ -2,11 +2,11 @@ function Scope(parent, type) {
   this.type = type;
 
   if (!parent) 
-    ASSERT.call(this.isFunc(), 'sub-scopes must have a parent');
+    ASSERT.call(this.isConcrete(), 'sub-scopes must have a parent');
 
   this.parent = parent;
   this.funcScope = 
-     this.isFunc() ? this : this.parent.funcScope;
+     this.isConcrete() ? this : this.parent.funcScope;
 
   // #if !V
   this.definedNames = {};
@@ -25,7 +25,7 @@ function Scope(parent, type) {
   this.wrappedDeclNames = null;
   this.scopeObjVar = null;
 
-  this.tempStack = this.isFunc() ? [] : null;
+  this.tempStack = this.isConcrete() ? [] : null;
 
   if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
     this.type |= SCOPE_TYPE_LEXICAL_LOOP;    
@@ -39,6 +39,8 @@ function Scope(parent, type) {
   this.children = [];
   if (this.parent) this.parent.children.push(this);
 
+  // TODO: replace both with something like 'cachedEmitNames', along with some associated methods like 'cacheEmitNames'
+  //
   // used when name synthesizing starts
   this.referencedEmitNames = null; // <k, v>: (emitName, actualName) -- for the names referenced in the current scope
   // <k, v>: (emitName, actualName) -- for the name defined in the current scope; only functions are supposed to have one of these 

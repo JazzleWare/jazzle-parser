@@ -13,9 +13,11 @@ this.setDeclModeByName = function(modeName) {
 };
 
 this.exitScope = function() {
+  var scope = this.scope;
   this.scope.finish();
   this.scope = this.scope.parent;
   if (this.scope.synth)
     this.scope = this.scope.parent;
+  return scope;
 };
 
