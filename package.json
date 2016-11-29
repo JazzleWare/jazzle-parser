@@ -1,7 +1,7 @@
 {
   "name": "jazzle",
   "main": "dist/jazzle.js",
-  "version": "0.5.0",
+  "version": "0.5.2",
   "description": "A very fast ECMAScript parser, fully written in plain ECMAScript 3 -- revamped",
   "homepage": "https://github.com/JazzleWare/jazzle-parser",
   "engines": { "node": ">=6.20.0" },
