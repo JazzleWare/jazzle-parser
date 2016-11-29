@@ -444,7 +444,7 @@ var SCOPE_ARGS = SCOPE_CONSTRUCTOR << 1;
 var SCOPE_BLOCK = SCOPE_ARGS << 1;
 var SCOPE_IF = SCOPE_BLOCK << 1;
 
-var SCOPE_WITH_FUNC_DECL = SCOPE_IF|SCOPE_BLOCK;
+var SCOPE_WITH_FUNC_DECL = SCOPE_BLOCK;
 var CLEAR_IB = ~SCOPE_WITH_FUNC_DECL;
 
 var  CONTEXT_FOR = 1,
@@ -4842,7 +4842,8 @@ this .parseFunc = function(context, argListMode, argLen ) {
 
   if ( !this.canBeStatement ) 
     this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
-  else if ( !(this.scopeFlags & SCOPE_WITH_FUNC_DECL) )
+  else if ( !(this.scopeFlags & SCOPE_WITH_FUNC_DECL) &&
+            (this.tight || !(this.scopeFlags & SCOPE_IF)) )
       this.err('func.decl.not.in.block', startc, startLoc);
 
   var isGen = false;

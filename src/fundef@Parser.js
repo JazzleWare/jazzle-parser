@@ -64,7 +64,8 @@ this .parseFunc = function(context, argListMode, argLen ) {
 
   if ( !this.canBeStatement ) 
     this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
-  else if ( !(this.scopeFlags & SCOPE_WITH_FUNC_DECL) )
+  else if ( !(this.scopeFlags & SCOPE_WITH_FUNC_DECL) &&
+            (this.tight || !(this.scopeFlags & SCOPE_IF)) )
       this.err('func.decl.not.in.block', startc, startLoc);
 
   var isGen = false;
