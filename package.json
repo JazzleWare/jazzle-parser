@@ -1,5 +1,5 @@
 {
-  "name": "jsrube",
+  "name": "jazzle",
   "main": "dist/lube.js",
   "version": "0.5.8",
   "description": "A very fast ECMAScript parser, fully written in plain ECMAScript 3",
