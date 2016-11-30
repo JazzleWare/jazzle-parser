@@ -5,7 +5,7 @@ this.parseProgram = function () {
 
   // #if V
   globalScope = new Scope(null, SCOPE_TYPE_GLOBAL);
-  //#end
+  // #end
  
   this.scope = new ParserScope(this, globalScope, SCOPE_TYPE_SCRIPT);
   this.next();

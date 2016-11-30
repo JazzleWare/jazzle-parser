@@ -147,7 +147,7 @@ this.parseIfStatement = function () {
 
   this.foundStatement = !false;
   return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,
-     loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt, scope: scope /* ,y:-1*/};
+     loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt/*,scope:  scope  ,y:-1*/};
 };
 
 this.parseWhileStatement = function () {
@@ -179,7 +179,7 @@ this.parseWhileStatement = function () {
 
    var scope = this.exitScope();
    return { type: 'WhileStatement', test: cond, start: startc, end: nbody.end,
-       loc: { start: startLoc, end: nbody.loc.end }, body:nbody, scope: scope/* ,y:-1*/ };
+       loc: { start: startLoc, end: nbody.loc.end }, body:nbody/*,scope:  scope ,y:-1*/ };
 };
 
 this.parseBlckStatement = function () {
@@ -193,7 +193,7 @@ this.parseBlckStatement = function () {
   this.scopeFlags |= SCOPE_BLOCK;
 
   var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() }, scope: this.scope /* ,y:-1*/};
+        loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/};
 
   if ( !this.expectType_soft ('}' ) &&
         this.err('block.unfinished',n) )
@@ -381,7 +381,7 @@ this.parseSwitchStatement = function () {
 
   var scope = this.exitScope(); 
   var n = { type: 'SwitchStatement', cases: cases, start: startc, discriminant: switchExpr,
-            end: this.c, loc: { start: startLoc, end: this.loc() }, scope: scope /* ,y:-1*/};
+            end: this.c, loc: { start: startLoc, end: this.loc() }/*,scope:  scope  ,y:-1*/};
   if ( !this.expectType_soft ('}' ) &&
         this.err('switch.unfinished',n) )
     return this.errorHandlerOutput ;
@@ -517,7 +517,7 @@ this. parseBlockStatement_dependent = function() {
     this.scopeFlags |= SCOPE_BLOCK;
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() }, scope: this.scope /* ,y:-1*/ };
+        loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/ };
     if ( ! this.expectType_soft ('}') &&
          this.err('block.dependent.is.unfinished' , n)  )
       return this.errorHandlerOutput;
@@ -639,7 +639,7 @@ this . parseWithStatement = function() {
        loc: { start: startLoc, end: nbody.loc.end },
        start: startc,
        end: nbody.end,
-       object: obj, body: nbody, scope: scope/* ,y:-1*/
+       object: obj, body: nbody/*,scope:  scope ,y:-1*/
    };
 };
 

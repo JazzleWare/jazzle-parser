@@ -43,6 +43,10 @@ this .ensureSimpAssig_soft = function(head) {
   }
 };
 
+this.ensureSpreadToRestArgument_soft = function(head) {
+  return head.type !== 'AssignmentExpression';
+};
+
 // an arr-pat is always to the left of an assig;
 this .toAssig = function(head) {
 
@@ -117,7 +121,7 @@ this .toAssig = function(head) {
 
      case 'SpreadElement':
        this.assert(head !== this.firstNonTailRest);
-       if (!this.ensureSimpAssig_soft(head.argument))
+       if (!this.ensureSpreadToRestArgument_soft(head.argument))
          this.err('rest.assig.non.id.arg', head);
 
        this.toAssig(head.argument);

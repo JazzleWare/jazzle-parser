@@ -2,7 +2,7 @@ var macro = require('./macro.js');
 var Macro = macro.Macro;
 var buildMacro = new Macro();
  module.exports.buildMacro = buildMacro;
-if (true) {
+if (false) {
   buildMacro.define('V');
 
   buildMacro.preprocessors.push(function(str) {
