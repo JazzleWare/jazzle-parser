@@ -4,6 +4,9 @@ var fs = require( 'fs' );
 var util = require( 'util' );
 var src = './src';
 var dist = './dist/jazzle';
+var macro = require('./macro.js');
+
+var buildMacro = new macro.Macro();
 
 function Builder() {
 
@@ -67,10 +70,15 @@ Builder.prototype.write = function(output) {
    console.log("FINISHED ALL.");
 };
 
+Builder.prototype.writeFileString = function(str) {
+  var fragments = buildMacro.callOn(str), e = 0;
+  while (e < fragments.length) this.write_string(fragments[e++]);
+};
+
 Builder.prototype.writeModule = function(  module ) {
    console.log( "--WRITING MODULE", module.name );
    this. write_string(  ';\n');
-   this. write_string(  fs .readFileSync( module.path ) );
+   this. writeFileString(  fs .readFileSync( module.path ) );
    console.log( "--FINISHED MODULE" );
 };          
   
@@ -93,7 +101,7 @@ Builder.prototype.writeSubmodules = function(module) {
      console.log( "----WRITING SUBMODULE", module.submodules[e] );
      if ( e ) this. write_string( ',\n' );
      this.write_string( 'function(){\n' );
-     this. write_string(  fs .readFileSync(module.submodules[e] ) );
+     this.writeFileString( fs .readFileSync(module.submodules[e] ) );
      this.write_string( '\n}')   ;
  
      console.log( "----FINISHED", module.submodules[e] );
@@ -142,7 +150,7 @@ var exports = {};
 console.log("BUILD STARTED");
 builder.build();
 console.log("TESTING.....");
-// try {
+try {
    new Function(builder.str).call(exports);
    var summary = require('./test-runner.js').runTestSuite('test/tests',exports.Parser);
    if (summary.pass - summary.skipPass !== summary.passAsExpected) {
@@ -151,13 +159,13 @@ console.log("TESTING.....");
    }
    console.log("TESTING COMPLETE.");
 
-   builder.write(fs .openSync(dist+'.js', 'w+'));
-   console.log("BUILDING COMPLETE.");
-// }
-/* catch (e) {
-   console.log("ERROR:\n", e);
-   dist += ".error";  
-   builder.write(fs .openSync(dist+'.js', 'w+'));
 }
-  */
+catch (e) {
+   console.log("ERROR:\n", e);
+// dist += ".error";  
+// builder.write(fs .openSync(dist+'.js', 'w+'));
+}
+
+builder.write(fs .openSync(dist+'.js', 'w+'));
+console.log("BUILDING COMPLETE.");
 

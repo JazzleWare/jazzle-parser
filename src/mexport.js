@@ -3,6 +3,5 @@ this.parse = function(src, isModule ) {
   return newp.parseProgram();
 };
 
-this.Parser = 
-Parser;  
+this.Parser = Parser;  
 

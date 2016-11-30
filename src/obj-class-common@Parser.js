@@ -7,7 +7,7 @@ this .parseMeth = function(name, isClass) {
      return { type: 'Property', key: core(name), start: name.start, end: val.end,
               kind: 'init', computed: name.type === PAREN,
               loc: { start: name.loc.start, end : val.loc.end },
-              method: !false, shorthand: false, value : val };
+              method: !false, shorthand: false, value : val/* ,y:-1*/ };
    }
 
    var kind = 'method' ;
@@ -28,7 +28,7 @@ this .parseMeth = function(name, isClass) {
    return { type: 'MethodDefinition', key: core(name), start: name.start, end: val.end,
             kind: kind, computed: name.type === PAREN,
             loc: { start: name.loc.start, end: val.loc.end },
-            value: val,    'static': false };
+            value: val,    'static': false/* ,y:-1*/ };
 };
 
 this .parseGen = function(isClass ) {
@@ -69,13 +69,13 @@ this .parseGen = function(isClass ) {
      return { type: 'Property', key: core(name), start: startc, end: val.end,
               kind: 'init', computed: name.type === PAREN,
               loc: { start: startLoc , end : val.loc.end },
-              method: !false, shorthand: false, value : val };
+              method: !false, shorthand: false, value : val/* ,y:-1*/ };
   }
 
   val = this.parseFunc(  CONTEXT_NONE , ARGLIST_AND_BODY_GEN|METH_FUNCTION, ANY_ARG_LEN )
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: 'method', computed: name.type === PAREN,
-           loc : { start: startLoc, end: val.loc.end },    'static': false, value: val };
+           loc : { start: startLoc, end: val.loc.end },    'static': false, value: val/* ,y:-1*/ };
 };
 
 this . parseSetGet= function(isClass) {
@@ -115,7 +115,7 @@ this . parseSetGet= function(isClass) {
        return { type: 'Property', key: core(name), start: startc, end: val.end,
              kind: kind, computed: name.type === PAREN,
              loc: { start: startLoc, end: val.loc.end }, method: false,
-             shorthand: false, value : val };
+             shorthand: false, value : val/* ,y:-1*/ };
   }
   
   if ( strName === 'constructor' &&
@@ -126,7 +126,7 @@ this . parseSetGet= function(isClass) {
 
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: kind, computed: name.type === PAREN,
-           loc : { start: startLoc, end: val.loc.end }, 'static': false, value: val };
+           loc : { start: startLoc, end: val.loc.end }, 'static': false, value: val/* ,y:-1*/ };
 };
 
 

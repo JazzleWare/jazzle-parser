@@ -16,6 +16,10 @@ this . parseFor = function() {
 
   var scopeFlags = this.scopeFlags;
 
+  this.scopeFlags = SCOPE_BLOCK;
+
+  this.enterLexicalScope(true);
+
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
      case 'var':
         this.canBeStatement = !false;
@@ -39,6 +43,7 @@ this . parseFor = function() {
         head = this. parseVariableDeclaration(CONTEXT_FOR);
            break ;
   }
+  this.scopeFlags = scopeFlags;
 
   if ( head === null ) {
        headIsExpr = !false;
@@ -80,7 +85,7 @@ this . parseFor = function() {
                  this.err('for.iter.no.end.paren',start,startLoc,head,afterHead) )
             return this.errorHandlerOutput ;
 
-          this.scopeFlags &= ~SCOPE_BLOCK;
+          this.scopeFlags &= CLEAR_IB;
           this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
           nbody = this.parseStatement(!false);
           if ( !nbody && this.err('null.stmt','for.iter',
@@ -90,8 +95,9 @@ this . parseFor = function() {
           this.scopeFlags = scopeFlags;
 
           this.foundStatement = !false;
+          this.exitScope();
           return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
-            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
+            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody/* ,y:-1*/ };
 
        default:
           return this.err('for.iter.not.of.in',startc, startLoc,head);
@@ -123,7 +129,7 @@ this . parseFor = function() {
          this.err('for.simple.no.end.paren',startc,startLoc,head,afterHead,tail) )
     return this.errorHandlerOutput ;
 
-  this.scopeFlags &= ~SCOPE_BLOCK;
+  this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
   nbody = this.parseStatement(! false);
   if ( !nbody && this.err('null.stmt','for.simple',
@@ -133,11 +139,13 @@ this . parseFor = function() {
   this.scopeFlags = scopeFlags;
 
   this.foundStatement = !false;
+
+  this.exitScope();
   return { type: 'ForStatement', init: head && core(head), start : startc, end: nbody.end,
          test: afterHead && core(afterHead),
          loc: { start: startLoc, end: nbody.loc.end },
           update: tail && core(tail),
-         body: nbody };
+         body: nbody/* ,y:-1*/ };
 };
 
 

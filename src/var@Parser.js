@@ -10,41 +10,21 @@ this . parseVariableDeclaration = function(context) {
 
      this.next () ;
 
-     var lexical = kind !== 'var';
-     var isInArgList = false, inComplexArgs = 0, argNames = null;
-
-     if ( lexical ) {
-       isInArgList = this.isInArgList;
-       this.isInArgList = true;
-       inComplexArgs = this.inComplexArgs ;
-       this.inComplexArgs = ICA_LEXICAL;
-       argNames = this.argNames;
-       this.argNames = {};
-     }
+     this.setDeclModeByName(kind);
+     
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
        if (kind !== 'let' && 
            this.err('var.has.no.declarators',startc,startLoc,kind,elem,context,isInArgsList,inComplexArgs,argNames  ) )
          return this.errorHandlerOutput;
 
-       if ( lexical ) {
-         this.isInArgsList = isInArgList;
-         this.inComplexArgs = inComplexArgs;
-         this.argNames = argNames;
-       }
-
        return null; 
      }
 
      var list = [elem];
-     var isConst = kind === 'const';
      
-     if (isConst) {
-        if (!(this.scopeFlags & SCOPE_BLOCK))
-          this.err('let.decl.not.in.block');
-     }
-
-     if ( isConst && elem.init === null ) {
+     var isConst = kind === 'const';
+     if ( isConst  && elem.init === null ) {
        this.assert(context & CONTEXT_FOR);
        this.unsatisfiedAssignment = elem;
      }
@@ -60,12 +40,6 @@ this . parseVariableDeclaration = function(context) {
             if (isConst) this.assert(elem.init !== null);
             list.push(elem);
           }
-
-     if ( lexical ) {
-       this.isInArgsList = isInArgList;
-       this.inComplexArgs = inComplexArgs;
-       this.argNames = argNames;
-     }
 
      var lastItem = list[list.length-1];
      var endI = 0, endLoc = null;
@@ -87,7 +61,7 @@ this . parseVariableDeclaration = function(context) {
      this.foundStatement  = !false ;
 
      return { declarations: list, type: 'VariableDeclaration', start: startc, end: endI,
-              loc: { start: startLoc, end: endLoc }, kind: kind };
+              loc: { start: startLoc, end: endLoc }, kind: kind /* ,y:-1*/};
 };
 
 this . parseVariableDeclarator = function(context) {
@@ -113,6 +87,6 @@ this . parseVariableDeclarator = function(context) {
 
   var initOrHead = init || head;
   return { type: 'VariableDeclarator', id: head, start: head.start, end: initOrHead.end,
-           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init) };
+           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init)/* ,y:-1*/ };
 };
 

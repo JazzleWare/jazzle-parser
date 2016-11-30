@@ -67,7 +67,7 @@ this.parseObjectExpression = function (context) {
   } while ( this.lttype === ',' );
 
   elem = { properties: list, type: 'ObjectExpression', start: startc,
-     end: this.c , loc: { start: startLoc, end: this.loc() }};
+     end: this.c , loc: { start: startLoc, end: this.loc() }/* ,y:-1*/};
 
   if ( ! this.expectType_soft ('}') && this.err('obj.unfinished',{
     obj: elem, asig: firstUnassignable, ea: firstEA,
@@ -139,7 +139,7 @@ this.parseProperty = function (name, context) {
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
          val = { type: 'Property', start: name.start, key: core(name), end: val.end,
                   kind: 'init', loc: { start: name.loc.start, end: val.loc.end }, computed: name.type === PAREN ,
-                  method: false, shorthand: false, value: core(val) };
+                  method: false, shorthand: false, value: core(val)/* ,y:-1*/ };
          if ( __proto__ )
             this.first__proto__ = val;
 
@@ -170,7 +170,7 @@ this.parseProperty = function (name, context) {
 
           return { type: 'Property', key: name, start: val.start, end: val.end,
                     loc: val.loc, kind: 'init',  shorthand: !false, method: false,
-                   value: val, computed: false };
+                   value: val, computed: false/* ,y:-1*/ };
   }
 
        return n   ;

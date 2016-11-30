@@ -118,6 +118,7 @@ this.parseIfStatement = function () {
     return this.errorHandlerOutput;
 
   this.fixupLabels(false);
+  this.enterLexicalScope(false); 
 
   var startc = this.c0,
       startLoc  = this.locBegin();
@@ -132,8 +133,8 @@ this.parseIfStatement = function () {
     return this.errorHandlerOutput ;
 
   var scopeFlags = this.scopeFlags ;
-  this.scopeFlags &= ~SCOPE_BLOCK;
-  this.scopeFlags |= SCOPE_BREAK; 
+  this.scopeFlags &= CLEAR_IB;
+  this.scopeFlags |= SCOPE_IF;
   var nbody = this. parseStatement (false);
   this.scopeFlags = scopeFlags ;
   var alt = null;
@@ -142,12 +143,15 @@ this.parseIfStatement = function () {
      alt = this.parseStatement(false);
   }
 
+  var scope = this.exitScope(); 
+
   this.foundStatement = !false;
   return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,
-     loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt };
+     loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt/*,scope:  scope  ,y:-1*/};
 };
 
 this.parseWhileStatement = function () {
+   this.enterLexicalScope(true);
    if ( ! this.ensureStmt_soft () &&
           this.err('not.stmt','while') )
      return this.errorHandlerOutput;
@@ -167,18 +171,21 @@ this.parseWhileStatement = function () {
      return this.errorHandlerOutput;
 
    var scopeFlags = this.scopeFlags;
-   this.scopeFlags &= ~SCOPE_BLOCK;
+   this.scopeFlags &= CLEAR_IB;
    this.scopeFlags |= (SCOPE_CONTINUE|SCOPE_BREAK );
    var nbody = this.parseStatement(false);
    this.scopeFlags = scopeFlags ;
    this.foundStatement = !false;
 
+   var scope = this.exitScope();
    return { type: 'WhileStatement', test: cond, start: startc, end: nbody.end,
-       loc: { start: startLoc, end: nbody.loc.end }, body:nbody };
+       loc: { start: startLoc, end: nbody.loc.end }, body:nbody/*,scope:  scope ,y:-1*/ };
 };
 
 this.parseBlckStatement = function () {
   this.fixupLabels(false);
+
+  this.enterLexicalScope(false); 
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
@@ -186,12 +193,13 @@ this.parseBlckStatement = function () {
   this.scopeFlags |= SCOPE_BLOCK;
 
   var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() } };
+        loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/};
 
   if ( !this.expectType_soft ('}' ) &&
         this.err('block.unfinished',n) )
     return this.errorHandlerOutput ;
 
+  this.exitScope(); 
   this.scopeFlags = scopeFlags;
   return n;
 };
@@ -201,13 +209,14 @@ this.parseDoWhileStatement = function () {
         this.err('not.stmt','do-while') )
     return this.errorHandlerOutput ;
 
+  this.enterLexicalScope(true); 
   this.fixupLabels(!false);
 
   var startc = this.c0,
       startLoc = this.locBegin() ;
   this.next() ;
   var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= ~SCOPE_BLOCK;
+  this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= (SCOPE_BREAK| SCOPE_CONTINUE);
   var nbody = this.parseStatement (!false) ;
   this.scopeFlags = scopeFlags;
@@ -233,8 +242,10 @@ this.parseDoWhileStatement = function () {
   }
 
  this.foundStatement = !false;
+
+ this.exitScope(); 
  return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
-          body: nbody, loc: { start: startLoc, end: { line: li, column: col } } } ;
+          body: nbody, loc: { start: startLoc, end: { line: li, column: col } } /* ,y:-1*/} ;
 };
 
 this.parseContinueStatement = function () {
@@ -289,10 +300,6 @@ this.parseBreakStatement = function () {
      return this.errorHandlerOutput ;
 
    this.fixupLabels(false);
-   if (!(this.scopeFlags & SCOPE_BREAK) &&
-         this.err('break.not.in.breakable') )
-     return this.errorHandlerOutput ;
-
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;
 
@@ -316,6 +323,10 @@ this.parseBreakStatement = function () {
        return { type: 'BreakStatement', label: label, start: startc, end: semi || label.end,
            loc: { start: startLoc, end: semiLoc || label.loc.end } };
    }
+   else if (!(this.scopeFlags & SCOPE_BREAK) &&
+         this.err('break.not.in.breakable') )
+     return this.errorHandlerOutput ;
+
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
    if ( !semiLoc && !this.newLineBeforeLookAhead &&
@@ -355,7 +366,8 @@ this.parseSwitchStatement = function () {
         this.err('switch.has.no.opening.curly',startc,stratLoc) )
     return this.errorHandlerOutput ;
 
-  this.scopeFlags |=  SCOPE_BREAK;
+  this.enterLexicalScope(false); 
+  this.scopeFlags |=  (SCOPE_BREAK|SCOPE_BLOCK);
   while ( elem = this.parseSwitchCase()) {
     if (elem.test === null) {
        if (hasDefault ) this.err('switch.has.a.dup.default',elem );
@@ -366,8 +378,10 @@ this.parseSwitchStatement = function () {
 
   this.scopeFlags = scopeFlags ;
   this.foundStatement = !false;
+
+  var scope = this.exitScope(); 
   var n = { type: 'SwitchStatement', cases: cases, start: startc, discriminant: switchExpr,
-            end: this.c, loc: { start: startLoc, end: this.loc() } };
+            end: this.c, loc: { start: startLoc, end: this.loc() }/*,scope:  scope  ,y:-1*/};
   if ( !this.expectType_soft ('}' ) &&
         this.err('switch.unfinished',n) )
     return this.errorHandlerOutput ;
@@ -409,7 +423,7 @@ this.parseSwitchCase = function () {
   nbody = this.blck();
   var last = nbody.length ? nbody[nbody.length-1] : null;
   return { type: 'SwitchCase', test: cond, start: startc, end: last ? last.end : c,
-     loc: { start: startLoc, end: last ? last.loc.end : { line: li, column: col } }, consequent: nbody };
+     loc: { start: startLoc, end: last ? last.loc.end : { line: li, column: col } }, consequent: nbody/* ,y:-1*/ };
 };
 
 this.parseReturnStatement = function () {
@@ -503,7 +517,7 @@ this. parseBlockStatement_dependent = function() {
     this.scopeFlags |= SCOPE_BLOCK;
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() } };
+        loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/ };
     if ( ! this.expectType_soft ('}') &&
          this.err('block.dependent.is.unfinished' , n)  )
       return this.errorHandlerOutput;
@@ -522,14 +536,19 @@ this.parseTryStatement = function () {
       startLoc = this.locBegin();
 
   this.next() ;
+
+  this.enterLexicalScope(false); 
   var tryBlock = this.parseBlockStatement_dependent();
+  this.exitScope(); 
   var finBlock = null, catBlock  = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'catch')
     catBlock = this.parseCatchClause();
 
   if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
      this.next();
+     this.enterLexicalScope(false); 
      finBlock = this.parseBlockStatement_dependent();
+     this.exitScope(); 
   }
 
   var finOrCat = finBlock || catBlock;
@@ -539,7 +558,11 @@ this.parseTryStatement = function () {
 
   this.foundStatement = !false;
   return  { type: 'TryStatement', block: tryBlock, start: startc, end: finOrCat.end,
-            handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end } };
+            handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end } /* ,y:-1*/};
+};
+
+this.enterCatchScope = function() {
+  this.scope = this.scope.spawnCatch();
 };
 
 this. parseCatchClause = function () {
@@ -547,38 +570,35 @@ this. parseCatchClause = function () {
        startLoc = this.locBegin();
 
    this.next();
+
+   this.enterCatchScope();
    if ( !this.expectType_soft ('(') &&
         this.err('catch.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput ;
 
-   var isInArgList = this.isInArgList,
-       inComplexArgs = this.inComplexArgs,
-       argNames = this.argNames;
-   
-   this.isInArgList = true;
-   this.inComplexArgs = ICA_CATCH;
-   this.argNames = {};   
-
+   this.scope.setDeclMode(DECL_MODE_CATCH_PARAMS);
    var catParam = this.parsePattern();
+   if (this.lttype === 'op' && this.ltraw === '=')
+     this.err('catch.param.has.default.val');
+
+   this.scope.setDeclMode(DECL_MODE_NONE);
    if (catParam === null)
      this.err('catch.has.no.param');
-
-   this.isInArgList = isInArgList;
-   this.inComplexArgs = inComplexArgs;
-   this.argNames = this.argNames;
 
    if ( !this.expectType_soft (')') &&
          this.err('catch.has.no.end.paren' , startc,startLoc,catParam)  )
      return this.errorHandlerOutput    ;
 
    var catBlock = this.parseBlockStatement_dependent();
+
+   this.exitScope();
    return {
        type: 'CatchClause',
         loc: { start: startLoc, end: catBlock.loc.end },
        start: startc,
        end: catBlock.end,
        param: catParam ,
-       body: catBlock
+       body: catBlock/* ,y:-1*/
    };
 };
 
@@ -588,6 +608,8 @@ this . parseWithStatement = function() {
      return this.errorHandlerOutput ;
 
    if ( this.tight) this.err('with.strict')  ;
+
+   this.enterLexicalScope(false);
    this.fixupLabels(false);
 
    var startc = this.c0,
@@ -603,15 +625,21 @@ this . parseWithStatement = function() {
          this.err('with.has.no.end.paren',startc,startLoc,obj ) )
      return this.errorHandlerOutput ;
 
-   var nbody = this.parseStatement(!false);
+   var scopeFlags = this.scopeFlags;
 
+   this.scopeFlags &= CLEAR_IB;
+   var nbody = this.parseStatement(!false);
+   this.scopeFlags = scopeFlags;
+   
    this.foundStatement = !false;
+
+   var scope = this.exitScope();
    return  {
        type: 'WithStatement',
        loc: { start: startLoc, end: nbody.loc.end },
        start: startc,
        end: nbody.end,
-       object: obj, body: nbody
+       object: obj, body: nbody/*,scope:  scope ,y:-1*/
    };
 };
 
@@ -644,7 +672,7 @@ this . prseDbg = function () {
      start: startc,
      end: c
    };
-}
+};
 
 this.blck = function () { // blck ([]stmt)
   var stmts = [], stmt;

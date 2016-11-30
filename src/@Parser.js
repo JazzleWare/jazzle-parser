@@ -27,10 +27,6 @@ var Parser = function (src, isModule) {
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
-
-  this.isInArgList = false;
-  this.argNames = null;
-
   this.tight = !!isModule ;
 
   this.parenYS = null;
@@ -54,11 +50,11 @@ var Parser = function (src, isModule) {
   this.firstEA = null;
   this.firstEAContainer = null;
   this.defaultEA = null;
-  this.inComplexArgs = ICA_NONE;
 
   this.first__proto__ = false;
   this.firstNonTailRest = null;
 
+  this.scope = null;
   this.directive = DIRECTIVE_NONE;
 };
 

@@ -26,7 +26,7 @@ this.parseYield = function(context) {
   else { endI = c; endLoc = { line: li, column: col }; }  
 
   var n = { type: 'YieldExpression', argument: arg && core(arg), start: startc, delegate: deleg,
-           end: endI, loc: { start : startLoc, end: endLoc } }
+           end: endI, loc: { start : startLoc, end: endLoc }/* ,y:-1*/ }
 
   if ( !this.firstYS )
         this.firstYS = n;

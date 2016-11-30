@@ -78,6 +78,11 @@ this.parseExprHead = function (context) {
         return this.errorHandlerOutput ;
   }
      
+  // #if V
+  if (head.type === 'Identifier')
+    this.scope.reference(head.name);
+  // #end
+
   inner = core( head ) ;
 
   LOOP:
@@ -91,7 +96,7 @@ this.parseExprHead = function (context) {
             elem  = this.memberID();
             this.assert(elem);
             head = {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };
+                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false /* ,y:-1*/};
             inner =  head ;
             continue;
 
@@ -99,7 +104,7 @@ this.parseExprHead = function (context) {
             this.next() ;
             elem   = this. parseExpr(PREC_WITH_NO_OP,CONTEXT_NONE ) ;
             head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                      loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false };
+                      loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false /* ,y:-1*/};
             inner  = head ;
             if ( !this.expectType_soft (']') &&
                   this.err('mem.unfinished',head,firstParen,firstUnassignable) )
@@ -110,7 +115,7 @@ this.parseExprHead = function (context) {
          case '(':
             elem  = this. parseArgList() ;
             head =  { type: 'CallExpression', callee: inner , start: head.start, end: this.c,
-                      arguments: elem, loc: { start: head.loc.start, end: this.loc() } };
+                      arguments: elem, loc: { start: head.loc.start, end: this.loc() } /* ,y:-1*/};
             if ( !this.expectType_soft (')'   ) &&
                   this.err('call.args.is.unfinished',head,firstParen,firstUnassignable) )
               return this.errorHandlerOutput  ;
@@ -126,7 +131,7 @@ this.parseExprHead = function (context) {
                   start: head.start,
                    end: elem.end,
                   loc : { start: head.loc.start, end: elem.loc.end },
-                  tag : inner
+                  tag : inner/* ,y:-1*/
              };
  
              inner = head;
@@ -293,7 +298,7 @@ this.parseParen = function () {
   // if we have a list, the expression in parens is a seq
   if ( list )
        elem = { type: 'SequenceExpression', expressions: list, start: firstElem .start , end: elem.end,
-               loc: { start:  firstElem .loc.start , end: elem.loc.end } };
+               loc: { start:  firstElem .loc.start , end: elem.loc.end } /* ,y:-1*/};
   // otherwise update the expression's paren depth if it's needed
   if ( elem ) {
     elem = core(elem); 

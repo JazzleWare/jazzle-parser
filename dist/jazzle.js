@@ -30,10 +30,6 @@ var Parser = function (src, isModule) {
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
-
-  this.isInArgList = false;
-  this.argNames = null;
-
   this.tight = !!isModule ;
 
   this.parenYS = null;
@@ -57,14 +53,56 @@ var Parser = function (src, isModule) {
   this.firstEA = null;
   this.firstEAContainer = null;
   this.defaultEA = null;
-  this.inComplexArgs = ICA_NONE;
 
   this.first__proto__ = false;
   this.firstNonTailRest = null;
 
+  this.scope = null;
   this.directive = DIRECTIVE_NONE;
 };
 
+;
+function ParserScope(ownerParser, parent, type) {
+   Scope.call(
+     this, parent, type
+   );
+
+   this.idNames = {};
+   this.declMode = DECL_MODE_NONE;
+   this.isInComplexArgs = false;
+   this.parser = ownerParser;
+   this.strict = this.parser.tight;
+   
+   this.synth = false;
+}
+
+;
+function Scope(parent, type) {
+  this.type = type;
+
+  if (!parent) 
+    ASSERT.call(this.isConcrete(), 'sub-scopes must have a parent');
+
+  this.parent = parent;
+  this.funcScope = 
+     this.isConcrete() ? this : this.parent.funcScope;
+
+  this.definedNames = {};
+
+}
+
+Scope.createFunc = function(parent, decl) {
+  var scope = new Scope(parent, decl ?
+       SCOPE_TYPE_FUNCTION_DECLARATION :
+       SCOPE_TYPE_FUNCTION_EXPRESSION );
+  return scope;
+};
+
+Scope.createLexical = function(parent, loop) {
+   return new Scope(parent, !loop ?
+        SCOPE_TYPE_LEXICAL_SIMPLE :
+        SCOPE_TYPE_LEXICAL_LOOP);
+};
 ;
 var CHAR_1 = char2int('1'),
     CHAR_2 = char2int('2'),
@@ -149,6 +187,10 @@ var SCOPE_YIELD       = SCOPE_METH << 1;
 var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 var SCOPE_ARGS = SCOPE_CONSTRUCTOR << 1;
 var SCOPE_BLOCK = SCOPE_ARGS << 1;
+var SCOPE_IF = SCOPE_BLOCK << 1;
+
+var SCOPE_WITH_FUNC_DECL = SCOPE_BLOCK;
+var CLEAR_IB = ~SCOPE_WITH_FUNC_DECL;
 
 var  CONTEXT_FOR = 1,
      CONTEXT_ELEM = CONTEXT_FOR << 1 ,
@@ -186,12 +228,32 @@ var CLASS_MEM = 1;
 var STATIC_MEM =  5;
 
 var STRING_TYPE = typeof "string";
+var NUMBER_TYPE = typeof 0;
+var HAS = {}.hasOwnProperty;
 
-var ICA_CATCH = 1,
-    ICA_LEXICAL = 2,
-    ICA_NONE = 0,
-    ICA_ARROW = 4,
-    ICA_FUNCTION = 8;
+function ASSERT(cond, message) { if (!cond) throw new Error(message); }
+
+var SCOPE_TYPE_FUNCTION_EXPRESSION = 1;
+var SCOPE_TYPE_FUNCTION_DECLARATION = SCOPE_TYPE_FUNCTION_EXPRESSION|2;
+var SCOPE_TYPE_LEXICAL_SIMPLE = 8;
+var SCOPE_TYPE_LEXICAL_LOOP = SCOPE_TYPE_LEXICAL_SIMPLE|16;
+var SCOPE_TYPE_SCRIPT = 32;
+var SCOPE_TYPE_CATCH = 128;
+var SCOPE_TYPE_GLOBAL = 256;
+
+var DECL_MODE_VAR = 1,
+    DECL_MODE_LET = 2,
+    DECL_MODE_NONE = 0,
+    DECL_MODE_FUNCTION_PARAMS = 4|DECL_MODE_VAR,
+    DECL_MODE_CATCH_PARAMS = 8,
+    DECL_MODE_FUNC_NAME = 32|DECL_MODE_VAR;
+
+var DECL_NOT_FOUND = 
+  DECL_MODE_NONE;
+
+var DECL_BASE = DECL_MODE_VAR|DECL_MODE_LET;
+
+var DECL_DUPE = 64;
 
 var VDT_VOID = 1;
 var VDT_TYPEOF = 2;
@@ -203,7 +265,6 @@ var DIRECTIVE_TOP = 1,
     DIRECTIVE_NONE = 0,
     DIRECTIVE_MODULE = DIRECTIVE_TOP,
     DIRECTIVE_SCRIPT = DIRECTIVE_MODULE;
-
 ;
 var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
 function isIDHead(c) {
@@ -259,6 +320,8 @@ Errors['err.prop.init'] = "Illegal property initializer";
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
 // > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
 
+
+
 var PREC_WITH_NO_OP = 0;
 var PREC_SIMP_ASSIG = PREC_WITH_NO_OP + 1  ;
 var PREC_OP_ASSIG = PREC_SIMP_ASSIG + 40 ;
@@ -283,6 +346,18 @@ function isBin(prec) { return prec !== PREC_BOOL_OR && prec !== PREC_BOOL_AND ; 
 function isMMorAA(prec) { return prec < 0 ;  }
 function isQuestion(prec) { return prec === PREC_COND  ; }
 
+
+;
+
+var SCOPE_FUNC = 1, SCOPE_CATCH = 2, SCOPE_LEXICAL = 0;
+
+var REF_I = 1, REF_D = 2;
+
+var has = Object.hasOwnProperty; 
+
+var VAR_DEF = 1, LET_OR_CONST = 2;
+     
+var SCOPE_LOOP = 4;
 
 ;
 var IDS_ = fromRunLenCodes([0,8472,1,21,1,3948,2],
@@ -388,6 +463,14 @@ function hex(number) {
   return str;
 }
 
+function hex2(number) {
+  var str = "";
+  str = hexD[number&0xf] + str
+  str = hexD[(number>>=4)&0xf] + str ;
+  
+  return str;
+}
+
 function fromRunLenCodes(runLenArray, bitm) {
   bitm = bitm || [];
   var bit = runLenArray[0];
@@ -435,6 +518,23 @@ function toNum (n) {
          (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
 };
 
+function createObj(fromPrototype) {
+  function Obj() {}
+  Obj.prototype = fromPrototype;
+  return new Obj();
+}
+
+function getOwnN(obj, name, notHave) {
+  return HAS.call(obj, name) ? obj[name] : notHave;
+}
+
+function getOwn(obj, name) {
+  return getOwnN(obj, name, null);
+}
+
+function hasOwn(obj, name) {
+  return HAS.call(obj, name);
+}
 
 ;
  (function(){
@@ -539,7 +639,7 @@ this.parseArrayExpression = function (context ) {
   this.firstNonTailRest = firstNonTailRest;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list};
+           start: startc, end: this.c, elements : list /* ,y:-1*/};
 
   this. expectType ( ']' ) ;
 
@@ -615,7 +715,8 @@ this. asArrowFuncArg = function(arg) {
 
            if (this.tight)
              this.assert(!arguments_or_eval(arg.name));
-           return this.addArg(arg);
+
+           return this.scope.parserDeclare(arg);
 
         case 'ArrayExpression':
            if ( arg === this.firstParen && this.parenParamError() ) 
@@ -709,16 +810,10 @@ this . parseArrowFunctionExpression = function(arg,context)   {
   if ( this.unsatisfiedArg )
        this.unsatisfiedArg = null;
 
-  var prevArgNames = this.argNames;
-  this.argNames = {};
-  
-  var prevComplexArgs = this.inComplexArgs;
-  this.inComplexArgs = ICA_ARROW;
-
-  var prevNonSimpArg = this.firstNonSimpArg;
-  this.firstNonSimpArg = null;
-
   var tight = this.tight;
+  this.enterFuncScope(false);
+  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
+  this.enterComplex();
 
   switch ( arg.type ) {
     case 'Identifier':
@@ -760,15 +855,9 @@ this . parseArrowFunctionExpression = function(arg,context)   {
   else
     nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context) ;
 
-  this.argNames = prevArgNames;
-  this.scopeFlags = scopeFlags;
-  this.firstNonSimpArg = prevNonSimpArg;
-
+  this.exitScope();
   var params = core(arg);
-
   this.tight = tight;
-  this.inComplexArgs = prevComplexArgs;
-
   return { type: 'ArrowFunctionExpression',
            params: params ?  params.type === 'SequenceExpression' ? params.expressions : [params] : [] ,
            start: arg.start,
@@ -832,6 +921,10 @@ this .ensureSimpAssig_soft = function(head) {
     default:
        return false ;
   }
+};
+
+this.ensureSpreadToRestArgument_soft = function(head) {
+  return head.type !== 'AssignmentExpression';
 };
 
 // an arr-pat is always to the left of an assig;
@@ -908,7 +1001,7 @@ this .toAssig = function(head) {
 
      case 'SpreadElement':
        this.assert(head !== this.firstNonTailRest);
-       if (!this.ensureSimpAssig_soft(head.argument))
+       if (!this.ensureSpreadToRestArgument_soft(head.argument))
          this.err('rest.assig.non.id.arg', head);
 
        this.toAssig(head.argument);
@@ -971,7 +1064,7 @@ this .parseAssignment = function(head, context ) {
     var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR ) ;
     this.firstEA = firstEA;
     var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
-             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }};
+             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }/* ,y:-1*/};
 
     if ( this.firstYS ) { // if there was a YS in the right hand side; for example [ e = yield ] = -->yield 12<--is yield!
        if ( context & CONTEXT_PARAM ) { 
@@ -1136,7 +1229,7 @@ this. parseClass = function(context) {
                    loc: { start: nbodyStartLoc, end: endLoc },
                    start: nbodyStartc,
                     end: this.c,
-                    body: list } };
+                    body: list/* ,y:-1*/ }/* ,y:-1*/ };
 
   this.expectType('}');
   if ( canBeStatement ) { this.foundStatement = !false; }
@@ -1566,6 +1659,8 @@ this.parseImport = function() {
 },
 function(){
 this.err = function(errorType, errorTok, args) {
+   throw new Error("Error: " + errorType + "\n" + this.src.substr(this.c-120,120) + ">>>>" + this.src.charAt(this.c+1) + "<<<<" + this.src.substr(this.c, 120));
+
    if ( has.call(this.errorHandlers, errorType) )
      return this.handleError(this.errorHandlers[errorType], errorTok, args );
 
@@ -1859,6 +1954,10 @@ this . parseFor = function() {
 
   var scopeFlags = this.scopeFlags;
 
+  this.scopeFlags = SCOPE_BLOCK;
+
+  this.enterLexicalScope(true);
+
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
      case 'var':
         this.canBeStatement = !false;
@@ -1882,6 +1981,7 @@ this . parseFor = function() {
         head = this. parseVariableDeclaration(CONTEXT_FOR);
            break ;
   }
+  this.scopeFlags = scopeFlags;
 
   if ( head === null ) {
        headIsExpr = !false;
@@ -1923,7 +2023,7 @@ this . parseFor = function() {
                  this.err('for.iter.no.end.paren',start,startLoc,head,afterHead) )
             return this.errorHandlerOutput ;
 
-          this.scopeFlags &= ~SCOPE_BLOCK;
+          this.scopeFlags &= CLEAR_IB;
           this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
           nbody = this.parseStatement(!false);
           if ( !nbody && this.err('null.stmt','for.iter',
@@ -1933,8 +2033,9 @@ this . parseFor = function() {
           this.scopeFlags = scopeFlags;
 
           this.foundStatement = !false;
+          this.exitScope();
           return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
-            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody };
+            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody/* ,y:-1*/ };
 
        default:
           return this.err('for.iter.not.of.in',startc, startLoc,head);
@@ -1966,7 +2067,7 @@ this . parseFor = function() {
          this.err('for.simple.no.end.paren',startc,startLoc,head,afterHead,tail) )
     return this.errorHandlerOutput ;
 
-  this.scopeFlags &= ~SCOPE_BLOCK;
+  this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
   nbody = this.parseStatement(! false);
   if ( !nbody && this.err('null.stmt','for.simple',
@@ -1976,11 +2077,13 @@ this . parseFor = function() {
   this.scopeFlags = scopeFlags;
 
   this.foundStatement = !false;
+
+  this.exitScope();
   return { type: 'ForStatement', init: head && core(head), start : startc, end: nbody.end,
          test: afterHead && core(afterHead),
          loc: { start: startLoc, end: nbody.loc.end },
           update: tail && core(tail),
-         body: nbody };
+         body: nbody/* ,y:-1*/ };
 };
 
 
@@ -1994,18 +2097,13 @@ this .parseArgs  = function (argLen) {
         this.err('func.args.no.opening.paren',argLen) )
     return this.errorHandlerOutput  ;
 
-  this.inComplexArgs = this.tight ? ICA_FUNCTION : ICA_NONE;
   var firstNonSimpArg = null;
   while ( list.length !== argLen ) {
     elem = this.parsePattern();
     if ( elem ) {
        if ( this.lttype === 'op' && this.ltraw === '=' ) {
          elem = this.parseAssig(elem);
-         if ( elem.left.type === 'Identifier' ) {
-            if ( this.argNames[elem.left.name+'%'] !== null )
-                 this.err('func.args.has.dup',elem);
-         }
-         this.inComplexArgs = ICA_FUNCTION;
+         this.scope.makeComplex();
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
@@ -2024,7 +2122,7 @@ this .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        this.inComplexArgs = ICA_FUNCTION;
+        this.scope.makeComplex();
         elem = this.parseRestElement();
         list.push( elem  );
         if ( !firstNonSimpArg )
@@ -2047,39 +2145,20 @@ this .parseArgs  = function (argLen) {
   return list;
 };
 
-this .addArg = function(id) {
-  var inComplexArgs = this.inComplexArgs;
-  if (inComplexArgs === ICA_LEXICAL)
-    this.assert(id.name !== 'let');
-
-  var name = id.name + '%';
-  if ( has.call(this.argNames, name) ) {
-    if ( inComplexArgs )
-       this.err('func.args.has.dup',id);
-
-    if ( this.argNames[name] === null )
-      this.argNames[name] = id ; // this will be useful if the body has a strictness directive
-  }
-  else
-     this.argNames[name] = null ;
-};
-
 this .parseFunc = function(context, argListMode, argLen ) {
   var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
   var prevLabels = this.labels;
   var prevStrict = this.tight;
-  var prevInArgList = this.isInArgList;
-  var prevArgNames = this.argNames;
+
   var prevScopeFlags = this.scopeFlags;
   var prevYS = this.firstYS ;
   var prevNonSimpArg = this.firstNonSimpArg;
 
-  if ( !this.canBeStatement ) {
-    if ( !(this.scopeFlags & SCOPE_BLOCK) )
-      this.err('func.decl.not.in.block', startc, startLoc);
- 
+  if ( !this.canBeStatement ) 
     this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
-  }
+  else if ( !(this.scopeFlags & SCOPE_WITH_FUNC_DECL) &&
+            (this.tight || !(this.scopeFlags & SCOPE_IF)) )
+      this.err('func.decl.not.in.block', startc, startLoc);
 
   var isGen = false;
 
@@ -2106,7 +2185,9 @@ this .parseFunc = function(context, argListMode, argLen ) {
                   args: [context, argListMode, argLen] } ) )
           return this.errorHandlerOutput ;
 
-        currentFuncName = this.validateID(null);
+        this.scope.setDeclMode(DECL_MODE_VAR);
+        currentFuncName = this.parsePattern();
+
         if ( this.tight && arguments_or_eval(currentFuncName.name) &&
              this.err('binding.to.eval.or.arguments','func',
                 { s: startc, l: startLoc, labels: prevLabels, stmt: !false, strict: prevStrict, inArgsList: prevInArgList,
@@ -2115,7 +2196,11 @@ this .parseFunc = function(context, argListMode, argLen ) {
           return this.errorHandlerOutput ;
      }
      else if ( this. lttype === 'Identifier' ) {
-        currentFuncName = this.validateID(null);
+        this.enterLexicalScope(false);
+        this.scope.synth = true;
+        this.scope.setDeclMode(DECL_MODE_VAR);
+        currentFuncName = this.parsePattern();
+        
         if ( this.tight && arguments_or_eval(currentFuncName.name) &&
              this.err('binding.to.eval.or.arguments','func',
                 { s: startc, l: startLoc, labels: prevLabels, stmt: canBeStatement, strict: prevStrict, inArgsList: prevInArgList,
@@ -2132,12 +2217,13 @@ this .parseFunc = function(context, argListMode, argLen ) {
   if ( this.scopeFlags )
        this.scopeFlags = 0;
 
-  var prevComplexArgs = this.inComplexArgs;
-  this.isInArgList = !false;
-  this.argNames = {};
+  this.enterFuncScope(canBeStatement);
+  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
+  
   if ( isGen ) this.scopeFlags |= SCOPE_YIELD|SCOPE_ARGS;
   var argList = this.parseArgs(argLen) ;
-  this.isInArgList = false;
+  this.scope.setDeclMode(DECL_MODE_NONE);
+
   this.tight = this.tight || argListMode !== WHOLE_FUNCTION;
   this.scopeFlags = SCOPE_FUNCTION;
   if ( argListMode & METH_FUNCTION )
@@ -2148,7 +2234,8 @@ this .parseFunc = function(context, argListMode, argLen ) {
    
   if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
 
-  this.inComplexArgs = ICA_NONE;
+  this.labels = {};
+
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
             id: currentFuncName,
@@ -2164,13 +2251,13 @@ this .parseFunc = function(context, argListMode, argLen ) {
      this.foundStatement = !false;
 
   this.labels = prevLabels;
-  this.isInArgList = prevInArgList;
-  this.argNames = prevArgNames; 
+
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
   this.firstYS = prevYS;
   this.firstNonSimpArg = prevNonSimpArg;
-  this.inComplexArgs = prevComplexArgs;
+
+  this.exitScope();
 
   return  n  ;
 };
@@ -2193,7 +2280,7 @@ this.parseFuncBody = function(context) {
   var list = this.blck();
 
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
-           loc: { start: startLoc, end: this.loc() } };
+           loc: { start: startLoc, end: this.loc() }, scope: this.scope/* ,y:-1*/ };
 
   if ( ! this.expectType_soft ( '}' ) &&
          this.err('func.body.is.unfinished',n) )
@@ -2210,18 +2297,17 @@ this . makeStrict  = function() {
 
    this.tight = !false;
 
-   var argName = null;
-   for ( argName in this.argNames ) {
-        if ( this.argNames[argName] !== null )
-          this.err('func.args.has.dup',this.argNames[argName]);
+   var a = null, argNames = this.scope.definedNames;
+   for (a in argNames) {
+     var declType = argNames[a];
+     a = a.substring(0,a.length-1);
+     if (declType&DECL_DUPE)
+       this.err('func.args.has.dup',a);
 
-        argName = argName.substring(0,argName.length-1) ;
-        this.assert(!arguments_or_eval(argName));
-        this.validateID(argName);
-
+     ASSERT.call(this, !arguments_or_eval(a));
+     this.validateID(a);
    }
 };
-
 
 
 },
@@ -2652,6 +2738,7 @@ this.parseNewHead = function () {
        return head.val;
   }
 
+
   var inner = core( head ) ;
   while ( !false ) {
     switch (this. lttype) {
@@ -2662,7 +2749,7 @@ this.parseNewHead = function () {
 
           elem = this.memberID();
           head =   {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };
+                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false/* ,y:-1*/ };
           inner = head;
           continue;
 
@@ -2670,7 +2757,7 @@ this.parseNewHead = function () {
           this.next() ;
           elem = this.parseExpr(CONTEXT_NONE) ;
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false };
+                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false/* ,y:-1*/ };
           inner = head ;
           if ( !this.expectType_soft (']') ) {
             head = this.err('mem.unfinished',startc,startLoc,head)  ;
@@ -2686,7 +2773,7 @@ this.parseNewHead = function () {
        case '(':
           elem = this. parseArgList();
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
-                    loc: { start: startLoc, end: this.loc() }, arguments: elem };
+                    loc: { start: startLoc, end: this.loc() }, arguments: elem /* ,y:-1*/};
           if ( !this. expectType_soft (')') ) {
             inner = this.err('new.args.is.unfinished',startc,startLoc,inner) ;
             if ( inner.type === ERR_RESUME )
@@ -2705,13 +2792,13 @@ this.parseNewHead = function () {
                 start: head.start,
                  end: elem.end,
                 loc : { start: head.loc.start, end: elem.loc.end },
-                tag : inner
+                tag : inner /* ,y:-1*/
             };
             inner = head;
             continue ;
 
         default: return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
-                 loc: { start: startLoc, end: head.loc.end }, arguments : [] };
+                 loc: { start: startLoc, end: head.loc.end }, arguments : [] /* ,y:-1*/};
 
      }
   }
@@ -3235,7 +3322,7 @@ this.parseExpr = function (context) {
     } while (this.lttype === ',' ) ;
 
     return  { type: 'SequenceExpression', expressions: e, start: head.start, end: lastExpr.end,
-              loc: { start : head.loc.start, end : lastExpr.loc.end} };
+              loc: { start : head.loc.start, end : lastExpr.loc.end}/* ,y:-1*/ };
   }
 
   return head ;
@@ -3249,7 +3336,7 @@ this .parseCond = function(cond,context ) {
 
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
     return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
-             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt) };
+             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt) /* ,y:-1*/};
 };
 
 this .parseUnaryExpression = function(context ) {
@@ -3445,7 +3532,7 @@ this.parseNonSeqExpr = function (prec, context  ) {
                    end: right.loc.end
                 },
                 left: core(head),
-                right: core(right)
+                right: core(right)/* ,y:-1*/
               };
     }
   
@@ -3547,12 +3634,10 @@ this.readNumberLiteral = function (peek) {
         else {
           b = this.c ;
           this.c = c ;
-          if ( this.frac(b) ) return;
-          else  {
+          if ( !this.frac(b) ) {
              this.ltval = 0;
              this.ltraw = '0';
           }
-          return  ;
         }
     }
   }
@@ -3567,8 +3652,8 @@ this.readNumberLiteral = function (peek) {
       this.c = c;
     }
   }
-  
-  if ( ( c < len && isIDHead(src.charCodeAt(c))) ) this.err('num.idhead.tail') ; // needless
+  // needless as it will be an error nevertheless, but it is still requir'd
+  if ( ( this.c < len && isIDHead(src.charCodeAt(this.c))) ) this.err('num.idhead.tail') ; 
 };
 
 this . frac = function(n) {
@@ -3613,7 +3698,7 @@ this .parseMeth = function(name, isClass) {
      return { type: 'Property', key: core(name), start: name.start, end: val.end,
               kind: 'init', computed: name.type === PAREN,
               loc: { start: name.loc.start, end : val.loc.end },
-              method: !false, shorthand: false, value : val };
+              method: !false, shorthand: false, value : val/* ,y:-1*/ };
    }
 
    var kind = 'method' ;
@@ -3634,7 +3719,7 @@ this .parseMeth = function(name, isClass) {
    return { type: 'MethodDefinition', key: core(name), start: name.start, end: val.end,
             kind: kind, computed: name.type === PAREN,
             loc: { start: name.loc.start, end: val.loc.end },
-            value: val,    'static': false };
+            value: val,    'static': false/* ,y:-1*/ };
 };
 
 this .parseGen = function(isClass ) {
@@ -3675,13 +3760,13 @@ this .parseGen = function(isClass ) {
      return { type: 'Property', key: core(name), start: startc, end: val.end,
               kind: 'init', computed: name.type === PAREN,
               loc: { start: startLoc , end : val.loc.end },
-              method: !false, shorthand: false, value : val };
+              method: !false, shorthand: false, value : val/* ,y:-1*/ };
   }
 
   val = this.parseFunc(  CONTEXT_NONE , ARGLIST_AND_BODY_GEN|METH_FUNCTION, ANY_ARG_LEN )
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: 'method', computed: name.type === PAREN,
-           loc : { start: startLoc, end: val.loc.end },    'static': false, value: val };
+           loc : { start: startLoc, end: val.loc.end },    'static': false, value: val/* ,y:-1*/ };
 };
 
 this . parseSetGet= function(isClass) {
@@ -3721,7 +3806,7 @@ this . parseSetGet= function(isClass) {
        return { type: 'Property', key: core(name), start: startc, end: val.end,
              kind: kind, computed: name.type === PAREN,
              loc: { start: startLoc, end: val.loc.end }, method: false,
-             shorthand: false, value : val };
+             shorthand: false, value : val/* ,y:-1*/ };
   }
   
   if ( strName === 'constructor' &&
@@ -3732,7 +3817,7 @@ this . parseSetGet= function(isClass) {
 
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: kind, computed: name.type === PAREN,
-           loc : { start: startLoc, end: val.loc.end }, 'static': false, value: val };
+           loc : { start: startLoc, end: val.loc.end }, 'static': false, value: val/* ,y:-1*/ };
 };
 
 
@@ -3808,7 +3893,7 @@ this.parseObjectExpression = function (context) {
   } while ( this.lttype === ',' );
 
   elem = { properties: list, type: 'ObjectExpression', start: startc,
-     end: this.c , loc: { start: startLoc, end: this.loc() }};
+     end: this.c , loc: { start: startLoc, end: this.loc() }/* ,y:-1*/};
 
   if ( ! this.expectType_soft ('}') && this.err('obj.unfinished',{
     obj: elem, asig: firstUnassignable, ea: firstEA,
@@ -3880,7 +3965,7 @@ this.parseProperty = function (name, context) {
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
          val = { type: 'Property', start: name.start, key: core(name), end: val.end,
                   kind: 'init', loc: { start: name.loc.start, end: val.loc.end }, computed: name.type === PAREN ,
-                  method: false, shorthand: false, value: core(val) };
+                  method: false, shorthand: false, value: core(val)/* ,y:-1*/ };
          if ( __proto__ )
             this.first__proto__ = val;
 
@@ -3911,7 +3996,7 @@ this.parseProperty = function (name, context) {
 
           return { type: 'Property', key: name, start: val.start, end: val.end,
                     loc: val.loc, kind: 'init',  shorthand: !false, method: false,
-                   value: val, computed: false };
+                   value: val, computed: false/* ,y:-1*/ };
   }
 
        return n   ;
@@ -3926,10 +4011,8 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
+       this.scope.parserDeclare(id);
        if (this.tight) this.assert(!arguments_or_eval(id.name));
-       if ( this.isInArgList ) 
-          this.addArg(id);
- 
        return id;
 
     case '[':
@@ -3948,9 +4031,7 @@ this. parseArrayPattern = function() {
       elem = null,
       list = [];
 
-  if ( this.isInArgList ) {
-     this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
-  }
+  this.enterComplex();
 
   this.next();
   while ( !false ) {
@@ -3976,7 +4057,7 @@ this. parseArrayPattern = function() {
   } 
 
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list};
+           start: startc, end: this.c, elements : list/* ,y:-1*/};
 
   if ( !this. expectType_soft ( ']' ) &&
         this.err('pat.array.is.unfinished',elem) )
@@ -3994,10 +4075,8 @@ this.parseObjectPattern  = function() {
     var val = null;
     var name = null;
 
-    if ( this.isInArgList ) {
-         this.inComplexArgs = this.inComplexArgs || ICA_FUNCTION;
-    }
-
+    this.enterComplex();
+    
     LOOP:
     do {
       sh = false;
@@ -4033,7 +4112,7 @@ this.parseObjectPattern  = function() {
       list.push({ type: 'Property', start: name.start, key: core(name), end: val.end,
                   loc: { start: name.loc.start, end: val.loc.end },
                  kind: 'init', computed: name.type === PAREN, value: val,
-               method: false, shorthand: sh });
+               method: false, shorthand: sh/* ,y:-1*/ });
 
     } while ( this.lttype === ',' );
 
@@ -4041,7 +4120,7 @@ this.parseObjectPattern  = function() {
              loc: { start: startLoc, end: this.loc() },
              start: startc,
               end: this.c,
-              properties: list };
+              properties: list/* ,y:-1*/ };
 
     if ( ! this.expectType_soft ('}') && this.err('pat.obj.is.unfinished',n) )
       return this.errorHandlerOutput ;
@@ -4053,7 +4132,7 @@ this .parseAssig = function (head) {
     this.next() ;
     var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
     return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
-           right: core(e), loc: { start: head.loc.start, end: e.loc.end } };
+           right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
 };
 
 
@@ -4160,6 +4239,7 @@ this.parseExprHead = function (context) {
         return this.errorHandlerOutput ;
   }
      
+
   inner = core( head ) ;
 
   LOOP:
@@ -4173,7 +4253,7 @@ this.parseExprHead = function (context) {
             elem  = this.memberID();
             this.assert(elem);
             head = {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };
+                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false /* ,y:-1*/};
             inner =  head ;
             continue;
 
@@ -4181,7 +4261,7 @@ this.parseExprHead = function (context) {
             this.next() ;
             elem   = this. parseExpr(PREC_WITH_NO_OP,CONTEXT_NONE ) ;
             head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                      loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false };
+                      loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false /* ,y:-1*/};
             inner  = head ;
             if ( !this.expectType_soft (']') &&
                   this.err('mem.unfinished',head,firstParen,firstUnassignable) )
@@ -4192,7 +4272,7 @@ this.parseExprHead = function (context) {
          case '(':
             elem  = this. parseArgList() ;
             head =  { type: 'CallExpression', callee: inner , start: head.start, end: this.c,
-                      arguments: elem, loc: { start: head.loc.start, end: this.loc() } };
+                      arguments: elem, loc: { start: head.loc.start, end: this.loc() } /* ,y:-1*/};
             if ( !this.expectType_soft (')'   ) &&
                   this.err('call.args.is.unfinished',head,firstParen,firstUnassignable) )
               return this.errorHandlerOutput  ;
@@ -4208,7 +4288,7 @@ this.parseExprHead = function (context) {
                   start: head.start,
                    end: elem.end,
                   loc : { start: head.loc.start, end: elem.loc.end },
-                  tag : inner
+                  tag : inner/* ,y:-1*/
              };
  
              inner = head;
@@ -4375,7 +4455,7 @@ this.parseParen = function () {
   // if we have a list, the expression in parens is a seq
   if ( list )
        elem = { type: 'SequenceExpression', expressions: list, start: firstElem .start , end: elem.end,
-               loc: { start:  firstElem .loc.start , end: elem.loc.end } };
+               loc: { start:  firstElem .loc.start , end: elem.loc.end } /* ,y:-1*/};
   // otherwise update the expression's paren depth if it's needed
   if ( elem ) {
     elem = core(elem); 
@@ -4454,6 +4534,10 @@ function(){
 this.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
+  var globalScope = null;
+
+ 
+  this.scope = new ParserScope(this, globalScope, SCOPE_TYPE_SCRIPT);
   this.next();
   this.scopeFlags = SCOPE_BLOCK;
 
@@ -4474,6 +4558,7 @@ this.parseProgram = function () {
     endLoc = startLoc = { line: 0, column: 0 };
   }
         
+  alwaysResolveInTheParentScope(this.scope);
   var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
            loc: { start: startLoc, end: endLoc } };
 
@@ -4484,6 +4569,8 @@ this.parseProgram = function () {
   return n;
 };
 
+function alwaysResolveInTheParentScope(scope) {
+}
 
 
 },
@@ -4672,6 +4759,32 @@ this.parseRegExpLiteral = function() {
 
 },
 function(){
+this.enterFuncScope = function(decl) { this.scope = this.scope.spawnFunc(decl); };
+
+this.enterComplex = function() {
+   if (this.scope.declMode === DECL_MODE_FUNCTION_PARAMS ||
+       this.scope.declMode & DECL_MODE_CATCH_PARAMS)
+     this.scope.makeComplex();
+};
+
+this.enterLexicalScope = function(loop) { this.scope = this.scope.spawnLexical(loop); };
+
+this.setDeclModeByName = function(modeName) {
+  this.scope.setDeclMode(modeName === 'var' ? DECL_MODE_VAR : DECL_MODE_LET);
+};
+
+this.exitScope = function() {
+  var scope = this.scope;
+  this.scope.finish();
+  this.scope = this.scope.parent;
+  if (this.scope.synth)
+    this.scope = this.scope.parent;
+  return scope;
+};
+
+
+},
+function(){
 this.semiLoc = function () {
   switch (this.lttype) {
     case ';':
@@ -4836,6 +4949,7 @@ this.parseIfStatement = function () {
     return this.errorHandlerOutput;
 
   this.fixupLabels(false);
+  this.enterLexicalScope(false); 
 
   var startc = this.c0,
       startLoc  = this.locBegin();
@@ -4850,8 +4964,8 @@ this.parseIfStatement = function () {
     return this.errorHandlerOutput ;
 
   var scopeFlags = this.scopeFlags ;
-  this.scopeFlags &= ~SCOPE_BLOCK;
-  this.scopeFlags |= SCOPE_BREAK; 
+  this.scopeFlags &= CLEAR_IB;
+  this.scopeFlags |= SCOPE_IF;
   var nbody = this. parseStatement (false);
   this.scopeFlags = scopeFlags ;
   var alt = null;
@@ -4860,12 +4974,15 @@ this.parseIfStatement = function () {
      alt = this.parseStatement(false);
   }
 
+  var scope = this.exitScope(); 
+
   this.foundStatement = !false;
   return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,
-     loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt };
+     loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt/*,scope:  scope  ,y:-1*/};
 };
 
 this.parseWhileStatement = function () {
+   this.enterLexicalScope(true);
    if ( ! this.ensureStmt_soft () &&
           this.err('not.stmt','while') )
      return this.errorHandlerOutput;
@@ -4885,18 +5002,21 @@ this.parseWhileStatement = function () {
      return this.errorHandlerOutput;
 
    var scopeFlags = this.scopeFlags;
-   this.scopeFlags &= ~SCOPE_BLOCK;
+   this.scopeFlags &= CLEAR_IB;
    this.scopeFlags |= (SCOPE_CONTINUE|SCOPE_BREAK );
    var nbody = this.parseStatement(false);
    this.scopeFlags = scopeFlags ;
    this.foundStatement = !false;
 
+   var scope = this.exitScope();
    return { type: 'WhileStatement', test: cond, start: startc, end: nbody.end,
-       loc: { start: startLoc, end: nbody.loc.end }, body:nbody };
+       loc: { start: startLoc, end: nbody.loc.end }, body:nbody/*,scope:  scope ,y:-1*/ };
 };
 
 this.parseBlckStatement = function () {
   this.fixupLabels(false);
+
+  this.enterLexicalScope(false); 
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next();
@@ -4904,12 +5024,13 @@ this.parseBlckStatement = function () {
   this.scopeFlags |= SCOPE_BLOCK;
 
   var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() } };
+        loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/};
 
   if ( !this.expectType_soft ('}' ) &&
         this.err('block.unfinished',n) )
     return this.errorHandlerOutput ;
 
+  this.exitScope(); 
   this.scopeFlags = scopeFlags;
   return n;
 };
@@ -4919,13 +5040,14 @@ this.parseDoWhileStatement = function () {
         this.err('not.stmt','do-while') )
     return this.errorHandlerOutput ;
 
+  this.enterLexicalScope(true); 
   this.fixupLabels(!false);
 
   var startc = this.c0,
       startLoc = this.locBegin() ;
   this.next() ;
   var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= ~SCOPE_BLOCK;
+  this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= (SCOPE_BREAK| SCOPE_CONTINUE);
   var nbody = this.parseStatement (!false) ;
   this.scopeFlags = scopeFlags;
@@ -4951,8 +5073,10 @@ this.parseDoWhileStatement = function () {
   }
 
  this.foundStatement = !false;
+
+ this.exitScope(); 
  return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
-          body: nbody, loc: { start: startLoc, end: { line: li, column: col } } } ;
+          body: nbody, loc: { start: startLoc, end: { line: li, column: col } } /* ,y:-1*/} ;
 };
 
 this.parseContinueStatement = function () {
@@ -5007,10 +5131,6 @@ this.parseBreakStatement = function () {
      return this.errorHandlerOutput ;
 
    this.fixupLabels(false);
-   if (!(this.scopeFlags & SCOPE_BREAK) &&
-         this.err('break.not.in.breakable') )
-     return this.errorHandlerOutput ;
-
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;
 
@@ -5034,6 +5154,10 @@ this.parseBreakStatement = function () {
        return { type: 'BreakStatement', label: label, start: startc, end: semi || label.end,
            loc: { start: startLoc, end: semiLoc || label.loc.end } };
    }
+   else if (!(this.scopeFlags & SCOPE_BREAK) &&
+         this.err('break.not.in.breakable') )
+     return this.errorHandlerOutput ;
+
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
    if ( !semiLoc && !this.newLineBeforeLookAhead &&
@@ -5073,7 +5197,8 @@ this.parseSwitchStatement = function () {
         this.err('switch.has.no.opening.curly',startc,stratLoc) )
     return this.errorHandlerOutput ;
 
-  this.scopeFlags |=  SCOPE_BREAK;
+  this.enterLexicalScope(false); 
+  this.scopeFlags |=  (SCOPE_BREAK|SCOPE_BLOCK);
   while ( elem = this.parseSwitchCase()) {
     if (elem.test === null) {
        if (hasDefault ) this.err('switch.has.a.dup.default',elem );
@@ -5084,8 +5209,10 @@ this.parseSwitchStatement = function () {
 
   this.scopeFlags = scopeFlags ;
   this.foundStatement = !false;
+
+  var scope = this.exitScope(); 
   var n = { type: 'SwitchStatement', cases: cases, start: startc, discriminant: switchExpr,
-            end: this.c, loc: { start: startLoc, end: this.loc() } };
+            end: this.c, loc: { start: startLoc, end: this.loc() }/*,scope:  scope  ,y:-1*/};
   if ( !this.expectType_soft ('}' ) &&
         this.err('switch.unfinished',n) )
     return this.errorHandlerOutput ;
@@ -5127,7 +5254,7 @@ this.parseSwitchCase = function () {
   nbody = this.blck();
   var last = nbody.length ? nbody[nbody.length-1] : null;
   return { type: 'SwitchCase', test: cond, start: startc, end: last ? last.end : c,
-     loc: { start: startLoc, end: last ? last.loc.end : { line: li, column: col } }, consequent: nbody };
+     loc: { start: startLoc, end: last ? last.loc.end : { line: li, column: col } }, consequent: nbody/* ,y:-1*/ };
 };
 
 this.parseReturnStatement = function () {
@@ -5221,7 +5348,7 @@ this. parseBlockStatement_dependent = function() {
     this.scopeFlags |= SCOPE_BLOCK;
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() } };
+        loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/ };
     if ( ! this.expectType_soft ('}') &&
          this.err('block.dependent.is.unfinished' , n)  )
       return this.errorHandlerOutput;
@@ -5240,14 +5367,19 @@ this.parseTryStatement = function () {
       startLoc = this.locBegin();
 
   this.next() ;
+
+  this.enterLexicalScope(false); 
   var tryBlock = this.parseBlockStatement_dependent();
+  this.exitScope(); 
   var finBlock = null, catBlock  = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'catch')
     catBlock = this.parseCatchClause();
 
   if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
      this.next();
+     this.enterLexicalScope(false); 
      finBlock = this.parseBlockStatement_dependent();
+     this.exitScope(); 
   }
 
   var finOrCat = finBlock || catBlock;
@@ -5257,7 +5389,11 @@ this.parseTryStatement = function () {
 
   this.foundStatement = !false;
   return  { type: 'TryStatement', block: tryBlock, start: startc, end: finOrCat.end,
-            handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end } };
+            handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end } /* ,y:-1*/};
+};
+
+this.enterCatchScope = function() {
+  this.scope = this.scope.spawnCatch();
 };
 
 this. parseCatchClause = function () {
@@ -5265,38 +5401,35 @@ this. parseCatchClause = function () {
        startLoc = this.locBegin();
 
    this.next();
+
+   this.enterCatchScope();
    if ( !this.expectType_soft ('(') &&
         this.err('catch.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput ;
 
-   var isInArgList = this.isInArgList,
-       inComplexArgs = this.inComplexArgs,
-       argNames = this.argNames;
-   
-   this.isInArgList = true;
-   this.inComplexArgs = ICA_CATCH;
-   this.argNames = {};   
-
+   this.scope.setDeclMode(DECL_MODE_CATCH_PARAMS);
    var catParam = this.parsePattern();
+   if (this.lttype === 'op' && this.ltraw === '=')
+     this.err('catch.param.has.default.val');
+
+   this.scope.setDeclMode(DECL_MODE_NONE);
    if (catParam === null)
      this.err('catch.has.no.param');
-
-   this.isInArgList = isInArgList;
-   this.inComplexArgs = inComplexArgs;
-   this.argNames = this.argNames;
 
    if ( !this.expectType_soft (')') &&
          this.err('catch.has.no.end.paren' , startc,startLoc,catParam)  )
      return this.errorHandlerOutput    ;
 
    var catBlock = this.parseBlockStatement_dependent();
+
+   this.exitScope();
    return {
        type: 'CatchClause',
         loc: { start: startLoc, end: catBlock.loc.end },
        start: startc,
        end: catBlock.end,
        param: catParam ,
-       body: catBlock
+       body: catBlock/* ,y:-1*/
    };
 };
 
@@ -5306,6 +5439,8 @@ this . parseWithStatement = function() {
      return this.errorHandlerOutput ;
 
    if ( this.tight) this.err('with.strict')  ;
+
+   this.enterLexicalScope(false);
    this.fixupLabels(false);
 
    var startc = this.c0,
@@ -5321,15 +5456,21 @@ this . parseWithStatement = function() {
          this.err('with.has.no.end.paren',startc,startLoc,obj ) )
      return this.errorHandlerOutput ;
 
-   var nbody = this.parseStatement(!false);
+   var scopeFlags = this.scopeFlags;
 
+   this.scopeFlags &= CLEAR_IB;
+   var nbody = this.parseStatement(!false);
+   this.scopeFlags = scopeFlags;
+   
    this.foundStatement = !false;
+
+   var scope = this.exitScope();
    return  {
        type: 'WithStatement',
        loc: { start: startLoc, end: nbody.loc.end },
        start: startc,
        end: nbody.end,
-       object: obj, body: nbody
+       object: obj, body: nbody/*,scope:  scope ,y:-1*/
    };
 };
 
@@ -5362,7 +5503,7 @@ this . prseDbg = function () {
      start: startc,
      end: c
    };
-}
+};
 
 this.blck = function () { // blck ([]stmt)
   var stmts = [], stmt;
@@ -5457,7 +5598,7 @@ this . parseTemplateLiteral = function() {
               // a lookahead before starting to parse an actual expression
               this.next(); 
                            
-              templExpressions.push( this.parseExpr(CONTEXT_NONE) );
+              templExpressions.push( core(this.parseExpr(CONTEXT_NONE)) );
               if ( this. lttype !== '}')
                 this.err('templ.expr.is.unfinished') ;
 
@@ -5537,7 +5678,7 @@ this . parseTemplateLiteral = function() {
   this.col ++ ;
 
   var n = { type: 'TemplateLiteral', start: startc, quasis: templStr, end: c,
-       expressions: templExpressions , loc: { start: startLoc, end : this.loc() } };
+       expressions: templExpressions , loc: { start: startLoc, end : this.loc() } /* ,y:-1*/};
 
   this.c = c;
   this.next(); // prepare the next token  
@@ -5702,41 +5843,21 @@ this . parseVariableDeclaration = function(context) {
 
      this.next () ;
 
-     var lexical = kind !== 'var';
-     var isInArgList = false, inComplexArgs = 0, argNames = null;
-
-     if ( lexical ) {
-       isInArgList = this.isInArgList;
-       this.isInArgList = true;
-       inComplexArgs = this.inComplexArgs ;
-       this.inComplexArgs = ICA_LEXICAL;
-       argNames = this.argNames;
-       this.argNames = {};
-     }
+     this.setDeclModeByName(kind);
+     
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
        if (kind !== 'let' && 
            this.err('var.has.no.declarators',startc,startLoc,kind,elem,context,isInArgsList,inComplexArgs,argNames  ) )
          return this.errorHandlerOutput;
 
-       if ( lexical ) {
-         this.isInArgsList = isInArgList;
-         this.inComplexArgs = inComplexArgs;
-         this.argNames = argNames;
-       }
-
        return null; 
      }
 
      var list = [elem];
-     var isConst = kind === 'const';
      
-     if (isConst) {
-        if (!(this.scopeFlags & SCOPE_BLOCK))
-          this.err('let.decl.not.in.block');
-     }
-
-     if ( isConst && elem.init === null ) {
+     var isConst = kind === 'const';
+     if ( isConst  && elem.init === null ) {
        this.assert(context & CONTEXT_FOR);
        this.unsatisfiedAssignment = elem;
      }
@@ -5752,12 +5873,6 @@ this . parseVariableDeclaration = function(context) {
             if (isConst) this.assert(elem.init !== null);
             list.push(elem);
           }
-
-     if ( lexical ) {
-       this.isInArgsList = isInArgList;
-       this.inComplexArgs = inComplexArgs;
-       this.argNames = argNames;
-     }
 
      var lastItem = list[list.length-1];
      var endI = 0, endLoc = null;
@@ -5779,7 +5894,7 @@ this . parseVariableDeclaration = function(context) {
      this.foundStatement  = !false ;
 
      return { declarations: list, type: 'VariableDeclaration', start: startc, end: endI,
-              loc: { start: startLoc, end: endLoc }, kind: kind };
+              loc: { start: startLoc, end: endLoc }, kind: kind /* ,y:-1*/};
 };
 
 this . parseVariableDeclarator = function(context) {
@@ -5805,7 +5920,7 @@ this . parseVariableDeclarator = function(context) {
 
   var initOrHead = init || head;
   return { type: 'VariableDeclarator', id: head, start: head.start, end: initOrHead.end,
-           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init) };
+           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init)/* ,y:-1*/ };
 };
 
 
@@ -5839,7 +5954,7 @@ this.parseYield = function(context) {
   else { endI = c; endLoc = { line: li, column: col }; }  
 
   var n = { type: 'YieldExpression', argument: arg && core(arg), start: startc, delegate: deleg,
-           end: endI, loc: { start : startLoc, end: endLoc } }
+           end: endI, loc: { start : startLoc, end: endLoc }/* ,y:-1*/ }
 
   if ( !this.firstYS )
         this.firstYS = n;
@@ -5850,6 +5965,240 @@ this.parseYield = function(context) {
 
 
 }]  ],
+[ParserScope.prototype, [function(){
+ParserScope.prototype = createObj(Scope.prototype);
+
+ParserScope.prototype.spawnFunc = function(fundecl) {
+  return new ParserScope(
+    this.parser,
+    this,
+    fundecl ?
+      SCOPE_TYPE_FUNCTION_DECLARATION :
+      SCOPE_TYPE_FUNCTION_EXPRESSION
+  );
+};
+
+ParserScope.prototype.spawnLexical = function(loop) {
+  return new ParserScope(
+    this.parser,
+    this,
+    !loop ?
+     SCOPE_TYPE_LEXICAL_SIMPLE :
+     SCOPE_TYPE_LEXICAL_LOOP );
+};
+
+ParserScope.prototype.spawnCatch = function() {
+  return new ParserScope(
+    this.parser,
+    this,
+    SCOPE_TYPE_CATCH );
+};
+
+ParserScope.prototype.setDeclMode = function(mode) {
+  this.declMode = mode;
+};
+
+ParserScope.prototype.makeComplex = function() {
+  // complex params are treated as let by the emitter
+  if (this.declMode & DECL_MODE_CATCH_PARAMS) {
+    this.declMode |= DECL_MODE_LET; 
+    return;
+  }
+
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
+  if (this.mustNotHaveAnyDupeParams()) return;
+  for (var a in this.definedNames) {
+     if (!HAS.call(this.definedNames, a)) continue;
+     if (this.definedNames[a] & DECL_DUPE) this.parser.err('func.args.has.dup', a);
+  }
+  this.isInComplexArgs = true;
+};
+
+ParserScope.prototype.parserDeclare = function(id) {
+   ASSERT.call(this, this.declMode !== DECL_MODE_NONE, 'Unknown declMode');
+   if (this.declMode === DECL_MODE_FUNCTION_PARAMS) {
+     if (!this.addParam(id)) // if it was not added, i.e., it is a duplicate
+       return;
+   }
+   else if (this.declMode === DECL_MODE_LET) {
+     if ( !(this.parser.scopeFlags & SCOPE_BLOCK) )
+       this.err('let.decl.not.in.block', id );
+
+     if ( id.name === 'let' )
+       this.err('lexical.name.is.let');
+   }
+
+   this.declare(id, this.declMode);
+};
+
+ParserScope.prototype.mustNotHaveAnyDupeParams = function() {
+  return this.strict || this.isInComplexArgs;
+};
+
+ParserScope.prototype.insertDecl0 = function(id) {
+  var name = id.name + '%';
+  this.insertID(id);
+  this.definedNames[name] = this.declMode;
+};
+
+ParserScope.prototype.err = function(errType, errParams) {
+  return this.parser.err(errType, errParams);
+};
+ 
+ParserScope.prototype.hasParam = function(name) {
+  return HAS.call(this.idNames, name+'%');
+};
+
+ParserScope.prototype.addParam = function(id) {
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
+  var name = id.name + '%';
+  if ( HAS.call(this.definedNames, name) ) {
+    if (this.mustNotHaveAnyDupeParams())
+      this.err('func.args.has.dup', id);
+
+    // TODO: this can be avoided with a dedicated 'dupes' dictionary,
+    // but then again, that might be too much.
+    if (!(this.definedNames[name] & DECL_DUPE)) {
+      this.insertID(id);
+      this.definedNames[name] |= DECL_DUPE ;
+    }
+
+    return false;
+  }
+
+  return true;
+};
+
+ParserScope.prototype.ensureParamIsNotDupe = function(id) {
+   var name = id.name + '%';
+
+   if (HAS.call(this.idNames, name) && this.idNames[name])
+     this.parser.err('func.args.has.dup', id );
+};
+
+
+}]  ],
+[Scope.prototype, [function(){
+
+
+this.declare = function(name, declType) {
+  return declare[declType].call(this, name, declType);
+};
+
+
+this.err = function(errType, errParams) {
+   if (errType === 'exists.in.current') {
+     var decl = errParams.newDecl,
+         existingDecl = errParams.existingDecl;
+
+     ASSERT.call(this, false, 
+        'name "'+decl.name+'" is a "'+decl.type+
+        '" and can not override the "'+existingDecl.type+
+        '" that exists in the current scope');
+   }
+   else
+     ASSERT.call(this, false, errType + '; PARAMS='+errParams);
+};
+
+this.hoistIdToScope = function(id, targetScope  ) { 
+   var scope = this;
+   
+   while (true) {
+     ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
+     if ( !scope.insertDecl(id  ) )
+       break;
+
+     if (scope === targetScope)
+       break;
+
+     scope = scope.parent;
+   }
+};
+   
+var declare = {};
+
+declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNC_NAME] =
+declare[DECL_MODE_VAR] = function(id, declType) {
+   var func = this.funcScope;
+
+   this.hoistIdToScope(id, func  );
+
+};
+
+declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
+declare[DECL_MODE_LET] = function(id, declType) {
+   this.insertDecl(id);
+};
+
+declare[DECL_MODE_CATCH_PARAMS] = function(id, declType) {
+  var name = id.name + '%';
+  this.insertDecl(id);
+};
+ 
+// returns false if the variable was not inserted
+// in the current scope because of having
+// the same name as a catch var in the scope
+// (this implies the scope must be a catch scope for this to happen)
+this.insertDecl = function(id ) {
+
+  var declType =  this.declMode; 
+  var existingDecl = this.findDeclInScope(id.name);
+  var func = this.funcScope;
+
+  if (existingDecl !== DECL_NOT_FOUND) {
+    var existingType = existingDecl;
+
+    // if a var name in a catch scope has the same name as a catch var,
+    // it will not get hoisted any further
+    if ((declType & DECL_MODE_VAR) && (existingType & DECL_MODE_CATCH_PARAMS))
+       return false;
+
+    // if a var decl is overriding a var decl of the same name, no matter what scope we are in,
+    // it's not a problem.
+    if ((declType & DECL_MODE_VAR) && (existingType & DECL_MODE_VAR))
+      return true; 
+     
+    this.err('exists.in.current', { id: id });
+  }
+
+  this.insertDecl0(id);
+
+  return true;
+};
+
+this.insertID = function(id) {
+  this.idNames[id.name+'%'] = id;
+};
+
+
+this.findDeclInScope = function(name) {
+  name += '%';
+  return HAS.call(this.definedNames, name) ? 
+     this.definedNames[name] : DECL_NOT_FOUND;
+};
+
+this.finish = function() {
+};
+    
+
+this.isLoop = function() { return this.type & SCOPE_TYPE_LEXICAL_LOOP; };
+this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
+this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
+this.isDeclaration = function() { return this.type === SCOPE_TYPE_FUNCTION_DECLARATION; };
+this.isCatch = function() { return (this.type & SCOPE_TYPE_CATCH) === SCOPE_TYPE_CATCH; };
+this.isGlobal = function() { return this.type === SCOPE_TYPE_GLOBAL; };
+
+// a scope is concrete if a 'var'-declaration gets hoisted to it
+this.isConcrete = function() {
+  return this.type === SCOPE_TYPE_SCRIPT ||
+         this.type === SCOPE_TYPE_GLOBAL ||
+         this.isFunc();
+};
+
+
+
+}]  ],
+null,
 null,
 null,
 null,
@@ -5861,7 +6210,6 @@ this.parse = function(src, isModule ) {
   return newp.parseProgram();
 };
 
-this.Parser = 
-Parser;  
+this.Parser = Parser;  
 
 ;}).call (this)

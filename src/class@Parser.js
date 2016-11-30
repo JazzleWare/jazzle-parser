@@ -137,7 +137,7 @@ this. parseClass = function(context) {
                    loc: { start: nbodyStartLoc, end: endLoc },
                    start: nbodyStartc,
                     end: this.c,
-                    body: list } };
+                    body: list/* ,y:-1*/ }/* ,y:-1*/ };
 
   this.expectType('}');
   if ( canBeStatement ) { this.foundStatement = !false; }

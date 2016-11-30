@@ -45,6 +45,11 @@ this.parseNewHead = function () {
        return head.val;
   }
 
+  // #if V
+  if (head.type === 'Identifier')
+    this.scope.reference(head.name);
+  // #end
+
   var inner = core( head ) ;
   while ( !false ) {
     switch (this. lttype) {
@@ -55,7 +60,7 @@ this.parseNewHead = function () {
 
           elem = this.memberID();
           head =   {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false };
+                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false/* ,y:-1*/ };
           inner = head;
           continue;
 
@@ -63,7 +68,7 @@ this.parseNewHead = function () {
           this.next() ;
           elem = this.parseExpr(CONTEXT_NONE) ;
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false };
+                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false/* ,y:-1*/ };
           inner = head ;
           if ( !this.expectType_soft (']') ) {
             head = this.err('mem.unfinished',startc,startLoc,head)  ;
@@ -79,7 +84,7 @@ this.parseNewHead = function () {
        case '(':
           elem = this. parseArgList();
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
-                    loc: { start: startLoc, end: this.loc() }, arguments: elem };
+                    loc: { start: startLoc, end: this.loc() }, arguments: elem /* ,y:-1*/};
           if ( !this. expectType_soft (')') ) {
             inner = this.err('new.args.is.unfinished',startc,startLoc,inner) ;
             if ( inner.type === ERR_RESUME )
@@ -98,13 +103,13 @@ this.parseNewHead = function () {
                 start: head.start,
                  end: elem.end,
                 loc : { start: head.loc.start, end: elem.loc.end },
-                tag : inner
+                tag : inner /* ,y:-1*/
             };
             inner = head;
             continue ;
 
         default: return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
-                 loc: { start: startLoc, end: head.loc.end }, arguments : [] };
+                 loc: { start: startLoc, end: head.loc.end }, arguments : [] /* ,y:-1*/};
 
      }
   }

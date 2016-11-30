@@ -14,6 +14,14 @@ function hex(number) {
   return str;
 }
 
+function hex2(number) {
+  var str = "";
+  str = hexD[number&0xf] + str
+  str = hexD[(number>>=4)&0xf] + str ;
+  
+  return str;
+}
+
 function fromRunLenCodes(runLenArray, bitm) {
   bitm = bitm || [];
   var bit = runLenArray[0];
@@ -61,4 +69,21 @@ function toNum (n) {
          (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
 };
 
+function createObj(fromPrototype) {
+  function Obj() {}
+  Obj.prototype = fromPrototype;
+  return new Obj();
+}
+
+function getOwnN(obj, name, notHave) {
+  return HAS.call(obj, name) ? obj[name] : notHave;
+}
+
+function getOwn(obj, name) {
+  return getOwnN(obj, name, null);
+}
+
+function hasOwn(obj, name) {
+  return HAS.call(obj, name);
+}
 

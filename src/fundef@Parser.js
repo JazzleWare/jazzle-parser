@@ -5,18 +5,13 @@ this .parseArgs  = function (argLen) {
         this.err('func.args.no.opening.paren',argLen) )
     return this.errorHandlerOutput  ;
 
-  this.inComplexArgs = this.tight ? ICA_FUNCTION : ICA_NONE;
   var firstNonSimpArg = null;
   while ( list.length !== argLen ) {
     elem = this.parsePattern();
     if ( elem ) {
        if ( this.lttype === 'op' && this.ltraw === '=' ) {
          elem = this.parseAssig(elem);
-         if ( elem.left.type === 'Identifier' ) {
-            if ( this.argNames[elem.left.name+'%'] !== null )
-                 this.err('func.args.has.dup',elem);
-         }
-         this.inComplexArgs = ICA_FUNCTION;
+         this.scope.makeComplex();
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
@@ -35,7 +30,7 @@ this .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        this.inComplexArgs = ICA_FUNCTION;
+        this.scope.makeComplex();
         elem = this.parseRestElement();
         list.push( elem  );
         if ( !firstNonSimpArg )
@@ -58,39 +53,20 @@ this .parseArgs  = function (argLen) {
   return list;
 };
 
-this .addArg = function(id) {
-  var inComplexArgs = this.inComplexArgs;
-  if (inComplexArgs === ICA_LEXICAL)
-    this.assert(id.name !== 'let');
-
-  var name = id.name + '%';
-  if ( has.call(this.argNames, name) ) {
-    if ( inComplexArgs )
-       this.err('func.args.has.dup',id);
-
-    if ( this.argNames[name] === null )
-      this.argNames[name] = id ; // this will be useful if the body has a strictness directive
-  }
-  else
-     this.argNames[name] = null ;
-};
-
 this .parseFunc = function(context, argListMode, argLen ) {
   var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
   var prevLabels = this.labels;
   var prevStrict = this.tight;
-  var prevInArgList = this.isInArgList;
-  var prevArgNames = this.argNames;
+
   var prevScopeFlags = this.scopeFlags;
   var prevYS = this.firstYS ;
   var prevNonSimpArg = this.firstNonSimpArg;
 
-  if ( !this.canBeStatement ) {
-    if ( !(this.scopeFlags & SCOPE_BLOCK) )
-      this.err('func.decl.not.in.block', startc, startLoc);
- 
+  if ( !this.canBeStatement ) 
     this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
-  }
+  else if ( !(this.scopeFlags & SCOPE_WITH_FUNC_DECL) &&
+            (this.tight || !(this.scopeFlags & SCOPE_IF)) )
+      this.err('func.decl.not.in.block', startc, startLoc);
 
   var isGen = false;
 
@@ -117,7 +93,9 @@ this .parseFunc = function(context, argListMode, argLen ) {
                   args: [context, argListMode, argLen] } ) )
           return this.errorHandlerOutput ;
 
-        currentFuncName = this.validateID(null);
+        this.scope.setDeclMode(DECL_MODE_VAR);
+        currentFuncName = this.parsePattern();
+
         if ( this.tight && arguments_or_eval(currentFuncName.name) &&
              this.err('binding.to.eval.or.arguments','func',
                 { s: startc, l: startLoc, labels: prevLabels, stmt: !false, strict: prevStrict, inArgsList: prevInArgList,
@@ -126,7 +104,11 @@ this .parseFunc = function(context, argListMode, argLen ) {
           return this.errorHandlerOutput ;
      }
      else if ( this. lttype === 'Identifier' ) {
-        currentFuncName = this.validateID(null);
+        this.enterLexicalScope(false);
+        this.scope.synth = true;
+        this.scope.setDeclMode(DECL_MODE_VAR);
+        currentFuncName = this.parsePattern();
+        
         if ( this.tight && arguments_or_eval(currentFuncName.name) &&
              this.err('binding.to.eval.or.arguments','func',
                 { s: startc, l: startLoc, labels: prevLabels, stmt: canBeStatement, strict: prevStrict, inArgsList: prevInArgList,
@@ -143,12 +125,13 @@ this .parseFunc = function(context, argListMode, argLen ) {
   if ( this.scopeFlags )
        this.scopeFlags = 0;
 
-  var prevComplexArgs = this.inComplexArgs;
-  this.isInArgList = !false;
-  this.argNames = {};
+  this.enterFuncScope(canBeStatement);
+  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
+  
   if ( isGen ) this.scopeFlags |= SCOPE_YIELD|SCOPE_ARGS;
   var argList = this.parseArgs(argLen) ;
-  this.isInArgList = false;
+  this.scope.setDeclMode(DECL_MODE_NONE);
+
   this.tight = this.tight || argListMode !== WHOLE_FUNCTION;
   this.scopeFlags = SCOPE_FUNCTION;
   if ( argListMode & METH_FUNCTION )
@@ -159,7 +142,8 @@ this .parseFunc = function(context, argListMode, argLen ) {
    
   if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
 
-  this.inComplexArgs = ICA_NONE;
+  this.labels = {};
+
   var nbody = this.parseFuncBody(context);
   var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
             id: currentFuncName,
@@ -175,13 +159,13 @@ this .parseFunc = function(context, argListMode, argLen ) {
      this.foundStatement = !false;
 
   this.labels = prevLabels;
-  this.isInArgList = prevInArgList;
-  this.argNames = prevArgNames; 
+
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
   this.firstYS = prevYS;
   this.firstNonSimpArg = prevNonSimpArg;
-  this.inComplexArgs = prevComplexArgs;
+
+  this.exitScope();
 
   return  n  ;
 };
@@ -204,7 +188,7 @@ this.parseFuncBody = function(context) {
   var list = this.blck();
 
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
-           loc: { start: startLoc, end: this.loc() } };
+           loc: { start: startLoc, end: this.loc() }, scope: this.scope/* ,y:-1*/ };
 
   if ( ! this.expectType_soft ( '}' ) &&
          this.err('func.body.is.unfinished',n) )
@@ -213,6 +197,7 @@ this.parseFuncBody = function(context) {
   return  n;
 };
 
+// #if V
 this . makeStrict  = function() {
    if ( this.firstNonSimpArg )
      return this.err('func.strict.non.simple.param')  ; 
@@ -221,16 +206,37 @@ this . makeStrict  = function() {
 
    this.tight = !false;
 
-   var argName = null;
-   for ( argName in this.argNames ) {
-        if ( this.argNames[argName] !== null )
-          this.err('func.args.has.dup',this.argNames[argName]);
+   var a = 0, argNames = this.scope.nameList;
+   while (a < argNames.length) {
+     var decl = argNames[a];
+     if (decl.type&DECL_DUPE)
+       this.err('func.args.has.dup',decl.name);
+     ASSERT.call(this, !arguments_or_eval(decl.name));
+     this.validateID(decl.name);
 
-        argName = argName.substring(0,argName.length-1) ;
-        this.assert(!arguments_or_eval(argName));
-        this.validateID(argName);
-
+     a++;
    }
 };
 
+// #else
+this . makeStrict  = function() {
+   if ( this.firstNonSimpArg )
+     return this.err('func.strict.non.simple.param')  ; 
+
+   if ( this.tight ) return;
+
+   this.tight = !false;
+
+   var a = null, argNames = this.scope.definedNames;
+   for (a in argNames) {
+     var declType = argNames[a];
+     a = a.substring(0,a.length-1);
+     if (declType&DECL_DUPE)
+       this.err('func.args.has.dup',a);
+
+     ASSERT.call(this, !arguments_or_eval(a));
+     this.validateID(a);
+   }
+};
+// #end
 
