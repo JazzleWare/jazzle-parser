@@ -58,8 +58,16 @@ this.hoistIdToScope = function(id, targetScope /* #if V */, decl /* #end */ ) {
    /* #if V */ var isFresh = targetScope.findDeclInScope(id.name) === null; /* #end */
    while (true) {
      ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
-     if ( !scope.insertDecl(id /* #if V */, decl /* #end */ ) )
+     // #if !V
+     scope.declMode = this.declMode; // TODO: ugh
+     // #end
+     if ( !scope.insertDecl(id /* #if V */, decl /* #end */ ) ) {
+       // #if !V
+       this.declMode = DECL_MODE_CATCH_PARAMS;
+       this.insertDecl0(id);
+       // #end
        break;
+     }
 
      if (scope === targetScope)
        break;
@@ -67,6 +75,7 @@ this.hoistIdToScope = function(id, targetScope /* #if V */, decl /* #end */ ) {
      scope = scope.parent;
    }
    // #if V
+   decl.scope = scope;
    if (isFresh) targetScope.nameList.push(decl);
    // #end
 };

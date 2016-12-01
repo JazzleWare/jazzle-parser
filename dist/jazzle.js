@@ -6105,8 +6105,12 @@ this.hoistIdToScope = function(id, targetScope  ) {
    
    while (true) {
      ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
-     if ( !scope.insertDecl(id  ) )
+     scope.declMode = this.declMode; // TODO: ugh
+     if ( !scope.insertDecl(id  ) ) {
+       this.declMode = DECL_MODE_CATCH_PARAMS;
+       this.insertDecl0(id);
        break;
+     }
 
      if (scope === targetScope)
        break;
