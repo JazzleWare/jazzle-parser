@@ -1,6 +1,8 @@
 var test = require('./test-util.js');
 var util = require('./util.js');
 var fs = require('fs');
+var path = require('path');
+
 var JazzleTest = test.JazzleTest;
 var JazzleTestSuite = test.JazzleTestSuite;
 
@@ -15,8 +17,8 @@ function runTestSuite(testRoot, Parser) {
 
   fs.readFileSync('.ignore').toString().split('\n').forEach( function(item){
      if (item) {
-       testSuite.exclude(item+'.js', 'ignore-.js');
-       testSuite.exclude(item+'.source.js', 'ignore-.source.js');
+       testSuite.exclude(path.join(item+'.js'), 'ignore-.js');
+       testSuite.exclude(path.join(item+'.source.js'), 'ignore-.source.js');
      }
   });
 
