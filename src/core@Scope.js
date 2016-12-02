@@ -59,12 +59,12 @@ this.hoistIdToScope = function(id, targetScope /* #if V */, decl /* #end */ ) {
    while (true) {
      ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
      // #if !V
-//   scope.declMode = this.declMode; // TODO: ugh
+     scope.declMode = this.declMode; // TODO: ugh
      // #end
      if ( !scope.insertDecl(id /* #if V */, decl /* #end */ ) ) {
        // #if !V
-//     this.declMode = DECL_MODE_CATCH_PARAMS;
-//     this.insertDecl0(id);
+       this.declMode = DECL_MODE_CATCH_PARAMS;
+       this.insertDecl0(id);
        // #end
        break;
      }

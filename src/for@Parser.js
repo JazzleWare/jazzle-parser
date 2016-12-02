@@ -74,13 +74,19 @@ this . parseFor = function() {
 //              return this.errorHandlerOutput;
           }
 
+          if (kind === 'ForOfStatement')
+            this.ensureVarsAreNotResolvingToCatchParams();
+
           if ( this.unsatisfiedAssignment )
             this.unsatisfiedAssignment = null;
 
           if (headIsExpr) this.toAssig(core(head));
 
           this.next();
-          afterHead = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE) ;
+          afterHead = kind === 'ForOfStatement' ? 
+            this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE) :
+            this.parseExpr(CONTEXT_NONE);
+
           if ( ! this.expectType_soft (')') &&
                  this.err('for.iter.no.end.paren',start,startLoc,head,afterHead) )
             return this.errorHandlerOutput ;
@@ -148,4 +154,18 @@ this . parseFor = function() {
          body: nbody/* ,y:-1*/ };
 };
 
-
+this.ensureVarsAreNotResolvingToCatchParams = function() {
+// #if V
+  var list = this.nameList, e = 0;
+  while (e < list.length) {
+    if (list[e].type & DECL_TYPE_CATCH_PARAMS)
+      this.err('for.of.var.overrides.catch', list[e].name);
+    e++;
+  }
+// #else
+  for (var name in this.definedNames) {
+    if (this.definedNames[name] & DECL_TYPE_CATCH_PARAMS)
+      this.err('for.of.var.overrides.catch', name.substr(0, name.length-1));
+  }
+// #end
+};
