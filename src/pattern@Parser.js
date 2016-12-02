@@ -80,7 +80,12 @@ this.parseObjectPattern  = function() {
               this.next();
               val = this.parsePattern()
             }
-            else { this.validateID(name.name); sh = !false; val = name; }
+            else {
+              this.validateID(name.name);
+              sh = !false;
+              val = name;
+              this.scope.parserDeclare(name);
+            }
             break ;
 
          case '[':
