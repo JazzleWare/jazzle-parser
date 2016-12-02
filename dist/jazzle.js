@@ -2156,9 +2156,16 @@ this .parseFunc = function(context, argListMode, argLen ) {
 
   if ( !this.canBeStatement ) 
     this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
-  else if ( !(this.scopeFlags & SCOPE_WITH_FUNC_DECL) &&
-            (this.tight || !(this.scopeFlags & SCOPE_IF)) )
+  else {
+    if (!(this.scopeFlags & SCOPE_WITH_FUNC_DECL) &&
+         (this.tight || !(this.scopeFlags & SCOPE_IF)))
       this.err('func.decl.not.in.block', startc, startLoc);
+    if (this.unsatisfiedLabel) {
+      if (!(this.scopeFlags & SCOPE_WITH_FUNC_DECL))
+        this.err('func.decl.not.in.block.has.label', startc, startLoc);
+      this.fixupLabels(false);
+    }
+  }
 
   var isGen = false;
 
@@ -4972,12 +4979,12 @@ this.parseIfStatement = function () {
   this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= SCOPE_IF;
   var nbody = this. parseStatement (false);
-  this.scopeFlags = scopeFlags ;
   var alt = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'else') {
      this.next() ;
      alt = this.parseStatement(false);
   }
+  this.scopeFlags = scopeFlags ;
 
   var scope = this.exitScope(); 
 

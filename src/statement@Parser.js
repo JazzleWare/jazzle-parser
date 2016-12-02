@@ -136,12 +136,12 @@ this.parseIfStatement = function () {
   this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= SCOPE_IF;
   var nbody = this. parseStatement (false);
-  this.scopeFlags = scopeFlags ;
   var alt = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'else') {
      this.next() ;
      alt = this.parseStatement(false);
   }
+  this.scopeFlags = scopeFlags ;
 
   var scope = this.exitScope(); 
 
