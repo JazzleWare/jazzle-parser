@@ -156,15 +156,15 @@ this . parseFor = function() {
 
 this.ensureVarsAreNotResolvingToCatchParams = function() {
 // #if V
-  var list = this.nameList, e = 0;
+  var list = this.scope.nameList, e = 0;
   while (e < list.length) {
-    if (list[e].type & DECL_TYPE_CATCH_PARAMS)
+    if (list[e].type & DECL_MODE_CATCH_PARAMS)
       this.err('for.of.var.overrides.catch', list[e].name);
     e++;
   }
 // #else
-  for (var name in this.definedNames) {
-    if (this.definedNames[name] & DECL_TYPE_CATCH_PARAMS)
+  for (var name in this.scope.definedNames) {
+    if (this.scope.definedNames[name] & DECL_MODE_CATCH_PARAMS)
       this.err('for.of.var.overrides.catch', name.substr(0, name.length-1));
   }
 // #end

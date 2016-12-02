@@ -2094,8 +2094,8 @@ this . parseFor = function() {
 };
 
 this.ensureVarsAreNotResolvingToCatchParams = function() {
-  for (var name in this.definedNames) {
-    if (this.definedNames[name] & DECL_TYPE_CATCH_PARAMS)
+  for (var name in this.scope.definedNames) {
+    if (this.scope.definedNames[name] & DECL_MODE_CATCH_PARAMS)
       this.err('for.of.var.overrides.catch', name.substr(0, name.length-1));
   }
 };
@@ -6135,8 +6135,11 @@ this.hoistIdToScope = function(id, targetScope  ) {
      ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
      scope.declMode = this.declMode; // TODO: ugh
      if ( !scope.insertDecl(id  ) ) {
+       // TODO: looks like having a 'declMode' with each call would be a beter idea than the folowing.
+       var curMode = this.declMode;
        this.declMode = DECL_MODE_CATCH_PARAMS;
        this.insertDecl0(id);
+       this.declMode = curMode;
        break;
      }
 

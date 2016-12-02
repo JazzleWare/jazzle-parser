@@ -63,8 +63,11 @@ this.hoistIdToScope = function(id, targetScope /* #if V */, decl /* #end */ ) {
      // #end
      if ( !scope.insertDecl(id /* #if V */, decl /* #end */ ) ) {
        // #if !V
+       // TODO: looks like having a 'declMode' with each call would be a beter idea than the folowing.
+       var curMode = this.declMode;
        this.declMode = DECL_MODE_CATCH_PARAMS;
        this.insertDecl0(id);
+       this.declMode = curMode;
        // #end
        break;
      }
