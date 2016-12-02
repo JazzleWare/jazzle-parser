@@ -129,6 +129,7 @@ this .toAssig = function(head) {
        return;
    
      case 'AssignmentPattern': // this would be the case in the event of converting an obj prop in the form of "name = val" rather than "name: val"
+       this.toAssig(head.left);
        return;
 
      default:
