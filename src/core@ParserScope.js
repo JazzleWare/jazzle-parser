@@ -83,6 +83,10 @@ ParserScope.prototype.hasParam = function(name) {
   return HAS.call(this.idNames, name+'%');
 };
 
+ParserScope.prototype.insertID = function(id) {
+  this.idNames[id.name+'%'] = id;
+};
+
 ParserScope.prototype.addParam = function(id) {
   ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
   var name = id.name + '%';

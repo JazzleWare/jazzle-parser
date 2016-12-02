@@ -2280,7 +2280,7 @@ this.parseFuncBody = function(context) {
   var list = this.blck();
 
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
-           loc: { start: startLoc, end: this.loc() }, scope: this.scope/* ,y:-1*/ };
+           loc: { start: startLoc, end: this.loc() }/* ,scope: this.scope ,y:-1*/ };
 
   if ( ! this.expectType_soft ( '}' ) &&
          this.err('func.body.is.unfinished',n) )
@@ -6049,6 +6049,10 @@ ParserScope.prototype.hasParam = function(name) {
   return HAS.call(this.idNames, name+'%');
 };
 
+ParserScope.prototype.insertID = function(id) {
+  this.idNames[id.name+'%'] = id;
+};
+
 ParserScope.prototype.addParam = function(id) {
   ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
   var name = id.name + '%';
@@ -6105,10 +6109,10 @@ this.hoistIdToScope = function(id, targetScope  ) {
    
    while (true) {
      ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
-     scope.declMode = this.declMode; // TODO: ugh
+//   scope.declMode = this.declMode; // TODO: ugh
      if ( !scope.insertDecl(id  ) ) {
-       this.declMode = DECL_MODE_CATCH_PARAMS;
-       this.insertDecl0(id);
+//     this.declMode = DECL_MODE_CATCH_PARAMS;
+//     this.insertDecl0(id);
        break;
      }
 
@@ -6168,10 +6172,6 @@ this.insertDecl = function(id ) {
   this.insertDecl0(id);
 
   return true;
-};
-
-this.insertID = function(id) {
-  this.idNames[id.name+'%'] = id;
 };
 
 
