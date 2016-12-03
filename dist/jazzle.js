@@ -848,6 +848,7 @@ this . parseArrowFunctionExpression = function(arg,context)   {
        this.firstYS = null;
        this.labels = {};
        isExpr = false;
+       this.scopeFlags |= SCOPE_FUNCTION;
        nbody = this.parseFuncBody(CONTEXT_NONE);
        this.labels = prevLabels;
        this.firstYS = prevYS;
@@ -858,6 +859,9 @@ this . parseArrowFunctionExpression = function(arg,context)   {
   this.exitScope();
   var params = core(arg);
   this.tight = tight;
+
+  this.scopeFlags = scopeFlags;
+
   return { type: 'ArrowFunctionExpression',
            params: params ?  params.type === 'SequenceExpression' ? params.expressions : [params] : [] ,
            start: arg.start,
