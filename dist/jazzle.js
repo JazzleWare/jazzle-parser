@@ -1252,7 +1252,7 @@ this.parseSuper  = function   () {
           break ;
         case '.':
         case '[':
-           if ( !(this.scopeFlags & SCOPE_METH) &&
+           if ( !(this.scopeFlags & (SCOPE_METH|SCOPE_CONSTRUCTOR)) &&
                   this.err('class.super.mem') ) return this.errorHandlerOutput ;
            break ;
         
