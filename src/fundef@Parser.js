@@ -110,6 +110,12 @@ this .parseFunc = function(context, argListMode, argLen ) {
                   args: [context, argListMode, argLen] } ) )
           return this.errorHandlerOutput ;
      }
+
+     // TODO: this line is supposed to consume a function expression's name;
+     // but will also wrongfully consume a name for a function declaration is an `export default` decl,
+     // if such name actually exists; this means things like `export default function l() {}` will not be
+     // errors, evn though they actually are (function declarations in 'default' context are not allowed to
+     // have names.
      else if ( this. lttype === 'Identifier' ) {
         this.enterLexicalScope(false);
         this.scope.synth = true;
