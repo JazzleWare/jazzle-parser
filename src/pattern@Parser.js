@@ -3,7 +3,7 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
-       this.scope.parserDeclare(id);
+       this.declare(id);
        if (this.tight) this.assert(!arguments_or_eval(id.name));
        return id;
 

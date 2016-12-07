@@ -59,22 +59,9 @@ var Parser = function (src, isModule) {
 
   this.scope = null;
   this.directive = DIRECTIVE_NONE;
+  
+  this.declMode = DECL_MODE_NONE;
 };
-
-;
-function ParserScope(ownerParser, parent, type) {
-   Scope.call(
-     this, parent, type
-   );
-
-   this.idNames = {};
-   this.declMode = DECL_MODE_NONE;
-   this.isInComplexArgs = false;
-   this.parser = ownerParser;
-   this.strict = this.parser.tight;
-   
-   this.synth = false;
-}
 
 ;
 function Scope(parent, type) {
@@ -89,6 +76,12 @@ function Scope(parent, type) {
 
   this.definedNames = {};
 
+
+  this.idNames = {};
+  this.isInComplexArgs = false;
+  this.strict = this.parser.tight;
+  this.synth = false;
+  
 }
 
 Scope.createFunc = function(parent, decl) {
@@ -182,9 +175,6 @@ var CHAR_1 = char2int('1'),
 var SCOPE_BREAK       = 1;
 var SCOPE_CONTINUE    = SCOPE_BREAK << 1;
 var SCOPE_FUNCTION    = SCOPE_CONTINUE << 1;
-var SCOPE_METH        = SCOPE_FUNCTION << 1;
-var SCOPE_YIELD       = SCOPE_METH << 1;
-var SCOPE_CONSTRUCTOR = SCOPE_YIELD << 1 ;
 var SCOPE_ARGS = SCOPE_CONSTRUCTOR << 1;
 var SCOPE_BLOCK = SCOPE_ARGS << 1;
 var SCOPE_IF = SCOPE_BLOCK << 1;
@@ -240,6 +230,53 @@ var SCOPE_TYPE_LEXICAL_LOOP = SCOPE_TYPE_LEXICAL_SIMPLE|16;
 var SCOPE_TYPE_SCRIPT = 32;
 var SCOPE_TYPE_CATCH = 128;
 var SCOPE_TYPE_GLOBAL = 256;
+
+// TODO: even though they will fit in an in, it would be probably
+// better to keep them separated -- they take some 20 bits right now 
+var CONTEXT_NONE = 0,
+    CONTEXT_ELEM = 1,
+    CONTEXT_FOR = CONTEXT_ELEM << 1,
+    CONTEXT_PARAM = CONTEXT_FOR << 1,
+    CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
+    CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
+    CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1,
+    CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1,
+
+    MEM_CLASS = CONTEXT_DEFAULT << 1, 
+    MEM_GEN = MEM_CLASS << 1,
+
+    SCOPE_FLAG_GEN = MEM_GEN,
+    SCOPE_FLAG_ALLOW_YIELD_EXPR = SCOPE_FLAG_GEN,
+
+    MEM_SET = MEM_GEN << 1,
+    MEM_GET = MEM_SET << 1,
+    MEM_STATIC = MEM_GET << 1,
+    MEM_CONSTRUCTOR = MEM_STATIC << 1,
+    MEM_PROTOTYPE = MEM_CONSTRUCTOR << 1,
+    MEM_OBJ_METH = MEM_PROTOTYPE << 1,
+    MEM_PROTO = MEM_OBJ_METH << 1,
+    MEM_SUPER = MEM_PROTO << 1,
+
+    SCOPE_FLAG_BREAK = MEM_SUPER << 1,
+    SCOPE_FLAG_CONTINUE = SCOPE_FLAG_BREAK << 1,
+
+    // TODO: SCOPE_FLAG_FN serves the same purpose as MEM_OBJ_METH;
+    // either makes the other one unnecessary; but in the meantime ...
+    SCOPE_FLAG_FN = SCOPE_FLAG_CONTINUE << 1,
+
+    SCOPE_FLAG_ARG_LIST = SCOPE_FLAG_FN << 1,
+    SCOPE_FLAG_ALLOW_RETURN_STMT = SCOPE_FLAG_FN,
+
+    MEM_ACCESSOR = MEM_GET|MEM_SET,
+    MEM_SPECIAL = MEM_ACCESSOR|MEM_GEN,
+    MEM_FLAGS = MEM_CLASS|MEM_SPECIAL|MEM_CONSTRUCTOR|
+                MEM_PROTO|MEM_SUPER|MEM_OBJ_METH|MEM_PROTOTYPE,
+    MEM_OBJ = 0,
+    SCOPE_FLAG_NONE = 0;
+
+var ARGLEN_GET = 0,
+    ARGLEN_SET = 1,
+    ARGLEN_ANY = -1;
 
 var DECL_MODE_VAR = 1,
     DECL_MODE_LET = 2,
@@ -2335,6 +2372,155 @@ this . makeStrict  = function() {
 
 },
 function(){
+this.parseFunc = function(context) {
+  var prevLabels = this.labels;
+      prevStrict = this.tight,
+      prevScopeFlags = this.scopeFlags,
+      prevYS = this.firstYS,
+      prevNonSimpArg = this.firstNonSimpArg;
+
+  var isStmt = false, startc = this.c0, startLoc = this.locBegin();
+  if (this.canBeStatement) {
+    isStmt = true;
+    this.canBeStatement = false;
+  }
+
+  var isGen = false,
+      isWhole = !(context & MEM_ANY);
+   
+  var argLen = !(context & MEM_ACCESSOR) ? ARGLEN_ANY :
+    (context & MEM_SET) ? ARGLEN_SET : ARGLEN_GET;
+
+  // current func name
+  var cfn = null;
+
+  if (isWhole) { 
+    this.next();
+    if (this.lttype === 'op' && this.ltraw === '*') {
+      isGen = true;
+      this.next();
+    }
+
+    if (isStmt) {
+      if (!this.canDeclareFunctionsInScope())
+        this.err('func.decl.not.allowed');
+      if (this.unsatisfiedLabel) {
+        if (!this.inFuncScope())
+          this.err('func.decl.not.alowed');
+        this.fixupLabels(false);
+      }
+      if (!(context & CONTEXT_DEFAULT)) {
+        if (this.lttype === 'Identifier') {
+          this.declMode = DECL_MODE_FUNCTION;
+          cfn = this.parsePattern();
+        }
+        else
+          this.err('missing.name', 'func');
+      }
+    }
+    else {
+      // FunctionExpression's BindingIdentifier can be yield regardless of context;
+      // but a GeneratorExpression's BindingIdentifier can't be 'yield'
+      this.scopeFlags = isGen ?
+        SCOPE_FLAG_ALLOW_YIELD_EXPR :
+        SCOPE_FLAG_NONE;
+      if (this.lttype === 'Identifier') {
+        this.enterLexicalScope(false);
+        this.scope.synth = true;
+        this.declMode = DECL_MODE_LET;
+        cfn = this.parsePattern();
+      }
+    }
+  }
+  else if (context & MEM_GEN)
+    isGen = true;
+
+  this.enterFuncScope(isStmt); 
+  this.declMode = DECL_MODE_FUNCTION_PARAMS;
+
+  this.scopeFlags = SCOPE_FLAG_ARG_LIST;
+  if (isGen)
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
+  else if (context & MEM_SUPER)
+    this.scopeFlags |= (context & (MEM_SUPER|MEM_CONSTRUCTOR));
+  
+  // class members, along with obj-methods, have strict formal parameter lists,
+  // which is a rather misleading name for a parameter list in which dupes are not allowed
+  if (!this.tight && !isWhole)
+    this.enterComplex();
+
+  this.firstNonSimpArg = null;
+  var argList = this.parseArgs(argLen);
+
+  this.scopeFlags &= ~SCOPE_FLAG_ARG_LIST;
+  this.scopeFlags |= SCOPE_FLAG_FN;  
+
+  this.labels = {};
+  var nbody = this.parseFuncBody(context & CONTEXT_FOR);
+
+  var n = {
+    type: isStmt ? 'FunctionDeclaration' : 'FunctionExpression', id: cfn,
+    start: startc, end: nbody.end, generator: isGen,
+    body: nbody, loc: { start: startLoc, end: nbody.loc.end },
+    expression: nbody.type !== 'BlockStatement', params: argList 
+  };
+
+  if (isStmt)
+    this.foundStatement = true;
+
+  this.labels = prevLabels;
+  this.tight = prevStrict;
+  this.scopeFlags = prevScopeFlags;
+  this.firstYS = prevYS;
+  this.firstNonSipArg = prevNonSimpArg;
+  
+  this.exitScope();
+  return n;
+};
+  
+this.parseMeth = function(name, flags) {
+  if (this.lttype !== '(')
+    this.err('meth.paren', name, context);
+  var val = null;
+  if (context & MEM_CLASS) {
+    if (context & MEM_CONSTRUCTOR) {
+      if (context & MEM_SPECIAL)
+        this.err('class.constructor.is.special.mem', name, context);
+    }
+    if (context & MEM_STATIC) {
+      if (context & MEM_PROTOTYPE)
+        this.err('class.prototype.is.static.mem', name, context);
+    }
+
+    val = this.parseFunc(CONTEXT_NONE|(context & MEM_FLAGS));
+
+    return {
+      type: 'MethodDefinition', key: core(name),
+      start: name.start, end: val.end,
+      kind: (flags & MEM_CONSTRUCTOR) ? 'constructor' : (flags & MEM_GET) ? 'get' :
+            (flags & MEM_SET) ? 'set' : 'method',
+      computed: name.type === PAREN,
+      loc: { start: name.loc.start, end: val.loc.end },
+      value: val, 'static': !!(flags & MEM_STATIC)/* ,y:-1*/
+    }
+  }
+   
+  var cm = (context & MEM_FLAGS) || MEM_OBJ_METH;
+  val = this.parseFunc(CONTEXT_NONE|cm);
+
+  return {
+    type: 'Property', key: core(name),
+    start: name.start, end: val.end,
+    kind: 'init', computed: name.type === PAREN,
+    loc: { start: name.loc.start, end : val.loc.end },
+    method: true, shorthand: false,
+    value : val/* ,y:-1*/
+  }
+};
+
+
+},
+function(){
 this . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
 this. parseIdStatementOrId = function ( context ) {
   var id = this.ltval ;
@@ -2688,6 +2874,156 @@ function(){
 this.loc = function() { return { line: this.li, column: this.col }; };
 this.locBegin = function() { return  { line: this.li0, column: this.col0 }; };
 this.locOn = function(l) { return { line: this.li, column: this.col - l }; };
+
+
+
+},
+function(){
+this.parseMem = function(context) {
+  var c0 = 0, li0 = 0, col0 = 0, nmod = 0,
+      nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "";
+
+  if (this.lttype === 'op' && this.ltval === '*') {
+    c0 = this.c - 1; li0 = this.li; col0 = this.col - 1;
+    context |= MEM_GEN;
+  }
+  else if (this.lttype === 'Identifier') {
+    c0 = this.c0; li0 = this.li; col0 = this.col0;
+    LOOP:  
+    // TODO: check version number when parsing get/set
+    do {
+      switch (this.ltval) {
+      case 'static':
+        if (!(context & MEM_CLASS)) break LOOP;
+        if (context & MEM_STATIC) break LOOP;
+        nc0 = this.c0; nli0 = this.li0;i
+        ncol0 = this.col0; nraw = this.ltraw;
+        nval = this.ltval;
+        nmod++; context |= MEM_STATIC; this.next();
+        break;
+
+      case 'get':
+      case 'set':
+        if (context & MEM_ACCESSOR) break LOOP;
+        nc0 = this.c0; nli0 = this.li0;
+        ncol0 = this.col0; nraw = this.ltraw;
+        nval = this.ltval;
+        context |= this.ltval === 'get' ? MEM_GET : MEM_SET;
+        nmod++; this.next();
+        break;
+
+      default: break LOOP;
+      }
+    } while (this.lttype === 'Identifier');
+  }
+  
+  var nmem = null;
+  switch (this.lttype) {
+  case 'Identifier':
+    if ((context & MEM_CLASS)) {
+      if (this.ltval === 'constructor') context |= MEM_CONSTRUCTOR;
+      if (this.ltval === 'prototype') context |= MEM_PROTOTYPE;
+    }
+    else if (this.ltval === '__proto__')
+      context |= MEM_PROTO;
+
+    nmem = this.memberID();
+    break;
+  case 'Literal':
+    if ((context & MEM_CLASS)) {
+      if (this.ltval === 'constructor') context |= MEM_CONSTRUCTOR;
+      if (this.ltval === 'prototype') context |= MEM_PROTOTYPE;
+    }
+    else if (this.ltval === '__proto__')
+      context |= MEM_PROTO;
+
+    nmem = this.parseLiteral();
+    break;
+  case '[':
+    nmem = this.memberExpr();
+    break;
+  default:
+    if (nmod) {
+      nmem = this.assembleID(nc0, nli0, ncol0, nraw, nval);
+      nmod--;
+    }
+  }
+
+  if (nmem === null) {
+    if (context & MEM_GEN)
+      this.err('mem.gen.has.no.name');
+    return null;
+  } 
+
+  if (this.lttype === '(') {
+    var mem = this.parseMeth(nmem, context);
+    if (c0) {
+      mem.start = c0;
+      mem.loc.start = { line: li0, column: col0 };
+    }
+    return mem;
+  }
+
+  if (context & MEM_CLASS)
+    this.err('unexpected.lookahead');
+
+  if (nmod)
+    this.err('unexpected.lookahead');
+
+  return this.parseObjElem(nmem, context);
+};
+ 
+this.parseObjElem = function(name, context) {
+  var hasProto = context & MEM_PROTO, firstProto = this.first__proto__;
+  var val = null;
+
+  this.firstUnassignable = this.firstParen = null;
+  switch (this.lttype) {
+  case ':':
+    if (hasProto && firstProto)
+      this.err('obj.proto.has.dup');
+    this.next();
+    val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+    if (!(context & CONTEXT_ELEM))
+      this.err('obj.prop.assig.not.allowed', name, context);
+    val = {
+      type: 'Property', start: name.start,
+      key: core(name), end: val.end,
+      kind: 'init',
+      loc: { start: name.loc.start, end: val.loc.end },
+      computed: name.type === PAREN,
+      method: false, shorthand: false, value: core(val)/* ,y:-1*/
+    };
+    if (hasProto)
+      this.first__proto__ = val;
+    return val;
+ 
+  case 'op':
+    if (name.type !== 'Identifier')
+      this.err('obj.prop.assig.not.id', name, context);
+    if (this.ltraw !== '=')
+      this.err('obj.prop.assig.not.assigop', name, context);
+    if (!(context & CONTEXT_ELEM))
+      this.err('obj.prop.assig.not.allowed', name, context);
+    val = this.parseAssig(name);
+    this.unsatisfiedAssignment = val;
+    break;
+
+  default:
+    if (name.type !== 'Identifier')
+      this.err('obj.prop.assig.not.id', name, context);
+    val = name;
+    break;
+  }
+  
+  return {
+    type: 'Property', key: name,
+    start: val.start, end: val.end,
+    loc: val.loc, kind: 'init',
+    shorthand: true, method: false,
+    value: val, computed: false/* ,y:-1*/
+  };
+};
 
 
 
@@ -4034,7 +4370,7 @@ this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID(null);
-       this.scope.parserDeclare(id);
+       this.declare(id);
        if (this.tight) this.assert(!arguments_or_eval(id.name));
        return id;
 
@@ -4789,16 +5125,17 @@ this.parseRegExpLiteral = function() {
 function(){
 this.enterFuncScope = function(decl) { this.scope = this.scope.spawnFunc(decl); };
 
+// TODO: it is no longer needed
 this.enterComplex = function() {
-   if (this.scope.declMode === DECL_MODE_FUNCTION_PARAMS ||
-       this.scope.declMode & DECL_MODE_CATCH_PARAMS)
-     this.scope.makeComplex();
+   if (this.declMode === DECL_MODE_FUNCTION_PARAMS ||
+       this.declMode & DECL_MODE_CATCH_PARAMS)
+     this.makeComplex();
 };
 
 this.enterLexicalScope = function(loop) { this.scope = this.scope.spawnLexical(loop); };
 
 this.setDeclModeByName = function(modeName) {
-  this.scope.setDeclMode(modeName === 'var' ? DECL_MODE_VAR : DECL_MODE_LET);
+  this.declMode = modeName === 'var' ? DECL_MODE_VAR : DECL_MODE_LET;
 };
 
 this.exitScope = function() {
@@ -4808,6 +5145,71 @@ this.exitScope = function() {
   if (this.scope.synth)
     this.scope = this.scope.parent;
   return scope;
+};
+
+this.declare = function(id) {
+   ASSERT.call(this, this.declMode !== DECL_MODE_NONE, 'Unknown declMode');
+   if (this.declMode === DECL_MODE_FUNCTION_PARAMS) {
+     if (!this.addParam(id)) // if it was not added, i.e., it is a duplicate
+       return;
+   }
+   else if (this.declMode === DECL_MODE_LET) {
+     // TODO: eliminate it because it must've been verified in somewhere else,
+     // most probably in parseVariableDeclaration
+     if ( !(this.scopeFlags & SCOPE_BLOCK) )
+       this.err('let.decl.not.in.block', id );
+
+     if ( id.name === 'let' )
+       this.err('lexical.name.is.let');
+   }
+
+   this.scope.declare(id, this.declMode);
+};
+
+this.makeComplex = function() {
+  // complex params are treated as let by the emitter
+  if (this.declMode & DECL_MODE_CATCH_PARAMS) {
+    this.declMode |= DECL_MODE_LET; 
+    return;
+  }
+
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
+  var scope = this.scope;
+  if (scope.mustNotHaveAnyDupeParams()) return;
+  for (var a in scope.definedNames) {
+     if (!HAS.call(scope.definedNames, a)) continue;
+     if (scope.definedNames[a] & DECL_DUPE)
+       this.err('func.args.has.dup', a);
+  }
+  scope.isInComplexArgs = true;
+};
+
+this.addParam = function(id) {
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
+  var name = id.name + '%';
+  var scope = this.scope;
+  if ( HAS.call(scope.definedNames, name) ) {
+    if (scope.mustNotHaveAnyDupeParams())
+      this.err('func.args.has.dup', id);
+
+    // TODO: this can be avoided with a dedicated 'dupes' dictionary,
+    // but then again, that might be too much.
+    if (!(scope.definedNames[name] & DECL_DUPE)) {
+      scope.insertID(id);
+      scope.definedNames[name] |= DECL_DUPE ;
+    }
+
+    return false;
+  }
+
+  return true;
+};
+
+this.ensureParamIsNotDupe = function(id) {
+   var name = id.name + '%';
+   var scope = this.scope;
+   if (HAS.call(scope.idNames, name) && scope.idNames[name])
+     this.err('func.args.has.dup', id );
 };
 
 
@@ -5993,123 +6395,6 @@ this.parseYield = function(context) {
 
 
 }]  ],
-[ParserScope.prototype, [function(){
-ParserScope.prototype = createObj(Scope.prototype);
-
-ParserScope.prototype.spawnFunc = function(fundecl) {
-  return new ParserScope(
-    this.parser,
-    this,
-    fundecl ?
-      SCOPE_TYPE_FUNCTION_DECLARATION :
-      SCOPE_TYPE_FUNCTION_EXPRESSION
-  );
-};
-
-ParserScope.prototype.spawnLexical = function(loop) {
-  return new ParserScope(
-    this.parser,
-    this,
-    !loop ?
-     SCOPE_TYPE_LEXICAL_SIMPLE :
-     SCOPE_TYPE_LEXICAL_LOOP );
-};
-
-ParserScope.prototype.spawnCatch = function() {
-  return new ParserScope(
-    this.parser,
-    this,
-    SCOPE_TYPE_CATCH );
-};
-
-ParserScope.prototype.setDeclMode = function(mode) {
-  this.declMode = mode;
-};
-
-ParserScope.prototype.makeComplex = function() {
-  // complex params are treated as let by the emitter
-  if (this.declMode & DECL_MODE_CATCH_PARAMS) {
-    this.declMode |= DECL_MODE_LET; 
-    return;
-  }
-
-  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
-  if (this.mustNotHaveAnyDupeParams()) return;
-  for (var a in this.definedNames) {
-     if (!HAS.call(this.definedNames, a)) continue;
-     if (this.definedNames[a] & DECL_DUPE) this.parser.err('func.args.has.dup', a);
-  }
-  this.isInComplexArgs = true;
-};
-
-ParserScope.prototype.parserDeclare = function(id) {
-   ASSERT.call(this, this.declMode !== DECL_MODE_NONE, 'Unknown declMode');
-   if (this.declMode === DECL_MODE_FUNCTION_PARAMS) {
-     if (!this.addParam(id)) // if it was not added, i.e., it is a duplicate
-       return;
-   }
-   else if (this.declMode === DECL_MODE_LET) {
-     if ( !(this.parser.scopeFlags & SCOPE_BLOCK) )
-       this.err('let.decl.not.in.block', id );
-
-     if ( id.name === 'let' )
-       this.err('lexical.name.is.let');
-   }
-
-   this.declare(id, this.declMode);
-};
-
-ParserScope.prototype.mustNotHaveAnyDupeParams = function() {
-  return this.strict || this.isInComplexArgs;
-};
-
-ParserScope.prototype.insertDecl0 = function(id) {
-  var name = id.name + '%';
-  this.insertID(id);
-  this.definedNames[name] = this.declMode;
-};
-
-ParserScope.prototype.err = function(errType, errParams) {
-  return this.parser.err(errType, errParams);
-};
- 
-ParserScope.prototype.hasParam = function(name) {
-  return HAS.call(this.idNames, name+'%');
-};
-
-ParserScope.prototype.insertID = function(id) {
-  this.idNames[id.name+'%'] = id;
-};
-
-ParserScope.prototype.addParam = function(id) {
-  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
-  var name = id.name + '%';
-  if ( HAS.call(this.definedNames, name) ) {
-    if (this.mustNotHaveAnyDupeParams())
-      this.err('func.args.has.dup', id);
-
-    // TODO: this can be avoided with a dedicated 'dupes' dictionary,
-    // but then again, that might be too much.
-    if (!(this.definedNames[name] & DECL_DUPE)) {
-      this.insertID(id);
-      this.definedNames[name] |= DECL_DUPE ;
-    }
-
-    return false;
-  }
-
-  return true;
-};
-
-ParserScope.prototype.ensureParamIsNotDupe = function(id) {
-   var name = id.name + '%';
-
-   if (HAS.call(this.idNames, name) && this.idNames[name])
-     this.parser.err('func.args.has.dup', id );
-};
-
-
-}]  ],
 [Scope.prototype, [function(){
 
 
@@ -6132,18 +6417,13 @@ this.err = function(errType, errParams) {
      ASSERT.call(this, false, errType + '; PARAMS='+errParams);
 };
 
-this.hoistIdToScope = function(id, targetScope  ) { 
+this.hoistIdToScope = function(id, targetScope, decl) { 
    var scope = this;
    
    while (true) {
      ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
-     scope.declMode = this.declMode; // TODO: ugh
-     if ( !scope.insertDecl(id  ) ) {
-       // TODO: looks like having a 'declMode' with each call would be a beter idea than the folowing.
-       var curMode = this.declMode;
-       this.declMode = DECL_MODE_CATCH_PARAMS;
-       this.insertDecl0(id);
-       this.declMode = curMode;
+     if ( !scope.insertDecl(id, decl) ) {
+       this.insertDecl0(id, DECL_MODE_CATCH_PARAMS);
        break;
      }
 
@@ -6160,27 +6440,26 @@ declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNC_NAME] =
 declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
 
-   this.hoistIdToScope(id, func  );
-
+   this.hoistIdToScope(id, func, decl);
 };
 
 declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
 declare[DECL_MODE_LET] = function(id, declType) {
-   this.insertDecl(id);
+   this.insertDecl(id, declType);
 };
 
 declare[DECL_MODE_CATCH_PARAMS] = function(id, declType) {
   var name = id.name + '%';
-  this.insertDecl(id);
+  this.insertDecl(id, declType);
 };
  
 // returns false if the variable was not inserted
 // in the current scope because of having
 // the same name as a catch var in the scope
 // (this implies the scope must be a catch scope for this to happen)
-this.insertDecl = function(id ) {
+this.insertDecl = function(id, decl) {
 
-  var declType =  this.declMode; 
+  var declType = decl;
   var existingDecl = this.findDeclInScope(id.name);
   var func = this.funcScope;
 
@@ -6200,11 +6479,16 @@ this.insertDecl = function(id ) {
     this.err('exists.in.current', { id: id });
   }
 
-  this.insertDecl0(id);
+  this.insertDecl0(id, decl);
+  this.insertID(id);
 
   return true;
 };
 
+this.insertDecl0 = function(id, declType) {
+  var name = id.name + '%';
+  this.definedNames[name] = decl;
+};
 
 this.findDeclInScope = function(name) {
   name += '%';
@@ -6230,6 +6514,45 @@ this.isConcrete = function() {
          this.isFunc();
 };
 
+
+
+},
+function(){
+
+this.spawnFunc = function(fundecl) {
+  return new Scope(
+    this,
+    fundecl ?
+      SCOPE_TYPE_FUNCTION_DECLARATION :
+      SCOPE_TYPE_FUNCTION_EXPRESSION
+  );
+};
+
+this.spawnLexical = function(loop) {
+  return new Scope(
+    this,
+    !loop ?
+     SCOPE_TYPE_LEXICAL_SIMPLE :
+     SCOPE_TYPE_LEXICAL_LOOP );
+};
+
+this.spawnCatch = function() {
+  return new Scope(
+    this,
+    SCOPE_TYPE_CATCH );
+};
+
+this.mustNotHaveAnyDupeParams = function() {
+  return this.strict || this.isInComplexArgs;
+};
+
+this.hasParam = function(name) {
+  return HAS.call(this.idNames, name+'%');
+};
+
+this.insertID = function(id) {
+  this.idNames[id.name+'%'] = id;
+};
 
 
 }]  ],
