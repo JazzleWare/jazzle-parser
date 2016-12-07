@@ -50,7 +50,7 @@ function Scope(parent, type) {
 
   this.idNames = {};
   this.isInComplexArgs = false;
-  this.strict = this.parser.tight;
+  this.strict = this.parent ? this.parent.strict : false;
   this.synth = false;
   
 }

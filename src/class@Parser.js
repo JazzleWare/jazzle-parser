@@ -45,87 +45,18 @@ this. parseClass = function(context) {
   var isStatic = false;
 
   WHILE:
-  while ( !false ) {
-      if ( this.lttype === 'Identifier' && this.ltval === 'static' ) {
-        startcStatic = this.c0;
-        rawStatic = this.ltraw;
-        colStatic = this.col;
-        liStatic = this.li;
-        cStatic = this.c;
-        startLocStatic = this.locBegin();
-
-        this.next();
-        
-        if ( this.lttype === '(' ) {
-          elem = this.parseMeth( { type: 'Identifier', name: 'static', start: startcStatic, end: cStatic, raw: rawStatic,
-                                  loc: { start: startLocStatic, end: { line: liStatic, column: colStatic } }}   , CLASS_MEM);
-          list.push(elem);
-          continue;
-        }
-        isStatic = !false;
-      }
-      SWITCH:
-      switch ( this.lttype ) {
-          case 'Identifier': switch ( this.ltval ) {
-             case 'get': case 'set': 
-               elem = this.parseSetGet(CLASS_MEM);
-               break SWITCH;
-
-             case 'constructor':
-                 if ( foundConstructor && this.ctorMultiError() )
-                   return this.errorHandlerOutput ;
-                 
-                 if ( !isStatic ) foundConstructor = !false;
-                
-             default:
-               elem = this.parseMeth(this.id(), CLASS_MEM);
-               break SWITCH;
-          }
-          case '[': elem = this.parseMeth(this.memberExpr(), CLASS_MEM); break;
-          case 'Literal':
-             if ( this.ltval === 'constructor') {
-                if ( foundConstructor && this.ctorMultiError() )
-                  return this.errorHandlerOutput;
-
-                if (!isStatic) foundConstructor = true;
-             }
-                 
-             elem = this.parseMeth(this.numstr(), CLASS_MEM);
-             break ;
-
-          case ';': this.next(); continue;
-          case 'op': 
-            if ( this.ltraw === '*' ) {
-              elem = this.parseGen(CLASS_MEM);
-              break ;
-            }
-
-          default: break WHILE;
-      } 
-      if ( isStatic ) {
-        if ( elem.kind === 'constructor' ) 
-          elem.kind   =  "method"; 
-
-        var elemName = "";
-        if ( !elem.computed ) switch (elem.key.type) {
-           case 'Identifier':
-              elemName = elem.key.name;
-              break;
-           case 'Literal':
-              if (typeof elem.key.value === STRING_TYPE)
-                elemName = elem.key.value;
-        }
-        if (elemName === 'prototype')
-          this.err('class.has.static.prototype');
-
-        elem.start = startcStatic;
-        elem.loc.start = startLocStatic;
-
-        elem['static'] = !false;
-        isStatic = false;
-      }
-      list.push(elem);         
+  while (true) {
+    if (this.lttype === ';') {
+      this.next();
+      continue;
+    }
+    elem = this.parseMem(MEM_CLASS);
+    if (elem !== null)
+      list.push(elem);
+    else 
+      break;
   }
+
   var endLoc = this.loc();
   var n = { type: canBeStatement ? 'ClassDeclaration' : 'ClassExpression',
             id: name,

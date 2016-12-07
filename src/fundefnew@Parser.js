@@ -1,5 +1,5 @@
 this.parseFunc = function(context) {
-  var prevLabels = this.labels;
+  var prevLabels = this.labels,
       prevStrict = this.tight,
       prevScopeFlags = this.scopeFlags,
       prevYS = this.firstYS,
@@ -104,7 +104,7 @@ this.parseFunc = function(context) {
   return n;
 };
   
-this.parseMeth = function(name, flags) {
+this.parseMeth = function(name, context) {
   if (this.lttype !== '(')
     this.err('meth.paren', name, context);
   var val = null;
@@ -123,11 +123,11 @@ this.parseMeth = function(name, flags) {
     return {
       type: 'MethodDefinition', key: core(name),
       start: name.start, end: val.end,
-      kind: (flags & MEM_CONSTRUCTOR) ? 'constructor' : (flags & MEM_GET) ? 'get' :
-            (flags & MEM_SET) ? 'set' : 'method',
+      kind: (context & MEM_CONSTRUCTOR) ? 'constructor' : (context & MEM_GET) ? 'get' :
+            (context & MEM_SET) ? 'set' : 'method',
       computed: name.type === PAREN,
       loc: { start: name.loc.start, end: val.loc.end },
-      value: val, 'static': !!(flags & MEM_STATIC)/* ,y:-1*/
+      value: val, 'static': !!(context & MEM_STATIC)/* ,y:-1*/
     }
   }
    

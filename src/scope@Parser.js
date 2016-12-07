@@ -87,3 +87,8 @@ this.ensureParamIsNotDupe = function(id) {
      this.err('func.args.has.dup', id );
 };
 
+// TODO: must check whether we are parsing with v > 5, whether we are in an if, etc.
+this.canDeclareFunctionsInScope = function() { return true; };
+
+this.inFuncScope = function() { return this.scope.isFunc(); };
+

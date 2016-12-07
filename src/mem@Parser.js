@@ -1,3 +1,20 @@
+// TODO: the values for li, col, and c can be calculated
+// by adding the value of raw.length to li0, col0, and c0, respectively,
+// but this holds only in a limited use case where the
+// value of the `raw` param is known to be either 'static', 'get', or 'set';
+// but if this is going to be called for any value of raw containing surrogates, it may not work correctly.
+function assembleID(c0, li0, col0, raw, val) {
+  return { 
+    type: 'Identifier', raw: raw,
+    name: val, end: c0 + raw.length,
+    start: c0, 
+    loc: {
+      start: { line: li0, column: col0 },
+      end: { line: li0 + raw.length, column: col0 + raw.length }
+    }
+  }
+}
+
 this.parseMem = function(context) {
   var c0 = 0, li0 = 0, col0 = 0, nmod = 0,
       nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "";
@@ -15,7 +32,7 @@ this.parseMem = function(context) {
       case 'static':
         if (!(context & MEM_CLASS)) break LOOP;
         if (context & MEM_STATIC) break LOOP;
-        nc0 = this.c0; nli0 = this.li0;i
+        nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
         nmod++; context |= MEM_STATIC; this.next();
@@ -56,14 +73,14 @@ this.parseMem = function(context) {
     else if (this.ltval === '__proto__')
       context |= MEM_PROTO;
 
-    nmem = this.parseLiteral();
+    nmem = this.numstr();
     break;
   case '[':
     nmem = this.memberExpr();
     break;
   default:
     if (nmod) {
-      nmem = this.assembleID(nc0, nli0, ncol0, nraw, nval);
+      nmem = assembleID(nc0, nli0, ncol0, nraw, nval);
       nmod--;
     }
   }

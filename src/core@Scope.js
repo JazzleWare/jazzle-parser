@@ -78,14 +78,14 @@ this.hoistIdToScope = function(id, targetScope, decl) {
    
 var declare = {};
 
-declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNC_NAME] =
+declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNCTION] =
 declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
    // #if V
    var decl = new Decl(declType, id.name, func, id.name);
    // #end
 
-   this.hoistIdToScope(id, func, decl);
+   this.hoistIdToScope(id, func/* #if V */, decl/* #else */, declType/* #end */ );
    // #if V
    return decl;
    // #end
@@ -171,7 +171,7 @@ this.insertDecl0 = function(isFresh, name, decl) {
 // #else
 this.insertDecl0 = function(id, declType) {
   var name = id.name + '%';
-  this.definedNames[name] = decl;
+  this.definedNames[name] = declType;
 };
 // #end
 

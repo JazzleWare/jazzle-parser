@@ -84,7 +84,7 @@ this.parseObjectPattern  = function() {
               this.validateID(name.name);
               sh = !false;
               val = name;
-              this.scope.parserDeclare(name);
+              this.declare(name);
             }
             break ;
 

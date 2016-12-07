@@ -172,7 +172,7 @@ this.parseWhileStatement = function () {
 
    var scopeFlags = this.scopeFlags;
    this.scopeFlags &= CLEAR_IB;
-   this.scopeFlags |= (SCOPE_CONTINUE|SCOPE_BREAK );
+   this.scopeFlags |= (SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
    var nbody = this.parseStatement(false);
    this.scopeFlags = scopeFlags ;
    this.foundStatement = !false;
@@ -217,7 +217,7 @@ this.parseDoWhileStatement = function () {
   this.next() ;
   var scopeFlags = this.scopeFlags;
   this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= (SCOPE_BREAK| SCOPE_CONTINUE);
+  this.scopeFlags |= (SCOPE_FLAG_BREAK| SCOPE_FLAG_CONTINUE);
   var nbody = this.parseStatement (!false) ;
   this.scopeFlags = scopeFlags;
   if ( !this.expectID_soft('while') &&
@@ -254,7 +254,7 @@ this.parseContinueStatement = function () {
      return this.errorHandlerOutput ;
 
    this.fixupLabels(false);
-   if (!(this.scopeFlags & SCOPE_CONTINUE) &&
+   if (!(this.scopeFlags & SCOPE_FLAG_CONTINUE) &&
          this.err('continue.not.in.loop') )
      return this.errorHandlerOutput  ;
 
@@ -323,7 +323,7 @@ this.parseBreakStatement = function () {
        return { type: 'BreakStatement', label: label, start: startc, end: semi || label.end,
            loc: { start: startLoc, end: semiLoc || label.loc.end } };
    }
-   else if (!(this.scopeFlags & SCOPE_BREAK) &&
+   else if (!(this.scopeFlags & SCOPE_FLAG_BREAK) &&
          this.err('break.not.in.breakable') )
      return this.errorHandlerOutput ;
 
@@ -367,7 +367,7 @@ this.parseSwitchStatement = function () {
     return this.errorHandlerOutput ;
 
   this.enterLexicalScope(false); 
-  this.scopeFlags |=  (SCOPE_BREAK|SCOPE_BLOCK);
+  this.scopeFlags |=  (SCOPE_FLAG_BREAK|SCOPE_BLOCK);
   while ( elem = this.parseSwitchCase()) {
     if (elem.test === null) {
        if (hasDefault ) this.err('switch.has.a.dup.default',elem );
@@ -576,12 +576,12 @@ this. parseCatchClause = function () {
         this.err('catch.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput ;
 
-   this.scope.setDeclMode(DECL_MODE_CATCH_PARAMS);
+   this.declMode = DECL_MODE_CATCH_PARAMS;
    var catParam = this.parsePattern();
    if (this.lttype === 'op' && this.ltraw === '=')
      this.err('catch.param.has.default.val');
 
-   this.scope.setDeclMode(DECL_MODE_NONE);
+   this.declMode = DECL_MODE_NONE;
    if (catParam === null)
      this.err('catch.has.no.param');
 

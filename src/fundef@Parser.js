@@ -11,7 +11,7 @@ this .parseArgs  = function (argLen) {
     if ( elem ) {
        if ( this.lttype === 'op' && this.ltraw === '=' ) {
          elem = this.parseAssig(elem);
-         this.scope.makeComplex();
+         this.makeComplex();
        }
 
        if ( !firstNonSimpArg && elem.type !== 'Identifier' )
