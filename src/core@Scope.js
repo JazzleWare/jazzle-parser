@@ -39,35 +39,14 @@ this.findRefInScope = function(name) {
 };
 // #end
 
-this.err = function(errType, errParams) {
-   if (errType === 'exists.in.current') {
-     var decl = errParams.newDecl,
-         existingDecl = errParams.existingDecl;
-
-     ASSERT.call(this, false, 
-        'name "'+decl.name+'" is a "'+decl.type+
-        '" and can not override the "'+existingDecl.type+
-        '" that exists in the current scope');
-   }
-   else
-     ASSERT.call(this, false, errType + '; PARAMS='+errParams);
-};
-
-this.hoistIdToScope = function(id, targetScope /* #if V */, decl /* #end */ ) { 
+this.hoistIdToScope = function(id, targetScope, decl) { 
    var scope = this;
    /* #if V */ var isFresh = targetScope.findDeclInScope(id.name) === null; /* #end */
    while (true) {
      ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
-     // #if !V
-     scope.declMode = this.declMode; // TODO: ugh
-     // #end
-     if ( !scope.insertDecl(id /* #if V */, decl /* #end */ ) ) {
+     if ( !scope.insertDecl(id, decl) ) {
        // #if !V
-       // TODO: looks like having a 'declMode' with each call would be a beter idea than the folowing.
-       var curMode = this.declMode;
-       this.declMode = DECL_MODE_CATCH_PARAMS;
-       this.insertDecl0(id);
-       this.declMode = curMode;
+       this.insertDecl0(id, DECL_MODE_CATCH_PARAMS);
        // #end
        break;
      }
@@ -85,21 +64,20 @@ this.hoistIdToScope = function(id, targetScope /* #if V */, decl /* #end */ ) {
    
 var declare = {};
 
-declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNC_NAME] =
+declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNCTION_DECL] =
 declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
    // #if V
    var decl = new Decl(declType, id.name, func, id.name);
    // #end
 
-   this.hoistIdToScope(id, func /* #if V */ , decl /* #end */ );
-
+   this.hoistIdToScope(id, func/* #if V */, decl/* #else */, declType/* #end */ );
    // #if V
    return decl;
    // #end
 };
 
-declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
+declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] = declare[DECL_MODE_FUNCTION_EXPR] =
 declare[DECL_MODE_LET] = function(id, declType) {
    // #if V
    if (declType & DECL_MODE_CATCH_PARAMS)
@@ -110,7 +88,7 @@ declare[DECL_MODE_LET] = function(id, declType) {
    this.nameList.push(decl);
    return decl;
    // #else
-   this.insertDecl(id);
+   this.insertDecl(id, declType);
    // #end
 };
 
@@ -124,7 +102,7 @@ declare[DECL_MODE_CATCH_PARAMS] = function(id, declType) {
   this.insertDecl(id, catchVar); 
   this.nameList.push(catchVar);
   // #else
-  this.insertDecl(id);
+  this.insertDecl(id, declType);
   // #end
 };
  
@@ -132,9 +110,9 @@ declare[DECL_MODE_CATCH_PARAMS] = function(id, declType) {
 // in the current scope because of having
 // the same name as a catch var in the scope
 // (this implies the scope must be a catch scope for this to happen)
-this.insertDecl = function(id /* #if V */, decl /* #end */) {
+this.insertDecl = function(id, decl) {
 
-  var declType = /* #if V */ decl.type; /* #else */ this.declMode; /* #end */
+  var declType = decl/* #if V */.type/* #end */;
   var existingDecl = this.findDeclInScope(id.name);
   var func = this.funcScope;
 
@@ -156,10 +134,10 @@ this.insertDecl = function(id /* #if V */, decl /* #end */) {
 
   // #if V
   this.insertDecl0(true, id.name, decl);
-  this.insertID(id);
   // #else
-  this.insertDecl0(id);
+  this.insertDecl0(id, decl);
   // #end
+  this.insertID(id);
 
   return true;
 };
@@ -175,6 +153,11 @@ this.insertDecl0 = function(isFresh, name, decl) {
       this.unresolvedNames[name] = null;
     }
     else decl.refMode = new RefMode();
+};
+// #else
+this.insertDecl0 = function(id, declType) {
+  var name = id.name + '%';
+  this.definedNames[name] = declType;
 };
 // #end
 

@@ -51,7 +51,7 @@ this. asArrowFuncArg = function(arg) {
            if (this.tight)
              this.assert(!arguments_or_eval(arg.name));
 
-           return this.scope.parserDeclare(arg);
+           return this.declare(arg);
 
         case 'ArrayExpression':
            if ( arg === this.firstParen && this.parenParamError() ) 
@@ -146,8 +146,9 @@ this . parseArrowFunctionExpression = function(arg,context)   {
        this.unsatisfiedArg = null;
 
   var tight = this.tight;
+
   this.enterFuncScope(false);
-  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
+  this.declMode = DECL_MODE_FUNCTION_PARAMS;
   this.enterComplex();
 
   switch ( arg.type ) {
@@ -174,7 +175,7 @@ this . parseArrowFunctionExpression = function(arg,context)   {
   this.next();
 
   var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= ( SCOPE_FUNCTION|SCOPE_METH|SCOPE_CONSTRUCTOR) ;
+  this.scopeFlags &= INHERITED_SCOPE_FLAGS;
 
   var isExpr = !false, nbody = null;
 
@@ -183,7 +184,7 @@ this . parseArrowFunctionExpression = function(arg,context)   {
        this.firstYS = null;
        this.labels = {};
        isExpr = false;
-       this.scopeFlags |= SCOPE_FUNCTION;
+       this.scopeFlags |= SCOPE_FLAG_FN;
        nbody = this.parseFuncBody(CONTEXT_NONE);
        this.labels = prevLabels;
        this.firstYS = prevYS;

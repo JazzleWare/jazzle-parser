@@ -7,7 +7,7 @@ this.parseProgram = function () {
   globalScope = new Scope(null, SCOPE_TYPE_GLOBAL);
   // #end
  
-  this.scope = new ParserScope(this, globalScope, SCOPE_TYPE_SCRIPT);
+  this.scope = new Scope(globalScope, SCOPE_TYPE_SCRIPT);
   this.next();
   this.scopeFlags = SCOPE_BLOCK;
 

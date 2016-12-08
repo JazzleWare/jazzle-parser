@@ -51,7 +51,7 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
     
          case 'yield': 
-            if (!this.tight && !(this.scopeFlags & SCOPE_YIELD)) {
+            if (!this.tight && !(this.scopeFlags & SCOPE_FLAG_GEN)) {
               break SWITCH;
             }
 

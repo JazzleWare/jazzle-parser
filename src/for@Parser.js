@@ -92,7 +92,7 @@ this . parseFor = function() {
             return this.errorHandlerOutput ;
 
           this.scopeFlags &= CLEAR_IB;
-          this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
+          this.scopeFlags |= ( SCOPE_FLAG_BREAK|SCOPE_FLAG_CONTINUE );
           nbody = this.parseStatement(!false);
           if ( !nbody && this.err('null.stmt','for.iter',
                { s:startc, l:startLoc, h: head, iter: afterHead, scopeFlags: scopeFlags }) )
@@ -136,7 +136,7 @@ this . parseFor = function() {
     return this.errorHandlerOutput ;
 
   this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
+  this.scopeFlags |= ( SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
   nbody = this.parseStatement(! false);
   if ( !nbody && this.err('null.stmt','for.simple',
       { s:startc, l:startc, h: head, t: afterHead, u: tail, scopeFlags: scopeFlags } ) )

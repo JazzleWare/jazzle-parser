@@ -47,6 +47,12 @@ function Scope(parent, type) {
   this.definedEmitNames = {}; 
 
   // #end
+
+  this.idNames = {};
+  this.isInComplexArgs = false;
+  this.strict = this.parent ? this.parent.strict : false;
+  this.synth = false;
+  
 }
 
 Scope.createFunc = function(parent, decl) {

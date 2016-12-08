@@ -30,7 +30,7 @@ this.parseObjectExpression = function (context) {
      this.firstEA = null;
      this.firstElemWithYS = null;
 
-     elem = this.parseProperty(null,context);
+     elem = this.parseMem(context, MEM_OBJ);
      if ( !first__proto__ && this.first__proto__ )
           first__proto__ =  this.first__proto__ ;
 
@@ -89,91 +89,6 @@ this.parseObjectExpression = function (context) {
   this.firstNonTailRest = firstNonTailRest;
 
   return elem;
-};
-
-this.parseProperty = function (name, context) {
-
-  var __proto__ = false, first__proto__ = this.first__proto__ ;
-  var val = null;
-  
-
-  SWITCH:
-  if ( name === null ) switch ( this.lttype  ) {
-      case 'op':
-         return this.ltraw === '*' ? this.parseGen(OBJ_MEM) : null;
-
-      case 'Identifier': switch ( this.ltval ) {
-         case 'get':
-            return this.parseSetGet(OBJ_MEM);
-         case 'set':
-            return this.parseSetGet(OBJ_MEM);
-
-         case '__proto__':
-            __proto__ = !false;
-
-         default:
-            name = this.memberID();
-            break SWITCH;
-      }
-      case 'Literal':
-            if ( this.ltval === '__proto__' )
-               __proto__ = !false;
- 
-            name = this.numstr();
-            break SWITCH;
-
-      case '[':
-            name = this.memberExpr();
-            break SWITCH;
-
-      default: return null;
-  }
-
-  this.firstUnassignable = this.firstParen = null;
-
-  switch (this.lttype) {
-      case ':':
-         if ( __proto__ && first__proto__ ) this.err('obj.proto.has.dup') ;
-
-         this.next();
-         val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
-         val = { type: 'Property', start: name.start, key: core(name), end: val.end,
-                  kind: 'init', loc: { start: name.loc.start, end: val.loc.end }, computed: name.type === PAREN ,
-                  method: false, shorthand: false, value: core(val)/* ,y:-1*/ };
-         if ( __proto__ )
-            this.first__proto__ = val;
-
-         return val;
-
-      case '(':
-         return this.parseMeth(name, OBJ_MEM);
-
-      default:
-          if (name.type !== 'Identifier') {
-            if ( this.err('obj.prop.assig.not.id',name,context) )
-              return this.errorHandlerOutput ;
-          }
-          else this.validateID(name.name);
-
-          if ( this.lttype === 'op' ) {
-             if (this.ltraw !== '=' && this.err('obj.prop.assig.not.assigop',name,context) )
-               return this.errorHandlerOutput  ;
-
-             if (!(context & CONTEXT_ELEM) && this.err('obj.prop.assig.not.allowed',name,context) )
-               return this.errorHandlerOutput ;
-
-             val = this.parseAssig(name);
-             this.unsatisfiedAssignment = val;
-          }
-          else
-             val = name;
-
-          return { type: 'Property', key: name, start: val.start, end: val.end,
-                    loc: val.loc, kind: 'init',  shorthand: !false, method: false,
-                   value: val, computed: false/* ,y:-1*/ };
-  }
-
-       return n   ;
 };
 
 
