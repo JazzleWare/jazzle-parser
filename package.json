@@ -1,7 +1,7 @@
 {
   "name": "jazzle",
   "main": "dist/jazzle.js",
-  "version": "0.5.18",
+  "version": "0.5.29",
   "description": "A very fast ECMAScript parser, fully written in plain ECMAScript 3",
   "homepage": "https://github.com/icefapper/jsrube",
   "engines": { "node": ">=6.20.0" },
