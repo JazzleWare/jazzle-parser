@@ -100,7 +100,7 @@ this.parseFunc = function(context, flags) {
   this.scopeFlags = prevScopeFlags;
   this.declMode = prevDeclMode;
   this.firstYS = prevYS;
-  this.firstNonSipArg = prevNonSimpArg;
+  this.firstNonSimpArg = prevNonSimpArg;
   
   this.exitScope();
   return n;
