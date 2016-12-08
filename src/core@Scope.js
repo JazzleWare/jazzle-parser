@@ -39,20 +39,6 @@ this.findRefInScope = function(name) {
 };
 // #end
 
-this.err = function(errType, errParams) {
-   if (errType === 'exists.in.current') {
-     var decl = errParams.newDecl,
-         existingDecl = errParams.existingDecl;
-
-     ASSERT.call(this, false, 
-        'name "'+decl.name+'" is a "'+decl.type+
-        '" and can not override the "'+existingDecl.type+
-        '" that exists in the current scope');
-   }
-   else
-     ASSERT.call(this, false, errType + '; PARAMS='+errParams);
-};
-
 this.hoistIdToScope = function(id, targetScope, decl) { 
    var scope = this;
    /* #if V */ var isFresh = targetScope.findDeclInScope(id.name) === null; /* #end */
@@ -78,7 +64,7 @@ this.hoistIdToScope = function(id, targetScope, decl) {
    
 var declare = {};
 
-declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNCTION] =
+declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNCTION_DECL] =
 declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
    // #if V
@@ -91,7 +77,7 @@ declare[DECL_MODE_VAR] = function(id, declType) {
    // #end
 };
 
-declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
+declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] = declare[DECL_MODE_FUNCTION_EXPR] =
 declare[DECL_MODE_LET] = function(id, declType) {
    // #if V
    if (declType & DECL_MODE_CATCH_PARAMS)

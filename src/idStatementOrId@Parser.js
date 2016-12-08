@@ -93,8 +93,8 @@ this. parseIdStatementOrId = function ( context ) {
         case 'throw': return this.parseThrowStatement();
         case 'while': return this.parseWhileStatement();
         case 'yield': 
-             if ( this.scopeFlags & SCOPE_YIELD ) {
-                if (this.scopeFlags & SCOPE_ARGS)
+             if ( this.scopeFlags & SCOPE_FLAG_GEN ) {
+                if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
                   this.err('yield.args');
 
                 if ( this.canBeStatement )
@@ -174,7 +174,7 @@ this. parseIdStatementOrId = function ( context ) {
     }
 
     case 8: switch (id) {
-        case 'function': return this.parseFunc(context&CONTEXT_FOR, WHOLE_FUNCTION, ANY_ARG_LEN );
+        case 'function': return this.parseFunc(context&CONTEXT_FOR, 0 );
         case 'debugger': return this.prseDbg();
         case 'continue': return this.parseContinueStatement();
         case 'abstract': case 'volatile':

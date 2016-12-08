@@ -29,10 +29,12 @@ this. parseClass = function(context) {
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
      name = this.validateID(null); 
 
+  var memParseFlags = MEM_CLASS;
   var classExtends = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
      this.next();
      classExtends = this.parseExprHead(CONTEXT_NONE);
+     memParseFlags |= MEM_SUPER;
   }
 
   var list = [];
@@ -50,9 +52,12 @@ this. parseClass = function(context) {
       this.next();
       continue;
     }
-    elem = this.parseMem(MEM_CLASS);
-    if (elem !== null)
+    elem = this.parseMem(CONTEXT_NONE, memParseFlags);
+    if (elem !== null) {
       list.push(elem);
+      if (elem.kind === 'constructor')
+        memParseFlags |= MEM_HAS_CONSTRUCTOR;
+    }
     else 
       break;
   }
@@ -81,12 +86,12 @@ this.parseSuper  = function   () {
    this.next() ;
    switch ( this.lttype ) {
         case '(':
-          if ( !( this.scopeFlags & SCOPE_CONSTRUCTOR ) &&
+          if ( (this.scopeFlags & (SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR)) !== (SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR) &&
                   this.err('class.super.call') ) return this.errorHandlerOutput;
           break ;
         case '.':
         case '[':
-           if ( !(this.scopeFlags & (SCOPE_METH|SCOPE_CONSTRUCTOR)) &&
+           if ( !(this.scopeFlags & SCOPE_FLAG_ALLOW_SUPER) &&
                   this.err('class.super.mem') ) return this.errorHandlerOutput ;
            break ;
         

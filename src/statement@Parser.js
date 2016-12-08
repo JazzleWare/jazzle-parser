@@ -433,7 +433,7 @@ this.parseReturnStatement = function () {
 
   this.fixupLabels(false ) ;
 
-  if ( !( this.scopeFlags & SCOPE_FUNCTION ) &&
+  if ( !( this.scopeFlags & SCOPE_FLAG_FN ) &&
           this.err('return.not.in.a.function') )
     return this.errorHandlerOutput ;
 

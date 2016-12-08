@@ -1,7 +1,8 @@
-this.parseFunc = function(context) {
+this.parseFunc = function(context, flags) {
   var prevLabels = this.labels,
       prevStrict = this.tight,
       prevScopeFlags = this.scopeFlags,
+      prevDeclMode = this.declMode,
       prevYS = this.firstYS,
       prevNonSimpArg = this.firstNonSimpArg;
 
@@ -12,10 +13,10 @@ this.parseFunc = function(context) {
   }
 
   var isGen = false,
-      isWhole = !(context & MEM_ANY);
+      isWhole = !(flags & MEM_CLASS_OR_OBJ);
    
-  var argLen = !(context & MEM_ACCESSOR) ? ARGLEN_ANY :
-    (context & MEM_SET) ? ARGLEN_SET : ARGLEN_GET;
+  var argLen = !(flags & MEM_ACCESSOR) ? ARGLEN_ANY :
+    (flags & MEM_SET) ? ARGLEN_SET : ARGLEN_GET;
 
   // current func name
   var cfn = null;
@@ -37,7 +38,7 @@ this.parseFunc = function(context) {
       }
       if (!(context & CONTEXT_DEFAULT)) {
         if (this.lttype === 'Identifier') {
-          this.declMode = DECL_MODE_FUNCTION;
+          this.declMode = DECL_MODE_FUNCTION_DECL;
           cfn = this.parsePattern();
         }
         else
@@ -53,12 +54,12 @@ this.parseFunc = function(context) {
       if (this.lttype === 'Identifier') {
         this.enterLexicalScope(false);
         this.scope.synth = true;
-        this.declMode = DECL_MODE_LET;
+        this.declMode = DECL_MODE_FUNCTION_EXPR;
         cfn = this.parsePattern();
       }
     }
   }
-  else if (context & MEM_GEN)
+  else if (flags & MEM_GEN)
     isGen = true;
 
   this.enterFuncScope(isStmt); 
@@ -67,8 +68,8 @@ this.parseFunc = function(context) {
   this.scopeFlags = SCOPE_FLAG_ARG_LIST;
   if (isGen)
     this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
-  else if (context & MEM_SUPER)
-    this.scopeFlags |= (context & (MEM_SUPER|MEM_CONSTRUCTOR));
+  else if (flags & MEM_SUPER)
+    this.scopeFlags |= (flags & (MEM_SUPER|MEM_CONSTRUCTOR));
   
   // class members, along with obj-methods, have strict formal parameter lists,
   // which is a rather misleading name for a parameter list in which dupes are not allowed
@@ -97,6 +98,7 @@ this.parseFunc = function(context) {
   this.labels = prevLabels;
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
+  this.declMode = prevDeclMode;
   this.firstYS = prevYS;
   this.firstNonSipArg = prevNonSimpArg;
   
@@ -104,35 +106,40 @@ this.parseFunc = function(context) {
   return n;
 };
   
-this.parseMeth = function(name, context) {
+this.parseMeth = function(name, flags) {
   if (this.lttype !== '(')
-    this.err('meth.paren', name, context);
+    this.err('meth.paren', name, flags);
   var val = null;
-  if (context & MEM_CLASS) {
-    if (context & MEM_CONSTRUCTOR) {
-      if (context & MEM_SPECIAL)
-        this.err('class.constructor.is.special.mem', name, context);
-    }
-    if (context & MEM_STATIC) {
-      if (context & MEM_PROTOTYPE)
-        this.err('class.prototype.is.static.mem', name, context);
+  if (flags & MEM_CLASS) {
+    // all modifiers come at the beginning
+    if (flags & MEM_STATIC) {
+      if (flags & MEM_PROTOTYPE)
+        this.err('class.prototype.is.static.mem', name, flags);
+
+      flags &= ~(MEM_CONSTRUCTOR|MEM_SUPER);
     }
 
-    val = this.parseFunc(CONTEXT_NONE|(context & MEM_FLAGS));
+    if (flags & MEM_CONSTRUCTOR) {
+      if (flags & MEM_SPECIAL)
+        this.err('class.constructor.is.special.mem', name, flags);
+      if (flags & MEM_HAS_CONSTRUCTOR)
+        this.err('class.constructor.is.a.dup', name, flags);
+    }
+
+    val = this.parseFunc(CONTEXT_NONE, flags);
 
     return {
       type: 'MethodDefinition', key: core(name),
       start: name.start, end: val.end,
-      kind: (context & MEM_CONSTRUCTOR) ? 'constructor' : (context & MEM_GET) ? 'get' :
-            (context & MEM_SET) ? 'set' : 'method',
+      kind: (flags & MEM_CONSTRUCTOR) ? 'constructor' : (flags & MEM_GET) ? 'get' :
+            (flags & MEM_SET) ? 'set' : 'method',
       computed: name.type === PAREN,
       loc: { start: name.loc.start, end: val.loc.end },
-      value: val, 'static': !!(context & MEM_STATIC)/* ,y:-1*/
+      value: val, 'static': !!(flags & MEM_STATIC)/* ,y:-1*/
     }
   }
    
-  var cm = (context & MEM_FLAGS) || MEM_OBJ_METH;
-  val = this.parseFunc(CONTEXT_NONE|cm);
+  val = this.parseFunc(CONTEXT_NONE, flags);
 
   return {
     type: 'Property', key: core(name),

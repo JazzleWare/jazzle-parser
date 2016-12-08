@@ -155,7 +155,7 @@ this .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
          this.err('meta.new.has.unknown.prop',startc,end,startLoc,endLoc,new_raw) )
        return this.errorHandlerOutput ;
     
-    if ( !(this.scopeFlags & SCOPE_FUNCTION) )
+    if ( !(this.scopeFlags & SCOPE_FLAG_FN) )
       this.err('meta.new.not.in.function',startc,end,startLoc,endLoc,new_raw);
 
     var prop = this.id();

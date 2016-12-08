@@ -30,7 +30,7 @@ this.parseObjectExpression = function (context) {
      this.firstEA = null;
      this.firstElemWithYS = null;
 
-     elem = this.parseMem(context);
+     elem = this.parseMem(context, MEM_OBJ);
      if ( !first__proto__ && this.first__proto__ )
           first__proto__ =  this.first__proto__ ;
 

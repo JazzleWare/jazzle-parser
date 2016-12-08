@@ -172,15 +172,6 @@ var CHAR_1 = char2int('1'),
     CHAR_GREATER_THAN = char2int('>')
  ;
 
-var  CONTEXT_FOR = 1,
-     CONTEXT_ELEM = CONTEXT_FOR << 1 ,
-     CONTEXT_NONE = 0,
-     CONTEXT_PARAM = CONTEXT_ELEM << 1,
-     CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
-     CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
-     CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1, 
-     CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
-
 var INTBITLEN = (function() { var i = 0;
   while ( 0 < (1 << (i++)))
      if (i >= 512) return 8;
@@ -221,7 +212,7 @@ var SCOPE_TYPE_SCRIPT = 32;
 var SCOPE_TYPE_CATCH = 128;
 var SCOPE_TYPE_GLOBAL = 256;
 
-// TODO: even though they will fit in an in, it would be probably
+// TODO: even though they will fit in an int, it would be probably
 // better to keep them separated -- they take some 20 bits right now 
 var CONTEXT_NONE = 0,
     CONTEXT_ELEM = 1,
@@ -238,18 +229,21 @@ var CONTEXT_NONE = 0,
     SCOPE_FLAG_GEN = MEM_GEN,
     SCOPE_FLAG_ALLOW_YIELD_EXPR = SCOPE_FLAG_GEN,
 
-    MEM_SET = MEM_GEN << 1,
+    MEM_OBJ = MEM_GEN << 1,
+
+    MEM_SET = MEM_OBJ << 1,
     MEM_GET = MEM_SET << 1,
     MEM_STATIC = MEM_GET << 1,
     MEM_CONSTRUCTOR = MEM_STATIC << 1,
     MEM_PROTOTYPE = MEM_CONSTRUCTOR << 1,
     MEM_OBJ_METH = MEM_PROTOTYPE << 1,
     MEM_PROTO = MEM_OBJ_METH << 1,
-
+    CONTEXT_PROTO = MEM_PROTO,
     MEM_SUPER = MEM_PROTO << 1,
     SCOPE_FLAG_ALLOW_SUPER = MEM_SUPER,    
      
-    SCOPE_FLAG_BREAK = MEM_SUPER << 1,
+    MEM_HAS_CONSTRUCTOR = MEM_SUPER << 1,
+    SCOPE_FLAG_BREAK = MEM_HAS_CONSTRUCTOR << 1,
     SCOPE_FLAG_CONTINUE = SCOPE_FLAG_BREAK << 1,
 
     // TODO: SCOPE_FLAG_FN serves the same purpose as MEM_OBJ_METH;
@@ -270,10 +264,10 @@ var CONTEXT_NONE = 0,
     MEM_FLAGS = MEM_CLASS|MEM_SPECIAL|MEM_CONSTRUCTOR|
                 MEM_PROTO|MEM_SUPER|MEM_OBJ_METH|MEM_PROTOTYPE,
     MEM_ANY = MEM_CLASS|MEM_OBJ_METH|MEM_SPECIAL|MEM_ACCESSOR|MEM_GEN,
-    MEM_OBJ = 0,
+    MEM_CLASS_OR_OBJ = MEM_CLASS|MEM_OBJ,
     SCOPE_FLAG_NONE = 0,
     
-    INHERITED_SCOPE_FLAGS = SCOPE_FLAG_ALLOW_SUPER;
+    INHERITED_SCOPE_FLAGS = SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR;
 
 var ARGLEN_GET = 0,
     ARGLEN_SET = 1,
@@ -284,7 +278,8 @@ var DECL_MODE_VAR = 1,
     DECL_MODE_NONE = 0,
     DECL_MODE_FUNCTION_PARAMS = 4|DECL_MODE_VAR,
     DECL_MODE_CATCH_PARAMS = 8,
-    DECL_MODE_FUNCTION = 32|DECL_MODE_VAR;
+    DECL_MODE_FUNCTION_DECL = 32|DECL_MODE_VAR,
+    DECL_MODE_FUNCTION_EXPR = 128|DECL_MODE_LET;
 
 var DECL_NOT_FOUND = 
   DECL_MODE_NONE;
@@ -1165,10 +1160,12 @@ this. parseClass = function(context) {
   else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
      name = this.validateID(null); 
 
+  var memParseFlags = MEM_CLASS;
   var classExtends = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
      this.next();
      classExtends = this.parseExprHead(CONTEXT_NONE);
+     memParseFlags |= MEM_SUPER;
   }
 
   var list = [];
@@ -1186,9 +1183,12 @@ this. parseClass = function(context) {
       this.next();
       continue;
     }
-    elem = this.parseMem(MEM_CLASS);
-    if (elem !== null)
+    elem = this.parseMem(CONTEXT_NONE, memParseFlags);
+    if (elem !== null) {
       list.push(elem);
+      if (elem.kind === 'constructor')
+        memParseFlags |= MEM_HAS_CONSTRUCTOR;
+    }
     else 
       break;
   }
@@ -1217,12 +1217,12 @@ this.parseSuper  = function   () {
    this.next() ;
    switch ( this.lttype ) {
         case '(':
-          if ( !( this.scopeFlags & SCOPE_CONSTRUCTOR ) &&
+          if ( (this.scopeFlags & (SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR)) !== (SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR) &&
                   this.err('class.super.call') ) return this.errorHandlerOutput;
           break ;
         case '.':
         case '[':
-           if ( !(this.scopeFlags & (SCOPE_METH|SCOPE_CONSTRUCTOR)) &&
+           if ( !(this.scopeFlags & SCOPE_FLAG_ALLOW_SUPER) &&
                   this.err('class.super.mem') ) return this.errorHandlerOutput ;
            break ;
         
@@ -2108,7 +2108,7 @@ this .parseArgs  = function (argLen) {
   }
   if ( argLen === ANY_ARG_LEN ) {
      if ( this.lttype === '...' ) {
-        this.scope.makeComplex();
+        this.makeComplex();
         elem = this.parseRestElement();
         list.push( elem  );
         if ( !firstNonSimpArg )
@@ -2129,130 +2129,6 @@ this .parseArgs  = function (argLen) {
      this.firstNonSimpArg = firstNonSimpArg ;
  
   return list;
-};
-
-this .parseFunc = function(context, argListMode, argLen ) {
-  var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
-  var prevLabels = this.labels;
-  var prevStrict = this.tight;
-
-  var prevScopeFlags = this.scopeFlags;
-  var prevYS = this.firstYS ;
-  var prevNonSimpArg = this.firstNonSimpArg;
-
-  if ( !this.canBeStatement ) 
-    this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
-  else {
-    if (!(this.scopeFlags & SCOPE_WITH_FUNC_DECL) &&
-         (this.tight || !(this.scopeFlags & SCOPE_IF)))
-      this.err('func.decl.not.in.block', startc, startLoc);
-    if (this.unsatisfiedLabel) {
-      if (!(this.scopeFlags & SCOPE_WITH_FUNC_DECL))
-        this.err('func.decl.not.in.block.has.label', startc, startLoc);
-      this.fixupLabels(false);
-    }
-  }
-
-  var isGen = false;
-
-  var currentFuncName = null;
-
-  if ( argListMode & WHOLE_FUNCTION ) {
-     if ( canBeStatement = this.canBeStatement )
-          this.canBeStatement = false;
-
-     this.next();
-
-     if ( this.lttype === 'op' && this.ltraw === '*' ) {
-          isGen = !false;
-          this.next();
-     }
-     if ( !canBeStatement && isGen ) // GeneratorExpression's BindingIdentifier can't be 'yield'
-       this.scopeFlags = SCOPE_YIELD;
-
-     if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
-        if ( this.lttype !== 'Identifier' &&
-             this.err('missing.name','func', 
-                { s: startc, l: startLoc, labels: prevLabels, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
-                  args: [context, argListMode, argLen] } ) )
-          return this.errorHandlerOutput ;
-
-        this.scope.setDeclMode(DECL_MODE_VAR);
-        currentFuncName = this.parsePattern();
-
-        if ( this.tight && arguments_or_eval(currentFuncName.name) &&
-             this.err('binding.to.eval.or.arguments','func',
-                { s: startc, l: startLoc, labels: prevLabels, stmt: !false, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
-                  args: [context, argListMode, argLen] } ) )
-          return this.errorHandlerOutput ;
-     }
-     else if ( this. lttype === 'Identifier' ) {
-        this.enterLexicalScope(false);
-        this.scope.synth = true;
-        this.scope.setDeclMode(DECL_MODE_VAR);
-        currentFuncName = this.parsePattern();
-        
-        if ( this.tight && arguments_or_eval(currentFuncName.name) &&
-             this.err('binding.to.eval.or.arguments','func',
-                { s: startc, l: startLoc, labels: prevLabels, stmt: canBeStatement, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimArg,
-                  context: [ context, argListMode, argLen] } )   )
-          return this.errorHandlerOutput;
-     }
-     else
-        currentFuncName = null;
-  }
-  else if ( argListMode & ARGLIST_AND_BODY_GEN )
-     isGen = !false; 
-
-  if ( this.scopeFlags )
-       this.scopeFlags = 0;
-
-  this.enterFuncScope(canBeStatement);
-  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
-  
-  if ( isGen ) this.scopeFlags |= SCOPE_YIELD|SCOPE_ARGS;
-  var argList = this.parseArgs(argLen) ;
-  this.scope.setDeclMode(DECL_MODE_NONE);
-
-  this.tight = this.tight || argListMode !== WHOLE_FUNCTION;
-  this.scopeFlags = SCOPE_FUNCTION;
-  if ( argListMode & METH_FUNCTION )
-    this.scopeFlags |= SCOPE_METH;
-  
-  else if ( argListMode & CONSTRUCTOR_FUNCTION )
-    this.scopeFlags |= SCOPE_CONSTRUCTOR;
-   
-  if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
-
-  this.labels = {};
-
-  var nbody = this.parseFuncBody(context);
-  var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
-            id: currentFuncName,
-           start: startc,
-           end: nbody.end,
-           generator: isGen,
-           body: nbody,
-            loc: { start: startLoc, end: nbody.loc.end },
-           expression: nbody.type !== 'BlockStatement' ,  
-            params: argList };
-
-  if ( canBeStatement )
-     this.foundStatement = !false;
-
-  this.labels = prevLabels;
-
-  this.tight = prevStrict;
-  this.scopeFlags = prevScopeFlags;
-  this.firstYS = prevYS;
-  this.firstNonSimpArg = prevNonSimpArg;
-
-  this.exitScope();
-
-  return  n  ;
 };
 
 this.parseFuncBody = function(context) {
@@ -2288,7 +2164,9 @@ this . makeStrict  = function() {
 
    if ( this.tight ) return;
 
-   this.tight = !false;
+   // TODO: squash them into one
+   this.tight = true;
+   this.scope.strict = true;
 
    var a = null, argNames = this.scope.definedNames;
    for (a in argNames) {
@@ -2305,10 +2183,11 @@ this . makeStrict  = function() {
 
 },
 function(){
-this.parseFunc = function(context) {
+this.parseFunc = function(context, flags) {
   var prevLabels = this.labels,
       prevStrict = this.tight,
       prevScopeFlags = this.scopeFlags,
+      prevDeclMode = this.declMode,
       prevYS = this.firstYS,
       prevNonSimpArg = this.firstNonSimpArg;
 
@@ -2319,10 +2198,10 @@ this.parseFunc = function(context) {
   }
 
   var isGen = false,
-      isWhole = !(context & MEM_ANY);
+      isWhole = !(flags & MEM_CLASS_OR_OBJ);
    
-  var argLen = !(context & MEM_ACCESSOR) ? ARGLEN_ANY :
-    (context & MEM_SET) ? ARGLEN_SET : ARGLEN_GET;
+  var argLen = !(flags & MEM_ACCESSOR) ? ARGLEN_ANY :
+    (flags & MEM_SET) ? ARGLEN_SET : ARGLEN_GET;
 
   // current func name
   var cfn = null;
@@ -2344,7 +2223,7 @@ this.parseFunc = function(context) {
       }
       if (!(context & CONTEXT_DEFAULT)) {
         if (this.lttype === 'Identifier') {
-          this.declMode = DECL_MODE_FUNCTION;
+          this.declMode = DECL_MODE_FUNCTION_DECL;
           cfn = this.parsePattern();
         }
         else
@@ -2360,12 +2239,12 @@ this.parseFunc = function(context) {
       if (this.lttype === 'Identifier') {
         this.enterLexicalScope(false);
         this.scope.synth = true;
-        this.declMode = DECL_MODE_LET;
+        this.declMode = DECL_MODE_FUNCTION_EXPR;
         cfn = this.parsePattern();
       }
     }
   }
-  else if (context & MEM_GEN)
+  else if (flags & MEM_GEN)
     isGen = true;
 
   this.enterFuncScope(isStmt); 
@@ -2374,8 +2253,8 @@ this.parseFunc = function(context) {
   this.scopeFlags = SCOPE_FLAG_ARG_LIST;
   if (isGen)
     this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
-  else if (context & MEM_SUPER)
-    this.scopeFlags |= (context & (MEM_SUPER|MEM_CONSTRUCTOR));
+  else if (flags & MEM_SUPER)
+    this.scopeFlags |= (flags & (MEM_SUPER|MEM_CONSTRUCTOR));
   
   // class members, along with obj-methods, have strict formal parameter lists,
   // which is a rather misleading name for a parameter list in which dupes are not allowed
@@ -2404,6 +2283,7 @@ this.parseFunc = function(context) {
   this.labels = prevLabels;
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
+  this.declMode = prevDeclMode;
   this.firstYS = prevYS;
   this.firstNonSipArg = prevNonSimpArg;
   
@@ -2411,35 +2291,40 @@ this.parseFunc = function(context) {
   return n;
 };
   
-this.parseMeth = function(name, context) {
+this.parseMeth = function(name, flags) {
   if (this.lttype !== '(')
-    this.err('meth.paren', name, context);
+    this.err('meth.paren', name, flags);
   var val = null;
-  if (context & MEM_CLASS) {
-    if (context & MEM_CONSTRUCTOR) {
-      if (context & MEM_SPECIAL)
-        this.err('class.constructor.is.special.mem', name, context);
-    }
-    if (context & MEM_STATIC) {
-      if (context & MEM_PROTOTYPE)
-        this.err('class.prototype.is.static.mem', name, context);
+  if (flags & MEM_CLASS) {
+    // all modifiers come at the beginning
+    if (flags & MEM_STATIC) {
+      if (flags & MEM_PROTOTYPE)
+        this.err('class.prototype.is.static.mem', name, flags);
+
+      flags &= ~(MEM_CONSTRUCTOR|MEM_SUPER);
     }
 
-    val = this.parseFunc(CONTEXT_NONE|(context & MEM_FLAGS));
+    if (flags & MEM_CONSTRUCTOR) {
+      if (flags & MEM_SPECIAL)
+        this.err('class.constructor.is.special.mem', name, flags);
+      if (flags & MEM_HAS_CONSTRUCTOR)
+        this.err('class.constructor.is.a.dup', name, flags);
+    }
+
+    val = this.parseFunc(CONTEXT_NONE, flags);
 
     return {
       type: 'MethodDefinition', key: core(name),
       start: name.start, end: val.end,
-      kind: (context & MEM_CONSTRUCTOR) ? 'constructor' : (context & MEM_GET) ? 'get' :
-            (context & MEM_SET) ? 'set' : 'method',
+      kind: (flags & MEM_CONSTRUCTOR) ? 'constructor' : (flags & MEM_GET) ? 'get' :
+            (flags & MEM_SET) ? 'set' : 'method',
       computed: name.type === PAREN,
       loc: { start: name.loc.start, end: val.loc.end },
-      value: val, 'static': !!(context & MEM_STATIC)/* ,y:-1*/
+      value: val, 'static': !!(flags & MEM_STATIC)/* ,y:-1*/
     }
   }
    
-  var cm = (context & MEM_FLAGS) || MEM_OBJ_METH;
-  val = this.parseFunc(CONTEXT_NONE|cm);
+  val = this.parseFunc(CONTEXT_NONE, flags);
 
   return {
     type: 'Property', key: core(name),
@@ -2549,8 +2434,8 @@ this. parseIdStatementOrId = function ( context ) {
         case 'throw': return this.parseThrowStatement();
         case 'while': return this.parseWhileStatement();
         case 'yield': 
-             if ( this.scopeFlags & SCOPE_YIELD ) {
-                if (this.scopeFlags & SCOPE_ARGS)
+             if ( this.scopeFlags & SCOPE_FLAG_GEN ) {
+                if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
                   this.err('yield.args');
 
                 if ( this.canBeStatement )
@@ -2630,7 +2515,7 @@ this. parseIdStatementOrId = function ( context ) {
     }
 
     case 8: switch (id) {
-        case 'function': return this.parseFunc(context&CONTEXT_FOR, WHOLE_FUNCTION, ANY_ARG_LEN );
+        case 'function': return this.parseFunc(context&CONTEXT_FOR, 0 );
         case 'debugger': return this.prseDbg();
         case 'continue': return this.parseContinueStatement();
         case 'abstract': case 'volatile':
@@ -2824,41 +2709,38 @@ function assembleID(c0, li0, col0, raw, val) {
     start: c0, 
     loc: {
       start: { line: li0, column: col0 },
-      end: { line: li0 + raw.length, column: col0 + raw.length }
+      end: { line: li0, column: col0 + raw.length }
     }
   }
 }
 
-this.parseMem = function(context) {
+this.parseMem = function(context, flags) {
   var c0 = 0, li0 = 0, col0 = 0, nmod = 0,
-      nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "";
+      nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "", latestFlag = 0;
 
-  if (this.lttype === 'op' && this.ltval === '*') {
-    c0 = this.c - 1; li0 = this.li; col0 = this.col - 1;
-    context |= MEM_GEN;
-  }
-  else if (this.lttype === 'Identifier') {
+  if (this.lttype === 'Identifier') {
     c0 = this.c0; li0 = this.li; col0 = this.col0;
     LOOP:  
     // TODO: check version number when parsing get/set
     do {
       switch (this.ltval) {
       case 'static':
-        if (!(context & MEM_CLASS)) break LOOP;
-        if (context & MEM_STATIC) break LOOP;
+        if (!(flags & MEM_CLASS)) break LOOP;
+        if (flags & MEM_STATIC) break LOOP;
         nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
-        nmod++; context |= MEM_STATIC; this.next();
+        nmod++;
+        flags |= latestFlag = MEM_STATIC; this.next();
         break;
 
       case 'get':
       case 'set':
-        if (context & MEM_ACCESSOR) break LOOP;
+        if (flags & MEM_ACCESSOR) break LOOP;
         nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
-        context |= this.ltval === 'get' ? MEM_GET : MEM_SET;
+        flags |= latestFlag = this.ltval === 'get' ? MEM_GET : MEM_SET;
         nmod++; this.next();
         break;
 
@@ -2867,25 +2749,32 @@ this.parseMem = function(context) {
     } while (this.lttype === 'Identifier');
   }
   
+  if (this.lttype === 'op' && this.ltraw === '*') {
+    c0 = this.c - 1; li0 = this.li; col0 = this.col - 1;
+    flags |= latestFlag = MEM_GEN;
+    nmod++;
+    this.next();
+  }
+
   var nmem = null;
   switch (this.lttype) {
   case 'Identifier':
-    if ((context & MEM_CLASS)) {
-      if (this.ltval === 'constructor') context |= MEM_CONSTRUCTOR;
-      if (this.ltval === 'prototype') context |= MEM_PROTOTYPE;
+    if ((flags & MEM_CLASS)) {
+      if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
+      if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
     }
     else if (this.ltval === '__proto__')
-      context |= MEM_PROTO;
+      flags |= MEM_PROTO;
 
     nmem = this.memberID();
     break;
   case 'Literal':
-    if ((context & MEM_CLASS)) {
-      if (this.ltval === 'constructor') context |= MEM_CONSTRUCTOR;
-      if (this.ltval === 'prototype') context |= MEM_PROTOTYPE;
+    if ((flags & MEM_CLASS)) {
+      if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
+      if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
     }
     else if (this.ltval === '__proto__')
-      context |= MEM_PROTO;
+      flags |= MEM_PROTO;
 
     nmem = this.numstr();
     break;
@@ -2893,20 +2782,22 @@ this.parseMem = function(context) {
     nmem = this.memberExpr();
     break;
   default:
-    if (nmod) {
+    if (nmod && latestFlag !== MEM_GEN) {
       nmem = assembleID(nc0, nli0, ncol0, nraw, nval);
+      flags &= ~latestFlag; // it's found out to be a name, not a modifier
       nmod--;
     }
   }
 
   if (nmem === null) {
-    if (context & MEM_GEN)
+    if (flags & MEM_GEN)
       this.err('mem.gen.has.no.name');
     return null;
   } 
 
   if (this.lttype === '(') {
-    var mem = this.parseMeth(nmem, context);
+
+    var mem = this.parseMeth(nmem, flags);
     if (c0) {
       mem.start = c0;
       mem.loc.start = { line: li0, column: col0 };
@@ -2914,18 +2805,19 @@ this.parseMem = function(context) {
     return mem;
   }
 
-  if (context & MEM_CLASS)
+  if (flags & MEM_CLASS)
     this.err('unexpected.lookahead');
 
   if (nmod)
     this.err('unexpected.lookahead');
 
-  return this.parseObjElem(nmem, context);
+  return this.parseObjElem(nmem, context|(flags & MEM_PROTO));
 };
  
 this.parseObjElem = function(name, context) {
-  var hasProto = context & MEM_PROTO, firstProto = this.first__proto__;
+  var hasProto = context & CONTEXT_PROTO, firstProto = this.first__proto__;
   var val = null;
+  context &= ~CONTEXT_PROTO;
 
   this.firstUnassignable = this.firstParen = null;
   switch (this.lttype) {
@@ -2934,8 +2826,14 @@ this.parseObjElem = function(name, context) {
       this.err('obj.proto.has.dup');
     this.next();
     val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
-    if (!(context & CONTEXT_ELEM))
+    // TODO: `this.unsatisfiedAssignment` is supposed to have been set to null
+    // before this.parseObjElem(name, context); currently, this is always the case,
+    // but maybe it would be better to omit the if below and let an
+    // unsatisfied assignment get trapped in somewhere else, like parseNonSeqExpr.
+    // the only reason of the if below is to fail early (that is, without parsing a whole node before failing.)
+    if (this.unsatisfiedAssignment && !(context & CONTEXT_ELEM))
       this.err('obj.prop.assig.not.allowed', name, context);
+
     val = {
       type: 'Property', start: name.start,
       key: core(name), end: val.end,
@@ -4030,7 +3928,7 @@ this.parseObjectExpression = function (context) {
      this.firstEA = null;
      this.firstElemWithYS = null;
 
-     elem = this.parseMem(context);
+     elem = this.parseMem(context, MEM_OBJ);
      if ( !first__proto__ && this.first__proto__ )
           first__proto__ =  this.first__proto__ ;
 
@@ -4491,7 +4389,7 @@ this .parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
          this.err('meta.new.has.unknown.prop',startc,end,startLoc,endLoc,new_raw) )
        return this.errorHandlerOutput ;
     
-    if ( !(this.scopeFlags & SCOPE_FUNCTION) )
+    if ( !(this.scopeFlags & SCOPE_FLAG_FN) )
       this.err('meta.new.not.in.function',startc,end,startLoc,endLoc,new_raw);
 
     var prop = this.id();
@@ -5514,7 +5412,7 @@ this.parseReturnStatement = function () {
 
   this.fixupLabels(false ) ;
 
-  if ( !( this.scopeFlags & SCOPE_FUNCTION ) &&
+  if ( !( this.scopeFlags & SCOPE_FLAG_FN ) &&
           this.err('return.not.in.a.function') )
     return this.errorHandlerOutput ;
 
@@ -5992,7 +5890,7 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
     
          case 'yield': 
-            if (!this.tight && !(this.scopeFlags & SCOPE_YIELD)) {
+            if (!this.tight && !(this.scopeFlags & SCOPE_FLAG_GEN)) {
               break SWITCH;
             }
 
@@ -6223,20 +6121,6 @@ this.declare = function(name, declType) {
 };
 
 
-this.err = function(errType, errParams) {
-   if (errType === 'exists.in.current') {
-     var decl = errParams.newDecl,
-         existingDecl = errParams.existingDecl;
-
-     ASSERT.call(this, false, 
-        'name "'+decl.name+'" is a "'+decl.type+
-        '" and can not override the "'+existingDecl.type+
-        '" that exists in the current scope');
-   }
-   else
-     ASSERT.call(this, false, errType + '; PARAMS='+errParams);
-};
-
 this.hoistIdToScope = function(id, targetScope, decl) { 
    var scope = this;
    
@@ -6256,14 +6140,14 @@ this.hoistIdToScope = function(id, targetScope, decl) {
    
 var declare = {};
 
-declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNCTION] =
+declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNCTION_DECL] =
 declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
 
    this.hoistIdToScope(id, func, declType );
 };
 
-declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
+declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] = declare[DECL_MODE_FUNCTION_EXPR] =
 declare[DECL_MODE_LET] = function(id, declType) {
    this.insertDecl(id, declType);
 };
