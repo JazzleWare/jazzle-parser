@@ -31,7 +31,7 @@ this.declare = function(id) {
    else if (this.declMode === DECL_MODE_LET) {
      // TODO: eliminate it because it must've been verified in somewhere else,
      // most probably in parseVariableDeclaration
-     if ( !(this.scopeFlags & SCOPE_BLOCK) )
+     if ( !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK) )
        this.err('let.decl.not.in.block', id );
 
      if ( id.name === 'let' )
@@ -88,7 +88,33 @@ this.ensureParamIsNotDupe = function(id) {
 };
 
 // TODO: must check whether we are parsing with v > 5, whether we are in an if, etc.
-this.canDeclareFunctionsInScope = function() { return true; };
+this.canDeclareFunctionsInScope = function() {
+  if (this.scope.isConcrete())
+    return true;
+  if (this.scopeFlags & SCOPE_FLAG_IN_BLOCK)
+    return this.v > 5;
+  if (this.tight)
+    return false;
+  if (this.scopeFlags & SCOPE_FLAG_IN_IF)
+    return true;
+  
+  return false;
+};
 
-this.inFuncScope = function() { return this.scope.isFunc(); };
+this.canDeclareClassInScope = function() {
+  return this.scopeFlag & SCOPE_FLAG_IN_BLOCK ||
+    this.scope.isConcrete();
+};
+
+this.canLabelFunctionsInScope = function() { 
+  // TODO: add something like a 'compat' option so as to actually allow it for v <= 5;
+  // this is what happens in reality: versions prior to ES2015 don't officially allow it, but it
+  // is supported in most browsers.
+  if (this.v <= 5)
+    return false;
+  if (this.tight)
+    return false;
+  return (this.scopeFlag & SCOPE_FLAG_IN_BLOCK) ||
+          this.scope.isConcrete(); 
+};
 

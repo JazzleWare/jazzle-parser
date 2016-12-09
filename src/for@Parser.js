@@ -16,7 +16,7 @@ this . parseFor = function() {
 
   var scopeFlags = this.scopeFlags;
 
-  this.scopeFlags = SCOPE_BLOCK;
+  this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
   this.enterLexicalScope(true);
 

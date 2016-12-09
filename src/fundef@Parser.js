@@ -32,18 +32,16 @@ this.parseFunc = function(context, flags) {
       if (!this.canDeclareFunctionsInScope())
         this.err('func.decl.not.allowed');
       if (this.unsatisfiedLabel) {
-        if (!this.inFuncScope())
+        if (!this.canLabelFunctionsInScope())
           this.err('func.decl.not.alowed');
         this.fixupLabels(false);
       }
-      if (!(context & CONTEXT_DEFAULT)) {
-        if (this.lttype === 'Identifier') {
-          this.declMode = DECL_MODE_FUNCTION_DECL;
-          cfn = this.parsePattern();
-        }
-        else
-          this.err('missing.name', 'func');
+      if (this.lttype === 'Identifier') {
+        this.declMode = DECL_MODE_FUNCTION_DECL;
+        cfn = this.parsePattern();
       }
+      else if (!(context & CONTEXT_DEFAULT))
+        this.err('missing.name', 'func');
     }
     else {
       // FunctionExpression's BindingIdentifier can be yield regardless of context;
@@ -144,7 +142,10 @@ this.parseMeth = function(name, flags) {
   return {
     type: 'Property', key: core(name),
     start: name.start, end: val.end,
-    kind: 'init', computed: name.type === PAREN,
+    kind:
+     !(flags & MEM_ACCESSOR) ? 'init' :
+      (flags & MEM_SET) ? 'set' : 'get',
+    computed: name.type === PAREN,
     loc: { start: name.loc.start, end : val.loc.end },
     method: true, shorthand: false,
     value : val/* ,y:-1*/

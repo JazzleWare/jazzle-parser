@@ -134,7 +134,7 @@ this.parseIfStatement = function () {
 
   var scopeFlags = this.scopeFlags ;
   this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= SCOPE_IF;
+  this.scopeFlags |= SCOPE_FLAG_IN_IF;
   var nbody = this. parseStatement (false);
   var alt = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'else') {
@@ -190,7 +190,7 @@ this.parseBlckStatement = function () {
       startLoc = this.locOn(1);
   this.next();
   var scopeFlags = this.scopeFlags;
-  this.scopeFlags |= SCOPE_BLOCK;
+  this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
 
   var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/};
@@ -367,7 +367,7 @@ this.parseSwitchStatement = function () {
     return this.errorHandlerOutput ;
 
   this.enterLexicalScope(false); 
-  this.scopeFlags |=  (SCOPE_FLAG_BREAK|SCOPE_BLOCK);
+  this.scopeFlags |=  (SCOPE_FLAG_BREAK|SCOPE_FLAG_IN_BLOCK);
   while ( elem = this.parseSwitchCase()) {
     if (elem.test === null) {
        if (hasDefault ) this.err('switch.has.a.dup.default',elem );
@@ -514,7 +514,7 @@ this. parseBlockStatement_dependent = function() {
       return this.errorHandlerOutput;
 
     var scopeFlags = this.scopeFlags;
-    this.scopeFlags |= SCOPE_BLOCK;
+    this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/ };

@@ -33,7 +33,7 @@ var Parser = function (src, isModule) {
   this.firstNonSimpArg = null;
 
   this.isScript = !isModule;
-  this.v = 12 ;
+  this.v = 12/2;
 
   this.firstParen = null;
   this.firstUnassignable = null;

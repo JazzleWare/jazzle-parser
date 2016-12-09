@@ -64,7 +64,9 @@ this.hoistIdToScope = function(id, targetScope, decl) {
    
 var declare = {};
 
-declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNCTION_DECL] =
+declare[DECL_MODE_FUNCTION_PARAMS] =
+declare[DECL_MODE_FUNCTION_DECL] =
+declare[DECL_MODE_CLASS_DECL] =
 declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
    // #if V
@@ -77,7 +79,9 @@ declare[DECL_MODE_VAR] = function(id, declType) {
    // #end
 };
 
-declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] = declare[DECL_MODE_FUNCTION_EXPR] =
+declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
+declare[DECL_MODE_FUNCTION_EXPR] =
+declare[DECL_MODE_CLASS_EXPR] =
 declare[DECL_MODE_LET] = function(id, declType) {
    // #if V
    if (declType & DECL_MODE_CATCH_PARAMS)

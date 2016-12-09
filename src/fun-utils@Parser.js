@@ -63,7 +63,7 @@ this.parseFuncBody = function(context) {
     return elem;
   }
 
-  this.scopeFlags |= SCOPE_BLOCK;
+  this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
   var startc= this.c - 1, startLoc = this.locOn(1);
   this.next() ;
 

@@ -1,52 +1,45 @@
-this.noNameError = function() { 
-    return this.err('u.token', this.locAndType() );
-};
-
-this.ctorMultiError = function() {
-  return this.err( 'class.ctor.multi' );
-};
-
 this. parseClass = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin();
 
-  var canBeStatement = this.canBeStatement, name = null;
-  this.next () ;
-
-  if ( canBeStatement ) {
-     if (!(this.scopeFlags & SCOPE_BLOCK))
-       this.err('class.decl.not.in.block', startc, startLoc);
-
-     if ( context !== CONTEXT_DEFAULT ) {
-       if ( this.lttype !== 'Identifier' ) {
-         if ( this.noNameError() ) return this.errorHandlerOutput;
-       }
-       else
-         name = this. validateID(null);
-     }
-     this.canBeStatement = false;
+  var isStmt = false, name = null;
+  if (this.canBeStatement) {
+    isStmt = true;
+    this.canBeStatement = false;
   }
-  else if ( this.lttype === 'Identifier' && this.ltval !== 'extends' )
-     name = this.validateID(null); 
+  this.next(); // 'class'
+
+  if (isStmt) {
+    if (!this.canDeclareClassInScope())
+      this.err('class.decl.not.in.block', startc, startLoc);
+    if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
+      this.declMode = DECL_MODE_CLASS_DECL;
+      name = this.parsePattern();
+    }
+    else if (!(context & CONTEXT_DEFAULT))
+      this.err('class.decl.has.no.name');
+  }
+  else if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
+    this.enterLexicalScope(false);
+    this.scope.synth = true;
+    this.declMode = DECL_MODE_CLASS_EXPR;
+    name = this.parsePattern();
+  }
 
   var memParseFlags = MEM_CLASS;
-  var classExtends = null;
+  var superClass = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
      this.next();
-     classExtends = this.parseExprHead(CONTEXT_NONE);
+     superClass = this.parseExprHead(CONTEXT_NONE);
      memParseFlags |= MEM_SUPER;
   }
 
   var list = [];
-  var nbodyStartc = this.c - 1, nbodyStartLoc = this.locOn(1);
+  var startcBody = this.c - 1, startLocBody = this.locOn(1);
 
-  this.expectType ( '{' ) ;
-  var elem = null, foundConstructor = false;
+  this.expectType('{');
+  var elem = null;
 
-  var startcStatic, liStatic, colStatic, rawStatic, cStatic, startLocStatic;
-  var isStatic = false;
-
-  WHILE:
   while (true) {
     if (this.lttype === ';') {
       this.next();
@@ -58,52 +51,59 @@ this. parseClass = function(context) {
       if (elem.kind === 'constructor')
         memParseFlags |= MEM_HAS_CONSTRUCTOR;
     }
-    else 
-      break;
+    else break;
   }
 
   var endLoc = this.loc();
-  var n = { type: canBeStatement ? 'ClassDeclaration' : 'ClassExpression',
-            id: name,
-           start: startc,
-            end: this.c,
-           superClass: classExtends,
-           loc: { start: startLoc, end: endLoc },
-            body: { type: 'ClassBody',
-                   loc: { start: nbodyStartLoc, end: endLoc },
-                   start: nbodyStartc,
-                    end: this.c,
-                    body: list/* ,y:-1*/ }/* ,y:-1*/ };
+  var n = {
+    type: isStmt ? 'ClassDeclaration' : 'ClassExpression', id: name, start: startc,
+    end: this.c, superClass: superClass,
+    loc: { start: startLoc, end: endLoc },
+    body: {
+      type: 'ClassBody', loc: { start: startLocBody, end: endLoc },
+      start: startcBody, end: this.c,
+      body: list/* ,y:-1*/
+    }/* ,y:-1*/ 
+  };
 
   this.expectType('}');
-  if ( canBeStatement ) { this.foundStatement = !false; }
+
+  if (isStmt)
+    this.foundStatement = true;
 
   return n;
 };
 
-this.parseSuper  = function   () {
-   var n = { type: 'Super', loc: { start: this.locBegin(), end: this.loc() }, start: this.c0 , end: this.c };
-   this.next() ;
-   switch ( this.lttype ) {
-        case '(':
-          if ( (this.scopeFlags & (SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR)) !== (SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR) &&
-                  this.err('class.super.call') ) return this.errorHandlerOutput;
-          break ;
-        case '.':
-        case '[':
-           if ( !(this.scopeFlags & SCOPE_FLAG_ALLOW_SUPER) &&
-                  this.err('class.super.mem') ) return this.errorHandlerOutput ;
-           break ;
-        
-       default:
-          if ( this.err('class.super.lone') )
-            return this.errorHandlerOutput ; 
-   }
+this.parseSuper = function() {
+  var n = {
+    type: 'Super', loc: { start: this.locBegin(), end: this.loc() },
+    start: this.c0, end: this.c
+  };
+ 
+  this.next();
+  switch ( this.lttype ) {
+  case '(':
+    if (
+      (this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER) !==
+      SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER
+    ) this.err('class.super.call');
+ 
+    break;
+ 
+  case '.':
+  case '[':
+    if (!(this.scopeFlags & SCOPE_FLAG_ALLOW_SUPER))
+      this.err('class.super.mem');
+ 
+    break ;
+  
+  default:
+    this.err('class.super.lone'); 
 
-   if ( !this.firstYS )
-         this.firstYS = n;
-
-   return n;
+  }
+ 
+  if (!this.firstYS)
+    this.firstYS = n;
+ 
+  return n;
 };
-
-

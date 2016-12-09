@@ -9,7 +9,7 @@ this.parseProgram = function () {
  
   this.scope = new Scope(globalScope, SCOPE_TYPE_SCRIPT);
   this.next();
-  this.scopeFlags = SCOPE_BLOCK;
+  this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
   this.directive = DIRECTIVE_FUNC; 
   var list = this.blck(); 
