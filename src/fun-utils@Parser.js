@@ -1,54 +1,43 @@
-this .parseArgs  = function (argLen) {
+this.parseArgs = function (argLen) {
   var list = [], elem = null;
 
-  if ( !this.expectType_soft('(') &&
-        this.err('func.args.no.opening.paren',argLen) )
-    return this.errorHandlerOutput  ;
+  if (!this.expectType_soft('('))
+    this.err('func.args.no.opening.paren',argLen);
 
   var firstNonSimpArg = null;
-  while ( list.length !== argLen ) {
+  while (list.length !== argLen) {
     elem = this.parsePattern();
-    if ( elem ) {
-       if ( this.lttype === 'op' && this.ltraw === '=' ) {
-         elem = this.parseAssig(elem);
-         this.makeComplex();
-       }
-
-       if ( !firstNonSimpArg && elem.type !== 'Identifier' )
-             firstNonSimpArg =  elem;
-
-       list.push(elem);
-    }
-    else
-       break ;
-    
-    if ( this.lttype === ',' )
-       this.next();
-    else
-        break ;
- 
-  }
-  if ( argLen === ANY_ARG_LEN ) {
-     if ( this.lttype === '...' ) {
+    if (elem) {
+      if (this.lttype === 'op' && this.ltraw === '=') {
+        elem = this.parseAssig(elem);
         this.makeComplex();
-        elem = this.parseRestElement();
-        list.push( elem  );
-        if ( !firstNonSimpArg )
-              firstNonSimpArg = elem;
-     }
+      }
+      if (!firstNonSimpArg && elem.type !== 'Identifier')
+        firstNonSimpArg =  elem;
+      list.push(elem);
+    }
+    else break ;
+    
+    if (this.lttype === ',' ) this.next();
+    else break;
   }
-  else {
-     if ( list.length !== argLen &&
-          this.err('func.args.not.enough',argLen,list) )
-       return this.errorHandlerOutput;
+  if (argLen === ARGLEN_ANY) {
+    if (this.lttype === '...') {
+      this.makeComplex();
+      elem = this.parseRestElement();
+      list.push( elem  );
+      if ( !firstNonSimpArg )
+        firstNonSimpArg = elem;
+    }
   }
+  else if (list.length !== argLen)
+    this.err('func.args.not.enough',argLen,list);
 
-  if ( ! this.expectType_soft (')') &&
-       this.err('func.args.no.end.paren',argLen,list) )
-    return this.errorHandlerOutput ;
+  if (!this.expectType_soft (')'))
+    this.err('func.args.no.end.paren',argLen,list);
 
-  if ( firstNonSimpArg )
-     this.firstNonSimpArg = firstNonSimpArg ;
+  if (firstNonSimpArg)
+    this.firstNonSimpArg = firstNonSimpArg;
  
   return list;
 };

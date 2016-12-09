@@ -166,7 +166,7 @@ this.parseExport = function() {
 
           case 'function':
              this.canBeStatement = !false;
-             ex = this.parseFunc( context, WHOLE_FUNCTION, ANY_ARG_LEN );
+             ex = this.parseFunc( context, 0 );
              break ;
         }
    }

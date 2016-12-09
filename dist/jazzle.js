@@ -185,19 +185,6 @@ while ( M_INTBITLEN >> (++D_INTBITLEN) );
 
 var PAREN = 'paren';
 
-
-var ANY_ARG_LEN = -1;
-
-var WHOLE_FUNCTION = 8;
-var ARGLIST_AND_BODY_GEN = 1 ;
-var ARGLIST_AND_BODY = 2;
-var METH_FUNCTION = 4;
-var CONSTRUCTOR_FUNCTION = 128;
-
-var OBJ_MEM = 0;
-var CLASS_MEM = 1;
-var STATIC_MEM =  5;
-
 var STRING_TYPE = typeof "string";
 var NUMBER_TYPE = typeof 0;
 var HAS = {}.hasOwnProperty;
@@ -1474,7 +1461,7 @@ this.parseExport = function() {
 
           case 'function':
              this.canBeStatement = !false;
-             ex = this.parseFunc( context, WHOLE_FUNCTION, ANY_ARG_LEN );
+             ex = this.parseFunc( context, 0 );
              break ;
         }
    }
@@ -2078,57 +2065,46 @@ this.ensureVarsAreNotResolvingToCatchParams = function() {
 
 },
 function(){
-this .parseArgs  = function (argLen) {
+this.parseArgs = function (argLen) {
   var list = [], elem = null;
 
-  if ( !this.expectType_soft('(') &&
-        this.err('func.args.no.opening.paren',argLen) )
-    return this.errorHandlerOutput  ;
+  if (!this.expectType_soft('('))
+    this.err('func.args.no.opening.paren',argLen);
 
   var firstNonSimpArg = null;
-  while ( list.length !== argLen ) {
+  while (list.length !== argLen) {
     elem = this.parsePattern();
-    if ( elem ) {
-       if ( this.lttype === 'op' && this.ltraw === '=' ) {
-         elem = this.parseAssig(elem);
-         this.makeComplex();
-       }
-
-       if ( !firstNonSimpArg && elem.type !== 'Identifier' )
-             firstNonSimpArg =  elem;
-
-       list.push(elem);
-    }
-    else
-       break ;
-    
-    if ( this.lttype === ',' )
-       this.next();
-    else
-        break ;
- 
-  }
-  if ( argLen === ANY_ARG_LEN ) {
-     if ( this.lttype === '...' ) {
+    if (elem) {
+      if (this.lttype === 'op' && this.ltraw === '=') {
+        elem = this.parseAssig(elem);
         this.makeComplex();
-        elem = this.parseRestElement();
-        list.push( elem  );
-        if ( !firstNonSimpArg )
-              firstNonSimpArg = elem;
-     }
+      }
+      if (!firstNonSimpArg && elem.type !== 'Identifier')
+        firstNonSimpArg =  elem;
+      list.push(elem);
+    }
+    else break ;
+    
+    if (this.lttype === ',' ) this.next();
+    else break;
   }
-  else {
-     if ( list.length !== argLen &&
-          this.err('func.args.not.enough',argLen,list) )
-       return this.errorHandlerOutput;
+  if (argLen === ARGLEN_ANY) {
+    if (this.lttype === '...') {
+      this.makeComplex();
+      elem = this.parseRestElement();
+      list.push( elem  );
+      if ( !firstNonSimpArg )
+        firstNonSimpArg = elem;
+    }
   }
+  else if (list.length !== argLen)
+    this.err('func.args.not.enough',argLen,list);
 
-  if ( ! this.expectType_soft (')') &&
-       this.err('func.args.no.end.paren',argLen,list) )
-    return this.errorHandlerOutput ;
+  if (!this.expectType_soft (')'))
+    this.err('func.args.no.end.paren',argLen,list);
 
-  if ( firstNonSimpArg )
-     this.firstNonSimpArg = firstNonSimpArg ;
+  if (firstNonSimpArg)
+    this.firstNonSimpArg = firstNonSimpArg;
  
   return list;
 };

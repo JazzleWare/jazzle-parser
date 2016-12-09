@@ -86,19 +86,6 @@ while ( M_INTBITLEN >> (++D_INTBITLEN) );
 
 var PAREN = 'paren';
 
-
-var ANY_ARG_LEN = -1;
-
-var WHOLE_FUNCTION = 8;
-var ARGLIST_AND_BODY_GEN = 1 ;
-var ARGLIST_AND_BODY = 2;
-var METH_FUNCTION = 4;
-var CONSTRUCTOR_FUNCTION = 128;
-
-var OBJ_MEM = 0;
-var CLASS_MEM = 1;
-var STATIC_MEM =  5;
-
 var STRING_TYPE = typeof "string";
 var NUMBER_TYPE = typeof 0;
 var HAS = {}.hasOwnProperty;
