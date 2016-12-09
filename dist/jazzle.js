@@ -1,6 +1,52 @@
 (function(){
 "use strict";
 ;
+function ErrorString(stringsAndTemplates) {
+  this.stringsAndTemplates = stringsAndTemplates;
+}
+
+function eof_rcurly(str, i) {
+  if (i >= str.length)
+    ASSERT.call(this, false, 'reached eof before a }');
+
+  return str.charCodeAt(i) === CHAR_RCURLY; 
+}
+
+function readTemplate(str, i) {
+  if (str.charCodeAt(i) === CHAR_RCURLY)
+    return null;
+  return Template.from(str, i, eof_rcurly);
+}
+
+ErrorString.from = function(str) {
+  var elem = "", i = 0, list = [];
+  while (i < str.length) {
+    if (str.charCodeAt(i) === CHAR_LCURLY) {
+      i++;
+      var template = readTemplate(str, i);
+      if (template === null)
+        elem += '{';
+      else {
+        list.push(elem);
+        list.push(template);
+        elem = "";
+        i += template.str.length;
+      }
+    }
+    else
+      elem += str.charAt(i);
+    
+    i++;
+  }
+  if (elem.length)
+    list.push(elem);
+
+  var error = new ErrorString(list);
+  error.str = str;
+
+  return error;
+};
+;
 var Parser = function (src, isModule) {
 
   this.src = src;
@@ -95,6 +141,85 @@ Scope.createLexical = function(parent, loop) {
    return new Scope(parent, !loop ?
         SCOPE_TYPE_LEXICAL_SIMPLE :
         SCOPE_TYPE_LEXICAL_LOOP);
+};
+;
+function Template(idxList) {
+  this.idxList = idxList;
+  this.str = "";
+}
+
+function readParen(str, i, eof) {
+  var elem = "";
+  while (!eof(str, i)) {
+    switch (str.charCodeAt(i)) {
+    case CHAR_SINGLEDOT: elem += '.'; break;
+    case CHAR_GREATER_THAN: elem += ')'; break;
+    case CHAR_LESS_THAN: elem += '('; break;
+    case CHAR_RPAREN: return elem;
+    default:
+      ASSERT.call(this, false, 
+        'invalid character at index '+i+' -- "'+str.charAt(i)+'"');
+    }
+    i++;
+  }
+  ASSERT.call(this, false, 
+    'reached eof before any ")" was found');
+}
+
+function eof_default(str, i) {
+  return i >= str.length;
+}
+
+Template.from = function(str, i, eof) {
+  i = i || 0;
+  eof = eof || eof_default;
+  var start = i, needDot = false, list = [], pendingDot = false, elem = "";
+  while (!eof(str, i)) {
+    var ch = str.charCodeAt(i);
+    if (ch === CHAR_SINGLEDOT) {
+      if (pendingDot)
+        break;
+
+      i++;
+      list.push(elem);
+      elem = "";
+      if (needDot)
+        needDot = false;
+
+      pendingDot = true;
+      continue;
+    }
+    if (needDot)
+      ASSERT.call(this, false, 'dot expected at index'+(i-1));
+
+    pendingDot = false;
+    if (ch === CHAR_LPAREN) {
+      i++;
+      elem += readParen(str, i, eof);
+      if (elem.length === 0)
+        needDot = true; 
+      
+      i += elem.length + 1; // length + ')'.length
+      continue;
+    }
+
+    // TODO: can be faster, yet for its limited use case it looks fast enough
+    elem += str.charAt(i);
+    i++;
+  }
+
+  pendingDot && ASSERT.call(this, false, 
+    'unexpected ' + (!eof(str, i) ? 'dot (index='+i+')' : 'eof'));
+
+  if (needDot || elem.length > 0)
+    list.push(elem);
+
+  var template = new Template(list);
+  template.str = (start === 0 && i === str.length) ?
+    str :
+    str.substring(start, i);
+
+  return template;
 };
 ;
 var CHAR_1 = char2int('1'),
@@ -569,6 +694,24 @@ function hasOwn(obj, name) {
              def[1][e++].call(def[0]);
        }
      }).call([
+[ErrorString.prototype, [function(){
+this.applyTo = function(obj) {
+  var errorMessage = "",
+      isString = true,
+      list = this.stringsAndTemplates,
+      e = 0;
+  while (e < list.length) {
+    errorMessage += isString ?
+      list[e] : list[e].applyTo(obj);
+    e++;
+    isString = !isString;
+  }
+  
+  return errorMessage;
+};
+
+
+}]  ],
 [Parser.prototype, [function(){
 this.parseArrayExpression = function (context ) {
   var startc = this.c - 1,
@@ -6185,6 +6328,35 @@ this.insertID = function(id) {
 
 
 }]  ],
+[Template.prototype, [function(){
+// TODO: add a mechanism to react to cases where latestVal does not have a property (own or inherited)
+// whose name has the same value as idx
+
+this.applyTo = function(obj, noErrIfUndefNull) {
+  var latestVal = obj, latestIdx = "", list = this.idxList, e = 0;
+  while (e < list.length) {
+    var idx = list[e];
+    if (latestVal === null || latestVal === void 0) {
+      if (noErrIfUndefNull)
+        return latestVal;
+      ASSERT.call(this, false,
+        (e === 0 ?
+          'the value to apply the template to' :
+          'the value for index ' + latestIdx + '(name="'+list[latestIdx]+'")') +
+        'is ' + (latestVal !== null ? 'undefined' : 'null')
+      );
+    }
+    
+    latestVal = latestVal[idx];
+    latestIdx = e;
+
+    e++;
+  }
+
+  return latestVal;
+};
+
+}]  ],
 null,
 null,
 null,
@@ -6198,5 +6370,5 @@ this.parse = function(src, isModule ) {
 };
 
 this.Parser = Parser;  
-
+this.ErrorString = ErrorString; this.Template = Template;
 ;}).call (this)

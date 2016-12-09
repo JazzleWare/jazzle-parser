@@ -69,4 +69,3 @@ test/tests/test/invalid-syntax/migrated_0234
 test/tests/test/invalid-syntax/migrated_0235
 test/tests/test/invalid-syntax/migrated_0236
 test/tests/test/statement/if/migrated_0001
-test/tests/test/ES6/export-declaration/export-default-named-function
