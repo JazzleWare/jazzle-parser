@@ -2457,7 +2457,7 @@ this.parseMeth = function(name, flags) {
       (flags & MEM_SET) ? 'set' : 'get',
     computed: name.type === PAREN,
     loc: { start: name.loc.start, end : val.loc.end },
-    method: flags & MEM_ACCESSOR === 0, shorthand: false,
+    method: (flags & MEM_ACCESSOR) === 0, shorthand: false,
     value : val/* ,y:-1*/
   }
 };
