@@ -161,6 +161,7 @@ this.parseObjElem = function(name, context) {
   default:
     if (name.type !== 'Identifier')
       this.err('obj.prop.assig.not.id', name, context);
+    this.validateID(name.name);
     val = name;
     break;
   }
