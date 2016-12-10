@@ -12,7 +12,13 @@ Funnily enough, it does all the above while keeping track of as much early error
 It is almost completely esprima-compatible (except when things get annoying, in which case it is acorn-compatible).
 
 #Future
-My take is that, awesome as the parser is, it can still be more robust, and more low-power; even if it hits limits in the previous criteria, I'm still aiming to make it catch all of the spec's early errors, and i am intending to make it so in a matter of weeks, i.e, not even months.
+[ ] cleaner source
+[ ] tolerant parsing
+[ ] even lighter weight
+[ ] descriptive errors
+[ ] more comments
+[ ] finer grained control over parsing (via more options, possibly)
+[ ] a demo website
 
 #Using in the browser
 Include the file `./dist/jazzle.js` in a `<script>` tag. It exposes the `Parser` constructor, and `parse` utility function. One use case could be:
@@ -20,10 +26,18 @@ Include the file `./dist/jazzle.js` in a `<script>` tag. It exposes the `Parser`
 var code = 'sample(code);';
 var result;
 
-result = new Parser(code).parseProgram();
+result = new Parser(code, false).parseProgram();
 
 // or alternatively
-result = parse(code)
+result = parse(code, false)
+```
+
+**NOTE** in ES versions before ES2015, any given source was treated as a 'script'; in ES2015 and above, this is not the case anymore -- sources can be parsed as `script`s and as `module`s. You have to explicitly tell the parser if you want it to parse your code as a 'module' rather than a 'script' by sending the value `true` as the second argument to the `Parser` constructor or the `parse` method:
+```js
+var code = 'import * as a from "l"';
+// please note the `true` there; it tells the parser to treat the code as module code;
+// because `import`s are module-specific source elements, 
+var result = new Parser(code, /*-->*/true/*<--*/).parseProgram(); 
 ```
 
 #Building
@@ -71,7 +85,4 @@ Then:
 var jazzle = require( 'jazzle' );
 console.log( jazzle.parse('var v = "hi !";') );
 ```
-
-#anything else
-Thanks a lot reading this far.
 
