@@ -12,13 +12,13 @@ Funnily enough, it does all the above while keeping track of as much early error
 It is almost completely esprima-compatible (except when things get annoying, in which case it is acorn-compatible).
 
 #Future
-[ ] cleaner source
-[ ] tolerant parsing
-[ ] even lighter weight
-[ ] descriptive errors
-[ ] more comments
-[ ] finer grained control over parsing (via more options, possibly)
-[ ] a demo website
+- [ ] cleaner source
+- [ ] tolerant parsing
+- [ ] even lighter weight
+- [ ] descriptive errors
+- [ ] more comments
+- [ ] finer grained control over parsing (via more options, possibly)
+- [ ] a demo website
 
 #Using in the browser
 Include the file `./dist/jazzle.js` in a `<script>` tag. It exposes the `Parser` constructor, and `parse` utility function. One use case could be:
