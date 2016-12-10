@@ -1,37 +1,32 @@
-this.err = function(errorType, errorTok, args) {
-   throw new Error("Error: " + errorType + "\n" + this.src.substr(this.c-120,120) + ">>>>" + this.src.charAt(this.c+1) + "<<<<" + this.src.substr(this.c, 120));
-
+this.err = function(errorType, errParams) {
    if ( has.call(this.errorHandlers, errorType) )
-     return this.handleError(this.errorHandlers[errorType], errorTok, args );
+     return this.handleError(this.errorHandlers[errorType], errParams);
 
-   throw new CustomError( createMessage( Errors[errorType], errorTok, args ) );
-};
+   var message = "";
+   if (!HAS.call(ErrorBuilders, errorType))
+     message = "Error: " + errorType + "\n" +
+       this.src.substr(this.c-120,120) +
+       ">>>>" + this.src.charAt(this.c+1) + "<<<<" +
+       this.src.substr(this.c, 120);
 
-
-function CustomError(start,li,col,message) {
-   this.atChar = start;
-   this.atLine = li;
-   this.atCol = col;
-   this.message = message;
-
-}
-
-CustomError.prototype = Error.prototype;
-
-function createMessage( errorMessage, errorTok, args  ) {
-  return errorMessage.replace( /%\{([^\}]*)\}/g,
-  function(matchedString, name, matchIndex, wholeString) {
-     if ( name.length === 0 )
-       throw new Error( "placeholder empty on " + matchIndex + " for [" + errorMessage + "]" );
-
-     if ( !has.call(args, name) )
-       throw new Error( "[" + name + "] not found in params " );
-     
-     return args[name] + "" ;
-  }) ;
-
-}
+   else {
+     var errorBuilder = ErrorBuilders[errorType];
+     var messageBuilder = errorBuilder.m;
+     var offsetBuilder = errorBuilder.o;
+     var locBuilder = errorBuilder.l;
    
+     message += "Error: ";
+
+     // TODO: add a way to print a 'pinpoint', i.e., the particular chunk of the
+     // source code that is causing the error
+     message += buildLoc(locBuilder, errParams)+"(src@";
+     message += buildOffset(offsetBuilder, errParams)+"): ";
+     message += buildMessage(messageBuilder, errParams);
+   }
+
+   throw new Error(message);
+};
+  
 this.handleError = function(handlerFunction, errorTok, args ) {
    var output = handlerFunction.call( this, params, coords );
    if ( output ) {

@@ -324,8 +324,6 @@ var SCOPE_TYPE_SCRIPT = 32;
 var SCOPE_TYPE_CATCH = 128;
 var SCOPE_TYPE_GLOBAL = 256;
 
-// TODO: even though they will fit in an int, it would be probably
-// better to keep them separated -- they take some 20 bits right now 
 var CONTEXT_NONE = 0,
     CONTEXT_ELEM = 1,
     CONTEXT_FOR = CONTEXT_ELEM << 1,
@@ -333,53 +331,53 @@ var CONTEXT_NONE = 0,
     CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
     CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
     CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1,
-    CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1,
+    CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
 
-    MEM_CLASS = CONTEXT_DEFAULT << 1, 
-
+// TODO: order matters in the first few declarations below, mostly due to a 
+// slight performance gain in parseFunc, where MEM_CONSTRUCTOR and MEM_SUPER in `flags` are
+// getting added to the current scope flags.
+// the ordering is also to make the relevant value sets (i.e., SCOPE_FLAG_* and MEM_*)
+// span less bit lengths; this order sensitivity is something that must change in a very
+// near future.
+var MEM_CLASS = 1, 
     MEM_GEN = MEM_CLASS << 1,
+   
     SCOPE_FLAG_GEN = MEM_GEN,
     SCOPE_FLAG_ALLOW_YIELD_EXPR = SCOPE_FLAG_GEN,
 
-    MEM_OBJ = MEM_GEN << 1,
-
-    MEM_SET = MEM_OBJ << 1,
-    MEM_GET = MEM_SET << 1,
-    MEM_STATIC = MEM_GET << 1,
-    MEM_CONSTRUCTOR = MEM_STATIC << 1,
-    MEM_PROTOTYPE = MEM_CONSTRUCTOR << 1,
-    MEM_OBJ_METH = MEM_PROTOTYPE << 1,
-    MEM_PROTO = MEM_OBJ_METH << 1,
-    CONTEXT_PROTO = MEM_PROTO,
-    MEM_SUPER = MEM_PROTO << 1,
+    MEM_SUPER = MEM_GEN << 1,
     SCOPE_FLAG_ALLOW_SUPER = MEM_SUPER,    
-     
-    MEM_HAS_CONSTRUCTOR = MEM_SUPER << 1,
-    SCOPE_FLAG_BREAK = MEM_HAS_CONSTRUCTOR << 1,
+
+    MEM_CONSTRUCTOR = MEM_SUPER << 1,
+    SCOPE_FLAG_IN_CONSTRUCTOR = MEM_CONSTRUCTOR,
+
+    SCOPE_FLAG_BREAK = SCOPE_FLAG_IN_CONSTRUCTOR << 1,
     SCOPE_FLAG_CONTINUE = SCOPE_FLAG_BREAK << 1,
-
-    // TODO: SCOPE_FLAG_FN serves the same purpose as MEM_OBJ_METH;
-    // either makes the other one unnecessary; but in the meantime ...
     SCOPE_FLAG_FN = SCOPE_FLAG_CONTINUE << 1,
-
     SCOPE_FLAG_ARG_LIST = SCOPE_FLAG_FN << 1,
     SCOPE_FLAG_IN_BLOCK = SCOPE_FLAG_ARG_LIST << 1,
     SCOPE_FLAG_IN_IF = SCOPE_FLAG_IN_BLOCK << 1,
-
+    SCOPE_FLAG_ALLOW_RETURN_STMT = SCOPE_FLAG_FN,
+    SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER = SCOPE_FLAG_IN_CONSTRUCTOR|SCOPE_FLAG_ALLOW_SUPER,
+    SCOPE_FLAG_NONE = 0,
+    INHERITED_SCOPE_FLAGS = SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR,
     CLEAR_IB = ~(SCOPE_FLAG_IN_BLOCK|SCOPE_FLAG_IN_IF),
 
-    SCOPE_FLAG_ALLOW_RETURN_STMT = SCOPE_FLAG_FN,
-    SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER = MEM_SUPER|MEM_CONSTRUCTOR,
-
+    MEM_OBJ = MEM_CONSTRUCTOR << 1,
+    MEM_SET = MEM_OBJ << 1,
+    MEM_GET = MEM_SET << 1,
+    MEM_STATIC = MEM_GET << 1,
+    MEM_PROTOTYPE = MEM_STATIC << 1,
+    MEM_OBJ_METH = MEM_PROTOTYPE << 1,
+    MEM_PROTO = MEM_OBJ_METH << 1,
+    CONTEXT_PROTO = MEM_PROTO,
+    MEM_HAS_CONSTRUCTOR = MEM_PROTO << 1,
     MEM_ACCESSOR = MEM_GET|MEM_SET,
     MEM_SPECIAL = MEM_ACCESSOR|MEM_GEN,
     MEM_FLAGS = MEM_CLASS|MEM_SPECIAL|MEM_CONSTRUCTOR|
                 MEM_PROTO|MEM_SUPER|MEM_OBJ_METH|MEM_PROTOTYPE,
     MEM_ANY = MEM_CLASS|MEM_OBJ_METH|MEM_SPECIAL|MEM_ACCESSOR|MEM_GEN,
-    MEM_CLASS_OR_OBJ = MEM_CLASS|MEM_OBJ,
-    SCOPE_FLAG_NONE = 0,
-    
-    INHERITED_SCOPE_FLAGS = SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR;
+    MEM_CLASS_OR_OBJ = MEM_CLASS|MEM_OBJ;
 
 var ARGLEN_GET = 0,
     ARGLEN_SET = 1,
@@ -437,31 +435,6 @@ function isHex(e) {
            ( e >= CHAR_A && e <= CHAR_F );
 }
 
-
-;
-var Errors = {};
-
-Errors['u.token'] = "Unexpected token {0}";
-Errors['u.invalid.token'] = "Unexpected {0}";
-Errors['u.newline']= "Unexpected line terminator";
-Errors['u.eos']= "Unexpected end of input";
-Errors['u.num']= "Unexpected #{toktype(arg.tok)}";
-Errors['u.newline']= "Unexpected line terminator";
-Errors['u.comma.after.rest'] = "Unexpected comma after rest";
-Errors['err.throw.newline'] = "Illegal newline after throw";
-Errors['err.regex.incompl'] = "Invalid regular expression= missing /";
-Errors['err.regex.flags'] = "Invalid regular expression flags";
-Errors['err.assig.not'] = "Invalid left-hand side in assignment";
-Errors['err.bind.not']= "Invalid left-hand side in binding";
-Errors['err.assig.for-in']= "Invalid left-hand side in for-in";
-Errors['err.assig.for-of']= "Invalid left-hand side in for-of";
-Errors['err.assig.simple.not']= "Increment/decrement target must be an identifier or member expression";
-Errors['err.switch.multi']= "More than one default clause in switch statement";
-Errors['err.try.tail.no']= "Missing catch or finally after try";
-Errors['err.ret.not.allowed'] = "Illegal return statement";
-Errors['err.arrow.arg']= "Illegal arrow function parameter list";
-Errors['err.for.init.decl'] = "Invalid variable declaration in for-in statement";
-Errors['err.prop.init'] = "Illegal property initializer";
 
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
@@ -1648,99 +1621,100 @@ this.parseExport = function() {
 },
 function(){
 this.parseImport = function() {
-  if ( !this.canBeStatement && this.err('not.stmt','import') )
-    return this.errorHandlerOutput ;
+  if (!this.canBeStatement)
+    this.err('not.stmt','import');
 
   this.canBeStatement = false;
 
-  var startc = this.c0, startLoc = this.locBegin();
-  var hasList = false;
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      hasList = false;
+
   this.next();
+
   var list = [], local = null;
   if ( this.lttype === 'Identifier' ) {
     local = this.validateID(null);
-    list.push({ type: 'ImportDefaultSpecifier',
-               start: local.start,
-               loc: local.loc,
-                end: local.end,
-               local: local });
+    list.push({
+      type: 'ImportDefaultSpecifier',
+      start: local.start,
+      loc: local.loc,
+      end: local.end,
+      local: local
+    });
   }
 
-  if ( this.lttype === ',' ) {
-    if (local === null && this.err('import.no.elem.yet.comma',startc,startLoc) )
-      return this.errorHandlerOutput;
+  if (this.lttype === ',') {
+    if (local === null)
+      this.err('import.no.elem.yet.comma',startc,startLoc);
 
     this.next();
-  }
-
+  } 
   var spStartc = 0, spStartLoc = null;
-
-  switch ( this.lttype ) {   
-     case 'op':
-       if ( this.ltraw !== '*' &&
-            this.err('import.namespace.specifier.not.*',startc, startLoc) )
-         return this.errorHandlerOutput ;
-
-       else {
-         spStartc = this.c - 1;
-         spStartLoc = this.locOn(1);
-         this.next();
-         if ( !this.expectID_soft('as') &&
-               this.err('import.namespace.specifier.no.as',startc, startLoc, spStartc, spStartLoc) )
-           return this.errorHandlerOutput;
-
-         if (this.lttype !== 'Identifier' &&
-             this.err('import.namespace.specifier.local.not.id',startc,startLoc,spStartc, spStartLoc ) )
-           return this.errorHandlerOutput;
-
-         local = this.validateID(null);
-         list.push({ type: 'ImportNamespaceSpecifier',
-                    start: spStartc,
-                    loc: { start: spStartLoc, end: local.loc.end },
-                     end: local.end,
-                    local: local  }) ;
-       }
-       break;
-
-    case '{':
-       hasList = !false;
-       this.next();
-       while ( this.lttype === 'Identifier' ) {
-          local = this.id();
-          var im = local; 
-          if ( this.lttype === 'Identifier' ) {
-             if ( this.ltval !== 'as' && 
-                  this.err('import.specifier.no.as',startc,startLoc,local) )
-               return this.errorHandlerOutput ;
-
-             this.next();
-             if ( this.lttype !== 'Identifier' &&
-                  this.err('import.specifier.local.not.id',startc,startLoc,local) )
-               return this.errorHandlerOutput ;
-
-             local = this.validateID(null);
-          }
-          else this.validateID(local);
-
-          list.push({ type: 'ImportSpecifier',
-                     start: im.start,
-                     loc: { start: im.loc.start, end: local.loc.end },
-                      end: local.end, imported: im,
-                    local: local }) ;
-
-          if ( this.lttype === ',' )
-             this.next();
-          else
-             break ;                                  
-       }
-
-       if ( !this.expectType_soft('}') && 
-             this.err('import.specifier.list.unfinished',startc,startLoc,list) )
-         return this.errorHandlerOutput  ;
-
-       break ;
+  
+  switch (this.lttype) {   
+  case 'op':
+    if (this.ltraw !== '*')
+      this.err('import.namespace.specifier.not.*',startc, startLoc);
+    else {
+      spStartc = this.c - 1;
+      spStartLoc = this.locOn(1);
+  
+      this.next();
+      if (!this.expectID_soft('as'))
+        this.err('import.namespace.specifier.no.as',startc, startLoc, spStartc, spStartLoc);
+      if (this.lttype !== 'Identifier')
+        this.err('import.namespace.specifier.local.not.id',startc,startLoc,spStartc, spStartLoc );
+ 
+      local = this.validateID(null);
+      list.push({
+        type: 'ImportNamespaceSpecifier',
+        start: spStartc,
+        loc: { start: spStartLoc, end: local.loc.end },
+        end: local.end,
+        local: local
+      });
+    }
+    break;
+  
+  case '{':
+     hasList = !false;
+     this.next();
+     while ( this.lttype === 'Identifier' ) {
+        local = this.id();
+        var im = local; 
+        if ( this.lttype === 'Identifier' ) {
+           if ( this.ltval !== 'as' && 
+                this.err('import.specifier.no.as',startc,startLoc,local) )
+             return this.errorHandlerOutput ;
+  
+           this.next();
+           if ( this.lttype !== 'Identifier' &&
+                this.err('import.specifier.local.not.id',startc,startLoc,local) )
+             return this.errorHandlerOutput ;
+  
+           local = this.validateID(null);
+        }
+        else this.validateID(local.name);
+  
+        list.push({ type: 'ImportSpecifier',
+                   start: im.start,
+                   loc: { start: im.loc.start, end: local.loc.end },
+                    end: local.end, imported: im,
+                  local: local }) ;
+  
+        if ( this.lttype === ',' )
+           this.next();
+        else
+           break ;                                  
+     }
+  
+     if ( !this.expectType_soft('}') && 
+           this.err('import.specifier.list.unfinished',startc,startLoc,list) )
+       return this.errorHandlerOutput  ;
+  
+     break ;
    }
-    
    if ( list.length || hasList ) {
       if ( !this.expectID_soft('from') &&
             this.err('import.from',startc,startLoc,list) )
@@ -1769,40 +1743,35 @@ this.parseImport = function() {
 
 },
 function(){
-this.err = function(errorType, errorTok, args) {
-   throw new Error("Error: " + errorType + "\n" + this.src.substr(this.c-120,120) + ">>>>" + this.src.charAt(this.c+1) + "<<<<" + this.src.substr(this.c, 120));
-
+this.err = function(errorType, errParams) {
    if ( has.call(this.errorHandlers, errorType) )
-     return this.handleError(this.errorHandlers[errorType], errorTok, args );
+     return this.handleError(this.errorHandlers[errorType], errParams);
 
-   throw new CustomError( createMessage( Errors[errorType], errorTok, args ) );
-};
+   var message = "";
+   if (!HAS.call(ErrorBuilders, errorType))
+     message = "Error: " + errorType + "\n" +
+       this.src.substr(this.c-120,120) +
+       ">>>>" + this.src.charAt(this.c+1) + "<<<<" +
+       this.src.substr(this.c, 120);
 
-
-function CustomError(start,li,col,message) {
-   this.atChar = start;
-   this.atLine = li;
-   this.atCol = col;
-   this.message = message;
-
-}
-
-CustomError.prototype = Error.prototype;
-
-function createMessage( errorMessage, errorTok, args  ) {
-  return errorMessage.replace( /%\{([^\}]*)\}/g,
-  function(matchedString, name, matchIndex, wholeString) {
-     if ( name.length === 0 )
-       throw new Error( "placeholder empty on " + matchIndex + " for [" + errorMessage + "]" );
-
-     if ( !has.call(args, name) )
-       throw new Error( "[" + name + "] not found in params " );
-     
-     return args[name] + "" ;
-  }) ;
-
-}
+   else {
+     var errorBuilder = ErrorBuilders[errorType];
+     var messageBuilder = errorBuilder.m;
+     var offsetBuilder = errorBuilder.o;
+     var locBuilder = errorBuilder.l;
    
+     message += "Error: ";
+
+     // TODO: add a way to print a 'pinpoint', i.e., the particular chunk of the
+     // source code that is causing the error
+     message += buildLoc(locBuilder, errParams)+"(src@";
+     message += buildOffset(offsetBuilder, errParams)+"): ";
+     message += buildMessage(messageBuilder, errParams);
+   }
+
+   throw new Error(message);
+};
+  
 this.handleError = function(handlerFunction, errorTok, args ) {
    var output = handlerFunction.call( this, params, coords );
    if ( output ) {
@@ -6361,7 +6330,6 @@ this.applyTo = function(obj, noErrIfUndefNull) {
 };
 
 }]  ],
-null,
 null,
 null,
 null,

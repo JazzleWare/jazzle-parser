@@ -1,0 +1,34 @@
+{ c0^t, // ----------------- the error node's start offset in the source
+  c^t, // ------------------ the error node's end offset in the source
+  (loc0|(li0,col0))^t, // -- the error node's start (line, column)
+  (e_loc|(e_li,e_col)^t, // -the error node's end (line, column)
+  t, // -------------------- the error node itself; if present, it must contain all the info above
+  extra: // ---------------- extra info about the error; useful for the tolerant mode,
+  parser: // --------------- the parser -- is usable for any purpose -- even to take over the whole parse process right from the recovery routine it is called in
+} // errParam layout -- this is what it looks like when sent to this.err
+
+{ start: { c0, li0, col0 },
+  end: { c, li, col },
+  t: 'the error node itself',
+  parser: 'the parser',
+  extra: extra } // errParams after normalization
+
+// error specifications can have the following info:
+
+{ c0, // path to get c0 from errParams; defaults: 'start.c0'
+  li0, // path to get li0 from errParams; default: 'start.li0'
+  col0, // path to get col0 from errParams; default: 'start.col0',
+  c, // same as c0, but with c instead of c0
+  li, // same as li0, but with li instead of li0
+  col, // same as col0, but with col instead of col0
+  startLoc, // path to get an object whose 'start' supplies li0 and col0
+  endLoc, // path to get an object whose 'end' supplies li and col
+  loc, // path to get an object whose 'loc' supplies startLoc and endLoc
+  t, // path to an object whose 'start', 'end', and 'loc' supply c0, c, and loc, respectively
+  message // the template that is applied to errParams }
+
+{ start: { c0, li0, col0 },
+  end: { c, li, col }, message } // normalized specification
+
+add({t: 'parser.unsatisfiedArg', message: 'Unexpected token: ...'}) ->
+
