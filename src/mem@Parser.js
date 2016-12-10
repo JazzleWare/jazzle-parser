@@ -155,7 +155,10 @@ this.parseObjElem = function(name, context) {
       this.err('obj.prop.assig.not.assigop', name, context);
     if (!(context & CONTEXT_ELEM))
       this.err('obj.prop.assig.not.allowed', name, context);
-    val = this.parseAssig(name);
+
+    // could have been parsed as an outright pattern,
+    // but were it done that way, yield/super tracking would not have worked
+    val = this.parseAssignment(name, context);
     this.unsatisfiedAssignment = val;
     break;
 
