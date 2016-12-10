@@ -177,10 +177,61 @@ function a(errorType, builderOutline) {
   return builder;
 }
 
+function set(newErrorType, existingErrorType) {
+  if (HAS.call(ErrorBuilders, newErrorType))
+    throw new Error('cannot override the existing <'+
+      newErrorType+'> with <'+existingErrorType);
+  if (!HAS.call(ErrorBuilders, existingErrorType))
+    throw new Error('error is not defined: <'+existingErrorType+'>');
+  
+  var builder = ErrorBuilders[existingErrorType];
+  ErrorBuilders[newErrorType] = builder;
+
+  return builder;
+}
+
 // TODO: the argument that is coming last is a sample error code; builders must have this value as a property.
 // also a list of options may come after each of these "samples" signifying which options they should be parsed with
-a('arrow.paren.no.arrow', { tn: 'parser.unsatisfiedArg', m: 'Unexpected token: ...' }, '(a,...b)');
-a('assignable.unsatisfied', { tn: 'parser.unsatisfiedAssignment', m: 'Shorthand assignments can not be left unassigned' }, '[{a=b}]');
-a('assig.not.first', { c0: 'parser.c', li0: 'parser.li', col0: 'parser.col', m: 'Assignment left hand side not valid', p: function() { this.c0 -= 1; this.col0 -= 1; } }, 'a*b=12');
-a('assig.not.simple', { tn: 'tn', m: 'Identifiers along with member expressions are the only valid targets for non-simple assignments; {tn.type} is neither an identifier nor a member expression' });
- 
+a('arrow.paren.no.arrow',
+  { tn: 'parser.unsatisfiedArg', m: 'Unexpected token: ...' },
+  '(a,...b)');
+
+a('assignable.unsatisfied',
+  { tn: 'parser.unsatisfiedAssignment', m: 'Shorthand assignments can not be left unassigned' },
+  '[{a=b}]');
+
+a('assig.not.first',
+  { c0: 'parser.c',
+    li0: 'parser.li',
+    col0: 'parser.col',
+    m: 'Assignment left hand side not valid',
+    p: function() { this.c0 -= 1; this.col0 -= 1; }
+  },
+  'a*b=12');
+
+a('assig.not.simple',
+  { tn: 'tn',
+    m: 'Identifiers along with member expressions are the only valid targets for non-simple assignments; {tn.type} is neither an identifier nor a member expression' });
+
+a('assig.to.eval.or.arguments',
+  { tn: 'tn',
+    m: '{tn.name} cannot be modified in the current context' },
+  '"use strict"; [eval, arguments=12]=l');
+
+a('binding.rest.arg.not.id',
+  { tn:'tn',
+    m: 'a function\'s rest parameter can only have an identifier as its argument; in this case, it is a {tn.argument.type}' },
+  '(a, ...[b])=>12', '(function (e, ...{l}) {})');
+
+a('block.unfinished',
+  { c0: 'parser.c0', li0: 'parser.li0', col0: 'parser.col0',
+    m: 'the block starting at {tn.loc.start.line}:{tn.loc.start.column} is unfinished; got a token of type {parser.lttype} instead of a closing "}"' }, '{ )');
+
+set('block.dependent.is.unfinished', 'block.unfinished');
+
+// TODO: locations
+a('block.dependent.no.opening.curly',
+  { c0: 'parser.c0', li0: 'parser.li0', col0: 'parser.col0',
+    m: 'curly brace was expected after this {extra.blockOwner}; instead, got a token with type {parser.lttype}' },
+  'try (', 'try {} catch (e) return');
+

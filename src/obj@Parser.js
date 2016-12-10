@@ -45,7 +45,7 @@ this.parseObjectExpression = function (context) {
      if ( elem ) {
        list.push(elem);
        if (!unsatisfiedAssignment && this.unsatisfiedAssignment ) {
-           if (!( context & CONTEXT_ELEM)  ) this.err('assig.unsatisfied') ;
+           if (!( context & CONTEXT_ELEM)  ) this.err('assignable.unsatisfied') ;
            unsatisfiedAssignment =  this.unsatisfiedAssignment ;
        }
        

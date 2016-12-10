@@ -119,14 +119,14 @@ this. asArrowFuncArg = function(arg) {
         case 'SpreadElement':
             this.assert(arg !== this.firstNonTailRest);
             if (arg.argument.type !== 'Identifier')
-              this.err('binding.rest.arg.not.id');
+              this.err('binding.rest.arg.not.id', {tn:arg});
             this.asArrowFuncArg(arg.argument);
             arg.type = 'RestElement';
             return;
 
         case 'RestElement':
             if (arg.argument.type !== 'Identifier')
-              this.err('binding.rest.arg.not.id');
+              this.err('binding.rest.arg.not.id',{tn:arg});
             this.asArrowFuncArg(arg.argument);
             return;
 

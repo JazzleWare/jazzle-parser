@@ -183,7 +183,7 @@ this.parseNonSeqExpr = function (prec, context  ) {
 
          if ( this.firstEA )
             if( !(context & CONTEXT_ELEM_OR_PARAM) || op )
-              this.err('assig.to.eval.or.arguments');
+              this.err('assig.to.eval.or.arguments',{tn:this.firstEA});
 
          if ( this.unsatisfiedAssignment ) {
             if ( !(prec===PREC_WITH_NO_OP && (context & CONTEXT_ELEM_OR_PARAM ) ) )
