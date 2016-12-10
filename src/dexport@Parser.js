@@ -37,7 +37,7 @@ this.parseExport = function() {
               { s:startc, l:startLoc, src: src, endI: endI } ) )
            return this.errorHandlerOutput;
 
-         this.foundStatement = !false;
+         this.foundStatement = true;
          
          return  { type: 'ExportAllDeclaration',
                     start: startc,
@@ -57,7 +57,7 @@ this.parseExport = function() {
               if ( this.throwReserved )
                 firstReserved = local;
               else
-                this.throwReserved = !false;
+                this.throwReserved = true;
             }
             ex = local;
             if ( this.lttype === 'Identifier' ) {
@@ -126,7 +126,7 @@ this.parseExport = function() {
                   { s:startc, l:startLoc, list: list, end: [endI,li,col], src: src } ))
            return this.errorHandlerOutput; 
 
-         this.foundStatement = !false;
+         this.foundStatement = true;
          return { type: 'ExportNamedDeclaration',
                  start: startc,
                  loc: { start: startLoc, end: semiLoc || ( src && src.loc.end ) ||
@@ -150,22 +150,22 @@ this.parseExport = function() {
                  this.err('export.default.const.let',startc,startLoc) )
                return this.errorHandlerOutput;
                  
-             this.canBeStatement = !false;
+             this.canBeStatement = true;
              ex = this.parseVariableDeclaration(CONTEXT_NONE);
              break;
                
           case 'class':
-             this.canBeStatement = !false;
+             this.canBeStatement = true;
              ex = this.parseClass(context);
              break;
   
           case 'var':
-             this.canBeStatement = !false;
+             this.canBeStatement = true;
              ex = this.parseVariableDeclaration(CONTEXT_NONE ) ;
              break ;
 
           case 'function':
-             this.canBeStatement = !false;
+             this.canBeStatement = true;
              ex = this.parseFunc( context, 0 );
              break ;
         }
@@ -176,7 +176,7 @@ this.parseExport = function() {
      if (!ex && this.err('export.named.no.exports',startc, startLoc) )
        return this.errorHandlerOutput ;
      
-     this.foundStatement = !false;
+     this.foundStatement = true;
      return { type: 'ExportNamedDeclaration',
             start: startc,
             loc: { start: startLoc, end: ex.loc.end },
@@ -196,7 +196,7 @@ this.parseExport = function() {
           return this.errorHandlerOutput;
    }
 
-   this.foundStatement = !false;
+   this.foundStatement = true;
    return { type: 'ExportDefaultDeclaration',    
            start: startc,
            loc: { start: startLoc, end: endLoc || ex.loc.end },

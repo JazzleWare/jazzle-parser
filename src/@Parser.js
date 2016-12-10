@@ -41,7 +41,7 @@ var Parser = function (src, isModule) {
   this.firstElemWithYS = null;
   this.firstYS = null;
   
-  this.throwReserved = !false;
+  this.throwReserved = true;
  
   this.errorHandlers = {};
   this.errorHandlerOutput = null;

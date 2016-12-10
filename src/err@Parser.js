@@ -31,7 +31,7 @@ this.handleError = function(handlerFunction, errorTok, args ) {
    var output = handlerFunction.call( this, params, coords );
    if ( output ) {
      this.errorHandlerOutput = output;
-     return !false;
+     return true;
    }
 
    return false;

@@ -44,7 +44,7 @@ function arguments_or_eval(l) {
   switch ( l ) {
      case 'arguments':
      case 'eval':
-       return !false;
+       return true;
   }
 
   return false;

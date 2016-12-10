@@ -58,7 +58,7 @@ this . parseVariableDeclaration = function(context) {
        endLoc = lastItem.loc.end;
      }
 
-     this.foundStatement  = !false ;
+     this.foundStatement  = true ;
 
      return { declarations: list, type: 'VariableDeclaration', start: startc, end: endI,
               loc: { start: startLoc, end: endLoc }, kind: kind /* ,y:-1*/};

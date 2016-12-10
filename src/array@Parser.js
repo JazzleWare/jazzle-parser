@@ -32,7 +32,7 @@ this.parseArrayExpression = function (context ) {
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
      if ( !elem && this.lttype === '...' ) {
          elem = this.parseSpreadElement();
-         restElem = !false;
+         restElem = true;
      }
 
      if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
@@ -75,7 +75,7 @@ this.parseArrayExpression = function (context ) {
         break ;
      }
  
-  } while ( !false );
+  } while ( true );
 
   if ( firstParen ) this.firstParen = firstParen ;
   if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;

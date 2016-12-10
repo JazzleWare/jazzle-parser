@@ -130,7 +130,7 @@ this .validateID  = function (e) {
 
 this.errorReservedID = function(id) {
     if ( !this.throwReserved ) {
-       this.throwReserved = !false;
+       this.throwReserved = true;
        return null;
     }
     if ( this.err('reserved.id',id) ) return this.errorHandlerOutput;

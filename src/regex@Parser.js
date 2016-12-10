@@ -61,7 +61,7 @@ this.parseRegExpLiteral = function() {
        switch ( src.charCodeAt(c) ) {
          case CHAR_LSQBRACKET:
             if ( !inSquareBrackets )
-               inSquareBrackets = !false;
+               inSquareBrackets = true;
 
             break;
 

@@ -9,7 +9,7 @@ this.parseYield = function(context) {
   this.next();
   if (  !this.newLineBeforeLookAhead  ) {
      if ( this.lttype === 'op' && this.ltraw === '*' ) {
-            deleg = !false;
+            deleg = true;
             this.next();
             arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CONTEXT_FOR );
             if (!arg &&

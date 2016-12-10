@@ -181,7 +181,7 @@ this . parseArrowFunctionExpression = function(arg,context)   {
   var scopeFlags = this.scopeFlags;
   this.scopeFlags &= INHERITED_SCOPE_FLAGS;
 
-  var isExpr = !false, nbody = null;
+  var isExpr = true, nbody = null;
 
   if ( this.lttype === '{' ) {
        var prevLabels = this.labels, prevYS = this.firstYS;

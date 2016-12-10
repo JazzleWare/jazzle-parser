@@ -102,7 +102,7 @@ this . parseTemplateLiteral = function() {
      start: startElem,
      loc: { start : { line: li, column: col }, end: { line: this.li, column: this.col } },
      end: startElem < c ? c : startElem ,
-     tail: !false,
+     tail: true,
      value: { raw: src.slice(startElem,c).replace(/\r\n|\r/g,'\n'), 
               cooked: currentElemContents }
   }); 

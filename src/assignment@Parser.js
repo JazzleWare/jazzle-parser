@@ -36,7 +36,7 @@ this .ensureSimpAssig_soft = function(head) {
          this.err('assig.to.eval.or.arguments',head);
 
     case 'MemberExpression':
-       return ! false ;
+       return true ;
 
     default:
        return false ;

@@ -1,7 +1,7 @@
 
 this . parseFor = function() {
   this.ensureStmt();
-  this.fixupLabels(!false) ;
+  this.fixupLabels(true) ;
 
   var startc = this.c0,
       startLoc = this.locBegin();
@@ -22,13 +22,13 @@ this . parseFor = function() {
 
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
      case 'var':
-        this.canBeStatement = !false;
+        this.canBeStatement = true;
         head = this.parseVariableDeclaration(CONTEXT_FOR);
         break;
 
      case 'let':
         if ( this.v >= 5 ) {
-          this.canBeStatement = !false;
+          this.canBeStatement = true;
           head = this.parseLet(CONTEXT_FOR);
         }
 
@@ -39,14 +39,14 @@ this . parseFor = function() {
         if ( this.v < 5 && this.err('const.not.in.v5',startc, startLoc) )
           return this.errorHandlerOutput ;
 
-        this.canBeStatement = !false;
+        this.canBeStatement = true;
         head = this. parseVariableDeclaration(CONTEXT_FOR);
            break ;
   }
   this.scopeFlags = scopeFlags;
 
   if ( head === null ) {
-       headIsExpr = !false;
+       headIsExpr = true;
        head = this.parseExpr( CONTEXT_NULLABLE|CONTEXT_ELEM|CONTEXT_FOR ) ;
   }
   else 
@@ -93,14 +93,14 @@ this . parseFor = function() {
 
           this.scopeFlags &= CLEAR_IB;
           this.scopeFlags |= ( SCOPE_FLAG_BREAK|SCOPE_FLAG_CONTINUE );
-          nbody = this.parseStatement(!false);
+          nbody = this.parseStatement(true);
           if ( !nbody && this.err('null.stmt','for.iter',
                { s:startc, l:startLoc, h: head, iter: afterHead, scopeFlags: scopeFlags }) )
             return this.errorHandlerOutput;
 
           this.scopeFlags = scopeFlags;
 
-          this.foundStatement = !false;
+          this.foundStatement = true;
           this.exitScope();
           return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
             start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody/* ,y:-1*/ };
@@ -137,14 +137,14 @@ this . parseFor = function() {
 
   this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= ( SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
-  nbody = this.parseStatement(! false);
+  nbody = this.parseStatement(true);
   if ( !nbody && this.err('null.stmt','for.simple',
       { s:startc, l:startc, h: head, t: afterHead, u: tail, scopeFlags: scopeFlags } ) )
     return this.errorhandlerOutput;  
 
   this.scopeFlags = scopeFlags;
 
-  this.foundStatement = !false;
+  this.foundStatement = true;
 
   this.exitScope();
   return { type: 'ForStatement', init: head && core(head), start : startc, end: nbody.end,

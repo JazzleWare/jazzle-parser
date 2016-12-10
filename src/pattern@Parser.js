@@ -26,7 +26,7 @@ this. parseArrayPattern = function() {
   this.enterComplex();
 
   this.next();
-  while ( !false ) {
+  while ( true ) {
       elem = this.parsePattern();
       if ( elem ) {
          if ( this.lttype === 'op' && this.ltraw === '=' ) elem = this.parseAssig(elem);
@@ -82,7 +82,7 @@ this.parseObjectPattern  = function() {
             }
             else {
               this.validateID(name.name);
-              sh = !false;
+              sh = true;
               val = name;
               this.declare(name);
             }

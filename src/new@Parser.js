@@ -51,7 +51,7 @@ this.parseNewHead = function () {
   // #end
 
   var inner = core( head ) ;
-  while ( !false ) {
+  while ( true ) {
     switch (this. lttype) {
        case '.':
           this.next();
@@ -68,7 +68,7 @@ this.parseNewHead = function () {
           this.next() ;
           elem = this.parseExpr(CONTEXT_NONE) ;
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false/* ,y:-1*/ };
+                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: true/* ,y:-1*/ };
           inner = head ;
           if ( !this.expectType_soft (']') ) {
             head = this.err('mem.unfinished',startc,startLoc,head)  ;

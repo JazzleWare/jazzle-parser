@@ -341,7 +341,7 @@ this . opGrea = function()   {
 };
 
 this.skipS = function() {
-     var noNewLine = !false,
+     var noNewLine = true,
          startOffset = this.c,
          c = this.c,
          l = this.src,
@@ -391,7 +391,7 @@ this.skipS = function() {
                      this.prec  = 0xAD ;
                      this.lttype =  '/';
                      this.ltraw = '/' ;
-                     return !false;
+                     return true;
              }
 
          case 0x0020:case 0x00A0:case 0x1680:case 0x2000:
@@ -480,7 +480,7 @@ this.expectID = function (n) {
 this.expectType_soft = function (n)  {
   if (this.lttype === n ) {
       this.next();
-      return !false;
+      return true;
   }
 
   return false;
@@ -489,7 +489,7 @@ this.expectType_soft = function (n)  {
 this.expectID_soft = function (n) {
   if (this.lttype === 'Identifier' && this.ltval === n) {
      this.next();
-     return !false;
+     return true;
   }
 
   return false;

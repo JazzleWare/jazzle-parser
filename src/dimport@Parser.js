@@ -56,7 +56,7 @@ this.parseImport = function() {
     break;
   
   case '{':
-     hasList = !false;
+     hasList = true;
      this.next();
      while ( this.lttype === 'Identifier' ) {
         local = this.id();
@@ -111,7 +111,7 @@ this.parseImport = function() {
         this.err('no.semi','import',{s:startc,l:startLoc,list:list,endI:endI,src:src }) )
      return this.errorHandlerOutput;
    
-   this.foundStatement = !false;
+   this.foundStatement = true;
    return { type: 'ImportDeclaration',
            start: startc,
            loc: { start: startLoc, end: semiLoc || src.loc.end  },

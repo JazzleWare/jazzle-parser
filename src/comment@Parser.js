@@ -5,7 +5,7 @@ this.readMultiComment = function () {
        e = l.length,
        r,
        start = c,
-       n = !false ;
+       n = true ;
 
    while ( c < e )
         switch (r = l.charCodeAt(c++ ) ) {

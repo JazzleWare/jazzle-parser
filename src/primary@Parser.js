@@ -31,7 +31,7 @@ this.parseExprHead = function (context) {
             break ;
 
         case '(' :
-            this.arrowParen = !false;
+            this.arrowParen = true;
             head = this. parseParen() ;
             if ( this.unsatisfiedArg )
                return head ;
@@ -86,7 +86,7 @@ this.parseExprHead = function (context) {
   inner = core( head ) ;
 
   LOOP:
-  while ( !false ) {
+  while ( true ) {
      switch (this.lttype ) {
          case '.':
             this.next();
@@ -104,7 +104,7 @@ this.parseExprHead = function (context) {
             this.next() ;
             elem   = this. parseExpr(PREC_WITH_NO_OP,CONTEXT_NONE ) ;
             head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                      loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false /* ,y:-1*/};
+                      loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: true /* ,y:-1*/};
             inner  = head ;
             if ( !this.expectType_soft (']') &&
                   this.err('mem.unfinished',head,firstParen,firstUnassignable) )
@@ -225,7 +225,7 @@ this.parseParen = function () {
   var firstEA = null;
   var firstNonTailRest = null;
 
-  while ( !false ) {
+  while ( true ) {
      this.firstParen = null;
      this.next() ;
      this.unsatisfiedAssignment = null;

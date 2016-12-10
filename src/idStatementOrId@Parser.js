@@ -65,7 +65,7 @@ this. parseIdStatementOrId = function ( context ) {
             break SWITCH;
         case 'case':
             if ( this.canBeStatement ) {
-              this.foundStatement = !false;
+              this.foundStatement = true;
               this.canBeStatement = false ;
               return null;
             }

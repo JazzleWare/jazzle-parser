@@ -132,7 +132,7 @@ this . frac = function(n) {
   this.ltraw = l.slice (n === -1 ? this.c - 1 : n, c);
   this.ltval =  parseFloat(this.ltraw )  ;
   this.c = c ;
-  return ! false   ;
+  return true   ;
 }
 
 

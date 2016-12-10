@@ -53,7 +53,7 @@ this .parseUnaryExpression = function(context ) {
     this.err('delete.arg.not.a.mem', startc, startLoc, arg);
 
   return { type: 'UnaryExpression', operator: u, start: startc, end: arg.end,
-           loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg) };
+           loc: { start: startLoc, end: arg.loc.end }, prefix: true, argument: core(arg) };
 };
 
 this .parseUpdateExpression = function(arg, context) {
@@ -73,7 +73,7 @@ this .parseUpdateExpression = function(arg, context) {
          return this.errorHandlerOutput;
 
        return { type: 'UpdateExpression', argument: core(arg), start: c, operator: u,
-                prefix: !false, end: arg.end, loc: { start: loc, end: arg.loc.end } };
+                prefix: true, end: arg.end, loc: { start: loc, end: arg.loc.end } };
     }
 
     if ( !this.ensureSimpAssig_soft(core(arg)) &&
@@ -92,9 +92,9 @@ this .parseO = function(context ) {
 
     switch ( this. lttype ) {
 
-      case 'op': return !false;
-      case '--': return !false;
-      case '-': this.prec = PREC_ADD_MIN; return !false;
+      case 'op': return true;
+      case '--': return true;
+      case '-': this.prec = PREC_ADD_MIN; return true;
       case '/':
            if ( this.src.charCodeAt(this.c) === CHAR_EQUALITY_SIGN ) {
              this.c++ ;
@@ -105,24 +105,24 @@ this .parseO = function(context ) {
            else
               this.prec = PREC_MUL ; 
 
-           return !false;
+           return true;
 
       case 'Identifier': switch ( this. ltval ) {
          case 'instanceof':
            this.prec = PREC_COMP  ;
            this.ltraw = this.ltval ;
-           return !false;
+           return true;
 
          case 'of':
          case 'in':
             if ( context & CONTEXT_FOR ) break ;
             this.prec = PREC_COMP ;
             this.ltraw = this.ltval;
-            return !false;
+            return true;
      }
      break;
 
-     case '?': this .prec = PREC_COND  ; return !false;
+     case '?': this .prec = PREC_COND  ; return true;
    }
 
    return false ;
@@ -163,7 +163,7 @@ this.parseNonSeqExpr = function (prec, context  ) {
     }   
 
     var op = false;
-    while ( !false ) {
+    while ( true ) {
        op = this. parseO( context );
        if ( op && isAssignment(this.prec) ) {
          this.firstUnassignable = firstUnassignable;
