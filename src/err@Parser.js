@@ -86,32 +86,34 @@ this.normalize = function(err) {
     parser: this,
     extra: null
   };
-
-  var i = 0;
-  while (i < NORMALIZE_COMMON.length) {
-    var name = NORMALIZE_COMMON[i];
-    if (HAS.call(err, name)) {
-      this.veri(name, err);
-      e[name] = err[name];
+  
+  if (err) {
+    var i = 0;
+    while (i < NORMALIZE_COMMON.length) {
+      var name = NORMALIZE_COMMON[i];
+      if (HAS.call(err, name)) {
+        this.veri(name, err);
+        e[name] = err[name];
+      }
+      i++;
+    } 
+    if (HAS.call(err, 'tn')) {
+      this.veri('tn', err);
+      var t = err.tn;
+      e.c0 = t.start; e.li0 = t.loc.start.line; e.col0 = t.loc.start.column;
+      e.c = t.end; e.li = t.loc.end.line; e.col = t.loc.end.column;
+      e.tn = err.tn; 
     }
-    i++;
-  } 
-  if (HAS.call(err, 'tn')) {
-    this.veri('tn', err);
-    var t = err.tn;
-    e.c0 = t.start; e.li0 = t.loc.start.line; e.col0 = t.loc.start.column;
-    e.c = t.end; e.li = t.loc.end.line; e.col = t.loc.end.column;
-    e.tn = err.tn; 
+    if (HAS.call(err, 'loc0')) {
+      this.veri('loc0', err);
+      e.li0 = err.loc0.line; e.col0 = err.loc0.column; 
+    }
+    if (HAS.call(err, 'loc')) {
+      this.veri('loc', err);
+      e.li = err.loc.line; e.col = err.loc.column;
+    }
+    if (HAS.call(err, 'extra')) { e.extra = err.extra; }
   }
-  if (HAS.call(err, 'loc0')) {
-    this.veri('loc0', err);
-    e.li0 = err.loc0.line; e.col0 = err.loc0.column; 
-  }
-  if (HAS.call(err, 'loc')) {
-    this.veri('loc', err);
-    e.li = err.loc.line; e.col = err.loc.column;
-  }
-  if (HAS.call(err, 'extra')) { e.extra = err.extra; }
 
   return e;
 };
@@ -150,6 +152,9 @@ this.buildErrorInfo = function(builder, params) {
  
   errInfo.messageTemplate = builder.messageTemplate;
 
+  if (builder.preprocessor)
+    builder.preprocessor.call(errInfo);
+ 
   return errInfo;
 };
 
@@ -157,16 +162,25 @@ var ErrorBuilders = {};
 function a(errorType, builderOutline) {
   if (HAS.call(ErrorBuilders, errorType))
     throw new Error('Error type has already got a builder: <'+errorType+'>');
-  var builder = {};
+  var builder = {preprocessor:null};
   for (var name in builderOutline) {
     if (name === 'm')
       builder.messageTemplate = ErrorString.from(builderOutline[name]);
+    else if (name === 'p')
+      builder.preprocessor = builderOutline.p; 
     else
       builder[name] = Template.from(builderOutline[name]);
   }
 
   ErrorBuilders[errorType] = builder;
+
+  return builder;
 }
 
-a('arrow.paren.no.arrow', { tn: 'parser.unsatisfiedArg', m: 'Unexpected token: ...' });
+// TODO: the argument that is coming last is a sample error code; builders must have this value as a property.
+// also a list of options may come after each of these "samples" signifying which options they should be parsed with
+a('arrow.paren.no.arrow', { tn: 'parser.unsatisfiedArg', m: 'Unexpected token: ...' }, '(a,...b)');
+a('assignable.unsatisfied', { tn: 'parser.unsatisfiedAssignment', m: 'Shorthand assignments can not be left unassigned' }, '[{a=b}]');
+a('assig.not.first', { c0: 'parser.c', li0: 'parser.li', col0: 'parser.col', m: 'Assignment left hand side not valid', p: function() { this.c0 -= 1; this.col0 -= 1; } }, 'a*b=12');
+a('assig.not.simple', { tn: 'tn', m: 'Identifiers along with member expressions are the only valid targets for non-simple assignments; {tn.type} is neither an identifier nor a member expression' });
  

@@ -25,7 +25,7 @@ this .ensureSimpAssig = function(head) {
        return;
 
     default:
-       return this.err('assig.not.simple',head);
+       return this.err('assig.not.simple',{tn:head});
   }
 };
 
