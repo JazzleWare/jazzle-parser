@@ -19,6 +19,7 @@ It is almost completely esprima-compatible (except when things get annoying, in 
 - [ ] more comments
 - [ ] finer grained control over parsing (via more options, possibly)
 - [ ] a demo website
+- [ ] standalone regex verifier (currently, regex verification is verified by passing it to the underlying engine's RegExp constructor, which, while not a defendable approach, is the most straightforward solution)
 
 #Using in the browser
 Include the file `./dist/jazzle.js` in a `<script>` tag. It exposes the `Parser` constructor, and `parse` utility function. One use case could be:
