@@ -506,10 +506,12 @@ this.parseThrowStatement = function () {
 
 };
 
-this. parseBlockStatement_dependent = function() {
+this. parseBlockStatement_dependent = function(owner) {
     var startc = this.c - 1,
         startLoc = this.locOn(1);
 
+    if (!this.expectType_soft ('{'))
+      this.err('block.dependent.no.opening.curly',{extra:{blockOwner:owner}});
     var scopeFlags = this.scopeFlags;
     this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
 
@@ -536,9 +538,7 @@ this.parseTryStatement = function () {
 
   this.enterLexicalScope(false); 
 
-  if (!this.expectType_soft ('{'))
-    this.err('block.dependent.no.opening.curly',{extra:{blockOwner:'try'}});
-  var tryBlock = this.parseBlockStatement_dependent();
+  var tryBlock = this.parseBlockStatement_dependent('try');
   this.exitScope(); 
   var finBlock = null, catBlock  = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'catch')
@@ -546,11 +546,9 @@ this.parseTryStatement = function () {
 
   if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
      this.next();
-     if (!this.expectType_soft ('{'))
-       this.err('block.dependent.no.opening.curly',{extra:{blockOwner:'finally'}});
 
      this.enterLexicalScope(false); 
-     finBlock = this.parseBlockStatement_dependent();
+     finBlock = this.parseBlockStatement_dependent('finally');
      this.exitScope(); 
   }
 
@@ -592,10 +590,7 @@ this. parseCatchClause = function () {
          this.err('catch.has.no.end.paren' , startc,startLoc,catParam)  )
      return this.errorHandlerOutput    ;
 
-   if (!this.expectType_soft ('{'))
-     this.err('block.dependent.no.opening.curly',{extra:{blockOwner:'catch'}});
-
-   var catBlock = this.parseBlockStatement_dependent();
+   var catBlock = this.parseBlockStatement_dependent('catch');
 
    this.exitScope();
    return {
