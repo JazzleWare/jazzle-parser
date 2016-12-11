@@ -2,9 +2,6 @@ this.readNumberLiteral = function (peek) {
   var c = this.c, src = this.src, len = src.length;
   var b = 10 , val = 0;
   this.lttype  = 'Literal' ;
-  this.li0 = this.li ;
-  this.col0 = this.col;
-  this.c0 = this.c;
 
   if (peek === CHAR_0) { // if our num lit starts with a 0
     b = src.charCodeAt(++c);

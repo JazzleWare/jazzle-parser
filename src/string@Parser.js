@@ -1,7 +1,4 @@
 this.readStrLiteral = function (start) {
-  this.li0 = this.li;
-  this.col0 = this.col;
-  this.c0 = this.c ;
   var c = this.c += 1,
       l = this.src,
       e = l.length,

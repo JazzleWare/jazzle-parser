@@ -12,6 +12,10 @@ this.next = function () {
       peek,
       start =  c;
 
+  this.c0 = c;
+  this.col0 = this.col;
+  this.li0 = this.li;
+
   peek  = this.src.charCodeAt(start);
   if ( isIDHead(peek) )this.readAnIdentifierToken('');
   else if (Num(peek))this.readNumberLiteral(peek);
@@ -151,11 +155,6 @@ this.next = function () {
       default:
 
         var mustBeAnID = 0 ;
-
-        this.c = c;
-        this.c0 = c;
-        this.col0 = this.col;
-        this.li0 = this.li;
 
         if (CHAR_BACK_SLASH === peek) {
             mustBeAnID = 1;

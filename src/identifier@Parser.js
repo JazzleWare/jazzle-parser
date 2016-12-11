@@ -1,11 +1,4 @@
 this.readAnIdentifierToken = function (v) {
-   // if head has been a u, the location has already been saved in #next()
-   if ( !v ) {
-     this.li0 = this.li;
-     this.col0 = this.col;
-     this.c0 = this.c;
-   }
-
    var c = this.c, src = this.src, len = src.length, peek;
    c++; // start reading the body
 

@@ -2871,13 +2871,6 @@ this. parseIdStatementOrId = function ( context ) {
 },
 function(){
 this.readAnIdentifierToken = function (v) {
-   // if head has been a u, the location has already been saved in #next()
-   if ( !v ) {
-     this.li0 = this.li;
-     this.col0 = this.col;
-     this.c0 = this.c;
-   }
-
    var c = this.c, src = this.src, len = src.length, peek;
    c++; // start reading the body
 
@@ -3340,6 +3333,10 @@ this.next = function () {
       peek,
       start =  c;
 
+  this.c0 = c;
+  this.col0 = this.col;
+  this.li0 = this.li;
+
   peek  = this.src.charCodeAt(start);
   if ( isIDHead(peek) )this.readAnIdentifierToken('');
   else if (Num(peek))this.readNumberLiteral(peek);
@@ -3479,11 +3476,6 @@ this.next = function () {
       default:
 
         var mustBeAnID = 0 ;
-
-        this.c = c;
-        this.c0 = c;
-        this.col0 = this.col;
-        this.li0 = this.li;
 
         if (CHAR_BACK_SLASH === peek) {
             mustBeAnID = 1;
@@ -4071,9 +4063,6 @@ this.readNumberLiteral = function (peek) {
   var c = this.c, src = this.src, len = src.length;
   var b = 10 , val = 0;
   this.lttype  = 'Literal' ;
-  this.li0 = this.li ;
-  this.col0 = this.col;
-  this.c0 = this.c;
 
   if (peek === CHAR_0) { // if our num lit starts with a 0
     b = src.charCodeAt(++c);
@@ -5918,9 +5907,6 @@ this.blck = function () { // blck ([]stmt)
 },
 function(){
 this.readStrLiteral = function (start) {
-  this.li0 = this.li;
-  this.col0 = this.col;
-  this.c0 = this.c ;
   var c = this.c += 1,
       l = this.src,
       e = l.length,
