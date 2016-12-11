@@ -6,6 +6,7 @@ outline/
 yield/
 early-error*
 yield-container*
+scrap/
 a*
 *-
 .s*
@@ -18,3 +19,4 @@ incubator/
 *outline*
 *yield-*
 diff
+
