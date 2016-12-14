@@ -146,9 +146,6 @@ this. asArrowFuncArg = function(arg) {
 
 this . parseArrowFunctionExpression = function(arg,context)   {
 
-  if ( this.unsatisfiedArg )
-       this.unsatisfiedArg = null;
-
   var tight = this.tight;
 
   this.enterFuncScope(false);

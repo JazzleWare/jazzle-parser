@@ -6,67 +6,13 @@ this.parseArrayExpression = function (context ) {
 
   this.next () ;
 
-  if ( context & CONTEXT_UNASSIGNABLE_CONTAINER )
-      context = (context & CONTEXT_PARAM)|CONTEXT_NULLABLE;
-
-  else
-      context = (context & CONTEXT_PARAM)|CONTEXT_NULLABLE|CONTEXT_ELEM;
-
-  var firstEA = null,
-      firstElemWithYS = null,
-      firstUnassignable = null,
-      parenYS = null,
-      firstParen = null,
-      unsatisfiedAssignment = null,
-      firstYS = this.firstYS,
-      restElem = false, 
-      firstNonTailRest = null ;
-
   do {
-     this.firstUnassignable =
-     this.firstParen = 
-     this.unsatisfiedAssignment = 
-     this.firstEA = 
-     this.firstElemWithYS = null;
-
      elem = this.parseNonSeqExpr (PREC_WITH_NO_OP, context );
      if ( !elem && this.lttype === '...' ) {
          elem = this.parseSpreadElement();
-         restElem = true;
      }
-
-     if ( !unsatisfiedAssignment && this.unsatisfiedAssignment ) {
-           if ( !(context & CONTEXT_ELEM) && 
-                this.err('err.prop.init', this.unsatisfiedAssignment) )
-                return this.errorHandlerOutput ;
-           unsatisfiedAssignment =  this.unsatisfiedAssignment;
-     }
- 
-     if ( !firstParen && this.firstParen )
-           firstParen =  this.firstParen ;
-
-     if ( !firstUnassignable && this.firstUnassignable )
-           firstUnassignable =  this.firstUnassignable ;
-
-     if ( !firstEA && this.firstEA )
-           firstEA =  this.firstEA ;
-
-     if ( context & CONTEXT_PARAM) {
-        if ( !firstElemWithYS && this.firstElemWithYS ) {
-              firstElemWithYS =  this.firstElemWithYS;
-              parenYS = this.parenYS;
-        }
-     }
-
-     if ( !firstYS && this.firstYS ) firstYS = this.firstYS;
 
      if ( this.lttype === ',' ) { 
-        if (restElem) { 
-           if (firstNonTailRest===null)
-             firstNonTailRest = elem;
-
-           restElem = false;
-        }
         list.push(elem) ;
         this.next();
      }
@@ -76,17 +22,6 @@ this.parseArrayExpression = function (context ) {
      }
  
   } while ( true );
-
-  if ( firstParen ) this.firstParen = firstParen ;
-  if ( firstUnassignable ) this.firstUnassignable = firstUnassignable;
-  if ( firstEA ) this.firstEA = firstEA;
-  if ( unsatisfiedAssignment ) this.unsatisfiedAssignment = unsatisfiedAssignment;
-  if ( firstElemWithYS ) {
-     this.firstElemWithYS = firstElemWithYS;
-     this.parenYS = parenYS;
-  } 
-  this.firstYS = firstYS;
-  this.firstNonTailRest = firstNonTailRest;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list /* ,y:-1*/};

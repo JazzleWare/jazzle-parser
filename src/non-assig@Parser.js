@@ -129,8 +129,6 @@ this .parseO = function(context ) {
 };
 
 this.parseNonSeqExpr = function (prec, context  ) {
-    var firstUnassignable = null, firstParen = null;
-
     var head = this. parseExprHead(context);
 
     if ( head === null ) {
@@ -157,40 +155,21 @@ this.parseNonSeqExpr = function (prec, context  ) {
               return null;
          }
     }
-    else if ( prec === PREC_WITH_NO_OP ) {
-      firstParen = head. type === PAREN ? head.expr : this.firstParen ;      
-      firstUnassignable = this.firstUnassignable;
-    }   
 
     var op = false;
     while ( true ) {
        op = this. parseO( context );
        if ( op && isAssignment(this.prec) ) {
-         this.firstUnassignable = firstUnassignable;
          if ( prec === PREC_WITH_NO_OP )
             head =  this. parseAssignment(head, context );
          
          else
-            head = this.err('assig.not.first',
+           this.err('assig.not.first',
                  { c:context, u:firstUnassignable, h: head, paren: firstParen, prec: prec });
 
          break ;
        }
        else {
-         if ( this.unsatisfiedArg && 
-              this.err('arrow.paren.no.arrow',{c:context, u:firstUnassignable, h: head, p:firstParen, prec: prec}) )
-           return this.errorHandlerOutput; 
-
-         if ( this.firstEA )
-            if( !(context & CONTEXT_ELEM_OR_PARAM) || op )
-              this.err('assig.to.eval.or.arguments',{tn:this.firstEA});
-
-         if ( this.unsatisfiedAssignment ) {
-            if ( !(prec===PREC_WITH_NO_OP && (context & CONTEXT_ELEM_OR_PARAM ) ) )
-              this.err('assignable.unsatisfied');
-
-            else break ;
-         }
          if ( !op ) break;
        }
 
@@ -227,11 +206,6 @@ this.parseNonSeqExpr = function (prec, context  ) {
               };
     }
   
-    if ( prec === PREC_WITH_NO_OP ) {
-      this.firstParen = firstParen ;
-      this.firstUnassignable = firstUnassignable;
-    }
-
     return head;
 };
 
