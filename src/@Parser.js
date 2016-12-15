@@ -43,5 +43,11 @@ var Parser = function (src, isModule) {
   this.directive = DIRECTIVE_NONE;
   
   this.declMode = DECL_MODE_NONE;
+
+  // ERROR TYPE           CORE ERROR NODE    OWNER NODE
+  this.pt = ERR_NONE_YET; this.pe = null; this.po = null; // paramErr info
+  this.at = ERR_NONE_YET; this.ae = null; this.ao = null; // assigErr info
+  this.st = ERR_NONE_YET; this.se = null; this.so = null; // simpleErr info
+
 };
 

@@ -113,6 +113,12 @@ this.parseMem = function(context, flags) {
   if (nmod)
     this.err('unexpected.lookahead');
 
+  // TODO: it is not strictly needed -- this.parseObjElem itself can verify if the name passed to it is
+  // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad
+  // faster
+  if (flags & MEM_PROTO)
+    context |= CONTEXT_PROTO;
+
   return this.parseObjElem(nmem, context|(flags & MEM_PROTO));
 };
  
