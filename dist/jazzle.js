@@ -92,6 +92,12 @@ var Parser = function (src, isModule) {
   this.directive = DIRECTIVE_NONE;
   
   this.declMode = DECL_MODE_NONE;
+
+  // ERROR TYPE           CORE ERROR NODE    OWNER NODE
+  this.pt = ERR_NONE_YET; this.pe = null; this.po = null; // paramErr info
+  this.at = ERR_NONE_YET; this.ae = null; this.ao = null; // assigErr info
+  this.st = ERR_NONE_YET; this.se = null; this.so = null; // simpleErr info
+
 };
 
 ;
@@ -310,13 +316,15 @@ var SCOPE_TYPE_CATCH = 128;
 var SCOPE_TYPE_GLOBAL = 256;
 
 var CONTEXT_NONE = 0,
-    CONTEXT_ELEM = 1,
-    CONTEXT_FOR = CONTEXT_ELEM << 1,
-    CONTEXT_PARAM = CONTEXT_FOR << 1,
-    CONTEXT_ELEM_OR_PARAM = CONTEXT_ELEM|CONTEXT_PARAM,
-    CONTEXT_UNASSIGNABLE_CONTAINER = CONTEXT_PARAM << 1,
-    CONTEXT_NULLABLE = CONTEXT_UNASSIGNABLE_CONTAINER << 1,
-    CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1;
+    CONTEXT_MIGHT_BE_PARAM = 1,
+    CONTEXT_FOR = CONTEXT_MIGHT_BE_PARAM << 1,
+    CONTEXT_MIGHT_BE_PATTERN = CONTEXT_FOR << 1,
+    CONTEXT_NULLABLE = CONTEXT_MIGHT_BE_PATTERN << 1,
+    CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1,
+    CONTEXT_PROTO = CONTEXT_DEFAULT << 1,
+    CONTEXT_HAS_AN_ERR_PARAM = CONTEXT_PROTO << 1,
+    CONTEXT_HAS_AN_ERR_ASSIG = CONTEXT_HAS_AN_ERR_PARAM << 1,
+    CONTEXT_HAS_AN_ERR_SIMPLE = CONTEXT_HAS_AN_ERR_ASSIG;
 
 // TODO: order matters in the first few declarations below, mostly due to a 
 // slight performance gain in parseFunc, where MEM_CONSTRUCTOR and MEM_SUPER in `flags` are
@@ -355,7 +363,6 @@ var MEM_CLASS = 1,
     MEM_PROTOTYPE = MEM_STATIC << 1,
     MEM_OBJ_METH = MEM_PROTOTYPE << 1,
     MEM_PROTO = MEM_OBJ_METH << 1,
-    CONTEXT_PROTO = MEM_PROTO,
     MEM_HAS_CONSTRUCTOR = MEM_PROTO << 1,
     MEM_ACCESSOR = MEM_GET|MEM_SET,
     MEM_SPECIAL = MEM_ACCESSOR|MEM_GEN,
@@ -420,6 +427,29 @@ function isHex(e) {
            ( e >= CHAR_A && e <= CHAR_F );
 }
 
+
+;
+var ERR_NONE_YET = 0,
+    // [(a)] = 12;
+    ERR_PAREN_UNBINDABLE = ERR_NONE_YET + 1,
+
+    // { a = 12 };
+    ERR_SHORTHAND_UNASSIGNED = ERR_PAREN_UNBINDABLE + 1,
+
+    // [...a, b] = [...e,] = 12 
+    ERR_NON_TAIL_REST = ERR_SHORTHAND_UNASSIGNED + 1,
+
+    // [arguments, [arguments=12], [arguments]=12, eval] = 'l'
+    ERR_ARGUMENTS_OR_EVAL_ASSIGNED = ERR_NON_TAIL_REST + 1,
+
+    // function* l() { ([e=yield])=>12 }
+    ERR_YIELD_OR_SUPER = ERR_ARGUMENTS_OR_EVAL_ASSIGNED + 1,
+
+    // (a, ...b)
+    ERR_UNEXPECTED_REST = ERR_YIELD_OR_SUPER + 1,
+
+    // ()
+    ERR_EMPTY_LIST_MISSING_ARROW = ERR_UNEXPECTED_REST + 1;
 
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
@@ -1174,10 +1204,9 @@ this.parseSuper = function() {
   this.next();
   switch ( this.lttype ) {
   case '(':
-    if (
-      (this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER) !==
-      SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER
-    ) this.err('class.super.call');
+    if (this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER !==
+      SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER)
+      this.err('class.super.call');
  
     break;
  
@@ -1604,6 +1633,54 @@ this.parseImport = function() {
      end:  endI , specifiers: list,
      source: src
    };
+}; 
+
+},
+function(){
+this.flushParenFromAnyErrors = function() {
+  if (this.pt !== ERR_NONE_YET) {
+    var pt = this.pt; this.pt = ERR_NONE_YET;
+    var pe = this.pe; this.pe = null;
+    this.po = null;
+    this.throwTricky('p', pt, pe);
+  }
+};
+
+this.flushAssigFromAnyErrors = function() {
+  if (this.at !== ERR_NONE_YET) {
+    var at = this.at; this.at = ERR_NONE_YET;
+    var ae = this.ae; this.ae = null;
+    this.ao = null;
+    this.throwTricky('a', at, ae);
+  }
+};
+
+this.flushSimpleFromAnyErrors = function() {
+  if (this.st !== ERR_NONE_YET) {
+    var st = this.st; this.st = NONE_YET;
+    var se = this.se; this.se = null;
+    this.so = null;
+    this.throwTricky('s', st, se);
+  }
+};
+
+// tricky map
+var tm = {};
+
+tm[ERR_PAREN_UNBINDABLE] = 'paren.unbindable';
+tm[ERR_SHORTHAND_UNASSIGNED] = 'shorthand.unassigned';
+tm[ERR_NON_TAIL_REST] = 'non.tail.rest';
+tm[ERR_ARGUMENTS_OR_EVAL_ASSIGNED] = 'assig.to.arguments.or.eval';
+tm[ERR_YIELD_OR_SUPER] = 'param.has.yield.or.super';
+tm[ERR_UNEXPECTED_REST] = 'unexpected.rest';
+tm[ERR_EMPTY_LIST_MISSING_ARROW] = 'arrow.missing.after.empty.list';
+
+// TODO: trickyContainer
+this.throwTricky = function(source, trickyType, trickyCore) {
+  if (!HAS.call(tm, trickType))
+    throw new Error("Unknown error value: "+trickyType);
+  
+  this.err(tm[trickyType], {tn:trickyCore, extra:{source:source}});
 }; 
 
 },
@@ -2410,7 +2487,12 @@ this.parseFunc = function(context, flags) {
     this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
   else if (flags & MEM_SUPER)
     this.scopeFlags |= (flags & (MEM_SUPER|MEM_CONSTRUCTOR));
-  
+
+  // TODO: super is allowed in methods of a class regardless of whether the class
+  // has an actual heritage clause; but this could probably be better implemented
+  else if (!isWhole && !(flags & MEM_CONSTRUCTOR))
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_SUPER;
+ 
   // class members, along with obj-methods, have strict formal parameter lists,
   // which is a rather misleading name for a parameter list in which dupes are not allowed
   if (!this.tight && !isWhole)
@@ -2963,6 +3045,12 @@ this.parseMem = function(context, flags) {
   if (nmod)
     this.err('unexpected.lookahead');
 
+  // TODO: it is not strictly needed -- this.parseObjElem itself can verify if the name passed to it is
+  // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad
+  // faster
+  if (flags & MEM_PROTO)
+    context |= CONTEXT_PROTO;
+
   return this.parseObjElem(nmem, context|(flags & MEM_PROTO));
 };
  
@@ -2971,20 +3059,28 @@ this.parseObjElem = function(name, context) {
   var val = null;
   context &= ~CONTEXT_PROTO;
 
-  this.firstUnassignable = this.firstParen = null;
   switch (this.lttype) {
   case ':':
     if (hasProto && firstProto)
       this.err('obj.proto.has.dup');
+
     this.next();
     val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
-    // TODO: `this.unsatisfiedAssignment` is supposed to have been set to null
-    // before this.parseObjElem(name, context); currently, this is always the case,
-    // but maybe it would be better to omit the if below and let an
-    // unsatisfied assignment get trapped in somewhere else, like parseNonSeqExpr.
-    // the only reason of the if below is to fail early (that is, without parsing a whole node before failing.)
-    if (this.unsatisfiedAssignment && !(context & CONTEXT_ELEM))
-      this.err('obj.prop.assig.not.allowed', name, context);
+
+    if (context & CONTEXT_PARAM_OR_PATTERN) {
+      if (val.type === PAREN_TYPE) {
+        if ((context & CONTEXT_CAN_BE_PARAM) &&
+           !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+           this.pt === ERR_NONE_YET) {
+          this.pt = ERR_PAREN_UNBINDABLE; this.pe = val;
+        }
+        if ((context & CONTEXT_CAN_BE_PATTERN) &&
+           !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+           this.at === ERR_NONE_YET) {
+          this.at = ERR_PAREN_UNBINDABLE; this.pe = val;
+        }
+      }
+    }
 
     val = {
       type: 'Property', start: name.start,
@@ -2994,8 +3090,10 @@ this.parseObjElem = function(name, context) {
       computed: name.type === PAREN,
       method: false, shorthand: false, value: core(val)/* ,y:-1*/
     };
+
     if (hasProto)
       this.first__proto__ = val;
+
     return val;
  
   case 'op':
@@ -3003,13 +3101,15 @@ this.parseObjElem = function(name, context) {
       this.err('obj.prop.assig.not.id', name, context);
     if (this.ltraw !== '=')
       this.err('obj.prop.assig.not.assigop', name, context);
-    if (!(context & CONTEXT_ELEM))
+    if (!(context & CONTEXT_PARAM_OR_PATERN))
       this.err('obj.prop.assig.not.allowed', name, context);
 
-    // could have been parsed as an outright pattern,
-    // but were it done that way, yield/super tracking would not have worked
     val = this.parseAssignment(name, context);
-    this.unsatisfiedAssignment = val;
+    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE) &&
+       this.st === ERR_NONE_YET) {
+      this.st = ERR_SHORTHAND_UNASSIGNED; this.se = val;
+    }
+ 
     break;
 
   default:
@@ -3051,6 +3151,473 @@ this .memberExpr = function() {
 };
 
 
+
+},
+function(){
+this.parseArrayExpression = function(context) {
+
+  var startc = this.c - 1,
+      startLoc = this.locOn(1);
+
+  this.next();
+
+  var elem = null,
+      list = [];
+  var elemContext = CONTEXT_NULLABLE;
+
+  elemContext |= (context & CONTEXT_PARAM_OR_PATTERN);
+  elemContext |= (context & CONTEXT_PARAM_OR_PATTERN_ERR);
+
+  var pt = ERR_NONE_YET, pe = null, po = null;
+  var at = ERR_NONE_YET, ae = null, ao = null;
+  var st = ERR_NONE_YET, se = null, so = null;
+
+  if (context & CONTEXT_PARAM_OR_PATTERN) {
+    if ((context & CONTEXT_PARAM) &&
+       !(context & CONTEXT_HAS_AN_ERR_PARAM)) {
+      this.pt = ERR_NONE_YET; this.pe = this.po = null;
+    }
+
+    if (!(context & CONTEXT_HAS_AN_ERR_ASSIG)) {
+      this.at = ERR_NONE_YET; this.ae = this.ao = null;
+    }
+
+    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE)) {
+      this.st = ERR_NONE_YET; this.se = this.so = null;
+    }
+  }
+
+  var hasRest = false, hasNonTailRest = false;
+
+  while (true) {
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
+    if (elem === null && this.lttype === '...') {
+      elem = this.parseSpreadElement(elemContext);
+      hasRest = true;
+    }
+    if (this.lttype === ',') {
+      if (hasRest)
+        hasNonTailRest = true; 
+      list.push(core(elem));
+      this.next();
+    }
+    else if (elem) list.push(core(elem));
+    else break;
+ 
+    if (elem &&
+       (elemContext & CONTEXT_PARAM_OR_PATTERN)) {
+      var elemCore = hasRest ? elem.argument : elem;
+      // TODO: [...(a),] = 12
+      var t = ERR_NONE_YET;
+      if (hasNonTailRest)
+        t = ERR_NON_TAIL_REST;
+      else if (elemCore.type === PAREN_TYPE)
+        t = ERR_PAREN_UNBINDABLE;
+
+      if (t !== ERR_NONE_YET) {
+        if (this.pt === ERR_NONE_YET) {
+          this.pt = t;
+          this.pe = elemCore; this.po = elem;
+        }
+        if (this.at === ERR_NONE_YET) {
+          this.at = t;
+          this.ae = elemCore; this.ao = elem;
+        }
+      }
+      if ((elemContext & CONTEXT_MIGHT_BE_PARAM) && 
+         !(elemContext & CONTEXT_HAS_AN_ERR_PARAM)) {
+        if (this.pt !== ERR_NONE_YET) {
+          pt = this.pt; pe = this.pe; po = this.po;
+          elemContext |= CONTEXT_HAS_AN_ERR_PARAM;
+        }
+      }
+      if ((elemContext & CONTEXT_MIGHT_BE_PATTERN) &&
+         !(elemContext & CONTEXT_HAS_AN_ERR_ASSIG)) {
+        if (this.at !== ERR_NONE_YET) {
+          at = this.at; ae = this.ae; ao = this.ao;
+          elemContext |= CONTEXT_HAS_AN_ERR_ASSIG;
+        }
+      }
+      if (!(elemContext & CONTEXT_HAS_AN_ERR_SIMPLE)) {
+        if (this.st !== ERR_NONE_YET) {
+          st = this.st; se = this.se; so = this.so;
+          elemContext |= CONTEXT_HAS_AN_ERR_SIMPLE;
+        }
+      }
+    }
+
+    hasRest = hasNonTailRest = false;
+  }
+
+  
+  if ((context & CONTEXT_CAN_BE_PARAM) && pt !== ERR_NONE_YET) {
+    this.pt = pt; this.pe = pe; this.po = po; 
+  }
+  if ((context & CONTEXT_CAN_BE_PATTERN) && at !== ERR_NONE_YET) {
+    this.at = at; this.ae = ae; this.ao = ao;
+  }
+  if ((context & CONTEXT_PARAM_OR_PATTERN) && st !== ERR_NONE_YET) {
+    this.st = st; this.se = se; this.so = so;
+  }
+
+  var n = {
+    type: 'ArrayExpression',
+    loc: { start: startLoc, end: this.loc() },
+    start: startc,
+    end: this.c,
+    elements : list /* ,y:-1*/
+  };
+
+  this.expectType(']');
+  
+  return n;
+};
+
+},
+function(){
+this.toAssig = function(head, context) {
+  if (head === this.ao)
+    this.assigError_flush();
+
+  var i = 0, list = null;
+  switch (head.type) {
+  case 'Identifier':
+    if (this.tight && arguments_or_eval(head.name)) {
+      if (!(context & CONTEXT_PARAM_OR_PATTERN) &&
+         (this.st === ERR_NONE_YET ||
+          this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT))
+        this.st = ERR_NONE_YET;
+
+      if (this.st === ERR_NONE_YET) {
+        this.st = ERR_ARGUMENTS_OR_EVAL_ASSIGNED;
+        this.se = head;
+      }
+      if (!(context & CONTEXT_PARAM_OR_PATTERN))
+        this.simpleError_flush();
+    }
+    return;
+
+  case 'MemberExpression':
+    return;
+
+  case 'ObjectExpression':
+    i = 0; list = head.properties;
+    while (i < list.length)
+      this.toAssig(list[i++], context);
+    head.type = 'ObjectPattern';
+    return;
+
+  case 'ArrayExpression':
+    i = 0; list = head.elements;
+    while (i < list.length)
+      this.toAssig(list[i++], context);
+    head.type = 'ArrayPattern';
+    return;
+
+  case 'AssignmentExpression':
+    // TODO: operator is the one that must be pinned,
+    // but head is pinned currently
+    if (head.operator !== '=')
+      this.err('complex.assig.not.pattern',{tn:head});
+    // TODO: the left is not re-checked for errors
+    // because it is already an assignable pattern;
+    // this requires keeping track of the latest
+    // ea error, in order to re-record it if it is
+    // also the first error in the current pattern
+    if (this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT &&
+       head === this.so)
+      this.st = ERR_ARGUMENTS_OR_EVAL_ASSIGNED;
+
+    head.type = 'AssignmentPattern';
+    delete head.operator;
+    return;
+
+  case 'SpreadElement':
+    if (head.argument.type === 'AssignmentExpression')
+      this.err('rest.arg.not.valid',{tn:head});
+    this.toAssig(head.argument, context);
+    head.type = 'RestElement';
+    return;
+
+  default:
+    this.err('not.assignable',{tn:head});
+ 
+  }
+};
+
+this.parseAssignment = function(head, context) {
+  var o = this.ltraw;
+  if (o === '=>')
+    return this.parseArrowFunctionExpression(head);
+
+  if (head.type === PAREN_TYPE) {
+    this.at = ERR_PAREN_UNBINDABLE;
+    this.ae = this.ao = head;
+    this.assigError_flush();
+  }
+
+  if (o === '=') {
+    if ((context & CONTEXT_PARAM_OR_PATTERN) &&
+       this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
+      this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
+
+    this.toAssig(head);
+  }
+  else {
+    this.ensureSimpAssig(head);
+    this.simpleError_flush();
+  }
+
+  var right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
+    context & CONTEXT_FOR);
+ 
+  return {
+    type: 'AssignmentExpression',
+    operator: o,
+    start: head.start,
+    end: right.end,
+    left: head,
+    right: core(right),
+    loc: {
+      start: head.loc.start,
+      end: right.loc.end
+    }/* ,y:-1*/
+  };
+};
+
+},
+function(){
+this.parseObjectExpression = function(context) {
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      elem = null,
+      list = [],
+      first__proto__ = null,
+      elemContext = CONTEXT_NONE,
+      pt = ERR_NONE_YET, pe = null, po = null,
+      at = ERR_NONE_YET, ae = null, ao = null,
+      st = ERR_NONE_YET, se = null, so = null,
+      n = null;
+
+  elemContext |= context & CONTEXT_PARAM_OR_PATTERN;
+  elemContext |= context & CONTEXT_PARAM_OR_PATTERN_ERR;
+
+  if (context & CONTEXT_PARAM_OR_PATTERN) {
+    if ((context & CONTEXT_CAN_BE_PARAM) &&
+       !(context & CONTEXT_HAS_AN_ERR_PARAM)) {
+      this.pt = ERR_NONE_YET; this.pe = this.po = null;
+    }
+    if ((context & CONTEXT_CAN_BE_PATTERN) &&
+       !(context & CONTEXT_HAS_AN_ERR_ASSIG)) {
+      this.at = ERR_NONE_YET; this.ae = this.ao = null;
+    }
+    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE)) {
+      this.st = ERR_NONE_YET; this.se = this.so = null;
+    }
+  }
+  
+  do {
+    this.next();
+    this.first__proto__ = first__proto__;
+    elem = this.parseMem(elemContext, MEM_OBJ);
+
+    if (elem === null)
+      break;
+
+    if (!first__proto__ && this.first__proto__)
+      first__proto__ = this.first__proto__;
+
+    list.push(elem);
+    if (!(context & CONTEXT_PARAM_OR_PATTERN))
+      continue;
+
+    if ((context & CONTEXT_CAN_BE_PARAM) &&
+       !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+       this.pt !== ERR_NONE_YET) {
+      pt = this.pt; pe = po = elem;
+    }
+    if ((context & CONTEXT_CAN_BE_PATTERN) &&
+       !(context & CONTEXT_HAS_AN_ERR_ASSIG) &&
+       this.at !== ERR_NONE_YET) {
+      at = this.at; ae = ao = elem;
+    }
+    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE) &&
+       this.st !== ERR_NONE_YET) {
+      st = this.st; se = so = elem;
+    }
+  } while (this.lttype === ',');
+
+  if (context & CONTEXT_PARAM_OR_PATTERN) {
+    if ((context & CONTEXT_CAN_BE_PARAM) && pt !== ERR_NONE_YET) {
+      this.pt = pt; this.pe = pe; this.po = po;
+    }
+    if ((context & CONTEXT_CAN_BE_PATTERN) && at !== ERR_NONE_YET) {
+      this.at = at; this.ae = ae; this.ao = ao;
+    }
+    if (st !== ERR_NONE_YET) {
+      this.st = st; this.se = se; this.so = so;
+    }
+  }
+
+  n = {
+    properties: list,
+    type: 'ObjectExpression',
+    start: startc,
+    end: this.c,
+    loc: { start: startLoc, end: this.loc() }/* ,y:-1*/
+  };
+
+  if (!this.expectType_soft('}'))
+    this.err('obj.unfinished',{tn:n});
+
+  return n;
+};
+
+
+},
+function(){
+this.parseParen = function(context) {
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      elem = null,
+      elemContext = CONTEXT_NULLABLE,
+      list = null;
+  
+  var prevys = this.suspys,
+      hasRest = false,
+      st = ERR_NONE_YET, se = null, so = null,
+      pt = ERR_NONE_YET, pe = null, po = null; 
+
+  if (context & CONTEXT_PARAM_OR_PATTERN) {
+    this.pt = this.st = ERR_NONE_YET;
+    this.pe = this.po =
+    this.se = this.so = null;
+    this.suspys = null;
+    elemContext |= CONTEXT_CAN_BE_PARAM;
+  }
+
+  this.next();
+  while (true) {
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
+    if (elem === null) {
+      if (this.ltval === '...') {
+        if (!(elemContext & CONTEXT_CAN_BE_PARAM)) {
+          this.st = ERR_UNEXPECTED_REST;
+          this.se = this.so = null;
+          this.simpleError_flush();
+        }
+        elem = this.parseSpreadElement(elemContext);
+        hasRest = true;
+      }
+      else if (list)
+        this.err('unexpected.lookahead');
+      else break;
+    }
+
+    if (elemContext & CONTEXT_CAN_BE_PARAM) {
+      // TODO: could be `pt === ERR_NONE_YET`
+      if (!(elemContext & CONTEXT_HAS_AN_ERR_PARAM)) {
+        if (this.pt === ERR_NONE_YET) {
+          // TODO: function* l() { ({[yield]: (a)})=>12 }
+          if (elem.type === PAREN_TYPE) {
+            this.pt = ERR_PAREN_UNBINDABLE;
+            this.pe = elem; this.po = core(elem);
+          }
+          else if(this.suspys) {
+            this.pt = ERR_YIELD_OR_SUPER;
+            this.pe = this.suspys; this.po = elem;
+          }
+        }
+        if (this.pt !== ERR_NONE_YET) {
+          pt = this.pt; pe = this.pe; po = this.po;
+          elemContext |= CONTEXT_HAS_AN_ERR_PARAM;
+        }
+      }
+
+      // TODO: could be `st === ERR_NONE_YET`
+      if (!(elemContext & CONTEXT_HAS_AN_ERR_SIMPLE)) {
+        if (this.st === ERR_NONE_YET && hasRest) {
+          this.st = ERR_UNEXPECTED_REST;
+          this.se = this.so = elem;
+        }
+        if (this.st !== ERR_NONE_YET) {
+          st = this.st; se = this.se; so = this.so;
+          elemContext |= CONTEXT_HAS_AN_ERR_SIMPLE;
+        }
+      }
+    }
+
+    if (hasRest)
+      break;
+
+    if (this.lttype === ',') {
+    //if (hasRest)
+    //  this.err('unexpected.lookahead');
+      if (list === null)
+        list = [core(elem)];
+      else
+        list.push(core(elem));
+      this.next();
+    }
+    else break;
+  }
+
+  var n = {
+      type: PARAN_TYPE,
+      expr: list ? {
+        type: 'SequenceExpression',
+        expressions: list,
+        start: list[0].start,
+        end: list[list.length-1].end,
+        loc: {
+          start: list[0].loc.start,
+          end: list[list.length-1].loc.end
+        } 
+      } : elem,
+      start: startc,
+      end: this.c,
+      loc: { start: startLoc, end: this.loc() }
+  };
+
+  if (!this.expectType_soft(')'))
+    this.err('unfinished.paren');
+
+  if ((context & CONTEXT_MIGHT_BE_PARAM) &&
+     elem === null && list === null) {
+    this.st = ERR_MISSING_ARROW;
+    this.pe = this.po = n;
+  }
+
+  // TODO: this looks a little like a hack
+  if (this.lttype !== 'op' || this.ltraw !== '=>') {
+    this.simpleErrors_flush();
+    if (this.prevys !== null)
+      this.suspys = prevys;
+  }
+
+  return n;
+};
+
+
+},
+function(){
+this.parseSpreadElement = function(context) {
+  var startc = this.c0;
+  var startLoc = this.locBegin();
+
+  this.next();
+  var e = this.parseNonSeqExpr(
+    PREC_WITH_NO_OP,
+    context & ~CONTEXT_NULLABLE);
+
+  return {
+    type: 'SpreadElement',
+    loc: { start: startLoc, end: e.loc.end },
+    start: startc,
+    end: e.end,
+    argument: core(e)
+  };
+};
 
 },
 function(){
@@ -6148,6 +6715,7 @@ this.applyTo = function(obj, noErrIfUndefNull) {
 };
 
 }]  ],
+null,
 null,
 null,
 null,

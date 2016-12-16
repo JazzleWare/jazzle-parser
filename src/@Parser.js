@@ -49,5 +49,7 @@ var Parser = function (src, isModule) {
   this.at = ERR_NONE_YET; this.ae = null; this.ao = null; // assigErr info
   this.st = ERR_NONE_YET; this.se = null; this.so = null; // simpleErr info
 
+  this.suspys = null;
+
 };
 

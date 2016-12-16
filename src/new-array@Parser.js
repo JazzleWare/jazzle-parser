@@ -50,21 +50,22 @@ this.parseArrayExpression = function(context) {
  
     if (elem &&
        (elemContext & CONTEXT_PARAM_OR_PATTERN)) {
+      var elemCore = hasRest ? elem.argument : elem;
       // TODO: [...(a),] = 12
       var t = ERR_NONE_YET;
       if (hasNonTailRest)
         t = ERR_NON_TAIL_REST;
-      else if (elem.type === PAREN_TYPE)
+      else if (elemCore.type === PAREN_TYPE)
         t = ERR_PAREN_UNBINDABLE;
 
       if (t !== ERR_NONE_YET) {
         if (this.pt === ERR_NONE_YET) {
           this.pt = t;
-          this.pe = this.po = elem;
+          this.pe = elemCore; this.po = elem;
         }
         if (this.at === ERR_NONE_YET) {
           this.at = t;
-          this.ae = this.ao = elem;
+          this.ae = elemCore; this.ao = elem;
         }
       }
       if ((elemContext & CONTEXT_MIGHT_BE_PARAM) && 
@@ -103,7 +104,7 @@ this.parseArrayExpression = function(context) {
     this.st = st; this.se = se; this.so = so;
   }
 
-  elem = {
+  var n = {
     type: 'ArrayExpression',
     loc: { start: startLoc, end: this.loc() },
     start: startc,
@@ -113,5 +114,5 @@ this.parseArrayExpression = function(context) {
 
   this.expectType(']');
   
-  return elem;
+  return n;
 };

@@ -127,20 +127,28 @@ this.parseObjElem = function(name, context) {
   var val = null;
   context &= ~CONTEXT_PROTO;
 
-  this.firstUnassignable = this.firstParen = null;
   switch (this.lttype) {
   case ':':
     if (hasProto && firstProto)
       this.err('obj.proto.has.dup');
+
     this.next();
     val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
-    // TODO: `this.unsatisfiedAssignment` is supposed to have been set to null
-    // before this.parseObjElem(name, context); currently, this is always the case,
-    // but maybe it would be better to omit the if below and let an
-    // unsatisfied assignment get trapped in somewhere else, like parseNonSeqExpr.
-    // the only reason of the if below is to fail early (that is, without parsing a whole node before failing.)
-    if (this.unsatisfiedAssignment && !(context & CONTEXT_ELEM))
-      this.err('obj.prop.assig.not.allowed', name, context);
+
+    if (context & CONTEXT_PARAM_OR_PATTERN) {
+      if (val.type === PAREN_TYPE) {
+        if ((context & CONTEXT_CAN_BE_PARAM) &&
+           !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+           this.pt === ERR_NONE_YET) {
+          this.pt = ERR_PAREN_UNBINDABLE; this.pe = val;
+        }
+        if ((context & CONTEXT_CAN_BE_PATTERN) &&
+           !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+           this.at === ERR_NONE_YET) {
+          this.at = ERR_PAREN_UNBINDABLE; this.pe = val;
+        }
+      }
+    }
 
     val = {
       type: 'Property', start: name.start,
@@ -150,8 +158,10 @@ this.parseObjElem = function(name, context) {
       computed: name.type === PAREN,
       method: false, shorthand: false, value: core(val)/* ,y:-1*/
     };
+
     if (hasProto)
       this.first__proto__ = val;
+
     return val;
  
   case 'op':
@@ -159,13 +169,15 @@ this.parseObjElem = function(name, context) {
       this.err('obj.prop.assig.not.id', name, context);
     if (this.ltraw !== '=')
       this.err('obj.prop.assig.not.assigop', name, context);
-    if (!(context & CONTEXT_ELEM))
+    if (!(context & CONTEXT_PARAM_OR_PATERN))
       this.err('obj.prop.assig.not.allowed', name, context);
 
-    // could have been parsed as an outright pattern,
-    // but were it done that way, yield/super tracking would not have worked
     val = this.parseAssignment(name, context);
-    this.unsatisfiedAssignment = val;
+    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE) &&
+       this.st === ERR_NONE_YET) {
+      this.st = ERR_SHORTHAND_UNASSIGNED; this.se = val;
+    }
+ 
     break;
 
   default:

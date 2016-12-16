@@ -68,7 +68,12 @@ this.parseFunc = function(context, flags) {
     this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
   else if (flags & MEM_SUPER)
     this.scopeFlags |= (flags & (MEM_SUPER|MEM_CONSTRUCTOR));
-  
+
+  // TODO: super is allowed in methods of a class regardless of whether the class
+  // has an actual heritage clause; but this could probably be better implemented
+  else if (!isWhole && !(flags & MEM_CONSTRUCTOR))
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_SUPER;
+ 
   // class members, along with obj-methods, have strict formal parameter lists,
   // which is a rather misleading name for a parameter list in which dupes are not allowed
   if (!this.tight && !isWhole)
