@@ -49,16 +49,16 @@ this.parseObjectExpression = function(context) {
     if ((context & CTX_PARAM) &&
        !(context & CTX_HAS_A_PARAM_ERR) &&
        this.pt !== ERR_NONE_YET) {
-      pt = this.pt; pe = po = elem;
+      pt = this.pt; pe = this.pe; po = elem;
     }
     if ((context & CTX_PAT) &&
        !(context & CTX_HAS_AN_ASSIG_ERR) &&
        this.at !== ERR_NONE_YET) {
-      at = this.at; ae = ao = elem;
+      at = this.at; ae = this.ae; ao = elem;
     }
     if (!(context & CTX_HAS_A_SIMPLE_ERR) &&
        this.st !== ERR_NONE_YET) {
-      st = this.st; se = so = elem;
+      st = this.st; se = this.se; so = elem;
     }
   } while (this.lttype === ',');
 

@@ -1,25 +1,15 @@
 this.currentExprIsParams = function() {
-  if (this.pt !== ERR_NONE_YET) {
-    var pt = this.pt;
-    this.pt = this.at = this.st = ERR_NONE_YET;
-    var pe = this.pe;
-    this.throwTricky('p', pt, pe);
-  }
+  this.st = this.pt = this.at = this.st = ERR_NONE_YET;
 };
 
 this.currentExprIsAssig = function() {
-  if (this.at !== ERR_NONE_YET) {
-    var at = this.at;
-    this.pt = this.at = this.st = ERR_NONE_YET;
-    var ae = this.ae;
-    this.throwTricky('a', at, ae);
-  }
+  this.st = this.pt = this.at = ERR_NONE_YET;
 };
 
 this.currentExprIsSimple = function() {
+  this.pt = this.at = ERR_NONE_YET;
   if (this.st !== ERR_NONE_YET) {
     var st = this.st;
-    this.pt = this.at = this.st = ERR_NONE_YET;
     var se = this.se;
     this.throwTricky('s', st, se);
   }

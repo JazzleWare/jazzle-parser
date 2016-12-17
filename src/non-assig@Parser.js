@@ -192,16 +192,15 @@ this.parseNonSeqExpr = function (prec, context) {
   }
 
   var op = this.parseO(context);
-  var currentPrec = this.prec, assig = op && isAssignment(currentPrec);
+  var currentPrec = op ? this.prec : PREC_WITH_NO_OP, assig = op && isAssignment(currentPrec);
   if (assig) {
     if (prec === PREC_WITH_NO_OP)
       head = this.parseAssignment(head, context);
     else
       this.err('assig.not.first');
   }
-  if (context & CTX_PAT)
-    if ((context & CTX_NO_SIMPLE_ERR) &&
-       this.st !== ERR_NONE_YET)
+  if ((context & CTX_PAT) &&
+     (context & CTX_NO_SIMPLE_ERR))
       this.currentExprIsSimple();
   
   if (!op || assig)

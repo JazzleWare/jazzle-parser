@@ -83,7 +83,7 @@ this.parseSuper = function() {
   this.next();
   switch ( this.lttype ) {
   case '(':
-    if (this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER !==
+    if ((this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER) !==
       SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER)
       this.err('class.super.call');
  

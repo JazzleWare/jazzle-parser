@@ -1,22 +1,18 @@
 this.toAssig = function(head, context) {
   if (head === this.ao)
-    this.currentExprIsAssig();
+    this.throwTricky('a', this.at, this.ae)
 
   var i = 0, list = null;
   switch (head.type) {
   case 'Identifier':
     if (this.tight && arguments_or_eval(head.name)) {
-      if (!(context & CTX_PARPAT) &&
-         (this.st === ERR_NONE_YET ||
-          this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT))
+      if (this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT)
         this.st = ERR_NONE_YET;
-
       if (this.st === ERR_NONE_YET) {
         this.st = ERR_ARGUMENTS_OR_EVAL_ASSIGNED;
         this.se = head;
       }
-      if (!(context & CTX_PARPAT) ||
-         (context & CONTEXT_NON_SIMPLE_ERROR))
+      if (context & CTX_NO_SIMPLE_ERR)
         this.currentExprIsSimple();
     }
     return;
@@ -52,8 +48,10 @@ this.toAssig = function(head, context) {
     // ea error, in order to re-record it if it is
     // also the first error in the current pattern
     if (this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT &&
-       head === this.so)
-      this.st = ERR_ARGUMENTS_OR_EVAL_ASSIGNED;
+       head === this.so) {
+      this.st = ERR_NONE_YET;
+      this.toAssig(this.se);
+    }
 
     head.type = 'AssignmentPattern';
     delete head.operator;
@@ -84,24 +82,63 @@ this.parseAssignment = function(head, context) {
   if (head.type === PAREN_TYPE) {
     this.at = ERR_PAREN_UNBINDABLE;
     this.ae = this.ao = head;
-    this.currentExprIsAssig();
+    this.throwTricky('a', this.at, this.ae);
   }
 
+  var right = null;
   if (o === '=') {
-    if ((context & CTX_PARPAT) &&
-       this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
-      this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
+    if (context & CTX_PARPAT) {
+      if (this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
+        this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
+      else
+        this.st = ERR_NONE_YET;
+    }
 
-    this.toAssig(head);
+    var st = ERR_NONE_YET, se = null, so = null,
+        pt = ERR_NONE_YET, pe = null, pe = null;
+
+    this.toAssig(head, context);
+    // TODO: crazy to say, but what about _not_ parsing assignments that are
+    // potpat elements, having the container (array or object) take over the parse
+    // for assignments.
+    // example:
+    // [ a = b, e = l] = 12:
+    //   elem = nextElem() -> a
+    //   if this.lttype == '=': this.toAssig(elem)
+    //   <update tricky>
+    //   if '=': elem = parsePatAssig(elem) -> a = b
+    //   elem = nextElem() -> e
+    //   if this.lttype == '=': this.toAssig(elem)
+    //   <update tricky>
+    //   if '=':  elem = parsePatAssig(elem) -> e = l
+    // 
+    // the approach above might be a fit replacement for the approach below
+    if ((context & CTX_PARAM) && this.pt !== ERR_NONE_YET) {
+      pt = this.pt; pe = this.pe; po = this.po; 
+    }
+    if ((context & CTX_PARPAT) && this.st !== ERR_NONE_YET) {
+      st = this.st; se = this.se; so = this.so;
+    }
+
+    this.currentExprIsAssig();
+    this.next();
+    right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
+      (context & CTX_FOR)|CTX_PAT|CTX_NO_SIMPLE_ERR);
+
+    if (pt !== ERR_NONE_YET) {
+      this.pt = pt; this.pe = pe; this.po = po;
+    }
+    if (st !== ERR_NONE_YET) {
+      this.st = st; this.se = se; this.so = so;
+    }
   }
   else {
+    // TODO: further scrutiny, like checking for this.at, is necessary (?)
     this.ensureSimpAssig(head);
-    this.currentExprIsSimple();
+    this.next();
+    right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
+      (context & CTX_FOR)|CTX_PAT|CTX_NO_SIMPLE_ERR);
   }
-
-  this.next();
-  var right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
-    context & CTX_FOR);
  
   return {
     type: 'AssignmentExpression',

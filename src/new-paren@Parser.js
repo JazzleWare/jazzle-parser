@@ -45,15 +45,15 @@ this.parseParen = function(context) {
           // TODO: function* l() { ({[yield]: (a)})=>12 }
           if (elem.type === PAREN_TYPE) {
             this.pt = ERR_PAREN_UNBINDABLE;
-            this.pe = elem; this.po = core(elem);
+            this.pe = elem;
           }
           else if(this.suspys) {
             this.pt = ERR_YIELD_OR_SUPER;
-            this.pe = this.suspys; this.po = elem;
+            this.pe = this.suspys;
           }
         }
         if (this.pt !== ERR_NONE_YET) {
-          pt = this.pt; pe = this.pe; po = this.po;
+          pt = this.pt; pe = this.pe; po = core(elem);
           elemContext |= CTX_HAS_A_PARAM_ERR;
         }
       }
@@ -62,10 +62,10 @@ this.parseParen = function(context) {
       if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
         if (this.st === ERR_NONE_YET && hasRest) {
           this.st = ERR_UNEXPECTED_REST;
-          this.se = this.so = elem;
+          this.se = elem;
         }
         if (this.st !== ERR_NONE_YET) {
-          st = this.st; se = this.se; so = this.so;
+          st = this.st; se = this.se; so = core(elem);
           elemContext |= CTX_HAS_A_SIMPLE_ERR;
         }
       }
@@ -102,10 +102,17 @@ this.parseParen = function(context) {
   if (!this.expectType_soft(')'))
     this.err('unfinished.paren');
 
-  if ((context & CTX_PARAM) &&
-     elem === null && list === null) {
-    this.st = ERR_MISSING_ARROW;
-    this.se = this.so = n;
+  if (context & CTX_PAT) {
+    if (elem === null && list === null) {
+      st = ERR_EMPTY_LIST_MISSING_ARROW;
+      se = so = n;
+    }
+    if (pt !== ERR_NONE_YET) {
+      this.pt = pt; this.pe = pe; this.po = po;
+    }
+    if (st !== ERR_NONE_YET) {
+      this.st = st; this.se = se; this.so = so;
+    }
   }
 
   // TODO: this looks a little like a hack

@@ -47,7 +47,7 @@ this . parseFor = function() {
 
   if ( head === null ) {
        headIsExpr = true;
-       head = this.parseExpr( CTX_NULLABLE|CONTEXT_ELEM|CTX_FOR ) ;
+       head = this.parseExpr( CTX_NULLABLE|CTX_PAT|CTX_FOR ) ;
   }
   else 
      this.foundStatement = false;

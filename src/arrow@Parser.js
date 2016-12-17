@@ -160,8 +160,7 @@ this . parseArrowFunctionExpression = function(arg,context)   {
          return this.errorHandlerOutput ;
   }
 
-  if ( this.firstEA )
-     this.firstEA = null;
+  this.currentExprIsParams();
 
   if ( this.newLineBeforeLookAhead &&
        this.err('new.line.before.arrow'))

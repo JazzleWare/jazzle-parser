@@ -59,8 +59,7 @@ this.parseArrayExpression = function(context) {
       else break;
     }
  
-    if (elem &&
-       (elemContext & CTX_PARPAT)) {
+    if (elem && (elemContext & CTX_PARPAT)) {
       var elemCore = hasRest ? elem.argument : elem;
       // TODO: [...(a),] = 12
       var t = ERR_NONE_YET;
@@ -72,26 +71,26 @@ this.parseArrayExpression = function(context) {
       if ((elemContext & CTX_PARAM) && 
          !(elemContext & CTX_HAS_A_PARAM_ERR)) {
         if (this.pt === ERR_NONE_YET && t !== ERR_NONE_YET) {
-          this.pt = t; this.pe = elemCore; this.po = elem;
+          this.pt = t; this.pe = elemCore;
         }
         if (this.pt !== ERR_NONE_YET) {
-          pt = this.pt; pe = this.pe; po = this.po;
+          pt = this.pt; pe = this.pe; po = core(elem);
           elemContext |= CTX_HAS_A_PARAM_ERR;
         }
       }
       if ((elemContext & CTX_PAT) &&
          !(elemContext & CTX_HAS_AN_ASSIG_ERR)) {
         if (this.at === ERR_NONE_YET && t !== ERR_NONE_YET) {
-          this.at = t; this.ae = elemCore; this.ao = elem;
+          this.at = t; this.ae = elemCore;
         }
         if (this.at !== ERR_NONE_YET) {
-          at = this.at; ae = this.ae; ao = this.ao;
+          at = this.at; ae = this.ae; ao = core(elem);
           elemContext |= CTX_HAS_AN_ASSIG_ERR;
         }
       }
       if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
         if (this.st !== ERR_NONE_YET) {
-          st = this.st; se = this.se; so = this.so;
+          st = this.st; se = this.se; so = core(elem);
           elemContext |= CTX_HAS_A_SIMPLE_ERR;
         }
       }
