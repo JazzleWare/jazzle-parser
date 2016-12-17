@@ -33,8 +33,10 @@ this.toAssig = function(head, context) {
 
   case 'ArrayExpression':
     i = 0; list = head.elements;
-    while (i < list.length)
-      this.toAssig(list[i++], context);
+    while (i < list.length) {
+      list[i] && this.toAssig(list[i], context);
+      i++ ;
+    }
     head.type = 'ArrayPattern';
     return;
 
@@ -62,6 +64,10 @@ this.toAssig = function(head, context) {
       this.err('rest.arg.not.valid',{tn:head});
     this.toAssig(head.argument, context);
     head.type = 'RestElement';
+    return;
+
+  case 'Property':
+    this.toAssig(head.value, context);
     return;
 
   default:

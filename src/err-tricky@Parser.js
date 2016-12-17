@@ -1,26 +1,26 @@
-this.parenError_flush = function() {
+this.currentExprIsParams = function() {
   if (this.pt !== ERR_NONE_YET) {
-    var pt = this.pt; this.pt = ERR_NONE_YET;
-    var pe = this.pe; this.pe = null;
-    this.po = null;
+    var pt = this.pt;
+    this.pt = this.at = this.st = ERR_NONE_YET;
+    var pe = this.pe;
     this.throwTricky('p', pt, pe);
   }
 };
 
-this.assigError_flush = function() {
+this.currentExprIsAssig = function() {
   if (this.at !== ERR_NONE_YET) {
-    var at = this.at; this.at = ERR_NONE_YET;
-    var ae = this.ae; this.ae = null;
-    this.ao = null;
+    var at = this.at;
+    this.pt = this.at = this.st = ERR_NONE_YET;
+    var ae = this.ae;
     this.throwTricky('a', at, ae);
   }
 };
 
-this.simpleError_flush = function() {
+this.currentExprIsSimple = function() {
   if (this.st !== ERR_NONE_YET) {
-    var st = this.st; this.st = NONE_YET;
-    var se = this.se; this.se = null;
-    this.so = null;
+    var st = this.st;
+    this.pt = this.at = this.st = ERR_NONE_YET;
+    var se = this.se;
     this.throwTricky('s', st, se);
   }
 };
@@ -38,7 +38,7 @@ tm[ERR_EMPTY_LIST_MISSING_ARROW] = 'arrow.missing.after.empty.list';
 
 // TODO: trickyContainer
 this.throwTricky = function(source, trickyType, trickyCore) {
-  if (!HAS.call(tm, trickType))
+  if (!HAS.call(tm, trickyType))
     throw new Error("Unknown error value: "+trickyType);
   
   this.err(tm[trickyType], {tn:trickyCore, extra:{source:source}});

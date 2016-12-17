@@ -169,7 +169,7 @@ this.parseObjElem = function(name, context) {
       this.err('obj.prop.assig.not.id', name, context);
     if (this.ltraw !== '=')
       this.err('obj.prop.assig.not.assigop', name, context);
-    if (!(context & CONTEXT_PARAM_OR_PATERN))
+    if (!(context & CTX_PARPAT))
       this.err('obj.prop.assig.not.allowed', name, context);
 
     val = this.parseAssignment(name, context);

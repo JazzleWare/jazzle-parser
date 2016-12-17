@@ -201,7 +201,7 @@ this.parseNonSeqExpr = function (prec, context) {
   }
   if (context & CTX_PAT)
     if ((context & CTX_NO_SIMPLE_ERR) &&
-       this.st !== ERR_NOT_YET)
+       this.st !== ERR_NONE_YET)
       this.simpleError_flush();
   
   if (!op || assig)
