@@ -5,8 +5,9 @@ this.parseExpr = function (context) {
   if ( this.lttype !== ',' )
     return head;
 
-  context &= (CTX_FOR|
-    CONTEXT_PARAM_OR_PAREN|CONTEXT_PARAM_OR_PAREN_ERR);
+  // TODO: abide to the original context by using `context = context|(CTX_FOR|CTX_PARPAT)` rather than the
+  // assignment below
+  context = (context & CTX_FOR)|CTX_PARPAT;
 
   var e = [core(head)];
   do {
@@ -192,7 +193,7 @@ this.parseNonSeqExpr = function (prec, context) {
   }
 
   var op = this.parseO(context);
-  var currentPrec = op ? this.prec : PREC_WITH_NO_OP, assig = op && isAssignment(currentPrec);
+  var assig = op && isAssignment(this.prec);
   if (assig) {
     if (prec === PREC_WITH_NO_OP)
       head = this.parseAssignment(head, context);
@@ -206,12 +207,15 @@ this.parseNonSeqExpr = function (prec, context) {
   if (!op || assig)
     return head;
 
-  if (currentPrec === PREC_COND) {
-    if (prec === PREC_WITH_NO_OP)
-      head = this.parseCond(head, context);
-  }
+  do {
+    var currentPrec = this.prec;
 
-  else do {
+    if (currentPrec === PREC_COND) {
+      if (prec === PREC_WITH_NO_OP)
+        head = this.parseCond(head, context);
+      break;
+    }
+
     if ( isMMorAA(currentPrec) ) {
       if (this.newLineBeforeLookAhead )
         break;
@@ -220,9 +224,9 @@ this.parseNonSeqExpr = function (prec, context) {
       continue;
     }
     
-    if (this.prec < prec)
+    if (currentPrec < prec)
       break;
-    if (this.prec === prec && !isRassoc(prec))
+    if (currentPrec === prec && !isRassoc(prec))
       break;
 
     var o = this.ltraw;
@@ -240,6 +244,7 @@ this.parseNonSeqExpr = function (prec, context) {
       left: core(head),
       right: core(right)/* ,y:-1*/
     };
+
   } while (op = this.parseO(context));
 
   return head;
