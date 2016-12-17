@@ -93,6 +93,7 @@ this.parseAssignment = function(head, context) {
     this.simpleError_flush();
   }
 
+  this.next();
   var right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
     context & CTX_FOR);
  

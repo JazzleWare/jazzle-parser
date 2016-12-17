@@ -23,7 +23,7 @@ this.parseStatement = function ( allowNull ) {
   }
 
   this.assert(head === null) ;
-  head = this.parseExpr(CTX_NULLABLE) ;
+  head = this.parseExpr(CTX_NULLABLE|CTX_PAT) ;
   if ( !head ) {
     if ( !allowNull && this.err('stmt.null') )
       this.errorHandlerOutput;

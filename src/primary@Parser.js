@@ -226,3 +226,22 @@ this.parseThis = function() {
   return n;
 };
 
+this.parseArgList = function () {
+    var elem = null;
+    var list = [];
+
+    do { 
+       this.next();
+       elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE ); 
+       if ( elem )
+         list.push (core(elem));
+       else if ( this.lttype === '...' )
+         list.push(this.parseSpreadElement(CTX_NONE));
+       else
+         break ;
+    } while ( this.lttype === ',' );
+
+    return list ;
+};
+
+

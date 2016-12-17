@@ -43,28 +43,22 @@ this. asArrowFuncArg = function(arg) {
     if (arg.type !== 'Identifier')
       this.firstNonSimpArg = arg;
 
+    if (arg === this.po)
+      this.err('invalid.arg');
+
     switch  ( arg.type ) {
         case 'Identifier':
-           if ( arg === this.firstParen && this.parenParamError() )
-              return this.errorHandlerOutput ;
-
            if (this.tight)
              this.assert(!arguments_or_eval(arg.name));
 
            return this.declare(arg);
 
         case 'ArrayExpression':
-           if ( arg === this.firstParen && this.parenParamError() ) 
-             return errorHandlerOutput ;
 
            list = arg.elements;
            while ( i < list.length ) {
               if ( list[i] ) {
                  this.asArrowFuncArg(list[i]);
-                 if ( list[i].type === 'SpreadElement' ) {
-                    i++;
-                    break;
-                 }
               }
               i++;
            }

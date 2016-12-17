@@ -85,6 +85,7 @@ var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
 
 var PAREN = 'paren';
+var PAREN_TYPE = PAREN;
 
 var STRING_TYPE = typeof "string";
 var NUMBER_TYPE = typeof 0;
@@ -110,7 +111,9 @@ var CTX_NONE = 0,
     CTX_HAS_A_PARAM_ERR = CTX_HASPROTO << 1,
     CTX_HAS_AN_ASSIG_ERR = CTX_HAS_A_PARAM_ERR << 1,
     CTX_HAS_A_SIMPLE_ERR = CTX_HAS_AN_ASSIG_ERR << 1,
-    CTX_NO_SIMPLE_ERR = CTX_HAS_A_SIMPLE_ERR << 1;
+    CTX_NO_SIMPLE_ERR = CTX_HAS_A_SIMPLE_ERR << 1,
+    CTX_PARPAT = CTX_PARAM|CTX_PAT,
+    CTX_PARPAT_ERR = CTX_HAS_A_PARAM_ERR|CTX_HAS_AN_ASSIG_ERR|CTX_HAS_A_SIMPLE_ERR;
 
 // TODO: order matters in the first few declarations below, mostly due to a 
 // slight performance gain in parseFunc, where MEM_CONSTRUCTOR and MEM_SUPER in `flags` are

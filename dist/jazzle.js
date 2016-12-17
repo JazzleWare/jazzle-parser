@@ -302,6 +302,7 @@ var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
 
 var PAREN = 'paren';
+var PAREN_TYPE = PAREN;
 
 var STRING_TYPE = typeof "string";
 var NUMBER_TYPE = typeof 0;
@@ -317,17 +318,19 @@ var SCOPE_TYPE_SCRIPT = 32;
 var SCOPE_TYPE_CATCH = 128;
 var SCOPE_TYPE_GLOBAL = 256;
 
-var CONTEXT_NONE = 0,
-    CONTEXT_MIGHT_BE_PARAM = 1,
-    CONTEXT_FOR = CONTEXT_MIGHT_BE_PARAM << 1,
-    CONTEXT_MIGHT_BE_PATTERN = CONTEXT_FOR << 1,
-    CONTEXT_NULLABLE = CONTEXT_MIGHT_BE_PATTERN << 1,
-    CONTEXT_DEFAULT = CONTEXT_NULLABLE << 1,
-    CONTEXT_PROTO = CONTEXT_DEFAULT << 1,
-    CONTEXT_HAS_AN_ERR_PARAM = CONTEXT_PROTO << 1,
-    CONTEXT_HAS_AN_ERR_ASSIG = CONTEXT_HAS_AN_ERR_PARAM << 1,
-    CONTEXT_HAS_AN_ERR_SIMPLE = CONTEXT_HAS_AN_ERR_ASSIG << 1,
-    CONTEXT_NO_SIMPLE_ERROR = CONTEXT_HAS_AN_ERR_SIMPLE << 1;
+var CTX_NONE = 0,
+    CTX_PARAM = 1,
+    CTX_FOR = CTX_PARAM << 1,
+    CTX_PAT = CTX_FOR << 1,
+    CTX_NULLABLE = CTX_PAT << 1,
+    CTX_DEFAULT = CTX_NULLABLE << 1,
+    CTX_HASPROTO = CTX_DEFAULT << 1,
+    CTX_HAS_A_PARAM_ERR = CTX_HASPROTO << 1,
+    CTX_HAS_AN_ASSIG_ERR = CTX_HAS_A_PARAM_ERR << 1,
+    CTX_HAS_A_SIMPLE_ERR = CTX_HAS_AN_ASSIG_ERR << 1,
+    CTX_NO_SIMPLE_ERR = CTX_HAS_A_SIMPLE_ERR << 1,
+    CTX_PARPAT = CTX_PARAM|CTX_PAT,
+    CTX_PARPAT_ERR = CTX_HAS_A_PARAM_ERR|CTX_HAS_AN_ASSIG_ERR|CTX_HAS_A_SIMPLE_ERR;
 
 // TODO: order matters in the first few declarations below, mostly due to a 
 // slight performance gain in parseFunc, where MEM_CONSTRUCTOR and MEM_SUPER in `flags` are
@@ -749,28 +752,22 @@ this. asArrowFuncArg = function(arg) {
     if (arg.type !== 'Identifier')
       this.firstNonSimpArg = arg;
 
+    if (arg === this.po)
+      this.err('invalid.arg');
+
     switch  ( arg.type ) {
         case 'Identifier':
-           if ( arg === this.firstParen && this.parenParamError() )
-              return this.errorHandlerOutput ;
-
            if (this.tight)
              this.assert(!arguments_or_eval(arg.name));
 
            return this.declare(arg);
 
         case 'ArrayExpression':
-           if ( arg === this.firstParen && this.parenParamError() ) 
-             return errorHandlerOutput ;
 
            list = arg.elements;
            while ( i < list.length ) {
               if ( list[i] ) {
                  this.asArrowFuncArg(list[i]);
-                 if ( list[i].type === 'SpreadElement' ) {
-                    i++;
-                    break;
-                 }
               }
               i++;
            }
@@ -892,12 +889,12 @@ this . parseArrowFunctionExpression = function(arg,context)   {
        this.labels = {};
        isExpr = false;
        this.scopeFlags |= SCOPE_FLAG_FN;
-       nbody = this.parseFuncBody(CONTEXT_NONE);
+       nbody = this.parseFuncBody(CTX_NONE);
        this.labels = prevLabels;
        this.firstYS = prevYS;
   }
   else
-    nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context|CONTEXT_MIGHT_BE_PATTERN) ;
+    nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_PAT) ;
 
   this.exitScope();
   var params = core(arg);
@@ -1049,7 +1046,7 @@ this .parseAssignment = function(head, context ) {
        this.toAssig(core(head));
     }
     else if ( o === '=>' )
-      return this.parseArrowFunctionExpression (head, context & CONTEXT_FOR );
+      return this.parseArrowFunctionExpression (head, context & CTX_FOR );
     else this.ensureSimpAssig(core(head));
 
     if ( this.unsatisfiedAssignment ) {
@@ -1061,7 +1058,7 @@ this .parseAssignment = function(head, context ) {
     var prec = this.prec;
     this.next();
 
-    var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, (context & CONTEXT_FOR)|CONTEXT_MIGHT_BE_PATTERN ) ;
+    var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, (context & CTX_FOR)|CTX_PAT ) ;
     var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
              left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }/* ,y:-1*/};
 
@@ -1090,7 +1087,7 @@ this. parseClass = function(context) {
       this.declMode = DECL_MODE_CLASS_DECL;
       name = this.parsePattern();
     }
-    else if (!(context & CONTEXT_DEFAULT))
+    else if (!(context & CTX_DEFAULT))
       this.err('class.decl.has.no.name');
   }
   else if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
@@ -1104,7 +1101,7 @@ this. parseClass = function(context) {
   var superClass = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
      this.next();
-     superClass = this.parseExprHead(CONTEXT_NONE);
+     superClass = this.parseExprHead(CTX_NONE);
      memParseFlags |= MEM_SUPER;
   }
 
@@ -1119,7 +1116,7 @@ this. parseClass = function(context) {
       this.next();
       continue;
     }
-    elem = this.parseMem(CONTEXT_NONE, memParseFlags);
+    elem = this.parseMem(CTX_NONE, memParseFlags);
     if (elem !== null) {
       list.push(elem);
       if (elem.kind === 'constructor')
@@ -1385,21 +1382,21 @@ this.parseExport = function() {
 
    }
 
-   var context = CONTEXT_NONE;
+   var context = CTX_NONE;
 
    if ( this.lttype === 'Identifier' && 
-        this.ltval === 'default' ) { context = CONTEXT_DEFAULT; this.next(); }
+        this.ltval === 'default' ) { context = CTX_DEFAULT; this.next(); }
   
    if ( this.lttype === 'Identifier' ) {
        switch ( this.ltval ) {
           case 'let':
           case 'const':
-             if (context === CONTEXT_DEFAULT && 
+             if (context === CTX_DEFAULT && 
                  this.err('export.default.const.let',startc,startLoc) )
                return this.errorHandlerOutput;
                  
              this.canBeStatement = true;
-             ex = this.parseVariableDeclaration(CONTEXT_NONE);
+             ex = this.parseVariableDeclaration(CTX_NONE);
              break;
                
           case 'class':
@@ -1409,7 +1406,7 @@ this.parseExport = function() {
   
           case 'var':
              this.canBeStatement = true;
-             ex = this.parseVariableDeclaration(CONTEXT_NONE ) ;
+             ex = this.parseVariableDeclaration(CTX_NONE ) ;
              break ;
 
           case 'function':
@@ -1419,7 +1416,7 @@ this.parseExport = function() {
         }
    }
 
-   if ( context !== CONTEXT_DEFAULT ) {
+   if ( context !== CTX_DEFAULT ) {
 
      if (!ex && this.err('export.named.no.exports',startc, startLoc) )
        return this.errorHandlerOutput ;
@@ -1435,7 +1432,7 @@ this.parseExport = function() {
 
    var endLoc = null;
    if ( ex === null ) {
-        ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE|CONTEXT_MIGHT_BE_PATTERN );
+        ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT );
         endI = this.semiI();
         endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
         if ( !endLoc && !this.newLineBeforeLookAhead &&
@@ -2134,13 +2131,13 @@ this . parseFor = function() {
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
      case 'var':
         this.canBeStatement = true;
-        head = this.parseVariableDeclaration(CONTEXT_FOR);
+        head = this.parseVariableDeclaration(CTX_FOR);
         break;
 
      case 'let':
         if ( this.v >= 5 ) {
           this.canBeStatement = true;
-          head = this.parseLet(CONTEXT_FOR);
+          head = this.parseLet(CTX_FOR);
         }
 
         break;
@@ -2151,14 +2148,14 @@ this . parseFor = function() {
           return this.errorHandlerOutput ;
 
         this.canBeStatement = true;
-        head = this. parseVariableDeclaration(CONTEXT_FOR);
+        head = this. parseVariableDeclaration(CTX_FOR);
            break ;
   }
   this.scopeFlags = scopeFlags;
 
   if ( head === null ) {
        headIsExpr = true;
-       head = this.parseExpr( CONTEXT_NULLABLE|CONTEXT_ELEM|CONTEXT_FOR ) ;
+       head = this.parseExpr( CTX_NULLABLE|CONTEXT_ELEM|CTX_FOR ) ;
   }
   else 
      this.foundStatement = false;
@@ -2195,8 +2192,8 @@ this . parseFor = function() {
 
           this.next();
           afterHead = kind === 'ForOfStatement' ? 
-            this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE|CONTEXT_MIGHT_BE_PATTERN) :
-            this.parseExpr(CONTEXT_NONE|CONTEXT_MIGHT_BE_PATTERN);
+            this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT) :
+            this.parseExpr(CTX_NONE|CTX_PAT);
 
           if ( ! this.expectType_soft (')') &&
                  this.err('for.iter.no.end.paren',start,startLoc,head,afterHead) )
@@ -2235,12 +2232,12 @@ this . parseFor = function() {
          this.err('for.simple.no.init.comma',startc,startLoc,head) )
     return this.errorHandlerOutput ;
 
-  afterHead = this.parseExpr(CONTEXT_NULLABLE );
+  afterHead = this.parseExpr(CTX_NULLABLE );
   if ( ! this.expectType_soft (';') &&
          this.err('for.simple.no.test.comma',startc,startLoc,head,afterHead) )
     return this.errorHandlerOutput ;
 
-  var tail = this.parseExpr(CONTEXT_NULLABLE );
+  var tail = this.parseExpr(CTX_NULLABLE );
 
   if ( ! this.expectType_soft (')') &&
          this.err('for.simple.no.end.paren',startc,startLoc,head,afterHead,tail) )
@@ -2322,7 +2319,7 @@ this.parseFuncBody = function(context) {
   var elem = null;
   
   if ( this.lttype !== '{' ) {
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CONTEXT_NULLABLE|CONTEXT_MIGHT_BE_PATTERN);
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_NULLABLE|CTX_PAT);
     if ( elem === null )
       return this.err('func.body.is.empty.expr',context);
     return elem;
@@ -2412,7 +2409,7 @@ this.parseFunc = function(context, flags) {
         this.declMode = DECL_MODE_FUNCTION_DECL;
         cfn = this.parsePattern();
       }
-      else if (!(context & CONTEXT_DEFAULT))
+      else if (!(context & CTX_DEFAULT))
         this.err('missing.name', 'func');
     }
     else {
@@ -2458,7 +2455,7 @@ this.parseFunc = function(context, flags) {
   this.scopeFlags |= SCOPE_FLAG_FN;  
 
   this.labels = {};
-  var nbody = this.parseFuncBody(context & CONTEXT_FOR);
+  var nbody = this.parseFuncBody(context & CTX_FOR);
 
   var n = {
     type: isStmt ? 'FunctionDeclaration' : 'FunctionExpression', id: cfn,
@@ -2501,7 +2498,7 @@ this.parseMeth = function(name, flags) {
         this.err('class.constructor.is.a.dup', name, flags);
     }
 
-    val = this.parseFunc(CONTEXT_NONE, flags);
+    val = this.parseFunc(CTX_NONE, flags);
 
     return {
       type: 'MethodDefinition', key: core(name),
@@ -2514,7 +2511,7 @@ this.parseMeth = function(name, flags) {
     }
   }
    
-  val = this.parseFunc(CONTEXT_NONE, flags);
+  val = this.parseFunc(CTX_NONE, flags);
 
   return {
     type: 'Property', key: core(name),
@@ -2546,7 +2543,7 @@ this. parseIdStatementOrId = function ( context ) {
         case 'do': return this.parseDoWhileStatement();
         case 'if': return this.parseIfStatement();
         case 'in':
-           if ( context & CONTEXT_FOR )
+           if ( context & CTX_FOR )
              return null;
  
            this.notId() ;
@@ -2566,14 +2563,14 @@ this. parseIdStatementOrId = function ( context ) {
         case 'try': return this.parseTryStatement();
         case 'let':
              if ( this.canBeStatement && this.v >= 5 )
-               return this.parseLet(CONTEXT_NONE);
+               return this.parseLet(CTX_NONE);
 
              if (this.tight ) this.err('strict.let.is.id',context);
 
              pendingExprHead = this.id();
              break SWITCH;
 
-        case 'var': return this.parseVariableDeclaration( context & CONTEXT_FOR );
+        case 'var': return this.parseVariableDeclaration( context & CTX_FOR );
         case 'int':
             if ( this.v <= 5 )
               this.errorReservedID();
@@ -2619,10 +2616,10 @@ this. parseIdStatementOrId = function ( context ) {
         case 'super': pendingExprHead = this.parseSuper(); break SWITCH;
         case 'break': return this.parseBreakStatement();
         case 'catch': this.notId ()  ;
-        case 'class': return this.parseClass(CONTEXT_NONE ) ;
+        case 'class': return this.parseClass(CTX_NONE ) ;
         case 'const':
             if (this.v<5) this.err('const.not.in.v5',context) ;
-            return this.parseVariableDeclaration(CONTEXT_NONE);
+            return this.parseVariableDeclaration(CTX_NONE);
 
         case 'throw': return this.parseThrowStatement();
         case 'while': return this.parseWhileStatement();
@@ -2708,7 +2705,7 @@ this. parseIdStatementOrId = function ( context ) {
     }
 
     case 8: switch (id) {
-        case 'function': return this.parseFunc(context&CONTEXT_FOR, 0 );
+        case 'function': return this.parseFunc(context&CTX_FOR, 0 );
         case 'debugger': return this.prseDbg();
         case 'continue': return this.parseContinueStatement();
         case 'abstract': case 'volatile':
@@ -2841,7 +2838,7 @@ function(){
 this.parseLet = function(context) {
 
 // this function is only calld when we have a 'let' at the start of a statement,
-// or else when we have a 'let' at the start of a for's init; so, CONTEXT_FOR means "at the start of a for's init ",
+// or else when we have a 'let' at the start of a for's init; so, CTX_FOR means "at the start of a for's init ",
 // not 'in for'
  
   if ( !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK) )
@@ -3002,15 +2999,15 @@ this.parseMem = function(context, flags) {
   // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad
   // faster
   if (flags & MEM_PROTO)
-    context |= CONTEXT_PROTO;
+    context |= CTX_HASPROTO;
 
   return this.parseObjElem(nmem, context|(flags & MEM_PROTO));
 };
  
 this.parseObjElem = function(name, context) {
-  var hasProto = context & CONTEXT_PROTO, firstProto = this.first__proto__;
+  var hasProto = context & CTX_HASPROTO, firstProto = this.first__proto__;
   var val = null;
-  context &= ~CONTEXT_PROTO;
+  context &= ~CTX_HASPROTO;
 
   switch (this.lttype) {
   case ':':
@@ -3020,15 +3017,15 @@ this.parseObjElem = function(name, context) {
     this.next();
     val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
 
-    if (context & CONTEXT_PARAM_OR_PATTERN) {
+    if (context & CTX_PARPAT) {
       if (val.type === PAREN_TYPE) {
-        if ((context & CONTEXT_CAN_BE_PARAM) &&
-           !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+        if ((context & CTX_PARAM) &&
+           !(context & CTX_HAS_A_PARAM_ERR) &&
            this.pt === ERR_NONE_YET) {
           this.pt = ERR_PAREN_UNBINDABLE; this.pe = val;
         }
-        if ((context & CONTEXT_CAN_BE_PATTERN) &&
-           !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+        if ((context & CTX_PAT) &&
+           !(context & CTX_HAS_A_PARAM_ERR) &&
            this.at === ERR_NONE_YET) {
           this.at = ERR_PAREN_UNBINDABLE; this.pe = val;
         }
@@ -3058,7 +3055,7 @@ this.parseObjElem = function(name, context) {
       this.err('obj.prop.assig.not.allowed', name, context);
 
     val = this.parseAssignment(name, context);
-    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE) &&
+    if (!(context & CTX_HAS_A_SIMPLE_ERR) &&
        this.st === ERR_NONE_YET) {
       this.st = ERR_SHORTHAND_UNASSIGNED; this.se = val;
     }
@@ -3091,7 +3088,7 @@ this .memberExpr = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next() ;
-  var e = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE|CONTEXT_MIGHT_BE_PATTERN); // TODO: should be CONTEXT_NULLABLE, or else the next line is in vain 
+  var e = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT); // TODO: should be CTX_NULLABLE, or else the next line is in vain 
   if (!e && this.err('prop.dyna.no.expr',startc,startLoc) ) // 
     return this.errorHandlerOutput ;
 
@@ -3116,38 +3113,39 @@ this.parseArrayExpression = function(context) {
 
   var elem = null,
       list = [];
-  var elemContext = CONTEXT_NULLABLE;
+  var elemContext = CTX_NULLABLE;
 
-  if (context & CONTEXT_MIGHT_BE_PATTERN) {
-    elemContext |= (context & CONTEXT_PARAM_OR_PATTERN);
-    elemContext |= (context & CONTEXT_PARAM_OR_PATTERN_ERR);
+  if (context & CTX_PAT) {
+    elemContext |= (context & CTX_PARPAT);
+    elemContext |= (context & CTX_PARPAT_ERR);
   }
   else
-    elemContext |= CONTEXT_MIGHT_BE_PATTERN|CONTEXT_NO_SIMPLE_ERROR;
+    elemContext |= CTX_PAT|CTX_NO_SIMPLE_ERR;
 
   var pt = ERR_NONE_YET, pe = null, po = null;
   var at = ERR_NONE_YET, ae = null, ao = null;
   var st = ERR_NONE_YET, se = null, so = null;
 
-  if (context & CONTEXT_PARAM_OR_PATTERN) {
-    if ((context & CONTEXT_PARAM) &&
-       !(context & CONTEXT_HAS_AN_ERR_PARAM)) {
+  if (context & CTX_PARPAT) {
+    if ((context & CTX_PARAM) &&
+       !(context & CTX_HAS_A_PARAM_ERR)) {
       this.pt = ERR_NONE_YET; this.pe = this.po = null;
     }
 
-    if ((context & CONTEXT_PATTERN) &&
-       !(context & CONTEXT_HAS_AN_ERR_ASSIG)) {
+    if ((context & CTX_PAT) &&
+       !(context & CTX_HAS_AN_ASSIG_ERR)) {
       this.at = ERR_NONE_YET; this.ae = this.ao = null;
     }
 
-    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE)) {
+    if (!(context & CTX_HAS_A_SIMPLE_ERR)) {
       this.st = ERR_NONE_YET; this.se = this.so = null;
     }
   }
 
+  var hasMore = true;
   var hasRest = false, hasNonTailRest = false;
 
-  while (true) {
+  while (hasMore) {
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
     if (elem === null && this.lttype === '...') {
       elem = this.parseSpreadElement(elemContext);
@@ -3156,14 +3154,19 @@ this.parseArrayExpression = function(context) {
     if (this.lttype === ',') {
       if (hasRest)
         hasNonTailRest = true; 
-      list.push(core(elem));
+      list.push(elem && core(elem));
       this.next();
     }
-    else if (elem) list.push(core(elem));
-    else break;
+    else {
+      if (elem) {
+        list.push(core(elem));
+        hasMore = false;
+      }
+      else break;
+    }
  
     if (elem &&
-       (elemContext & CONTEXT_PARAM_OR_PATTERN)) {
+       (elemContext & CTX_PARPAT)) {
       var elemCore = hasRest ? elem.argument : elem;
       // TODO: [...(a),] = 12
       var t = ERR_NONE_YET;
@@ -3172,30 +3175,30 @@ this.parseArrayExpression = function(context) {
       else if (hasNonTailRest)
         t = ERR_NON_TAIL_REST;
 
-      if ((elemContext & CONTEXT_MIGHT_BE_PARAM) && 
-         !(elemContext & CONTEXT_HAS_AN_ERR_PARAM)) {
+      if ((elemContext & CTX_PARAM) && 
+         !(elemContext & CTX_HAS_A_PARAM_ERR)) {
         if (this.pt === ERR_NONE_YET && t !== ERR_NONE_YET) {
           this.pt = t; this.pe = elemCore; this.po = elem;
         }
         if (this.pt !== ERR_NONE_YET) {
           pt = this.pt; pe = this.pe; po = this.po;
-          elemContext |= CONTEXT_HAS_AN_ERR_PARAM;
+          elemContext |= CTX_HAS_A_PARAM_ERR;
         }
       }
-      if ((elemContext & CONTEXT_MIGHT_BE_PATTERN) &&
-         !(elemContext & CONTEXT_HAS_AN_ERR_ASSIG)) {
+      if ((elemContext & CTX_PAT) &&
+         !(elemContext & CTX_HAS_AN_ASSIG_ERR)) {
         if (this.at === ERR_NONE_YET && t !== ERR_NONE_YET) {
           this.at = t; this.ae = elemCore; this.ao = elem;
         }
         if (this.at !== ERR_NONE_YET) {
           at = this.at; ae = this.ae; ao = this.ao;
-          elemContext |= CONTEXT_HAS_AN_ERR_ASSIG;
+          elemContext |= CTX_HAS_AN_ASSIG_ERR;
         }
       }
-      if (!(elemContext & CONTEXT_HAS_AN_ERR_SIMPLE)) {
+      if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
         if (this.st !== ERR_NONE_YET) {
           st = this.st; se = this.se; so = this.so;
-          elemContext |= CONTEXT_HAS_AN_ERR_SIMPLE;
+          elemContext |= CTX_HAS_A_SIMPLE_ERR;
         }
       }
     }
@@ -3204,13 +3207,13 @@ this.parseArrayExpression = function(context) {
   }
 
   
-  if ((context & CONTEXT_CAN_BE_PARAM) && pt !== ERR_NONE_YET) {
+  if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
     this.pt = pt; this.pe = pe; this.po = po; 
   }
-  if ((context & CONTEXT_CAN_BE_PATTERN) && at !== ERR_NONE_YET) {
+  if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
     this.at = at; this.ae = ae; this.ao = ao;
   }
-  if ((context & CONTEXT_PARAM_OR_PATTERN) && st !== ERR_NONE_YET) {
+  if ((context & CTX_PARPAT) && st !== ERR_NONE_YET) {
     this.st = st; this.se = se; this.so = so;
   }
 
@@ -3237,7 +3240,7 @@ this.toAssig = function(head, context) {
   switch (head.type) {
   case 'Identifier':
     if (this.tight && arguments_or_eval(head.name)) {
-      if (!(context & CONTEXT_PARAM_OR_PATTERN) &&
+      if (!(context & CTX_PARPAT) &&
          (this.st === ERR_NONE_YET ||
           this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT))
         this.st = ERR_NONE_YET;
@@ -3246,7 +3249,7 @@ this.toAssig = function(head, context) {
         this.st = ERR_ARGUMENTS_OR_EVAL_ASSIGNED;
         this.se = head;
       }
-      if (!(context & CONTEXT_PARAM_OR_PATTERN) ||
+      if (!(context & CTX_PARPAT) ||
          (context & CONTEXT_NON_SIMPLE_ERROR))
         this.simpleError_flush();
     }
@@ -3313,7 +3316,7 @@ this.parseAssignment = function(head, context) {
   }
 
   if (o === '=') {
-    if ((context & CONTEXT_PARAM_OR_PATTERN) &&
+    if ((context & CTX_PARPAT) &&
        this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
       this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
 
@@ -3324,8 +3327,9 @@ this.parseAssignment = function(head, context) {
     this.simpleError_flush();
   }
 
+  this.next();
   var right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
-    context & CONTEXT_FOR);
+    context & CTX_FOR);
  
   return {
     type: 'AssignmentExpression',
@@ -3349,29 +3353,29 @@ this.parseObjectExpression = function(context) {
       elem = null,
       list = [],
       first__proto__ = null,
-      elemContext = CONTEXT_NONE,
+      elemContext = CTX_NONE,
       pt = ERR_NONE_YET, pe = null, po = null,
       at = ERR_NONE_YET, ae = null, ao = null,
       st = ERR_NONE_YET, se = null, so = null,
       n = null;
 
-  if (context & CONTEXT_MIGHT_BE_PATTERN) {
-    elemContext |= context & CONTEXT_PARAM_OR_PATTERN;
-    elemContext |= context & CONTEXT_PARAM_OR_PATTERN_ERR;
+  if (context & CTX_PAT) {
+    elemContext |= context & CTX_PARPAT;
+    elemContext |= context & CTX_PARPAT_ERR;
   }
   else 
-    elemContext |= CONTEXT_MIGHT_BE_PATTERN|CONTEXT_NO_SIMPLE_ERROR;
+    elemContext |= CTX_PAT|CTX_NO_SIMPLE_ERR;
 
-  if (context & CONTEXT_PARAM_OR_PATTERN) {
-    if ((context & CONTEXT_CAN_BE_PARAM) &&
-       !(context & CONTEXT_HAS_AN_ERR_PARAM)) {
+  if (context & CTX_PARPAT) {
+    if ((context & CTX_PARAM) &&
+       !(context & CTX_HAS_A_PARAM_ERR)) {
       this.pt = ERR_NONE_YET; this.pe = this.po = null;
     }
-    if ((context & CONTEXT_CAN_BE_PATTERN) &&
-       !(context & CONTEXT_HAS_AN_ERR_ASSIG)) {
+    if ((context & CTX_PAT) &&
+       !(context & CTX_HAS_AN_ASSIG_ERR)) {
       this.at = ERR_NONE_YET; this.ae = this.ao = null;
     }
-    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE)) {
+    if (!(context & CTX_HAS_A_SIMPLE_ERR)) {
       this.st = ERR_NONE_YET; this.se = this.so = null;
     }
   }
@@ -3388,30 +3392,30 @@ this.parseObjectExpression = function(context) {
       first__proto__ = this.first__proto__;
 
     list.push(elem);
-    if (!(context & CONTEXT_PARAM_OR_PATTERN))
+    if (!(context & CTX_PARPAT))
       continue;
 
-    if ((context & CONTEXT_CAN_BE_PARAM) &&
-       !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+    if ((context & CTX_PARAM) &&
+       !(context & CTX_HAS_A_PARAM_ERR) &&
        this.pt !== ERR_NONE_YET) {
       pt = this.pt; pe = po = elem;
     }
-    if ((context & CONTEXT_CAN_BE_PATTERN) &&
-       !(context & CONTEXT_HAS_AN_ERR_ASSIG) &&
+    if ((context & CTX_PAT) &&
+       !(context & CTX_HAS_AN_ASSIG_ERR) &&
        this.at !== ERR_NONE_YET) {
       at = this.at; ae = ao = elem;
     }
-    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE) &&
+    if (!(context & CTX_HAS_A_SIMPLE_ERR) &&
        this.st !== ERR_NONE_YET) {
       st = this.st; se = so = elem;
     }
   } while (this.lttype === ',');
 
-  if (context & CONTEXT_PARAM_OR_PATTERN) {
-    if ((context & CONTEXT_CAN_BE_PARAM) && pt !== ERR_NONE_YET) {
+  if (context & CTX_PARPAT) {
+    if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
       this.pt = pt; this.pe = pe; this.po = po;
     }
-    if ((context & CONTEXT_CAN_BE_PATTERN) && at !== ERR_NONE_YET) {
+    if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
       this.at = at; this.ae = ae; this.ao = ao;
     }
     if (st !== ERR_NONE_YET) {
@@ -3440,7 +3444,7 @@ this.parseParen = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin(),
       elem = null,
-      elemContext = CONTEXT_NULLABLE|CONTEXT_MIGHT_BE_PATTERN;
+      elemContext = CTX_NULLABLE|CTX_PAT,
       list = null;
   
   var prevys = this.suspys,
@@ -3448,22 +3452,22 @@ this.parseParen = function(context) {
       st = ERR_NONE_YET, se = null, so = null,
       pt = ERR_NONE_YET, pe = null, po = null; 
 
-  if (context & CONTEXT_MIGHT_BE_PATTERN) {
+  if (context & CTX_PAT) {
     this.pt = this.st = ERR_NONE_YET;
     this.pe = this.po =
     this.se = this.so = null;
     this.suspys = null;
-    elemContext |= CONTEXT_CAN_BE_PARAM;
+    elemContext |= CTX_PARAM;
   }
   else
-    context |= CONTEXT_NO_SIMPLE_ERRORS;
+    context |= CTX_NO_SIMPLE_ERR;
 
   this.next();
   while (true) {
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
     if (elem === null) {
-      if (this.ltval === '...') {
-        if (!(elemContext & CONTEXT_CAN_BE_PARAM)) {
+      if (this.lttype === '...') {
+        if (!(elemContext & CTX_PARAM)) {
           this.st = ERR_UNEXPECTED_REST;
           this.se = this.so = null;
           this.simpleError_flush();
@@ -3476,9 +3480,9 @@ this.parseParen = function(context) {
       else break;
     }
 
-    if (elemContext & CONTEXT_CAN_BE_PARAM) {
+    if (elemContext & CTX_PARAM) {
       // TODO: could be `pt === ERR_NONE_YET`
-      if (!(elemContext & CONTEXT_HAS_AN_ERR_PARAM)) {
+      if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
         if (this.pt === ERR_NONE_YET) {
           // TODO: function* l() { ({[yield]: (a)})=>12 }
           if (elem.type === PAREN_TYPE) {
@@ -3492,40 +3496,36 @@ this.parseParen = function(context) {
         }
         if (this.pt !== ERR_NONE_YET) {
           pt = this.pt; pe = this.pe; po = this.po;
-          elemContext |= CONTEXT_HAS_AN_ERR_PARAM;
+          elemContext |= CTX_HAS_A_PARAM_ERR;
         }
       }
 
       // TODO: could be `st === ERR_NONE_YET`
-      if (!(elemContext & CONTEXT_HAS_AN_ERR_SIMPLE)) {
+      if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
         if (this.st === ERR_NONE_YET && hasRest) {
           this.st = ERR_UNEXPECTED_REST;
           this.se = this.so = elem;
         }
         if (this.st !== ERR_NONE_YET) {
           st = this.st; se = this.se; so = this.so;
-          elemContext |= CONTEXT_HAS_AN_ERR_SIMPLE;
+          elemContext |= CTX_HAS_A_SIMPLE_ERR;
         }
       }
     }
 
-    if (hasRest)
-      break;
-
+    if (list) list.push(elem);
     if (this.lttype === ',') {
-    //if (hasRest)
-    //  this.err('unexpected.lookahead');
+      if (hasRest)
+        this.err('unexpected.lookahead');
       if (list === null)
         list = [core(elem)];
-      else
-        list.push(core(elem));
       this.next();
     }
     else break;
   }
 
   var n = {
-      type: PARAN_TYPE,
+      type: PAREN_TYPE,
       expr: list ? {
         type: 'SequenceExpression',
         expressions: list,
@@ -3544,15 +3544,15 @@ this.parseParen = function(context) {
   if (!this.expectType_soft(')'))
     this.err('unfinished.paren');
 
-  if ((context & CONTEXT_MIGHT_BE_PARAM) &&
+  if ((context & CTX_PARAM) &&
      elem === null && list === null) {
     this.st = ERR_MISSING_ARROW;
-    this.pe = this.po = n;
+    this.se = this.so = n;
   }
 
   // TODO: this looks a little like a hack
   if (this.lttype !== 'op' || this.ltraw !== '=>') {
-    this.simpleErrors_flush();
+    this.simpleError_flush();
     if (this.prevys !== null)
       this.suspys = prevys;
   }
@@ -3570,7 +3570,7 @@ this.parseSpreadElement = function(context) {
   this.next();
   var e = this.parseNonSeqExpr(
     PREC_WITH_NO_OP,
-    context & ~CONTEXT_NULLABLE);
+    context & ~CTX_NULLABLE);
 
   return {
     type: 'SpreadElement',
@@ -3594,7 +3594,7 @@ this.parseNewHead = function () {
   var head, elem, inner;
   switch (this  .lttype) {
     case 'Identifier':
-       head = this.parseIdStatementOrId (CONTEXT_NONE);
+       head = this.parseIdStatementOrId (CTX_NONE);
        break;
 
     case '[':
@@ -3642,7 +3642,7 @@ this.parseNewHead = function () {
 
        case '[':
           this.next() ;
-          elem = this.parseExpr(CONTEXT_NONE) ;
+          elem = this.parseExpr(CTX_NONE) ;
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                     loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: true/* ,y:-1*/ };
           inner = head ;
@@ -4191,7 +4191,7 @@ this.parseExpr = function (context) {
   if ( this.lttype !== ',' )
     return head;
 
-  context &= (CONTEXT_FOR|
+  context &= (CTX_FOR|
     CONTEXT_PARAM_OR_PAREN|CONTEXT_PARAM_OR_PAREN_ERR);
 
   var e = [core(head)];
@@ -4211,13 +4211,13 @@ this.parseExpr = function (context) {
 this.parseCond = function(cond, context) {
   this.next();
   var seq =
-    this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE);
+    this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE);
 
   if (!this.expectType_soft(':'))
     this.err('cond.colon');
 
   var alt =
-    this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR);
+    this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CTX_FOR);
 
   return {
     type: 'ConditionalExpression', test: core(cond),
@@ -4249,7 +4249,7 @@ this.parseUnaryExpression = function(context) {
   }
 
   this.next();
-  var arg = this.parseNonSeqExpr(PREC_U, context & CONTEXT_FOR);
+  var arg = this.parseNonSeqExpr(PREC_U, context & CTX_FOR);
 
   if (this.tight &&
       isVDT === VDT_DELETE &&
@@ -4274,7 +4274,7 @@ this.parseUpdateExpression = function(arg, context) {
     c = this.c-2;
     loc = this.locOn(2);
     this.next() ;
-    arg = this.parseExprHead(context & CONTEXT_FOR);
+    arg = this.parseExprHead(context & CTX_FOR);
 
     if (!this.ensureSimpAssig_soft(core(arg)))
       this.err('incdec.pre.not.simple.assig');
@@ -4331,7 +4331,7 @@ this .parseO = function(context ) {
 
     case 'of':
     case 'in':
-      if ( context & CONTEXT_FOR ) break ;
+      if ( context & CTX_FOR ) break ;
       this.prec = PREC_COMP ;
       this.ltraw = this.ltval;
       return true;
@@ -4370,7 +4370,7 @@ this.parseNonSeqExpr = function (prec, context) {
       return this.parseYield(context); 
  
     default:
-      if (!(context & CONTEXT_NULLABLE) )
+      if (!(context & CTX_NULLABLE) )
         return this.err('nexpr.null.head');
        
       return null;
@@ -4385,8 +4385,8 @@ this.parseNonSeqExpr = function (prec, context) {
     else
       this.err('assig.not.first');
   }
-  if (context & CONTEXT_MIGHT_BE_PATTERN)
-    if ((context & CONTEXT_NO_SIMPLE_ERROR) &&
+  if (context & CTX_PAT)
+    if ((context & CTX_NO_SIMPLE_ERR) &&
        this.st !== ERR_NOT_YET)
       this.simpleError_flush();
   
@@ -4414,7 +4414,7 @@ this.parseNonSeqExpr = function (prec, context) {
 
     var o = this.ltraw;
     this.next();
-    var right = this.parseNonSeqExpr(currentPrec, context & CONTEXT_FOR);
+    var right = this.parseNonSeqExpr(currentPrec, context & CTX_FOR);
     head = {
       type: !isBin(currentPrec) ? 'LogicalExpression' : 'BinaryExpression',
       operator: o,
@@ -4701,7 +4701,7 @@ this.parseObjectPattern  = function() {
 
 this .parseAssig = function (head) {
     this.next() ;
-    var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
+    var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CTX_NONE );
     return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
            right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
 };
@@ -4816,7 +4816,7 @@ this.parseExprHead = function (context) {
 
     case '[':
       this.next() ;
-      elem = this.parseExpr(PREC_WITH_NO_OP,CONTEXT_NONE);
+      elem = this.parseExpr(PREC_WITH_NO_OP,CTX_NONE);
       head = {
         type: 'MemberExpression', property: core(elem),
         start: head.start, end: this.c,
@@ -4953,6 +4953,25 @@ this.parseThis = function() {
 
   return n;
 };
+
+this.parseArgList = function () {
+    var elem = null;
+    var list = [];
+
+    do { 
+       this.next();
+       elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE ); 
+       if ( elem )
+         list.push (core(elem));
+       else if ( this.lttype === '...' )
+         list.push(this.parseSpreadElement(CTX_NONE));
+       else
+         break ;
+    } while ( this.lttype === ',' );
+
+    return list ;
+};
+
 
 
 },
@@ -5361,7 +5380,7 @@ this.parseStatement = function ( allowNull ) {
     case ';': return this.parseEmptyStatement() ;
     case 'Identifier':
        this.canBeStatement = true;
-       head = this.parseIdStatementOrId(CONTEXT_NONE);
+       head = this.parseIdStatementOrId(CTX_NONE);
        if ( this.foundStatement ) {
           this.foundStatement = false ;
           return head;
@@ -5377,7 +5396,7 @@ this.parseStatement = function ( allowNull ) {
   }
 
   this.assert(head === null) ;
-  head = this.parseExpr(CONTEXT_NULLABLE) ;
+  head = this.parseExpr(CTX_NULLABLE|CTX_PAT) ;
   if ( !head ) {
     if ( !allowNull && this.err('stmt.null') )
       this.errorHandlerOutput;
@@ -5481,7 +5500,7 @@ this.parseIfStatement = function () {
         this.err('if.has.no.opening.paren',startc,startLoc) )
     return this.errorHanlerOutput;
 
-  var cond = core( this.parseExpr(CONTEXT_NONE) );
+  var cond = core( this.parseExpr(CTX_NONE) );
   if ( !this.expectType_soft (')' ) &&
         this.err('if.has.no.closing.paren',startc,startLoc) )
     return this.errorHandlerOutput ;
@@ -5519,7 +5538,7 @@ this.parseWhileStatement = function () {
          this.err('while.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput;
  
-   var cond = core( this.parseExpr(CONTEXT_NONE) );
+   var cond = core( this.parseExpr(CTX_NONE) );
    if ( !this.expectType_soft (')') &&
          this.err('while.has.no.closing.paren' ,startc,startLoc) )
      return this.errorHandlerOutput;
@@ -5582,7 +5601,7 @@ this.parseDoWhileStatement = function () {
         this.err('do.has.no.opening.paren',startc,startLoc,scopeFlags,nbody) )
     return this.errorHandlerOutput;
 
-  var cond = core(this.parseExpr(CONTEXT_NONE));
+  var cond = core(this.parseExpr(CTX_NONE));
   var c = this.c, li = this.li, col = this.col;
   if ( !this.expectType_soft (')') &&
         this.err('do.has.no.closing.paren',startc,startLoc,scopeFlags,nbody,c,li,col,cond) )
@@ -5711,7 +5730,7 @@ this.parseSwitchStatement = function () {
        this.err('switch.has.no.opening.paren',startc,startLoc) )
     return this.errorHandlerOutput;
 
-  var switchExpr = core(this.parseExpr(CONTEXT_NONE));
+  var switchExpr = core(this.parseExpr(CTX_NONE));
   if ( !this.expectType_soft (')') &&
         this.err('switch.has.no.closing.paren',startc,startLoc) )
     return this.errorHandlerOutput ;
@@ -5755,7 +5774,7 @@ this.parseSwitchCase = function () {
        startc = this.c0;
        startLoc = this.locBegin();
        this.next();
-       cond = core(this.parseExpr(CONTEXT_NONE)) ;
+       cond = core(this.parseExpr(CTX_NONE)) ;
        break;
 
      case 'default':
@@ -5803,7 +5822,7 @@ this.parseReturnStatement = function () {
   var semi = 0, semiLoc = null;
 
   if ( !this.newLineBeforeLookAhead )
-     retVal = this.parseExpr(CONTEXT_NULLABLE);
+     retVal = this.parseExpr(CTX_NULLABLE);
 
   semi = this.semiI();
   semiLoc = this.semiLoc();
@@ -5843,7 +5862,7 @@ this.parseThrowStatement = function () {
        this.err('throw.has.newline',startc,startLoc,c,li,col) )
     return this.errorHandlerOutput;
 
-  retVal = this.parseExpr(CONTEXT_NULLABLE );
+  retVal = this.parseExpr(CTX_NULLABLE );
   if ( retVal === null &&
        this.err('throw.has.no.argument',[startc,startLoc,c,li,col,semi,retVal]) )
      return this.errorHandlerOutput;
@@ -5975,7 +5994,7 @@ this . parseWithStatement = function() {
          this.err('with.has.no.opening.paren', startc, startLoc) )
      return this.errorHandlerOutput ;
 
-   var obj = this.parseExpr(CONTEXT_NONE);
+   var obj = this.parseExpr(CTX_NONE);
    if (! this.expectType_soft (')' ) &&
          this.err('with.has.no.end.paren',startc,startLoc,obj ) )
      return this.errorHandlerOutput ;
@@ -6119,7 +6138,7 @@ this . parseTemplateLiteral = function() {
               // a lookahead before starting to parse an actual expression
               this.next(); 
                            
-              templExpressions.push( core(this.parseExpr(CONTEXT_NONE)) );
+              templExpressions.push( core(this.parseExpr(CTX_NONE)) );
               if ( this. lttype !== '}')
                 this.err('templ.expr.is.unfinished') ;
 
@@ -6379,7 +6398,7 @@ this . parseVariableDeclaration = function(context) {
      
      var isConst = kind === 'const';
      if ( isConst  && elem.init === null ) {
-       this.assert(context & CONTEXT_FOR);
+       this.assert(context & CTX_FOR);
        this.unsatisfiedAssignment = elem;
      }
 
@@ -6398,7 +6417,7 @@ this . parseVariableDeclaration = function(context) {
      var lastItem = list[list.length-1];
      var endI = 0, endLoc = null;
 
-     if ( !(context & CONTEXT_FOR) ) {
+     if ( !(context & CTX_FOR) ) {
        endI = this.semiI() || lastItem.end;
        endLoc = this.semiLoc();
        if (  !endLoc ) {
@@ -6419,7 +6438,7 @@ this . parseVariableDeclaration = function(context) {
 };
 
 this . parseVariableDeclarator = function(context) {
-  if ( (context & CONTEXT_FOR) &&
+  if ( (context & CTX_FOR) &&
        this.lttype === 'Identifier' &&
        this.ltval === 'in' )
       return null;
@@ -6432,7 +6451,7 @@ this . parseVariableDeclarator = function(context) {
        init = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
   }
   else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
-       if (!( context & CONTEXT_FOR) )  // bail out in case it is not a 'for' loop's init
+       if (!( context & CTX_FOR) )  // bail out in case it is not a 'for' loop's init
          this.err('var.decl.neither.of.in',head,init,context) ;
 
        if( !this.unsatisfiedAssignment )
@@ -6460,13 +6479,13 @@ this.parseYield = function(context) {
      if ( this.lttype === 'op' && this.ltraw === '*' ) {
             deleg = true;
             this.next();
-            arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CONTEXT_FOR );
+            arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CTX_FOR );
             if (!arg &&
                  this.err('yield.has.no.expr.deleg',startc,startLoc,c,li,col,context) )
               return this.errorHandlerOutput ;
      }
      else
-        arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CONTEXT_FOR)|CONTEXT_NULLABLE );
+        arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CTX_FOR)|CTX_NULLABLE );
   }
 
   var endI, endLoc;

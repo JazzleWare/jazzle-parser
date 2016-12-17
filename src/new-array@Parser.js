@@ -11,7 +11,7 @@ this.parseArrayExpression = function(context) {
 
   if (context & CTX_PAT) {
     elemContext |= (context & CTX_PARPAT);
-    elemContext |= (context & CONTEXT_PARAM_OR_PATTERN_ERR);
+    elemContext |= (context & CTX_PARPAT_ERR);
   }
   else
     elemContext |= CTX_PAT|CTX_NO_SIMPLE_ERR;
@@ -21,12 +21,12 @@ this.parseArrayExpression = function(context) {
   var st = ERR_NONE_YET, se = null, so = null;
 
   if (context & CTX_PARPAT) {
-    if ((context & CONTEXT_PARAM) &&
+    if ((context & CTX_PARAM) &&
        !(context & CTX_HAS_A_PARAM_ERR)) {
       this.pt = ERR_NONE_YET; this.pe = this.po = null;
     }
 
-    if ((context & CONTEXT_PATTERN) &&
+    if ((context & CTX_PAT) &&
        !(context & CTX_HAS_AN_ASSIG_ERR)) {
       this.at = ERR_NONE_YET; this.ae = this.ao = null;
     }
@@ -36,9 +36,10 @@ this.parseArrayExpression = function(context) {
     }
   }
 
+  var hasMore = true;
   var hasRest = false, hasNonTailRest = false;
 
-  while (true) {
+  while (hasMore) {
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
     if (elem === null && this.lttype === '...') {
       elem = this.parseSpreadElement(elemContext);
@@ -47,11 +48,16 @@ this.parseArrayExpression = function(context) {
     if (this.lttype === ',') {
       if (hasRest)
         hasNonTailRest = true; 
-      list.push(core(elem));
+      list.push(elem && core(elem));
       this.next();
     }
-    else if (elem) list.push(core(elem));
-    else break;
+    else {
+      if (elem) {
+        list.push(core(elem));
+        hasMore = false;
+      }
+      else break;
+    }
  
     if (elem &&
        (elemContext & CTX_PARPAT)) {

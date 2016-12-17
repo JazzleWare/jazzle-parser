@@ -2,7 +2,7 @@ this.parseParen = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin(),
       elem = null,
-      elemContext = CTX_NULLABLE|CTX_PAT;
+      elemContext = CTX_NULLABLE|CTX_PAT,
       list = null;
   
   var prevys = this.suspys,
@@ -24,7 +24,7 @@ this.parseParen = function(context) {
   while (true) {
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
     if (elem === null) {
-      if (this.ltval === '...') {
+      if (this.lttype === '...') {
         if (!(elemContext & CTX_PARAM)) {
           this.st = ERR_UNEXPECTED_REST;
           this.se = this.so = null;
@@ -71,23 +71,19 @@ this.parseParen = function(context) {
       }
     }
 
-    if (hasRest)
-      break;
-
+    if (list) list.push(elem);
     if (this.lttype === ',') {
-    //if (hasRest)
-    //  this.err('unexpected.lookahead');
+      if (hasRest)
+        this.err('unexpected.lookahead');
       if (list === null)
         list = [core(elem)];
-      else
-        list.push(core(elem));
       this.next();
     }
     else break;
   }
 
   var n = {
-      type: PARAN_TYPE,
+      type: PAREN_TYPE,
       expr: list ? {
         type: 'SequenceExpression',
         expressions: list,
@@ -109,12 +105,12 @@ this.parseParen = function(context) {
   if ((context & CTX_PARAM) &&
      elem === null && list === null) {
     this.st = ERR_MISSING_ARROW;
-    this.pe = this.po = n;
+    this.se = this.so = n;
   }
 
   // TODO: this looks a little like a hack
   if (this.lttype !== 'op' || this.ltraw !== '=>') {
-    this.simpleErrors_flush();
+    this.simpleError_flush();
     if (this.prevys !== null)
       this.suspys = prevys;
   }

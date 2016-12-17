@@ -12,7 +12,7 @@ this.parseObjectExpression = function(context) {
 
   if (context & CTX_PAT) {
     elemContext |= context & CTX_PARPAT;
-    elemContext |= context & CONTEXT_PARAM_OR_PATTERN_ERR;
+    elemContext |= context & CTX_PARPAT_ERR;
   }
   else 
     elemContext |= CTX_PAT|CTX_NO_SIMPLE_ERR;
