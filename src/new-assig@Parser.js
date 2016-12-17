@@ -1,6 +1,6 @@
 this.toAssig = function(head, context) {
   if (head === this.ao)
-    this.assigError_flush();
+    this.currentExprIsAssig();
 
   var i = 0, list = null;
   switch (head.type) {
@@ -17,7 +17,7 @@ this.toAssig = function(head, context) {
       }
       if (!(context & CTX_PARPAT) ||
          (context & CONTEXT_NON_SIMPLE_ERROR))
-        this.simpleError_flush();
+        this.currentExprIsSimple();
     }
     return;
 
@@ -84,7 +84,7 @@ this.parseAssignment = function(head, context) {
   if (head.type === PAREN_TYPE) {
     this.at = ERR_PAREN_UNBINDABLE;
     this.ae = this.ao = head;
-    this.assigError_flush();
+    this.currentExprIsAssig();
   }
 
   if (o === '=') {
@@ -96,7 +96,7 @@ this.parseAssignment = function(head, context) {
   }
   else {
     this.ensureSimpAssig(head);
-    this.simpleError_flush();
+    this.currentExprIsSimple();
   }
 
   this.next();

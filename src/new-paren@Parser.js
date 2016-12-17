@@ -28,7 +28,7 @@ this.parseParen = function(context) {
         if (!(elemContext & CTX_PARAM)) {
           this.st = ERR_UNEXPECTED_REST;
           this.se = this.so = null;
-          this.simpleError_flush();
+          this.currentExprIsSimple();
         }
         elem = this.parseSpreadElement(elemContext);
         hasRest = true;
@@ -110,7 +110,7 @@ this.parseParen = function(context) {
 
   // TODO: this looks a little like a hack
   if (this.lttype !== 'op' || this.ltraw !== '=>') {
-    this.simpleError_flush();
+    this.currentExprIsSimple();
     if (this.prevys !== null)
       this.suspys = prevys;
   }

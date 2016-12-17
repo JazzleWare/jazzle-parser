@@ -3236,7 +3236,7 @@ this.parseArrayExpression = function(context) {
 function(){
 this.toAssig = function(head, context) {
   if (head === this.ao)
-    this.assigError_flush();
+    this.currentExprIsAssig();
 
   var i = 0, list = null;
   switch (head.type) {
@@ -3253,7 +3253,7 @@ this.toAssig = function(head, context) {
       }
       if (!(context & CTX_PARPAT) ||
          (context & CONTEXT_NON_SIMPLE_ERROR))
-        this.simpleError_flush();
+        this.currentExprIsSimple();
     }
     return;
 
@@ -3320,7 +3320,7 @@ this.parseAssignment = function(head, context) {
   if (head.type === PAREN_TYPE) {
     this.at = ERR_PAREN_UNBINDABLE;
     this.ae = this.ao = head;
-    this.assigError_flush();
+    this.currentExprIsAssig();
   }
 
   if (o === '=') {
@@ -3332,7 +3332,7 @@ this.parseAssignment = function(head, context) {
   }
   else {
     this.ensureSimpAssig(head);
-    this.simpleError_flush();
+    this.currentExprIsSimple();
   }
 
   this.next();
@@ -3478,7 +3478,7 @@ this.parseParen = function(context) {
         if (!(elemContext & CTX_PARAM)) {
           this.st = ERR_UNEXPECTED_REST;
           this.se = this.so = null;
-          this.simpleError_flush();
+          this.currentExprIsSimple();
         }
         elem = this.parseSpreadElement(elemContext);
         hasRest = true;
@@ -3560,7 +3560,7 @@ this.parseParen = function(context) {
 
   // TODO: this looks a little like a hack
   if (this.lttype !== 'op' || this.ltraw !== '=>') {
-    this.simpleError_flush();
+    this.currentExprIsSimple();
     if (this.prevys !== null)
       this.suspys = prevys;
   }
@@ -4396,7 +4396,7 @@ this.parseNonSeqExpr = function (prec, context) {
   if (context & CTX_PAT)
     if ((context & CTX_NO_SIMPLE_ERR) &&
        this.st !== ERR_NONE_YET)
-      this.simpleError_flush();
+      this.currentExprIsSimple();
   
   if (!op || assig)
     return head;
@@ -4792,7 +4792,7 @@ this.parseExprHead = function (context) {
   case '[':
   case '(':
   case '`':
-    this.simpleError_flush();
+    this.currentExprIsSimple();
   }
 
   inner = core( head ) ;

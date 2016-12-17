@@ -56,7 +56,7 @@ this.parseExprHead = function (context) {
   case '[':
   case '(':
   case '`':
-    this.simpleError_flush();
+    this.currentExprIsSimple();
   }
 
   inner = core( head ) ;
