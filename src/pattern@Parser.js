@@ -127,7 +127,7 @@ this.parseObjectPattern  = function() {
 
 this .parseAssig = function (head) {
     this.next() ;
-    var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
+    var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CTX_NONE );
     return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
            right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
 };

@@ -186,12 +186,12 @@ this . parseArrowFunctionExpression = function(arg,context)   {
        this.labels = {};
        isExpr = false;
        this.scopeFlags |= SCOPE_FLAG_FN;
-       nbody = this.parseFuncBody(CONTEXT_NONE);
+       nbody = this.parseFuncBody(CTX_NONE);
        this.labels = prevLabels;
        this.firstYS = prevYS;
   }
   else
-    nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context) ;
+    nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_PAT) ;
 
   this.exitScope();
   var params = core(arg);

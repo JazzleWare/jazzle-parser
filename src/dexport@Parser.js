@@ -137,21 +137,21 @@ this.parseExport = function() {
 
    }
 
-   var context = CONTEXT_NONE;
+   var context = CTX_NONE;
 
    if ( this.lttype === 'Identifier' && 
-        this.ltval === 'default' ) { context = CONTEXT_DEFAULT; this.next(); }
+        this.ltval === 'default' ) { context = CTX_DEFAULT; this.next(); }
   
    if ( this.lttype === 'Identifier' ) {
        switch ( this.ltval ) {
           case 'let':
           case 'const':
-             if (context === CONTEXT_DEFAULT && 
+             if (context === CTX_DEFAULT && 
                  this.err('export.default.const.let',startc,startLoc) )
                return this.errorHandlerOutput;
                  
              this.canBeStatement = true;
-             ex = this.parseVariableDeclaration(CONTEXT_NONE);
+             ex = this.parseVariableDeclaration(CTX_NONE);
              break;
                
           case 'class':
@@ -161,7 +161,7 @@ this.parseExport = function() {
   
           case 'var':
              this.canBeStatement = true;
-             ex = this.parseVariableDeclaration(CONTEXT_NONE ) ;
+             ex = this.parseVariableDeclaration(CTX_NONE ) ;
              break ;
 
           case 'function':
@@ -171,7 +171,7 @@ this.parseExport = function() {
         }
    }
 
-   if ( context !== CONTEXT_DEFAULT ) {
+   if ( context !== CTX_DEFAULT ) {
 
      if (!ex && this.err('export.named.no.exports',startc, startLoc) )
        return this.errorHandlerOutput ;
@@ -187,7 +187,7 @@ this.parseExport = function() {
 
    var endLoc = null;
    if ( ex === null ) {
-        ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE );
+        ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT );
         endI = this.semiI();
         endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
         if ( !endLoc && !this.newLineBeforeLookAhead &&

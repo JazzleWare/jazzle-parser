@@ -25,7 +25,7 @@ this . parseVariableDeclaration = function(context) {
      
      var isConst = kind === 'const';
      if ( isConst  && elem.init === null ) {
-       this.assert(context & CONTEXT_FOR);
+       this.assert(context & CTX_FOR);
        this.unsatisfiedAssignment = elem;
      }
 
@@ -44,7 +44,7 @@ this . parseVariableDeclaration = function(context) {
      var lastItem = list[list.length-1];
      var endI = 0, endLoc = null;
 
-     if ( !(context & CONTEXT_FOR) ) {
+     if ( !(context & CTX_FOR) ) {
        endI = this.semiI() || lastItem.end;
        endLoc = this.semiLoc();
        if (  !endLoc ) {
@@ -65,7 +65,7 @@ this . parseVariableDeclaration = function(context) {
 };
 
 this . parseVariableDeclarator = function(context) {
-  if ( (context & CONTEXT_FOR) &&
+  if ( (context & CTX_FOR) &&
        this.lttype === 'Identifier' &&
        this.ltval === 'in' )
       return null;
@@ -78,7 +78,7 @@ this . parseVariableDeclarator = function(context) {
        init = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
   }
   else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
-       if (!( context & CONTEXT_FOR) )  // bail out in case it is not a 'for' loop's init
+       if (!( context & CTX_FOR) )  // bail out in case it is not a 'for' loop's init
          this.err('var.decl.neither.of.in',head,init,context) ;
 
        if( !this.unsatisfiedAssignment )

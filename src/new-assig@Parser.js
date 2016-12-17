@@ -6,7 +6,7 @@ this.toAssig = function(head, context) {
   switch (head.type) {
   case 'Identifier':
     if (this.tight && arguments_or_eval(head.name)) {
-      if (!(context & CONTEXT_PARAM_OR_PATTERN) &&
+      if (!(context & CTX_PARPAT) &&
          (this.st === ERR_NONE_YET ||
           this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT))
         this.st = ERR_NONE_YET;
@@ -15,7 +15,8 @@ this.toAssig = function(head, context) {
         this.st = ERR_ARGUMENTS_OR_EVAL_ASSIGNED;
         this.se = head;
       }
-      if (!(context & CONTEXT_PARAM_OR_PATTERN))
+      if (!(context & CTX_PARPAT) ||
+         (context & CONTEXT_NON_SIMPLE_ERROR))
         this.simpleError_flush();
     }
     return;
@@ -42,6 +43,7 @@ this.toAssig = function(head, context) {
     // but head is pinned currently
     if (head.operator !== '=')
       this.err('complex.assig.not.pattern',{tn:head});
+
     // TODO: the left is not re-checked for errors
     // because it is already an assignable pattern;
     // this requires keeping track of the latest
@@ -80,7 +82,7 @@ this.parseAssignment = function(head, context) {
   }
 
   if (o === '=') {
-    if ((context & CONTEXT_PARAM_OR_PATTERN) &&
+    if ((context & CTX_PARPAT) &&
        this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
       this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
 
@@ -92,7 +94,7 @@ this.parseAssignment = function(head, context) {
   }
 
   var right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
-    context & CONTEXT_FOR);
+    context & CTX_FOR);
  
   return {
     type: 'AssignmentExpression',

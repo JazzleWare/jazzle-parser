@@ -31,7 +31,7 @@ this . parseTemplateLiteral = function() {
               // a lookahead before starting to parse an actual expression
               this.next(); 
                            
-              templExpressions.push( core(this.parseExpr(CONTEXT_NONE)) );
+              templExpressions.push( core(this.parseExpr(CTX_NONE)) );
               if ( this. lttype !== '}')
                 this.err('templ.expr.is.unfinished') ;
 

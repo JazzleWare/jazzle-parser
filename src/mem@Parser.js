@@ -117,15 +117,15 @@ this.parseMem = function(context, flags) {
   // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad
   // faster
   if (flags & MEM_PROTO)
-    context |= CONTEXT_PROTO;
+    context |= CTX_HASPROTO;
 
   return this.parseObjElem(nmem, context|(flags & MEM_PROTO));
 };
  
 this.parseObjElem = function(name, context) {
-  var hasProto = context & CONTEXT_PROTO, firstProto = this.first__proto__;
+  var hasProto = context & CTX_HASPROTO, firstProto = this.first__proto__;
   var val = null;
-  context &= ~CONTEXT_PROTO;
+  context &= ~CTX_HASPROTO;
 
   switch (this.lttype) {
   case ':':
@@ -135,15 +135,15 @@ this.parseObjElem = function(name, context) {
     this.next();
     val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
 
-    if (context & CONTEXT_PARAM_OR_PATTERN) {
+    if (context & CTX_PARPAT) {
       if (val.type === PAREN_TYPE) {
-        if ((context & CONTEXT_CAN_BE_PARAM) &&
-           !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+        if ((context & CTX_PARAM) &&
+           !(context & CTX_HAS_A_PARAM_ERR) &&
            this.pt === ERR_NONE_YET) {
           this.pt = ERR_PAREN_UNBINDABLE; this.pe = val;
         }
-        if ((context & CONTEXT_CAN_BE_PATTERN) &&
-           !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+        if ((context & CTX_PAT) &&
+           !(context & CTX_HAS_A_PARAM_ERR) &&
            this.at === ERR_NONE_YET) {
           this.at = ERR_PAREN_UNBINDABLE; this.pe = val;
         }
@@ -173,7 +173,7 @@ this.parseObjElem = function(name, context) {
       this.err('obj.prop.assig.not.allowed', name, context);
 
     val = this.parseAssignment(name, context);
-    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE) &&
+    if (!(context & CTX_HAS_A_SIMPLE_ERR) &&
        this.st === ERR_NONE_YET) {
       this.st = ERR_SHORTHAND_UNASSIGNED; this.se = val;
     }

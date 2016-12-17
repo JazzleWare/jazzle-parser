@@ -46,7 +46,7 @@ this.parseFuncBody = function(context) {
   var elem = null;
   
   if ( this.lttype !== '{' ) {
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CONTEXT_NULLABLE);
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_NULLABLE|CTX_PAT);
     if ( elem === null )
       return this.err('func.body.is.empty.expr',context);
     return elem;

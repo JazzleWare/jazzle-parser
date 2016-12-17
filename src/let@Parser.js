@@ -2,7 +2,7 @@
 this.parseLet = function(context) {
 
 // this function is only calld when we have a 'let' at the start of a statement,
-// or else when we have a 'let' at the start of a for's init; so, CONTEXT_FOR means "at the start of a for's init ",
+// or else when we have a 'let' at the start of a for's init; so, CTX_FOR means "at the start of a for's init ",
 // not 'in for'
  
   if ( !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK) )

@@ -23,13 +23,13 @@ this . parseFor = function() {
   if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
      case 'var':
         this.canBeStatement = true;
-        head = this.parseVariableDeclaration(CONTEXT_FOR);
+        head = this.parseVariableDeclaration(CTX_FOR);
         break;
 
      case 'let':
         if ( this.v >= 5 ) {
           this.canBeStatement = true;
-          head = this.parseLet(CONTEXT_FOR);
+          head = this.parseLet(CTX_FOR);
         }
 
         break;
@@ -40,14 +40,14 @@ this . parseFor = function() {
           return this.errorHandlerOutput ;
 
         this.canBeStatement = true;
-        head = this. parseVariableDeclaration(CONTEXT_FOR);
+        head = this. parseVariableDeclaration(CTX_FOR);
            break ;
   }
   this.scopeFlags = scopeFlags;
 
   if ( head === null ) {
        headIsExpr = true;
-       head = this.parseExpr( CONTEXT_NULLABLE|CONTEXT_ELEM|CONTEXT_FOR ) ;
+       head = this.parseExpr( CTX_NULLABLE|CONTEXT_ELEM|CTX_FOR ) ;
   }
   else 
      this.foundStatement = false;
@@ -84,8 +84,8 @@ this . parseFor = function() {
 
           this.next();
           afterHead = kind === 'ForOfStatement' ? 
-            this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE) :
-            this.parseExpr(CONTEXT_NONE);
+            this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT) :
+            this.parseExpr(CTX_NONE|CTX_PAT);
 
           if ( ! this.expectType_soft (')') &&
                  this.err('for.iter.no.end.paren',start,startLoc,head,afterHead) )
@@ -124,12 +124,12 @@ this . parseFor = function() {
          this.err('for.simple.no.init.comma',startc,startLoc,head) )
     return this.errorHandlerOutput ;
 
-  afterHead = this.parseExpr(CONTEXT_NULLABLE );
+  afterHead = this.parseExpr(CTX_NULLABLE );
   if ( ! this.expectType_soft (';') &&
          this.err('for.simple.no.test.comma',startc,startLoc,head,afterHead) )
     return this.errorHandlerOutput ;
 
-  var tail = this.parseExpr(CONTEXT_NULLABLE );
+  var tail = this.parseExpr(CTX_NULLABLE );
 
   if ( ! this.expectType_soft (')') &&
          this.err('for.simple.no.end.paren',startc,startLoc,head,afterHead,tail) )

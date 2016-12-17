@@ -2,7 +2,7 @@ this.parseParen = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin(),
       elem = null,
-      elemContext = CONTEXT_NULLABLE,
+      elemContext = CTX_NULLABLE|CTX_PAT;
       list = null;
   
   var prevys = this.suspys,
@@ -10,20 +10,22 @@ this.parseParen = function(context) {
       st = ERR_NONE_YET, se = null, so = null,
       pt = ERR_NONE_YET, pe = null, po = null; 
 
-  if (context & CONTEXT_PARAM_OR_PATTERN) {
+  if (context & CTX_PAT) {
     this.pt = this.st = ERR_NONE_YET;
     this.pe = this.po =
     this.se = this.so = null;
     this.suspys = null;
-    elemContext |= CONTEXT_CAN_BE_PARAM;
+    elemContext |= CTX_PARAM;
   }
+  else
+    context |= CTX_NO_SIMPLE_ERR;
 
   this.next();
   while (true) {
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
     if (elem === null) {
       if (this.ltval === '...') {
-        if (!(elemContext & CONTEXT_CAN_BE_PARAM)) {
+        if (!(elemContext & CTX_PARAM)) {
           this.st = ERR_UNEXPECTED_REST;
           this.se = this.so = null;
           this.simpleError_flush();
@@ -36,9 +38,9 @@ this.parseParen = function(context) {
       else break;
     }
 
-    if (elemContext & CONTEXT_CAN_BE_PARAM) {
+    if (elemContext & CTX_PARAM) {
       // TODO: could be `pt === ERR_NONE_YET`
-      if (!(elemContext & CONTEXT_HAS_AN_ERR_PARAM)) {
+      if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
         if (this.pt === ERR_NONE_YET) {
           // TODO: function* l() { ({[yield]: (a)})=>12 }
           if (elem.type === PAREN_TYPE) {
@@ -52,19 +54,19 @@ this.parseParen = function(context) {
         }
         if (this.pt !== ERR_NONE_YET) {
           pt = this.pt; pe = this.pe; po = this.po;
-          elemContext |= CONTEXT_HAS_AN_ERR_PARAM;
+          elemContext |= CTX_HAS_A_PARAM_ERR;
         }
       }
 
       // TODO: could be `st === ERR_NONE_YET`
-      if (!(elemContext & CONTEXT_HAS_AN_ERR_SIMPLE)) {
+      if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
         if (this.st === ERR_NONE_YET && hasRest) {
           this.st = ERR_UNEXPECTED_REST;
           this.se = this.so = elem;
         }
         if (this.st !== ERR_NONE_YET) {
           st = this.st; se = this.se; so = this.so;
-          elemContext |= CONTEXT_HAS_AN_ERR_SIMPLE;
+          elemContext |= CTX_HAS_A_SIMPLE_ERR;
         }
       }
     }
@@ -104,7 +106,7 @@ this.parseParen = function(context) {
   if (!this.expectType_soft(')'))
     this.err('unfinished.paren');
 
-  if ((context & CONTEXT_MIGHT_BE_PARAM) &&
+  if ((context & CTX_PARAM) &&
      elem === null && list === null) {
     this.st = ERR_MISSING_ARROW;
     this.pe = this.po = n;

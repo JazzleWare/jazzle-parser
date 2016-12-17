@@ -9,7 +9,7 @@ this.parseNewHead = function () {
   var head, elem, inner;
   switch (this  .lttype) {
     case 'Identifier':
-       head = this.parseIdStatementOrId (CONTEXT_NONE);
+       head = this.parseIdStatementOrId (CTX_NONE);
        break;
 
     case '[':
@@ -61,7 +61,7 @@ this.parseNewHead = function () {
 
        case '[':
           this.next() ;
-          elem = this.parseExpr(CONTEXT_NONE) ;
+          elem = this.parseExpr(CTX_NONE) ;
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
                     loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: true/* ,y:-1*/ };
           inner = head ;

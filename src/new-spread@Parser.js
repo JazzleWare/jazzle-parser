@@ -5,7 +5,7 @@ this.parseSpreadElement = function(context) {
   this.next();
   var e = this.parseNonSeqExpr(
     PREC_WITH_NO_OP,
-    context & ~CONTEXT_NULLABLE);
+    context & ~CTX_NULLABLE);
 
   return {
     type: 'SpreadElement',

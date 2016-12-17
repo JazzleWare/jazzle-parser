@@ -4,25 +4,29 @@ this.parseObjectExpression = function(context) {
       elem = null,
       list = [],
       first__proto__ = null,
-      elemContext = CONTEXT_NONE,
+      elemContext = CTX_NONE,
       pt = ERR_NONE_YET, pe = null, po = null,
       at = ERR_NONE_YET, ae = null, ao = null,
       st = ERR_NONE_YET, se = null, so = null,
       n = null;
 
-  elemContext |= context & CONTEXT_PARAM_OR_PATTERN;
-  elemContext |= context & CONTEXT_PARAM_OR_PATTERN_ERR;
+  if (context & CTX_PAT) {
+    elemContext |= context & CTX_PARPAT;
+    elemContext |= context & CONTEXT_PARAM_OR_PATTERN_ERR;
+  }
+  else 
+    elemContext |= CTX_PAT|CTX_NO_SIMPLE_ERR;
 
-  if (context & CONTEXT_PARAM_OR_PATTERN) {
-    if ((context & CONTEXT_CAN_BE_PARAM) &&
-       !(context & CONTEXT_HAS_AN_ERR_PARAM)) {
+  if (context & CTX_PARPAT) {
+    if ((context & CTX_PARAM) &&
+       !(context & CTX_HAS_A_PARAM_ERR)) {
       this.pt = ERR_NONE_YET; this.pe = this.po = null;
     }
-    if ((context & CONTEXT_CAN_BE_PATTERN) &&
-       !(context & CONTEXT_HAS_AN_ERR_ASSIG)) {
+    if ((context & CTX_PAT) &&
+       !(context & CTX_HAS_AN_ASSIG_ERR)) {
       this.at = ERR_NONE_YET; this.ae = this.ao = null;
     }
-    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE)) {
+    if (!(context & CTX_HAS_A_SIMPLE_ERR)) {
       this.st = ERR_NONE_YET; this.se = this.so = null;
     }
   }
@@ -39,30 +43,30 @@ this.parseObjectExpression = function(context) {
       first__proto__ = this.first__proto__;
 
     list.push(elem);
-    if (!(context & CONTEXT_PARAM_OR_PATTERN))
+    if (!(context & CTX_PARPAT))
       continue;
 
-    if ((context & CONTEXT_CAN_BE_PARAM) &&
-       !(context & CONTEXT_HAS_AN_ERR_PARAM) &&
+    if ((context & CTX_PARAM) &&
+       !(context & CTX_HAS_A_PARAM_ERR) &&
        this.pt !== ERR_NONE_YET) {
       pt = this.pt; pe = po = elem;
     }
-    if ((context & CONTEXT_CAN_BE_PATTERN) &&
-       !(context & CONTEXT_HAS_AN_ERR_ASSIG) &&
+    if ((context & CTX_PAT) &&
+       !(context & CTX_HAS_AN_ASSIG_ERR) &&
        this.at !== ERR_NONE_YET) {
       at = this.at; ae = ao = elem;
     }
-    if (!(context & CONTEXT_HAS_AN_ERR_SIMPLE) &&
+    if (!(context & CTX_HAS_A_SIMPLE_ERR) &&
        this.st !== ERR_NONE_YET) {
       st = this.st; se = so = elem;
     }
   } while (this.lttype === ',');
 
-  if (context & CONTEXT_PARAM_OR_PATTERN) {
-    if ((context & CONTEXT_CAN_BE_PARAM) && pt !== ERR_NONE_YET) {
+  if (context & CTX_PARPAT) {
+    if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
       this.pt = pt; this.pe = pe; this.po = po;
     }
-    if ((context & CONTEXT_CAN_BE_PATTERN) && at !== ERR_NONE_YET) {
+    if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
       this.at = at; this.ae = ae; this.ao = ao;
     }
     if (st !== ERR_NONE_YET) {

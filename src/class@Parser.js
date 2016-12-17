@@ -16,7 +16,7 @@ this. parseClass = function(context) {
       this.declMode = DECL_MODE_CLASS_DECL;
       name = this.parsePattern();
     }
-    else if (!(context & CONTEXT_DEFAULT))
+    else if (!(context & CTX_DEFAULT))
       this.err('class.decl.has.no.name');
   }
   else if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
@@ -30,7 +30,7 @@ this. parseClass = function(context) {
   var superClass = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
      this.next();
-     superClass = this.parseExprHead(CONTEXT_NONE);
+     superClass = this.parseExprHead(CTX_NONE);
      memParseFlags |= MEM_SUPER;
   }
 
@@ -45,7 +45,7 @@ this. parseClass = function(context) {
       this.next();
       continue;
     }
-    elem = this.parseMem(CONTEXT_NONE, memParseFlags);
+    elem = this.parseMem(CTX_NONE, memParseFlags);
     if (elem !== null) {
       list.push(elem);
       if (elem.kind === 'constructor')

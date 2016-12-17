@@ -122,7 +122,7 @@ this .parseAssignment = function(head, context ) {
        this.toAssig(core(head));
     }
     else if ( o === '=>' )
-      return this.parseArrowFunctionExpression (head, context & CONTEXT_FOR );
+      return this.parseArrowFunctionExpression (head, context & CTX_FOR );
     else this.ensureSimpAssig(core(head));
 
     if ( this.unsatisfiedAssignment ) {
@@ -134,7 +134,7 @@ this .parseAssignment = function(head, context ) {
     var prec = this.prec;
     this.next();
 
-    var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR ) ;
+    var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, (context & CTX_FOR)|CTX_PAT ) ;
     var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
              left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }/* ,y:-1*/};
 

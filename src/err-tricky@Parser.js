@@ -1,4 +1,4 @@
-this.flushParenFromAnyErrors = function() {
+this.parenError_flush = function() {
   if (this.pt !== ERR_NONE_YET) {
     var pt = this.pt; this.pt = ERR_NONE_YET;
     var pe = this.pe; this.pe = null;
@@ -7,7 +7,7 @@ this.flushParenFromAnyErrors = function() {
   }
 };
 
-this.flushAssigFromAnyErrors = function() {
+this.assigError_flush = function() {
   if (this.at !== ERR_NONE_YET) {
     var at = this.at; this.at = ERR_NONE_YET;
     var ae = this.ae; this.ae = null;
@@ -16,7 +16,7 @@ this.flushAssigFromAnyErrors = function() {
   }
 };
 
-this.flushSimpleFromAnyErrors = function() {
+this.simpleError_flush = function() {
   if (this.st !== ERR_NONE_YET) {
     var st = this.st; this.st = NONE_YET;
     var se = this.se; this.se = null;

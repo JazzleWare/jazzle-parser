@@ -7,7 +7,7 @@ this.parseStatement = function ( allowNull ) {
     case ';': return this.parseEmptyStatement() ;
     case 'Identifier':
        this.canBeStatement = true;
-       head = this.parseIdStatementOrId(CONTEXT_NONE);
+       head = this.parseIdStatementOrId(CTX_NONE);
        if ( this.foundStatement ) {
           this.foundStatement = false ;
           return head;
@@ -23,7 +23,7 @@ this.parseStatement = function ( allowNull ) {
   }
 
   this.assert(head === null) ;
-  head = this.parseExpr(CONTEXT_NULLABLE) ;
+  head = this.parseExpr(CTX_NULLABLE) ;
   if ( !head ) {
     if ( !allowNull && this.err('stmt.null') )
       this.errorHandlerOutput;
@@ -127,7 +127,7 @@ this.parseIfStatement = function () {
         this.err('if.has.no.opening.paren',startc,startLoc) )
     return this.errorHanlerOutput;
 
-  var cond = core( this.parseExpr(CONTEXT_NONE) );
+  var cond = core( this.parseExpr(CTX_NONE) );
   if ( !this.expectType_soft (')' ) &&
         this.err('if.has.no.closing.paren',startc,startLoc) )
     return this.errorHandlerOutput ;
@@ -165,7 +165,7 @@ this.parseWhileStatement = function () {
          this.err('while.has.no.opening.paren',startc,startLoc) )
      return this.errorHandlerOutput;
  
-   var cond = core( this.parseExpr(CONTEXT_NONE) );
+   var cond = core( this.parseExpr(CTX_NONE) );
    if ( !this.expectType_soft (')') &&
          this.err('while.has.no.closing.paren' ,startc,startLoc) )
      return this.errorHandlerOutput;
@@ -228,7 +228,7 @@ this.parseDoWhileStatement = function () {
         this.err('do.has.no.opening.paren',startc,startLoc,scopeFlags,nbody) )
     return this.errorHandlerOutput;
 
-  var cond = core(this.parseExpr(CONTEXT_NONE));
+  var cond = core(this.parseExpr(CTX_NONE));
   var c = this.c, li = this.li, col = this.col;
   if ( !this.expectType_soft (')') &&
         this.err('do.has.no.closing.paren',startc,startLoc,scopeFlags,nbody,c,li,col,cond) )
@@ -357,7 +357,7 @@ this.parseSwitchStatement = function () {
        this.err('switch.has.no.opening.paren',startc,startLoc) )
     return this.errorHandlerOutput;
 
-  var switchExpr = core(this.parseExpr(CONTEXT_NONE));
+  var switchExpr = core(this.parseExpr(CTX_NONE));
   if ( !this.expectType_soft (')') &&
         this.err('switch.has.no.closing.paren',startc,startLoc) )
     return this.errorHandlerOutput ;
@@ -401,7 +401,7 @@ this.parseSwitchCase = function () {
        startc = this.c0;
        startLoc = this.locBegin();
        this.next();
-       cond = core(this.parseExpr(CONTEXT_NONE)) ;
+       cond = core(this.parseExpr(CTX_NONE)) ;
        break;
 
      case 'default':
@@ -449,7 +449,7 @@ this.parseReturnStatement = function () {
   var semi = 0, semiLoc = null;
 
   if ( !this.newLineBeforeLookAhead )
-     retVal = this.parseExpr(CONTEXT_NULLABLE);
+     retVal = this.parseExpr(CTX_NULLABLE);
 
   semi = this.semiI();
   semiLoc = this.semiLoc();
@@ -489,7 +489,7 @@ this.parseThrowStatement = function () {
        this.err('throw.has.newline',startc,startLoc,c,li,col) )
     return this.errorHandlerOutput;
 
-  retVal = this.parseExpr(CONTEXT_NULLABLE );
+  retVal = this.parseExpr(CTX_NULLABLE );
   if ( retVal === null &&
        this.err('throw.has.no.argument',[startc,startLoc,c,li,col,semi,retVal]) )
      return this.errorHandlerOutput;
@@ -621,7 +621,7 @@ this . parseWithStatement = function() {
          this.err('with.has.no.opening.paren', startc, startLoc) )
      return this.errorHandlerOutput ;
 
-   var obj = this.parseExpr(CONTEXT_NONE);
+   var obj = this.parseExpr(CTX_NONE);
    if (! this.expectType_soft (')' ) &&
          this.err('with.has.no.end.paren',startc,startLoc,obj ) )
      return this.errorHandlerOutput ;

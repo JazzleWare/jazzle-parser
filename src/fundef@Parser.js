@@ -40,7 +40,7 @@ this.parseFunc = function(context, flags) {
         this.declMode = DECL_MODE_FUNCTION_DECL;
         cfn = this.parsePattern();
       }
-      else if (!(context & CONTEXT_DEFAULT))
+      else if (!(context & CTX_DEFAULT))
         this.err('missing.name', 'func');
     }
     else {
@@ -86,7 +86,7 @@ this.parseFunc = function(context, flags) {
   this.scopeFlags |= SCOPE_FLAG_FN;  
 
   this.labels = {};
-  var nbody = this.parseFuncBody(context & CONTEXT_FOR);
+  var nbody = this.parseFuncBody(context & CTX_FOR);
 
   var n = {
     type: isStmt ? 'FunctionDeclaration' : 'FunctionExpression', id: cfn,
@@ -129,7 +129,7 @@ this.parseMeth = function(name, flags) {
         this.err('class.constructor.is.a.dup', name, flags);
     }
 
-    val = this.parseFunc(CONTEXT_NONE, flags);
+    val = this.parseFunc(CTX_NONE, flags);
 
     return {
       type: 'MethodDefinition', key: core(name),
@@ -142,7 +142,7 @@ this.parseMeth = function(name, flags) {
     }
   }
    
-  val = this.parseFunc(CONTEXT_NONE, flags);
+  val = this.parseFunc(CTX_NONE, flags);
 
   return {
     type: 'Property', key: core(name),

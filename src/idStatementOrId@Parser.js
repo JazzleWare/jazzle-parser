@@ -12,7 +12,7 @@ this. parseIdStatementOrId = function ( context ) {
         case 'do': return this.parseDoWhileStatement();
         case 'if': return this.parseIfStatement();
         case 'in':
-           if ( context & CONTEXT_FOR )
+           if ( context & CTX_FOR )
              return null;
  
            this.notId() ;
@@ -32,14 +32,14 @@ this. parseIdStatementOrId = function ( context ) {
         case 'try': return this.parseTryStatement();
         case 'let':
              if ( this.canBeStatement && this.v >= 5 )
-               return this.parseLet(CONTEXT_NONE);
+               return this.parseLet(CTX_NONE);
 
              if (this.tight ) this.err('strict.let.is.id',context);
 
              pendingExprHead = this.id();
              break SWITCH;
 
-        case 'var': return this.parseVariableDeclaration( context & CONTEXT_FOR );
+        case 'var': return this.parseVariableDeclaration( context & CTX_FOR );
         case 'int':
             if ( this.v <= 5 )
               this.errorReservedID();
@@ -85,10 +85,10 @@ this. parseIdStatementOrId = function ( context ) {
         case 'super': pendingExprHead = this.parseSuper(); break SWITCH;
         case 'break': return this.parseBreakStatement();
         case 'catch': this.notId ()  ;
-        case 'class': return this.parseClass(CONTEXT_NONE ) ;
+        case 'class': return this.parseClass(CTX_NONE ) ;
         case 'const':
             if (this.v<5) this.err('const.not.in.v5',context) ;
-            return this.parseVariableDeclaration(CONTEXT_NONE);
+            return this.parseVariableDeclaration(CTX_NONE);
 
         case 'throw': return this.parseThrowStatement();
         case 'while': return this.parseWhileStatement();
@@ -174,7 +174,7 @@ this. parseIdStatementOrId = function ( context ) {
     }
 
     case 8: switch (id) {
-        case 'function': return this.parseFunc(context&CONTEXT_FOR, 0 );
+        case 'function': return this.parseFunc(context&CTX_FOR, 0 );
         case 'debugger': return this.prseDbg();
         case 'continue': return this.parseContinueStatement();
         case 'abstract': case 'volatile':

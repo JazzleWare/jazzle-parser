@@ -11,13 +11,13 @@ this.parseYield = function(context) {
      if ( this.lttype === 'op' && this.ltraw === '*' ) {
             deleg = true;
             this.next();
-            arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CONTEXT_FOR );
+            arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CTX_FOR );
             if (!arg &&
                  this.err('yield.has.no.expr.deleg',startc,startLoc,c,li,col,context) )
               return this.errorHandlerOutput ;
      }
      else
-        arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CONTEXT_FOR)|CONTEXT_NULLABLE );
+        arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CTX_FOR)|CTX_NULLABLE );
   }
 
   var endI, endLoc;
