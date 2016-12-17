@@ -14,9 +14,8 @@ this . parseVariableDeclaration = function(context) {
      
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
-       if (kind !== 'let' && 
-           this.err('var.has.no.declarators',startc,startLoc,kind,elem,context,isInArgsList,inComplexArgs,argNames  ) )
-         return this.errorHandlerOutput;
+       if (kind !== 'let') 
+           this.err('var.has.no.declarators');
 
        return null; 
      }

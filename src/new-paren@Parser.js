@@ -118,7 +118,7 @@ this.parseParen = function(context) {
   // TODO: this looks a little like a hack
   if (this.lttype !== 'op' || this.ltraw !== '=>') {
     this.currentExprIsSimple();
-    if (this.prevys !== null)
+    if (prevys !== null)
       this.suspys = prevys;
   }
 

@@ -972,100 +972,6 @@ this.ensureSpreadToRestArgument_soft = function(head) {
   return head.type !== 'AssignmentExpression';
 };
 
-// an arr-pat is always to the left of an assig;
-this .toAssig = function(head) {
-
-  var i = 0;
-  var list = null;
-
-  switch(head.type) {
-     case 'Identifier':
-     case 'MemberExpression':
-        return;
-
-     case 'ObjectExpression':
-
-        list = head.properties;
-
-        while ( i < list.length ) {
-           this.toAssig(list[i].value);
-           list[i].type = 'AssignmentProperty';
-           i++;
-        }
-        head.type = 'ObjectPattern';
-        return;
-
-     case 'ArrayExpression':
-
-        list = head.elements;
-        while ( i < list.length ) {
-          if ( list[i] ) {
-             this.toAssig(list[i]);
-             if ( list[i].type === 'SpreadElement' ) {
-                i++;
-                break ;
-             }
-          }
-          i++;
-        }
-
-        head.type = 'ArrayPattern';
-        return;
-
-     case 'AssignmentExpression':
-       if (head.operator !== '=' && this.notAssignableError()  )
-         return this.errorHandlerOutput ;
-
-       head.type = 'AssignmentPattern';
-       delete head.operator;
-
-       return;
-
-     case 'SpreadElement':
-       if (!this.ensureSpreadToRestArgument_soft(head.argument))
-         this.err('rest.assig.non.id.arg', head);
-
-       this.toAssig(head.argument);
-       head.type = 'RestElement';
-       return;
-   
-     case 'AssignmentPattern': // this would be the case in the event of converting an obj prop in the form of "name = val" rather than "name: val"
-       this.toAssig(head.left);
-       return;
-
-     default:
-        if ( this.notAssignableError(head) )
-          return this.errorHandlerOutput;
-  }
-};
-
-this .parseAssignment = function(head, context ) {
-    var o = this.ltraw;
-    var firstEA = null ;
-
-    if ( o === '=' ) {
-       this.toAssig(core(head));
-    }
-    else if ( o === '=>' )
-      return this.parseArrowFunctionExpression (head, context & CTX_FOR );
-    else this.ensureSimpAssig(core(head));
-
-    if ( this.unsatisfiedAssignment ) {
-       if ( o !== '=' && this.err('err.prop.init', this.unsatisfiedAssignment ) )
-          return this.errorHandlerOutput ;
-
-    }
-
-    var prec = this.prec;
-    this.next();
-
-    var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, (context & CTX_FOR)|CTX_PAT ) ;
-    var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
-             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }/* ,y:-1*/};
-
-    return n;
-};
-
 
 
 },
@@ -3079,7 +2985,16 @@ this .memberExpr = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next() ;
-  var e = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT); // TODO: should be CTX_NULLABLE, or else the next line is in vain 
+  
+  // none of the modifications memberExpr may make to this.pt, this.at, and this.st
+  // overwrite some other unrecorded this.pt, this.at, or this.st -- an unrecorded value of <pt:at:st>
+  // means a whole elem was just parsed, and <pt:at:st> is immediately recorded after that whole
+  // potpat element is parsed, so if a memberExpr overwrites <pt:at:st>, that <pt:at:st> is not an
+  // unrecorded one.
+  
+  // TODO: it is not necessary to reset <pt:at>
+  this.pt = this.at = this.st = 0;
+  var e = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR); // TODO: should be CTX_NULLABLE, or else the next line is in vain 
   if (!e && this.err('prop.dyna.no.expr',startc,startLoc) ) // 
     return this.errorHandlerOutput ;
 
@@ -3593,7 +3508,7 @@ this.parseParen = function(context) {
   // TODO: this looks a little like a hack
   if (this.lttype !== 'op' || this.ltraw !== '=>') {
     this.currentExprIsSimple();
-    if (this.prevys !== null)
+    if (prevys !== null)
       this.suspys = prevys;
   }
 
@@ -6431,9 +6346,8 @@ this . parseVariableDeclaration = function(context) {
      
      elem = this.parseVariableDeclarator(context);
      if ( elem === null ) {
-       if (kind !== 'let' && 
-           this.err('var.has.no.declarators',startc,startLoc,kind,elem,context,isInArgsList,inComplexArgs,argNames  ) )
-         return this.errorHandlerOutput;
+       if (kind !== 'let') 
+           this.err('var.has.no.declarators');
 
        return null; 
      }
