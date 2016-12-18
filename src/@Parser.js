@@ -43,6 +43,9 @@ var Parser = function (src, isModule) {
   this.directive = DIRECTIVE_NONE;
   
   this.declMode = DECL_MODE_NONE;
+ 
+  // TODO:eliminate
+  this.pendingExprHead = null;
 
   // ERROR TYPE           CORE ERROR NODE    OWNER NODE
   this.pt = ERR_NONE_YET; this.pe = null; this.po = null; // paramErr info

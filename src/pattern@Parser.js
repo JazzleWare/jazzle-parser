@@ -4,7 +4,9 @@ this.parsePattern = function() {
     case 'Identifier' :
        var id = this.validateID(null);
        this.declare(id);
-       if (this.tight) this.assert(!arguments_or_eval(id.name));
+       if (this.tight && arguments_or_eval(id.name))
+         this.err('bind.arguments.or.eval');
+
        return id;
 
     case '[':
@@ -90,13 +92,17 @@ this.parseObjectPattern  = function() {
 
          case '[':
             name = this.memberExpr();
-            this.expectType(':');
+            if (!this.expectType_soft(':'))
+              this.err('obj.pattern.no.:');
+
             val = this.parsePattern();
             break ;
 
          case 'Literal':
             name = this.numstr();
-            this.expectType(':');
+            if (!this.expectType_soft(':'))
+              this.err('obj.pattern.no.:');
+
             val = this.parsePattern();
             break ;
 

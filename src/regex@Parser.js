@@ -25,7 +25,8 @@ function curlyReplace(matchedString, b, matchIndex, wholeString ) {
 
 function regexReplace(matchedString, b, noB, matchIndex, wholeString) {
   var c = parseInt('0x' + ( b || noB ) ) ;
-  this.assert(c <= 0x010FFFF );
+  if (c > 0x010FFFF )
+    this.err('regex.val.not.in.range');
   
   if ( c <= 0xFFFF ) return String.fromCharCode(c) ;
 

@@ -92,6 +92,9 @@ var Parser = function (src, isModule) {
   this.directive = DIRECTIVE_NONE;
   
   this.declMode = DECL_MODE_NONE;
+ 
+  // TODO:eliminate
+  this.pendingExprHead = null;
 
   // ERROR TYPE           CORE ERROR NODE    OWNER NODE
   this.pt = ERR_NONE_YET; this.pe = null; this.po = null; // paramErr info
@@ -878,10 +881,6 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
 },
 function(){
-this . assert = function(cond, message) { if ( !cond ) throw new Error ( message )  ; }
-
-},
-function(){
 
 this.evalArgumentsError = function(l) {
   return this.err('err.assig.not', l || this.firstEA ) ;
@@ -974,7 +973,9 @@ this. parseClass = function(context) {
   var list = [];
   var startcBody = this.c - 1, startLocBody = this.locOn(1);
 
-  this.expectType('{');
+  if (!this.expectType_soft('{'))
+    this.err('class.no.curly');
+
   var elem = null;
 
   while (true) {
@@ -1003,7 +1004,8 @@ this. parseClass = function(context) {
     }/* ,y:-1*/ 
   };
 
-  this.expectType('}');
+  if (!this.expectType_soft('}'))
+    this.err('class.unfinished');
 
   if (isStmt)
     this.foundStatement = true;
@@ -1971,7 +1973,9 @@ this.peekUSeq = function () {
 },
 function(){
 this.parseFor = function() {
-  this.ensureStmt();
+  if (!this.ensureStmt_soft())
+    this.err('not.stmt', 'for');
+
   this.fixupLabels(true) ;
 
   var startc = this.c0,
@@ -3088,7 +3092,8 @@ this.parseArrayExpression = function(context) {
     elements : list /* ,y:-1*/
   };
 
-  this.expectType(']');
+  if (!this.expectType_soft(']'))
+    this.err('array.unfinished');
   
   return n;
 };
@@ -4069,13 +4074,9 @@ this.readDot = function() {
 
 this.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
 
-this.expectType = function (n)  {
-  this.assert(this.lttype === n, 'expected ' + n + '; got ' + this.lttype  )  ;
-  this.next();
-};
-
 this.expectID = function (n) {
-  this.assert(this.lttype === 'Identifier' && this.ltval === n)  ;
+  if (!(this.lttype === 'Identifier' && this.ltval === n)) 
+    this.err('unexpected.id');
   this.next();
 };
 
@@ -4498,7 +4499,9 @@ this.parsePattern = function() {
     case 'Identifier' :
        var id = this.validateID(null);
        this.declare(id);
-       if (this.tight) this.assert(!arguments_or_eval(id.name));
+       if (this.tight && arguments_or_eval(id.name))
+         this.err('bind.arguments.or.eval');
+
        return id;
 
     case '[':
@@ -4584,13 +4587,17 @@ this.parseObjectPattern  = function() {
 
          case '[':
             name = this.memberExpr();
-            this.expectType(':');
+            if (!this.expectType_soft(':'))
+              this.err('obj.pattern.no.:');
+
             val = this.parsePattern();
             break ;
 
          case 'Literal':
             name = this.numstr();
-            this.expectType(':');
+            if (!this.expectType_soft(':'))
+              this.err('obj.pattern.no.:');
+
             val = this.parsePattern();
             break ;
 
@@ -4968,7 +4975,8 @@ function curlyReplace(matchedString, b, matchIndex, wholeString ) {
 
 function regexReplace(matchedString, b, noB, matchIndex, wholeString) {
   var c = parseInt('0x' + ( b || noB ) ) ;
-  this.assert(c <= 0x010FFFF );
+  if (c > 0x010FFFF )
+    this.err('regex.val.not.in.range');
   
   if ( c <= 0xFFFF ) return String.fromCharCode(c) ;
 
@@ -5316,7 +5324,9 @@ this.parseStatement = function ( allowNull ) {
       return null;
   }
 
-  this.assert(head === null) ;
+  if (head !== null)
+    this.err('must.not.have.reached');
+
   head = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR) ;
   if ( !head ) {
     if ( !allowNull && this.err('stmt.null') )
@@ -5376,11 +5386,6 @@ this .parseLabeledStatement = function(label, allowNull) {
 
    return { type: 'LabeledStatement', label: label, start: label.start, end: stmt.end,
             loc: { start: label.loc.start, end: stmt.loc.end }, body: stmt };
-};
-
-this .ensureStmt = function() {
-   if ( this.canBeStatement ) this.canBeStatement = false;
-   else this.assert(false);
 };
 
 this .ensureStmt_soft = function() {

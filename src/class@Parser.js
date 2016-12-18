@@ -37,7 +37,9 @@ this. parseClass = function(context) {
   var list = [];
   var startcBody = this.c - 1, startLocBody = this.locOn(1);
 
-  this.expectType('{');
+  if (!this.expectType_soft('{'))
+    this.err('class.no.curly');
+
   var elem = null;
 
   while (true) {
@@ -66,7 +68,8 @@ this. parseClass = function(context) {
     }/* ,y:-1*/ 
   };
 
-  this.expectType('}');
+  if (!this.expectType_soft('}'))
+    this.err('class.unfinished');
 
   if (isStmt)
     this.foundStatement = true;

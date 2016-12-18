@@ -1,5 +1,7 @@
 this.parseFor = function() {
-  this.ensureStmt();
+  if (!this.ensureStmt_soft())
+    this.err('not.stmt', 'for');
+
   this.fixupLabels(true) ;
 
   var startc = this.c0,

@@ -22,7 +22,9 @@ this.parseStatement = function ( allowNull ) {
       return null;
   }
 
-  this.assert(head === null) ;
+  if (head !== null)
+    this.err('must.not.have.reached');
+
   head = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR) ;
   if ( !head ) {
     if ( !allowNull && this.err('stmt.null') )
@@ -82,11 +84,6 @@ this .parseLabeledStatement = function(label, allowNull) {
 
    return { type: 'LabeledStatement', label: label, start: label.start, end: stmt.end,
             loc: { start: label.loc.start, end: stmt.loc.end }, body: stmt };
-};
-
-this .ensureStmt = function() {
-   if ( this.canBeStatement ) this.canBeStatement = false;
-   else this.assert(false);
 };
 
 this .ensureStmt_soft = function() {

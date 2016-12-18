@@ -118,7 +118,8 @@ this.parseArrayExpression = function(context) {
     elements : list /* ,y:-1*/
   };
 
-  this.expectType(']');
+  if (!this.expectType_soft(']'))
+    this.err('array.unfinished');
   
   return n;
 };
