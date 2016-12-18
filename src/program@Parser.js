@@ -8,6 +8,7 @@ this.parseProgram = function () {
   // #end
  
   this.scope = new Scope(globalScope, SCOPE_TYPE_SCRIPT);
+  this.scope.parser = this;
   this.next();
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 

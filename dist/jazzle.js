@@ -121,6 +121,10 @@ function Scope(parent, type) {
   this.strict = this.parent ? this.parent.strict : false;
   this.synth = false;
   
+  // TODO: is it really needed? because all it will do is to delegate errors
+  this.parser = null;
+  if (this.parent && this.isConcrete())
+    this.parser = this.parent.parser;
 }
 
 Scope.createFunc = function(parent, decl) {
@@ -4899,6 +4903,7 @@ this.parseProgram = function () {
 
  
   this.scope = new Scope(globalScope, SCOPE_TYPE_SCRIPT);
+  this.scope.parser = this;
   this.next();
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
@@ -6558,6 +6563,10 @@ this.isConcrete = function() {
          this.isFunc();
 };
 
+
+this.err = function(errType, errParams) {
+  this.funcScope.parser.err(errType, errParams);
+};
 
 
 },

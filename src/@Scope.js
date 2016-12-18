@@ -53,6 +53,10 @@ function Scope(parent, type) {
   this.strict = this.parent ? this.parent.strict : false;
   this.synth = false;
   
+  // TODO: is it really needed? because all it will do is to delegate errors
+  this.parser = null;
+  if (this.parent && this.isConcrete())
+    this.parser = this.parent.parser;
 }
 
 Scope.createFunc = function(parent, decl) {

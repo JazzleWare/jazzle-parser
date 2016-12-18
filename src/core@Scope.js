@@ -435,3 +435,7 @@ this.findDeclByEmitNameInScope = function(name) {
 };
 // #end
 
+this.err = function(errType, errParams) {
+  this.funcScope.parser.err(errType, errParams);
+};
+
