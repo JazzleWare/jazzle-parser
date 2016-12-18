@@ -2270,7 +2270,6 @@ this.parseFunc = function(context, flags) {
       prevStrict = this.tight,
       prevScopeFlags = this.scopeFlags,
       prevDeclMode = this.declMode,
-      prevYS = this.firstYS,
       prevNonSimpArg = this.firstNonSimpArg;
 
   var isStmt = false, startc = this.c0, startLoc = this.locBegin();
@@ -2369,7 +2368,6 @@ this.parseFunc = function(context, flags) {
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
   this.declMode = prevDeclMode;
-  this.firstYS = prevYS;
   this.firstNonSimpArg = prevNonSimpArg;
   
   this.exitScope();
@@ -3336,7 +3334,7 @@ this.parseObjectExpression = function(context) {
     if (!first__proto__ && this.first__proto__)
       first__proto__ = this.first__proto__;
 
-    list.push(elem);
+    list.push(core(elem));
     if (!(context & CTX_PARPAT))
       continue;
 
@@ -3458,7 +3456,7 @@ this.parseParen = function(context) {
       }
     }
 
-    if (list) list.push(elem);
+    if (list) list.push(core(elem));
     if (this.lttype === ',') {
       if (hasRest)
         this.err('unexpected.lookahead');
@@ -3480,7 +3478,7 @@ this.parseParen = function(context) {
           start: list[0].loc.start,
           end: list[list.length-1].loc.end
         } 
-      } : elem,
+      } : elem && core(elem),
       start: startc,
       end: this.c,
       loc: { start: startLoc, end: this.loc() }

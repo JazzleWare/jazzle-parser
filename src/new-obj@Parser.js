@@ -42,7 +42,7 @@ this.parseObjectExpression = function(context) {
     if (!first__proto__ && this.first__proto__)
       first__proto__ = this.first__proto__;
 
-    list.push(elem);
+    list.push(core(elem));
     if (!(context & CTX_PARPAT))
       continue;
 

@@ -3,7 +3,6 @@ this.parseFunc = function(context, flags) {
       prevStrict = this.tight,
       prevScopeFlags = this.scopeFlags,
       prevDeclMode = this.declMode,
-      prevYS = this.firstYS,
       prevNonSimpArg = this.firstNonSimpArg;
 
   var isStmt = false, startc = this.c0, startLoc = this.locBegin();
@@ -102,7 +101,6 @@ this.parseFunc = function(context, flags) {
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
   this.declMode = prevDeclMode;
-  this.firstYS = prevYS;
   this.firstNonSimpArg = prevNonSimpArg;
   
   this.exitScope();

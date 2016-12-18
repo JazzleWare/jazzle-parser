@@ -71,7 +71,7 @@ this.parseParen = function(context) {
       }
     }
 
-    if (list) list.push(elem);
+    if (list) list.push(core(elem));
     if (this.lttype === ',') {
       if (hasRest)
         this.err('unexpected.lookahead');
@@ -93,7 +93,7 @@ this.parseParen = function(context) {
           start: list[0].loc.start,
           end: list[list.length-1].loc.end
         } 
-      } : elem,
+      } : elem && core(elem),
       start: startc,
       end: this.c,
       loc: { start: startLoc, end: this.loc() }
