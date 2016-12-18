@@ -87,12 +87,8 @@ this.parseAssignment = function(head, context) {
 
   var right = null;
   if (o === '=') {
-    if (context & CTX_PARPAT) {
-      if (this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
-        this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
-      else
-        this.st = ERR_NONE_YET;
-    }
+    if (context & CTX_PARPAT)
+      this.adjustErrors();
 
     var st = ERR_NONE_YET, se = null, so = null,
         pt = ERR_NONE_YET, pe = null, pe = null;

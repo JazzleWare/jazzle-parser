@@ -33,3 +33,11 @@ this.throwTricky = function(source, trickyType, trickyCore) {
   
   this.err(tm[trickyType], {tn:trickyCore, extra:{source:source}});
 }; 
+
+this.adjustErrors = function() { 
+  if (this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
+    this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
+  else
+    this.st = ERR_NONE_YET;
+};
+

@@ -99,7 +99,7 @@ var Parser = function (src, isModule) {
   this.st = ERR_NONE_YET; this.se = null; this.so = null; // simpleErr info
 
   this.suspys = null;
-
+  this.missingInit = false;
 };
 
 ;
@@ -1530,6 +1530,14 @@ this.throwTricky = function(source, trickyType, trickyCore) {
   this.err(tm[trickyType], {tn:trickyCore, extra:{source:source}});
 }; 
 
+this.adjustErrors = function() { 
+  if (this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
+    this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
+  else
+    this.st = ERR_NONE_YET;
+};
+
+
 },
 function(){
 this.err = function(errorType, errParams) {
@@ -2003,8 +2011,7 @@ this.peekUSeq = function () {
 
 },
 function(){
-
-this . parseFor = function() {
+this.parseFor = function() {
   this.ensureStmt();
   this.fixupLabels(true) ;
 
@@ -2012,151 +2019,145 @@ this . parseFor = function() {
       startLoc = this.locBegin();
 
   this.next () ;
-  if ( !this.expectType_soft ('(' ) &&
-        this.err('for.with.no.opening.paren',startc, startLoc) )
-    return this.errorHandlerOutput ;
+  if (!this.expectType_soft ('('))
+    this.err('for.with.no.opening.paren');
 
-  var head = null;
-  var headIsExpr = false;
+  var head = null, headIsExpr = false;
 
   var scopeFlags = this.scopeFlags;
 
+  // inside a for statement's init is like a block
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
   this.enterLexicalScope(true);
 
-  if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
-     case 'var':
-        this.canBeStatement = true;
-        head = this.parseVariableDeclaration(CTX_FOR);
-        break;
-
-     case 'let':
-        if ( this.v >= 5 ) {
-          this.canBeStatement = true;
-          head = this.parseLet(CTX_FOR);
-        }
-
-        break;
-
-     case 'const' :
-
-        if ( this.v < 5 && this.err('const.not.in.v5',startc, startLoc) )
-          return this.errorHandlerOutput ;
-
-        this.canBeStatement = true;
-        head = this. parseVariableDeclaration(CTX_FOR);
-           break ;
-  }
-  this.scopeFlags = scopeFlags;
-
-  if ( head === null ) {
-       headIsExpr = true;
-       head = this.parseExpr( CTX_NULLABLE|CTX_PAT|CTX_FOR ) ;
-  }
-  else 
-     this.foundStatement = false;
-
-  var kind = 'ForOfStatement';
-  var nbody = null;
-  var afterHead = null;
-
-  if ( head !== null /* && // if we have a head
-       ( headIsExpr || // that is an expression
-       (head.declarations.length === 1  && !head.declarations[0].init ) ) */ && // or one and only one lone declarator
-       this.lttype === 'Identifier' ) { // then if the token ahead is an id
+  this.missingInit = false;
+  if ( this.lttype === 'Identifier' ) {
     switch ( this.ltval ) {
-       case 'in':
-          kind = 'ForInStatement';
+    case 'var':
+      this.canBeStatement = true;
+      head = this.parseVariableDeclaration(CTX_FOR);
+      break;
 
-       case 'of':
-          if (!headIsExpr) {
-             if ( head.declarations.length !== 1 &&
-                  this.err('for.in.or.of.multi',startc, startLoc,head) )
-                return this.errorHandlerOutput;
-//           if ( head.kind === 'const' &&
-//                this.err( 'for.in.or.of.const', startc, starLoc, head) )
-//              return this.errorHandlerOutput;
-          }
+    case 'let':
+      if ( this.v >= 5 ) {
+        this.canBeStatement = true;
+        head = this.parseLet(CTX_FOR);
+      }
+      break;
 
-          if (kind === 'ForOfStatement')
-            this.ensureVarsAreNotResolvingToCatchParams();
+    case 'const' :
+      if (this.v < 5)
+        this.err('const.not.in.v5');
 
-          if ( this.unsatisfiedAssignment )
-            this.unsatisfiedAssignment = null;
+      this.canBeStatement = true;
+      head = this. parseVariableDeclaration(CTX_FOR);
+         break ;
 
-          if (headIsExpr) this.toAssig(core(head));
-
-          this.next();
-          afterHead = kind === 'ForOfStatement' ? 
-            this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT) :
-            this.parseExpr(CTX_NONE|CTX_PAT);
-
-          if ( ! this.expectType_soft (')') &&
-                 this.err('for.iter.no.end.paren',start,startLoc,head,afterHead) )
-            return this.errorHandlerOutput ;
-
-          this.scopeFlags &= CLEAR_IB;
-          this.scopeFlags |= ( SCOPE_FLAG_BREAK|SCOPE_FLAG_CONTINUE );
-          nbody = this.parseStatement(true);
-          if ( !nbody && this.err('null.stmt','for.iter',
-               { s:startc, l:startLoc, h: head, iter: afterHead, scopeFlags: scopeFlags }) )
-            return this.errorHandlerOutput;
-
-          this.scopeFlags = scopeFlags;
-
-          this.foundStatement = true;
-          this.exitScope();
-          return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
-            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody/* ,y:-1*/ };
-
-       default:
-          return this.err('for.iter.not.of.in',startc, startLoc,head);
     }
   }
 
-  if ( this.unsatisfiedAssignment &&
-       this.err('for.simple.head.is.unsatisfied',startc,startLoc,head) )
-    return this.errorHandlerOutput ;
+  this.scopeFlags = scopeFlags;
 
-/*
-  if ( head && !headIsExpr ) {
-    head.end = this.c;
-    head.loc.end = { line: head.loc.end.line, column: this.col };
+  if (head === null) {
+    headIsExpr = true;
+    head = this.parseExpr( CTX_NULLABLE|CTX_PAT|CTX_FOR ) ;
   }
-*/
-  if ( ! this.expectType_soft (';') &&
-         this.err('for.simple.no.init.comma',startc,startLoc,head) )
-    return this.errorHandlerOutput ;
+  else 
+    this.foundStatement = false;
 
-  afterHead = this.parseExpr(CTX_NULLABLE );
-  if ( ! this.expectType_soft (';') &&
-         this.err('for.simple.no.test.comma',startc,startLoc,head,afterHead) )
-    return this.errorHandlerOutput ;
+  var nbody = null;
+  var afterHead = null;
 
-  var tail = this.parseExpr(CTX_NULLABLE );
+  if (head !== null && this.lttype === 'Identifier') {
+    var kind = 'ForInStatement';
+    switch ( this.ltval ) {
+    case 'of':
+       kind = 'ForOfStatement';
+       this.ensureVarsAreNotResolvingToCatchParams();
 
-  if ( ! this.expectType_soft (')') &&
-         this.err('for.simple.no.end.paren',startc,startLoc,head,afterHead,tail) )
-    return this.errorHandlerOutput ;
+    case 'in':
+      if (headIsExpr) {
+        if (head.type === 'AssignmentExpression' && this.v < 7)
+          this.err('for.in.has.init.assig');
+
+        this.adjustErrors()
+        this.toAssig(head, CTX_FOR|CTX_PAT);
+        this.currentExprIsAssig();
+      }
+      else if (head.declarations.length !== 1)
+        this.err('for.decl.multi');
+      else if (this.missingInit)
+        this.missingInit = false;
+      else if (head.init && this.v < 7)
+        this.err('for.in.has.decl.init');
+
+      this.next();
+      afterHead = kind === 'ForOfStatement' ? 
+        this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR) :
+        this.parseExpr(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+
+      if (!this.expectType_soft(')'))
+        this.err('for.iter.no.end.paren');
+
+      this.scopeFlags &= CLEAR_IB;
+      this.scopeFlags |= ( SCOPE_FLAG_BREAK|SCOPE_FLAG_CONTINUE );
+
+      nbody = this.parseStatement(true);
+      if (!nbody)
+        this.err('null.stmt','for.iter');
+
+      this.scopeFlags = scopeFlags;
+      this.foundStatement = true;
+      this.exitScope();
+
+      return {
+        type: kind, loc: { start: startLoc, end: nbody.loc.end },
+        start: startc, end: nbody.end,
+        right: core(afterHead), left: head,
+        body: nbody/* ,y:-1*/
+      };
+
+    default:
+      this.err('for.iter.not.of.in');
+
+    }
+  }
+
+  if (headIsExpr)
+    this.currentExprIsSimple();
+  else if (head && this.missingInit)
+    this.err('for.decl.no.init');
+
+  if (!this.expectType_soft (';'))
+    this.err('for.simple.no.init.comma');
+
+  afterHead = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+  if (!this.expectType_soft (';'))
+    this.err('for.simple.no.test.comma');
+
+  var tail = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+  if (!this.expectType_soft (')'))
+    this.err('for.simple.no.end.paren');
 
   this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= ( SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
+
   nbody = this.parseStatement(true);
-  if ( !nbody && this.err('null.stmt','for.simple',
-      { s:startc, l:startc, h: head, t: afterHead, u: tail, scopeFlags: scopeFlags } ) )
-    return this.errorhandlerOutput;  
+  if (!nbody)
+    this.err('null.stmt','for.simple');
 
   this.scopeFlags = scopeFlags;
-
   this.foundStatement = true;
-
   this.exitScope();
-  return { type: 'ForStatement', init: head && core(head), start : startc, end: nbody.end,
-         test: afterHead && core(afterHead),
-         loc: { start: startLoc, end: nbody.loc.end },
-          update: tail && core(tail),
-         body: nbody/* ,y:-1*/ };
+
+  return {
+    type: 'ForStatement', init: head && core(head), 
+    start : startc, end: nbody.end,
+    test: afterHead && core(afterHead),
+    loc: { start: startLoc, end: nbody.loc.end },
+    update: tail && core(tail), body: nbody/* ,y:-1*/
+  };
 };
 
 this.ensureVarsAreNotResolvingToCatchParams = function() {
@@ -3226,12 +3227,8 @@ this.parseAssignment = function(head, context) {
 
   var right = null;
   if (o === '=') {
-    if (context & CTX_PARPAT) {
-      if (this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
-        this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
-      else
-        this.st = ERR_NONE_YET;
-    }
+    if (context & CTX_PARPAT)
+      this.adjustErrors();
 
     var st = ERR_NONE_YET, se = null, so = null,
         pt = ERR_NONE_YET, pe = null, pe = null;
@@ -6330,95 +6327,124 @@ this.errorReservedID = function(id) {
 
 },
 function(){
-this . parseVariableDeclaration = function(context) {
-     if ( ! this.canBeStatement &&
-            this.err('not.stmt','var',context) )
-       return this.errorHandlerOutput;
+this.parseVariableDeclaration = function(context) {
+  if (!this.canBeStatement)
+    this.err('not.stmt','var',context);
 
-     this.canBeStatement = false;
+  this.canBeStatement = false;
 
-     var startc = this.c0, startLoc = this.locBegin(), kind = this.ltval;
-     var elem = null;
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      kind = this.ltval,
+      elem = null;
 
-     this.next () ;
+  this.next();
+  this.declMode = kind === 'var' ? 
+    DECL_MODE_VAR : DECL_MODE_LET;
+  
+  if (kind === 'let' &&
+      this.lttype === 'Identifier' &&
+      this.ltval === 'in') {
+    return null;
+  }
 
-     this.setDeclModeByName(kind);
-     
-     elem = this.parseVariableDeclarator(context);
-     if ( elem === null ) {
-       if (kind !== 'let') 
-           this.err('var.has.no.declarators');
+  elem = this.parseVariableDeclarator(context);
+  if (elem === null) {
+    if (kind !== 'let') 
+      this.err('var.has.no.declarators');
 
-       return null; 
-     }
+    return null; 
+  }
 
-     var list = [elem];
-     
-     var isConst = kind === 'const';
-     if ( isConst  && elem.init === null ) {
-       this.assert(context & CTX_FOR);
-       this.unsatisfiedAssignment = elem;
-     }
+  var isConst = kind === 'const';
+  // TODO: if there is a context flag signifying that an init must be present,
+  // this is no longer needed
+  if (isConst && !elem.init && !this.missingInit) {
+    if (!(context & CTX_FOR))
+      this.err('const.has.no.init');
+    else this.missingInit = true;
+  }
 
-     if (!this.unsatisfiedAssignment) // parseVariableDeclarator sets it when it finds an uninitialized BindingPattern
-          while ( this.lttype === ',' ) {
-            this.next();     
-            elem = this.parseVariableDeclarator(context);
-            if (!elem &&
-                 this.err('var.has.an.empty.declarator',startc,startLoc,kind,list,context,isInArgList,inComplexArgs,argNames ) )
-              return this.erroHandlerOutput ;
+  var list = null;
+  if (this.missingInit) {
+    if (context & CTX_FOR)
+      list = [elem];
+    else this.err('var.must.have.init');
+  }
+  else {
+    list = [elem];
+    while (this.lttype === ',') {
+      this.next();     
+      elem = this.parseVariableDeclarator(context);
+      if (!elem)
+        this.err('var.has.an.empty.declarator');
+   
+      if (this.missingInit || (isConst && !elem.init))
+        this.err('var.init.is.missing');
+   
+      list.push(elem);
+    }
+  }
 
-            if (isConst) this.assert(elem.init !== null);
-            list.push(elem);
-          }
+  var lastItem = list[list.length-1];
+  var endI = 0, endLoc = null;
 
-     var lastItem = list[list.length-1];
-     var endI = 0, endLoc = null;
+  if (!(context & CTX_FOR)) {
+    endI = this.semiI() || lastItem.end;
+    endLoc = this.semiLoc();
+    if (!endLoc) {
+      if (this.newLineBeforeLookAhead)
+        endLoc =  lastItem.loc.end; 
+      else  
+        this.err('no.semi','var');
+    }
+  }
+  else {
+    endI = lastItem.end;
+    endLoc = lastItem.loc.end;
+  }
 
-     if ( !(context & CTX_FOR) ) {
-       endI = this.semiI() || lastItem.end;
-       endLoc = this.semiLoc();
-       if (  !endLoc ) {
-          if ( this.newLineBeforeLookAhead ) endLoc =  lastItem.loc.end; 
-          else if ( this.err('no.semi','var', [startc,startLoc,kind,list,endI] ) )
-             return this.errorHandlerOutput;
-       }
-     }
-     else {
-       endI = lastItem.end;
-       endLoc = lastItem.loc.end;
-     }
+  this.foundStatement = true ;
 
-     this.foundStatement  = true ;
-
-     return { declarations: list, type: 'VariableDeclaration', start: startc, end: endI,
-              loc: { start: startLoc, end: endLoc }, kind: kind /* ,y:-1*/};
+  return {
+    declarations: list,
+    type: 'VariableDeclaration',
+    start: startc,
+    end: endI,
+    loc: { start: startLoc, end: endLoc },
+    kind: kind /* ,y:-1*/
+  };
 };
 
-this . parseVariableDeclarator = function(context) {
-  if ( (context & CTX_FOR) &&
-       this.lttype === 'Identifier' &&
-       this.ltval === 'in' )
-      return null;
-
+this.parseVariableDeclarator = function(context) {
   var head = this.parsePattern(), init = null;
-  if ( !head ) return null;
+  if (!head)
+    return null;
 
-  if ( this.lttype === 'op' && this.ltraw === '=' )  {
+  if (this.lttype === 'op') {
+    if (this.ltraw === '=')  {
        this.next();
-       init = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
+       init = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+    }
+    else 
+      this.err('var.decl.not.=');
   }
-  else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
-       if (!( context & CTX_FOR) )  // bail out in case it is not a 'for' loop's init
-         this.err('var.decl.neither.of.in',head,init,context) ;
+  else if (head.type !== 'Identifier') { // our pattern is an arr or an obj?
+    if (!( context & CTX_FOR))  // bail out in case it is not a 'for' loop's init
+      this.err('var.decl.neither.of.in');
 
-       if( !this.unsatisfiedAssignment )
-         this.unsatisfiedAssignment  =  head;     // an 'in' or 'of' will satisfy it
+    this.missingInit = true;
   }
 
   var initOrHead = init || head;
-  return { type: 'VariableDeclarator', id: head, start: head.start, end: initOrHead.end,
-           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init)/* ,y:-1*/ };
+  return {
+    type: 'VariableDeclarator', id: head,
+    start: head.start, end: initOrHead.end,
+    loc: {
+      start: head.loc.start,
+      end: initOrHead.loc.end 
+    }, init: init && core(init)/* ,y:-1*/
+  };
 };
 
 
