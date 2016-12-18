@@ -91,7 +91,7 @@ this.parseAssignment = function(head, context) {
       this.adjustErrors();
 
     var st = ERR_NONE_YET, se = null, so = null,
-        pt = ERR_NONE_YET, pe = null, pe = null;
+        pt = ERR_NONE_YET, pe = null, po = null;
 
     this.toAssig(head, context);
     // TODO: crazy to say, but what about _not_ parsing assignments that are

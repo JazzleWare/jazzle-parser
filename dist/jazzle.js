@@ -3184,7 +3184,7 @@ this.parseAssignment = function(head, context) {
       this.adjustErrors();
 
     var st = ERR_NONE_YET, se = null, so = null,
-        pt = ERR_NONE_YET, pe = null, pe = null;
+        pt = ERR_NONE_YET, pe = null, po = null;
 
     this.toAssig(head, context);
     // TODO: crazy to say, but what about _not_ parsing assignments that are
@@ -3455,12 +3455,8 @@ this.parseParen = function(context) {
     }
   }
 
-  // TODO: this looks a little like a hack
-  if (this.lttype !== 'op' || this.ltraw !== '=>') {
-    this.currentExprIsSimple();
-    if (prevys !== null)
-      this.suspys = prevys;
-  }
+  if (prevys !== null)
+    this.suspys = prevys;
 
   return n;
 };
