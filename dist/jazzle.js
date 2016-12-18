@@ -716,10 +716,20 @@ this.applyTo = function(obj) {
 
 }]  ],
 [Parser.prototype, [function(){
-this. asArrowFuncArg = function(arg) {
+this.asArrowFuncArgList = function(argList) {
+  if (argList.type === 'SequenceExpression') {
+    var i = 0, list = argList.expressions;
+    while (i < list.length)
+      this.asArrowFuncArg(list[i++]);
+  }
+  else 
+    this.asArrowFuncArg(argList);
+};
+
+this.asArrowFuncArg = function(arg) {
   var i = 0, list = null;
 
-  if (arg.type !== 'Identifier')
+  if (this.firstNonSimpArg === null && arg.type !== 'Identifier')
     this.firstNonSimpArg = arg;
 
   if (arg === this.po)
@@ -795,12 +805,6 @@ this. asArrowFuncArg = function(arg) {
       this.asArrowFuncArg(list[i++].value);
     return;
 
-  case 'SequenceExpression':
-    list = arg.expressions;
-    while (i < list.length)
-      this.asArrowFuncArg(list[i++]);
-    return;
-
   default:
     this.err('not.bindable',{tn:head});
 
@@ -818,12 +822,14 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   switch ( arg.type ) {
   case 'Identifier':
+    this.firstNonSimpArg = null;
     this.asArrowFuncArg(arg);
     break;
 
   case PAREN_NODE:
+    this.firstNonSimpArg = null;
     if (arg.expr)
-      this.asArrowFuncArg(core(arg));
+      this.asArrowFuncArgList(core(arg));
     break;
 
   default:
