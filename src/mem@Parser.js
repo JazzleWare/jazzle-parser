@@ -136,7 +136,7 @@ this.parseObjElem = function(name, context) {
     val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
 
     if (context & CTX_PARPAT) {
-      if (val.type === PAREN_TYPE) {
+      if (val.type === PAREN_NODE) {
         if ((context & CTX_PARAM) &&
            !(context & CTX_HAS_A_PARAM_ERR) &&
            this.pt === ERR_NONE_YET) {

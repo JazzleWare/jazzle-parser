@@ -63,7 +63,7 @@ this.parseArrayExpression = function(context) {
       var elemCore = hasRest ? elem.argument : elem;
       // TODO: [...(a),] = 12
       var t = ERR_NONE_YET;
-      if (elemCore.type === PAREN_TYPE)
+      if (elemCore.type === PAREN_NODE)
         t = ERR_PAREN_UNBINDABLE;
       else if (hasNonTailRest)
         t = ERR_NON_TAIL_REST;

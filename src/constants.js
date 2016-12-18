@@ -85,7 +85,7 @@ var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
 
 var PAREN = 'paren';
-var PAREN_TYPE = PAREN;
+var PAREN_NODE = PAREN;
 
 var STRING_TYPE = typeof "string";
 var NUMBER_TYPE = typeof 0;

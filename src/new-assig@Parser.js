@@ -79,7 +79,7 @@ this.parseAssignment = function(head, context) {
   if (o === '=>')
     return this.parseArrowFunctionExpression(head);
 
-  if (head.type === PAREN_TYPE) {
+  if (head.type === PAREN_NODE) {
     this.at = ERR_PAREN_UNBINDABLE;
     this.ae = this.ao = head;
     this.throwTricky('a', this.at, this.ae);

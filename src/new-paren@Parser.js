@@ -43,7 +43,7 @@ this.parseParen = function(context) {
       if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
         if (this.pt === ERR_NONE_YET) {
           // TODO: function* l() { ({[yield]: (a)})=>12 }
-          if (elem.type === PAREN_TYPE) {
+          if (elem.type === PAREN_NODE) {
             this.pt = ERR_PAREN_UNBINDABLE;
             this.pe = elem;
           }
@@ -83,7 +83,7 @@ this.parseParen = function(context) {
   }
 
   var n = {
-      type: PAREN_TYPE,
+      type: PAREN_NODE,
       expr: list ? {
         type: 'SequenceExpression',
         expressions: list,

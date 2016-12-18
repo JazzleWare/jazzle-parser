@@ -302,7 +302,7 @@ var D_INTBITLEN = 0, M_INTBITLEN = INTBITLEN - 1;
 while ( M_INTBITLEN >> (++D_INTBITLEN) );
 
 var PAREN = 'paren';
-var PAREN_TYPE = PAREN;
+var PAREN_NODE = PAREN;
 
 var STRING_TYPE = typeof "string";
 var NUMBER_TYPE = typeof 0;
@@ -2914,7 +2914,7 @@ this.parseObjElem = function(name, context) {
     val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
 
     if (context & CTX_PARPAT) {
-      if (val.type === PAREN_TYPE) {
+      if (val.type === PAREN_NODE) {
         if ((context & CTX_PARAM) &&
            !(context & CTX_HAS_A_PARAM_ERR) &&
            this.pt === ERR_NONE_YET) {
@@ -3074,7 +3074,7 @@ this.parseArrayExpression = function(context) {
       var elemCore = hasRest ? elem.argument : elem;
       // TODO: [...(a),] = 12
       var t = ERR_NONE_YET;
-      if (elemCore.type === PAREN_TYPE)
+      if (elemCore.type === PAREN_NODE)
         t = ERR_PAREN_UNBINDABLE;
       else if (hasNonTailRest)
         t = ERR_NON_TAIL_REST;
@@ -3217,7 +3217,7 @@ this.parseAssignment = function(head, context) {
   if (o === '=>')
     return this.parseArrowFunctionExpression(head);
 
-  if (head.type === PAREN_TYPE) {
+  if (head.type === PAREN_NODE) {
     this.at = ERR_PAREN_UNBINDABLE;
     this.ae = this.ao = head;
     this.throwTricky('a', this.at, this.ae);
@@ -3428,7 +3428,7 @@ this.parseParen = function(context) {
       if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
         if (this.pt === ERR_NONE_YET) {
           // TODO: function* l() { ({[yield]: (a)})=>12 }
-          if (elem.type === PAREN_TYPE) {
+          if (elem.type === PAREN_NODE) {
             this.pt = ERR_PAREN_UNBINDABLE;
             this.pe = elem;
           }
@@ -3468,7 +3468,7 @@ this.parseParen = function(context) {
   }
 
   var n = {
-      type: PAREN_TYPE,
+      type: PAREN_NODE,
       expr: list ? {
         type: 'SequenceExpression',
         expressions: list,
@@ -3522,6 +3522,17 @@ this.parseSpreadElement = function(context) {
     PREC_WITH_NO_OP,
     context & ~CTX_NULLABLE);
 
+  if (e.type === PAREN_NODE) {
+    if ((context & CTX_PARAM) && !(context & CTX_HAS_A_PARAM_ERR) &&
+       this.pt === ERR_NONE_YET) { 
+      this.pt = ERR_PAREN_UNBINDABLE; this.pe = e;
+    }
+    if ((context & CTX_PAT) && !(context & CTX_HAS_AN_ASSIG_ERR) &&
+       this.at === ERR_NONE_YET) {
+      this.at = ERR_PAREN_UNBINDABLE; this.ae = e;
+    }
+  }
+    
   return {
     type: 'SpreadElement',
     loc: { start: startLoc, end: e.loc.end },
