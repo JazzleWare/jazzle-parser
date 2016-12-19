@@ -65,8 +65,6 @@ this.hoistIdToScope = function(id, targetScope, decl) {
 var declare = {};
 
 declare[DECL_MODE_FUNCTION_PARAMS] =
-declare[DECL_MODE_FUNCTION_DECL] =
-declare[DECL_MODE_CLASS_DECL] =
 declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
    // #if V
@@ -80,8 +78,6 @@ declare[DECL_MODE_VAR] = function(id, declType) {
 };
 
 declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
-declare[DECL_MODE_FUNCTION_EXPR] =
-declare[DECL_MODE_CLASS_EXPR] =
 declare[DECL_MODE_LET] = function(id, declType) {
    // #if V
    if (declType & DECL_MODE_CATCH_PARAMS)
@@ -125,12 +121,12 @@ this.insertDecl = function(id, decl) {
 
     // if a var name in a catch scope has the same name as a catch var,
     // it will not get hoisted any further
-    if ((declType & DECL_MODE_VAR) && (existingType & DECL_MODE_CATCH_PARAMS))
+    if ((declType & DECL_MODE_VAR_LIKE) && (existingType & DECL_MODE_CATCH_PARAMS))
        return false;
 
     // if a var decl is overriding a var decl of the same name, no matter what scope we are in,
     // it's not a problem.
-    if ((declType & DECL_MODE_VAR) && (existingType & DECL_MODE_VAR))
+    if ((declType & DECL_MODE_VAR_LIKE) && (existingType & DECL_MODE_VAR_LIKE))
       return true; 
      
     this.err('exists.in.current', { id: id });
@@ -244,19 +240,15 @@ this.declSynth = function(name) {
 };
 // #end
 
-this.isLoop = function() { return this.type & SCOPE_TYPE_LEXICAL_LOOP; };
-this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
-this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
-this.isDeclaration = function() { return this.type === SCOPE_TYPE_FUNCTION_DECLARATION; };
-this.isCatch = function() { return (this.type & SCOPE_TYPE_CATCH) === SCOPE_TYPE_CATCH; };
-this.isGlobal = function() { return this.type === SCOPE_TYPE_GLOBAL; };
+this.isLoop = function() { return this.type & ST_LOOP; };
+this.isLexical = function() { return this.type & ST_LEXICAL; };
+this.isFunc = function() { return this.type & ST_FN; };
+this.isHoisted = function() { return this.type === ST_HOISTED; };
+this.isCatch = function() { return this.type & ST_CATCH; };
+this.isGlobal = function() { return this.type === ST_GLOBAL; };
 
 // a scope is concrete if a 'var'-declaration gets hoisted to it
-this.isConcrete = function() {
-  return this.type === SCOPE_TYPE_SCRIPT ||
-         this.type === SCOPE_TYPE_GLOBAL ||
-         this.isFunc();
-};
+this.isConcrete = function() { return this.type === ST_CONCRETE; };
 
 // #if V
 this.addChildLexicalDeclaration = function(decl) {
@@ -316,48 +308,6 @@ this.setCatchVar = function(name) {
   ASSERT.call(this, this.catchVar === "", 'scope has already got a catch var: ' + this.catchVarName);
   this.catchVarName = name;
 };
-
-this.finishWithActuallyDeclaringTheCatchVar = function() {
-  // catch var names of catch scopes with non-simple catch params are calculated in the emit phase
-  if ( this.catchVarName === "" ) return;
-
-  // TODO: this.insertDecl0(true, synthName, decl), maybe?
-  var synthName = this.newSynthName(this.catchVarName);
-  var decl = this.findDeclInScope(this.catchVarName);
-  decl.synthName = synthName;
-};
-
-function getOrCreate(l, name) {
-  var entry = l.findName(name);
-  if (!entry)
-    entry = l.addNewLiquidName(name);
-   
-  return entry;
-};
-
-this.getOrCreateLocalLiquidName = function(name) {
-  var entry = null;
-  if ( !this.funcScope.localLiquidNames )
-    this.funcScope.localLiquidNames = new LiquidNames();
-  
-  return getOrCreate(this.funcScope.localLiquidNames, name);
-};
-
-// if a name is either referenced at func scope, directly or indirectly,
-// or it is a func scope binding, real or synth, it must be passed to this method
-this.updateLiquidNamesWith = function(name) {
-  if (this.funcScope.globalLiquidNames)
-    this.funcScope.globalLiquidNames.mustNotHaveReal(name);
-  if (this.funcScope.localLiquidNames)
-    this.funcScope.localLiquidNames.mustNotHaveReal(name);
-};
-
-this.getOrCreateGlobalLiquidName = function(name) {
-  if (!this.funcScope.globalLiquidNames)
-    this.funcScope.globalLiquidNames = new LiquidNames();
-
-  return getOrCreate(this.funcScope.globalLiquidNames, name);
-};  
 
 this.synthesizeNames = function() {
   var list = null, e = 0;

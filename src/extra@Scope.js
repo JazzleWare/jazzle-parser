@@ -3,8 +3,8 @@ this.spawnFunc = function(fundecl) {
   return new Scope(
     this,
     fundecl ?
-      SCOPE_TYPE_FUNCTION_DECLARATION :
-      SCOPE_TYPE_FUNCTION_EXPRESSION
+      ST_FN_STMT :
+      ST_FN_EXPR
   );
 };
 
@@ -12,14 +12,14 @@ this.spawnLexical = function(loop) {
   return new Scope(
     this,
     !loop ?
-     SCOPE_TYPE_LEXICAL_SIMPLE :
-     SCOPE_TYPE_LEXICAL_LOOP );
+     ST_LEXICAL :
+     ST_LEXICAL|ST_LOOP);
 };
 
 this.spawnCatch = function() {
   return new Scope(
     this,
-    SCOPE_TYPE_CATCH );
+    ST_LEXICAL|ST_CATCH);
 };
 
 this.mustNotHaveAnyDupeParams = function() {

@@ -28,13 +28,7 @@ function Scope(parent, type) {
   this.tempStack = this.isConcrete() ? [] : null;
 
   if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
-    this.type |= SCOPE_TYPE_LEXICAL_LOOP;    
-
-  this.catchVarIsSynth = false;
-  this.catchVarName = ""; 
-
-  this.globalLiquidNames = this.parent ? this.parent.globalLiquidNames : new LiquidNames();
-  this.localLiquidNames = null;
+    this.type |= ST_LOOP;    
 
   this.children = [];
   if (this.parent) this.parent.children.push(this);
@@ -61,13 +55,13 @@ function Scope(parent, type) {
 
 Scope.createFunc = function(parent, decl) {
   var scope = new Scope(parent, decl ?
-       SCOPE_TYPE_FUNCTION_DECLARATION :
-       SCOPE_TYPE_FUNCTION_EXPRESSION );
+       ST_FN_STMT :
+       ST_FN_EXPR );
   return scope;
 };
 
 Scope.createLexical = function(parent, loop) {
    return new Scope(parent, !loop ?
-        SCOPE_TYPE_LEXICAL_SIMPLE :
-        SCOPE_TYPE_LEXICAL_LOOP);
+        ST_LEXICAL :
+        ST_LEXICAL|ST_LOOP);
 };
