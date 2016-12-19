@@ -9,7 +9,7 @@ this.readStrLiteral = function (start) {
 
   while (c < e && (i = l.charCodeAt(c)) !== start) {
     switch ( i ) {
-     case CHAR_BACK_SLASH :
+     case CH_BACK_SLASH :
         v  += l.slice(v_start,c );
         this.col += ( c - startC ) ;
         startC =  this.c = c;
@@ -20,8 +20,8 @@ this.readStrLiteral = function (start) {
         v_start = ++c ;
         continue ;
 
-     case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CHAR_LINE_FEED ) c++ ;
-     case CHAR_LINE_FEED :
+     case CH_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CH_LINE_FEED ) c++ ;
+     case CH_LINE_FEED :
      case 0x2028 :
      case 0x2029 :
            if ( this.err('str.newline',c,startC,v,v_start) )

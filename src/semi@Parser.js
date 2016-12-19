@@ -17,6 +17,15 @@ this.semiLoc_soft = function () {
 };
 
 this.semiI = function() {
-   return this.lttype === ';' ? this.c : this.nl ? 0 : this.lttype === '}' ? this.c - 1 : this.lttype === 'eof' ? this.c : 0; };
+  switch (this.lttype) {
+  case ';':
+    return this.c;
+  case '}':
+    return this.nl ? 0 : this.c0;
+  case 'eof':
+    return this.nl ? 0 : this.c;
+  default:
+    return 0;
 
-
+  }
+};

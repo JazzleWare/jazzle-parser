@@ -11,10 +11,10 @@ this . parseTemplateLiteral = function() {
  
   while ( c < len ) {
     ch = src.charCodeAt(c);
-    if ( ch === CHAR_BACKTICK ) break; 
+    if ( ch === CH_BACKTICK ) break; 
     switch ( ch ) {
-       case CHAR_$ :
-          if ( src.charCodeAt(c+1) === CHAR_LCURLY ) {
+       case CH_$ :
+          if ( src.charCodeAt(c+1) === CH_LCURLY ) {
               currentElemContents += src.slice(startElemFragment, c) ;
               this.col += ( c - startColIndex );
               templStr.push(
@@ -47,16 +47,16 @@ this . parseTemplateLiteral = function() {
 
           continue;
 
-       case CHAR_CARRIAGE_RETURN: 
+       case CH_CARRIAGE_RETURN: 
            currentElemContents += src.slice(startElemFragment,c) + '\n' ;
            c++;
-           if ( src.charCodeAt(c) === CHAR_LINE_FEED ) c++;
+           if ( src.charCodeAt(c) === CH_LINE_FEED ) c++;
            startElemFragment = startColIndex = c;
            this.li++;
            this.col = 0;
            continue ;
  
-       case CHAR_LINE_FEED:
+       case CH_LINE_FEED:
            currentElemContents += src.slice(startElemFragment,c) + '\n';
            c++;
            startElemFragment = startColIndex = c;
@@ -73,7 +73,7 @@ this . parseTemplateLiteral = function() {
            this.col = 0;           
            continue ;
  
-       case CHAR_BACK_SLASH :
+       case CH_BACK_SLASH :
            this.c = c; 
            currentElemContents += src.slice( startElemFragment, c ) + this.readStrictEsc();
            c  = this.c;
@@ -88,7 +88,7 @@ this . parseTemplateLiteral = function() {
     c++ ;
   }
 
-  if ( ch !== CHAR_BACKTICK ) this.err('templ.lit.is.unfinished') ;
+  if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished') ;
   
   if ( startElem < c ) {
      this.col += ( c - startColIndex );

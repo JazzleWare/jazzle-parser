@@ -60,18 +60,18 @@ this.parseRegExpLiteral = function() {
      WHILE:
      while ( c < len ) {
        switch ( src.charCodeAt(c) ) {
-         case CHAR_LSQBRACKET:
+         case CH_LSQBRACKET:
             if ( !inSquareBrackets )
                inSquareBrackets = true;
 
             break;
 
-         case CHAR_BACK_SLASH:
+         case CH_BACK_SLASH:
             ++c;
             if (c < len) switch(src.charCodeAt(c)) {
-               case CHAR_CARRIAGE_RETURN: 
-                  if ( l.charCodeAt(c + 1) === CHAR_LINE_FEED ) c++;
-               case CHAR_LINE_FEED :
+               case CH_CARRIAGE_RETURN: 
+                  if ( l.charCodeAt(c + 1) === CH_LINE_FEED ) c++;
+               case CH_LINE_FEED :
                case 0x2028 :
                case 0x2029 :
                   if ( this.err('regex.newline.esc',c,startLoc) )
@@ -80,20 +80,20 @@ this.parseRegExpLiteral = function() {
 
             break;
 
-         case CHAR_RSQBRACKET:
+         case CH_RSQBRACKET:
             if ( inSquareBrackets )
                inSquareBrackets = false;
 
             break;
 
-         case CHAR_DIV :
+         case CH_DIV :
             if ( inSquareBrackets )
                break;
 
             break WHILE;
 
-         case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CHAR_LINE_FEED ) c++ ;
-         case CHAR_LINE_FEED :
+         case CH_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CH_LINE_FEED ) c++ ;
+         case CH_LINE_FEED :
          case 0x2028 :
          case 0x2029 :
            if ( this.err('regex.newline',c,startLoc) )
@@ -105,7 +105,7 @@ this.parseRegExpLiteral = function() {
        c++ ;
      }
 
-     if ( src.charCodeAt(c) !== CHAR_DIV && 
+     if ( src.charCodeAt(c) !== CH_DIV && 
           this.err('regex.unfinished',startc,startLoc,c) )
        return this.errorHandlerOutput ;
 
@@ -114,23 +114,23 @@ this.parseRegExpLiteral = function() {
      WHILE:
      while ( flagCount <= 5 ) {
         switch ( src.charCodeAt ( ++c ) ) {
-            case CHAR_g:
+            case CH_g:
                 if (flags & gRegexFlag)
                   this.err('regex.flag.is.dup',startc,startLoc,c);
                 flags |= gRegexFlag; break;
-            case CHAR_u:
+            case CH_u:
                 if (flags & uRegexFlag)
                   this.err('regex.flag.is.dup',startc,startLoc,c);
                 flags |= uRegexFlag; break;
-            case CHAR_y:
+            case CH_y:
                 if (flags & yRegexFlag)
                   this.err('regex.flag.is.dup',startc,startLoc,c);
                 flags |= yRegexFlag; break;
-            case CHAR_m:
+            case CH_m:
                 if (flags & mRegexFlag)
                   this.err('regex.flag.is.dup',startc,startLoc,c);
                 flags |= mRegexFlag; break;
-            case CHAR_i:
+            case CH_i:
                 if (flags & iRegexFlag)
                   this.err('regex.flag.is.dup',startc,startLoc,c);
                 flags |= iRegexFlag; break;

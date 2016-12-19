@@ -6,11 +6,11 @@ function eof_rcurly(str, i) {
   if (i >= str.length)
     ASSERT.call(this, false, 'reached eof before a }');
 
-  return str.charCodeAt(i) === CHAR_RCURLY; 
+  return str.charCodeAt(i) === CH_RCURLY; 
 }
 
 function readTemplate(str, i) {
-  if (str.charCodeAt(i) === CHAR_RCURLY)
+  if (str.charCodeAt(i) === CH_RCURLY)
     return null;
   return Template.from(str, i, eof_rcurly);
 }
@@ -18,7 +18,7 @@ function readTemplate(str, i) {
 ErrorString.from = function(str) {
   var elem = "", i = 0, list = [];
   while (i < str.length) {
-    if (str.charCodeAt(i) === CHAR_LCURLY) {
+    if (str.charCodeAt(i) === CH_LCURLY) {
       i++;
       var template = readTemplate(str, i);
       if (template === null)

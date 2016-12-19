@@ -4,8 +4,8 @@ this.readMultiComment = function () {
 
   while (c < e) {
     switch (r = l.charCodeAt(c++ ) ) {
-    case CHAR_MUL:
-      if (l.charCodeAt(c) === CHAR_DIV) {
+    case CH_MUL:
+      if (l.charCodeAt(c) === CH_DIV) {
         c++;
         this.col += (c-start);
         this.c = c;
@@ -13,10 +13,10 @@ this.readMultiComment = function () {
       }
       continue ;
 
-    case CHAR_CARRIAGE_RETURN:
-      if (CHAR_LINE_FEED === l.charCodeAt(c))
+    case CH_CARRIAGE_RETURN:
+      if (CH_LINE_FEED === l.charCodeAt(c))
         c++;
-    case CHAR_LINE_FEED:
+    case CH_LINE_FEED:
     case 0x2028:
     case 0x2029:
       start = c;
@@ -41,10 +41,10 @@ this.readLineComment = function() {
     L:
     while ( c < e )
      switch (r = l.charCodeAt(c++ ) ) {
-     case CHAR_CARRIAGE_RETURN:
-       if (CHAR_LINE_FEED === l.charCodeAt(c))
+     case CH_CARRIAGE_RETURN:
+       if (CH_LINE_FEED === l.charCodeAt(c))
          c++;
-     case CHAR_LINE_FEED :
+     case CH_LINE_FEED :
      case 0x2028:
      case 0x2029 :
        this.col = 0 ;

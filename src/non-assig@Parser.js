@@ -126,7 +126,7 @@ this .parseO = function(context ) {
   case '--': return true;
   case '-': this.prec = PREC_ADD_MIN; return true;
   case '/':
-    if ( this.src.charCodeAt(this.c) === CHAR_EQUALITY_SIGN ) {
+    if ( this.src.charCodeAt(this.c) === CH_EQUALITY_SIGN ) {
       this.c++ ;
       this.prec = PREC_OP_ASSIG;
       this.ltraw = '/=';

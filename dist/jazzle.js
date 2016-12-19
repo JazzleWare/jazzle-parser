@@ -9,11 +9,11 @@ function eof_rcurly(str, i) {
   if (i >= str.length)
     ASSERT.call(this, false, 'reached eof before a }');
 
-  return str.charCodeAt(i) === CHAR_RCURLY; 
+  return str.charCodeAt(i) === CH_RCURLY; 
 }
 
 function readTemplate(str, i) {
-  if (str.charCodeAt(i) === CHAR_RCURLY)
+  if (str.charCodeAt(i) === CH_RCURLY)
     return null;
   return Template.from(str, i, eof_rcurly);
 }
@@ -21,7 +21,7 @@ function readTemplate(str, i) {
 ErrorString.from = function(str) {
   var elem = "", i = 0, list = [];
   while (i < str.length) {
-    if (str.charCodeAt(i) === CHAR_LCURLY) {
+    if (str.charCodeAt(i) === CH_LCURLY) {
       i++;
       var template = readTemplate(str, i);
       if (template === null)
@@ -152,10 +152,10 @@ function readParen(str, i, eof) {
   var elem = "";
   while (!eof(str, i)) {
     switch (str.charCodeAt(i)) {
-    case CHAR_SINGLEDOT: elem += '.'; break;
-    case CHAR_GREATER_THAN: elem += ')'; break;
-    case CHAR_LESS_THAN: elem += '('; break;
-    case CHAR_RPAREN: return elem;
+    case CH_SINGLEDOT: elem += '.'; break;
+    case CH_GREATER_THAN: elem += ')'; break;
+    case CH_LESS_THAN: elem += '('; break;
+    case CH_RPAREN: return elem;
     default:
       ASSERT.call(this, false, 
         'invalid character at index '+i+' -- "'+str.charAt(i)+'"');
@@ -176,7 +176,7 @@ Template.from = function(str, i, eof) {
   var start = i, needDot = false, list = [], pendingDot = false, elem = "";
   while (!eof(str, i)) {
     var ch = str.charCodeAt(i);
-    if (ch === CHAR_SINGLEDOT) {
+    if (ch === CH_SINGLEDOT) {
       if (pendingDot)
         break;
 
@@ -193,7 +193,7 @@ Template.from = function(str, i, eof) {
       ASSERT.call(this, false, 'dot expected at index'+(i-1));
 
     pendingDot = false;
-    if (ch === CHAR_LPAREN) {
+    if (ch === CH_LPAREN) {
       i++;
       elem += readParen(str, i, eof);
       if (elem.length === 0)
@@ -222,79 +222,79 @@ Template.from = function(str, i, eof) {
   return template;
 };
 ;
-var CHAR_1 = char2int('1'),
-    CHAR_2 = char2int('2'),
-    CHAR_3 = char2int('3'),
-    CHAR_4 = char2int('4'),
-    CHAR_5 = char2int('5'),
-    CHAR_6 = char2int('6'),
-    CHAR_7 = char2int('7'),
-    CHAR_8 = char2int('8'),
-    CHAR_9 = char2int('9'),
-    CHAR_0 = char2int('0'),
+var CH_1 = char2int('1'),
+    CH_2 = char2int('2'),
+    CH_3 = char2int('3'),
+    CH_4 = char2int('4'),
+    CH_5 = char2int('5'),
+    CH_6 = char2int('6'),
+    CH_7 = char2int('7'),
+    CH_8 = char2int('8'),
+    CH_9 = char2int('9'),
+    CH_0 = char2int('0'),
 
-    CHAR_a = char2int('a'), CHAR_A = char2int('A'),
-    CHAR_b = char2int('b'), CHAR_B = char2int('B'),
-    CHAR_e = char2int('e'), CHAR_E = char2int('E'),
-    CHAR_g = char2int('g'),
-    CHAR_f = char2int('f'), CHAR_F = char2int('F'),
-    CHAR_i = char2int('i'),
-    CHAR_m = char2int('m'),
-    CHAR_n = char2int('n'),
-    CHAR_o = char2int('o'), CHAR_O = char2int('O'),
-    CHAR_r = char2int('r'),
-    CHAR_t = char2int('t'),
-    CHAR_u = char2int('u'), CHAR_U = char2int('U'),
-    CHAR_v = char2int('v'), CHAR_X = char2int('X'),
-    CHAR_x = char2int('x'),
-    CHAR_y = char2int('y'),
-    CHAR_z = char2int('z'), CHAR_Z = char2int('Z'),
+    CH_a = char2int('a'), CH_A = char2int('A'),
+    CH_b = char2int('b'), CH_B = char2int('B'),
+    CH_e = char2int('e'), CH_E = char2int('E'),
+    CH_g = char2int('g'),
+    CH_f = char2int('f'), CH_F = char2int('F'),
+    CH_i = char2int('i'),
+    CH_m = char2int('m'),
+    CH_n = char2int('n'),
+    CH_o = char2int('o'), CH_O = char2int('O'),
+    CH_r = char2int('r'),
+    CH_t = char2int('t'),
+    CH_u = char2int('u'), CH_U = char2int('U'),
+    CH_v = char2int('v'), CH_X = char2int('X'),
+    CH_x = char2int('x'),
+    CH_y = char2int('y'),
+    CH_z = char2int('z'), CH_Z = char2int('Z'),
 
-    CHAR_UNDERLINE = char2int('_'),
-    CHAR_$ = char2int('$'),
+    CH_UNDERLINE = char2int('_'),
+    CH_$ = char2int('$'),
 
-    CHAR_TAB = char2int('\t'),
-    CHAR_CARRIAGE_RETURN = char2int('\r'),
-    CHAR_LINE_FEED = char2int('\n'),
-    CHAR_VTAB = char2int('\v'),
-    CHAR_FORM_FEED   = char2int( '\f') ,
+    CH_TAB = char2int('\t'),
+    CH_CARRIAGE_RETURN = char2int('\r'),
+    CH_LINE_FEED = char2int('\n'),
+    CH_VTAB = char2int('\v'),
+    CH_FORM_FEED   = char2int( '\f') ,
 
-    CHAR_WHITESPACE = char2int(' '),
+    CH_WHITESPACE = char2int(' '),
 
-    CHAR_BACKTICK = char2int('`'),
-    CHAR_SINGLE_QUOTE = char2int('\''),
-    CHAR_MULTI_QUOTE = char2int('"'),
-    CHAR_BACK_SLASH = char2int(('\\')),
+    CH_BACKTICK = char2int('`'),
+    CH_SINGLE_QUOTE = char2int('\''),
+    CH_MULTI_QUOTE = char2int('"'),
+    CH_BACK_SLASH = char2int(('\\')),
 
-    CHAR_DIV = char2int('/'),
-    CHAR_MUL = char2int('*'),
-    CHAR_MIN = char2int('-'),
-    CHAR_ADD = char2int('+'),
-    CHAR_AND = char2int('&'),
-    CHAR_XOR = char2int('^'),
-    CHAR_MODULO = char2int('%'),
-    CHAR_OR = char2int('|'),
-    CHAR_EQUALITY_SIGN = char2int('='),
+    CH_DIV = char2int('/'),
+    CH_MUL = char2int('*'),
+    CH_MIN = char2int('-'),
+    CH_ADD = char2int('+'),
+    CH_AND = char2int('&'),
+    CH_XOR = char2int('^'),
+    CH_MODULO = char2int('%'),
+    CH_OR = char2int('|'),
+    CH_EQUALITY_SIGN = char2int('='),
 
-    CHAR_SEMI = char2int(';'),
-    CHAR_COMMA = char2int(','),
-    CHAR_SINGLEDOT = char2int('.'),
-    CHAR_COLON = char2int((':')),
-    CHAR_QUESTION = char2int('?'),
+    CH_SEMI = char2int(';'),
+    CH_COMMA = char2int(','),
+    CH_SINGLEDOT = char2int('.'),
+    CH_COLON = char2int((':')),
+    CH_QUESTION = char2int('?'),
 
-    CHAR_EXCLAMATION = char2int('!'),
-    CHAR_COMPLEMENT = char2int('~'),
+    CH_EXCLAMATION = char2int('!'),
+    CH_COMPLEMENT = char2int('~'),
 
-    CHAR_ATSIGN = char2int('@'),
+    CH_ATSIGN = char2int('@'),
 
-    CHAR_LPAREN = char2int('('),
-    CHAR_RPAREN = char2int(')'),
-    CHAR_LSQBRACKET = char2int('['),
-    CHAR_RSQBRACKET = char2int(']'),
-    CHAR_LCURLY = char2int('{'),
-    CHAR_RCURLY = char2int('}'),
-    CHAR_LESS_THAN = char2int('<'),
-    CHAR_GREATER_THAN = char2int('>')
+    CH_LPAREN = char2int('('),
+    CH_RPAREN = char2int(')'),
+    CH_LSQBRACKET = char2int('['),
+    CH_RSQBRACKET = char2int(']'),
+    CH_LCURLY = char2int('{'),
+    CH_RCURLY = char2int('}'),
+    CH_LESS_THAN = char2int('<'),
+    CH_GREATER_THAN = char2int('>')
  ;
 
 var INTBITLEN = (function() { var i = 0;
@@ -430,28 +430,28 @@ var DIRECTIVE_TOP = 1,
     DIRECTIVE_MODULE = DIRECTIVE_TOP,
     DIRECTIVE_SCRIPT = DIRECTIVE_MODULE;
 ;
-var Num,num = Num = function (c) { return (c >= CHAR_0 && c <= CHAR_9)};
+var Num,num = Num = function (c) { return (c >= CH_0 && c <= CH_9)};
 function isIDHead(c) {
-  return (c <= CHAR_z && c >= CHAR_a) ||
-          c === CHAR_$ ||
-         (c <= CHAR_Z && c >= CHAR_A) ||
-          c === CHAR_UNDERLINE ||
+  return (c <= CH_z && c >= CH_a) ||
+          c === CH_$ ||
+         (c <= CH_Z && c >= CH_A) ||
+          c === CH_UNDERLINE ||
          (IDS_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN)));
 };
 
 function isIDBody (c) {
-  return (c <= CHAR_z && c >= CHAR_a) ||
-          c === CHAR_$ ||
-         (c <= CHAR_Z && c >= CHAR_A) ||
-          c === CHAR_UNDERLINE ||
-         (c <= CHAR_9 && c >= CHAR_0) ||
+  return (c <= CH_z && c >= CH_a) ||
+          c === CH_$ ||
+         (c <= CH_Z && c >= CH_A) ||
+          c === CH_UNDERLINE ||
+         (c <= CH_9 && c >= CH_0) ||
          (IDC_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN)));
 };
 
 function isHex(e) {
-    return ( e >= CHAR_a && e <= CHAR_f ) ||
-           ( e >= CHAR_0 && e <= CHAR_9 ) ||
-           ( e >= CHAR_A && e <= CHAR_F );
+    return ( e >= CH_a && e <= CH_f ) ||
+           ( e >= CH_0 && e <= CH_9 ) ||
+           ( e >= CH_A && e <= CH_F );
 }
 
 
@@ -677,9 +677,9 @@ function fromcode(codePoint )  {
 function core(n) { return n.type === PAREN ? n.expr : n; };
 
 function toNum (n) {
-  return (n >= CHAR_0 && n <= CHAR_9) ? n - CHAR_0 :
-         (n <= CHAR_f && n >= CHAR_a) ? 10 + n - CHAR_a :
-         (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
+  return (n >= CH_0 && n <= CH_9) ? n - CH_0 :
+         (n <= CH_f && n >= CH_a) ? 10 + n - CH_a :
+         (n >= CH_A && n <= CH_F) ? 10 + n - CH_A : -1;
 };
 
 function createObj(fromPrototype) {
@@ -901,37 +901,6 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
 },
 function(){
-
-this.evalArgumentsError = function(l) {
-  return this.err('err.assig.not', l || this.firstEA ) ;
-};
-
-this.notSimpleError = function(l) {
-  return this.err('err.assig.simple.not', l);
-};
-
-this.notAssignableError = function(l) {
-  return this.err('err.assig.not', l || this.firstUnassignable );
-};
-
-this.parenUnassigableError = this.notAssignableError;
-
-this.restNotLastError = this.notAssignableError;
-
-this .ensureSimpAssig = function(head) {
-  switch(head.type) {
-    case 'Identifier':
-       if ( this.tight && arguments_or_eval(head.name) )
-         this.err('assig.to.eval.or.arguments',{tn:head});
-
-    case 'MemberExpression':
-       return;
-
-    default:
-       return this.err('assig.not.simple',{tn:head});
-  }
-};
-
 this .ensureSimpAssig_soft = function(head) {
   switch(head.type) {
     case 'Identifier':
@@ -1074,8 +1043,8 @@ this.readMultiComment = function () {
 
   while (c < e) {
     switch (r = l.charCodeAt(c++ ) ) {
-    case CHAR_MUL:
-      if (l.charCodeAt(c) === CHAR_DIV) {
+    case CH_MUL:
+      if (l.charCodeAt(c) === CH_DIV) {
         c++;
         this.col += (c-start);
         this.c = c;
@@ -1083,10 +1052,10 @@ this.readMultiComment = function () {
       }
       continue ;
 
-    case CHAR_CARRIAGE_RETURN:
-      if (CHAR_LINE_FEED === l.charCodeAt(c))
+    case CH_CARRIAGE_RETURN:
+      if (CH_LINE_FEED === l.charCodeAt(c))
         c++;
-    case CHAR_LINE_FEED:
+    case CH_LINE_FEED:
     case 0x2028:
     case 0x2029:
       start = c;
@@ -1111,10 +1080,10 @@ this.readLineComment = function() {
     L:
     while ( c < e )
      switch (r = l.charCodeAt(c++ ) ) {
-     case CHAR_CARRIAGE_RETURN:
-       if (CHAR_LINE_FEED === l.charCodeAt(c))
+     case CH_CARRIAGE_RETURN:
+       if (CH_LINE_FEED === l.charCodeAt(c))
          c++;
-     case CHAR_LINE_FEED :
+     case CH_LINE_FEED :
      case 0x2028:
      case 0x2029 :
        this.col = 0 ;
@@ -1763,16 +1732,16 @@ function(){
 this.readEsc = function ()  {
   var src = this.src, b0 = 0, b = 0;
   switch ( src.charCodeAt ( ++this.c ) ) {
-   case CHAR_BACK_SLASH: return '\\';
-   case CHAR_MULTI_QUOTE: return'\"' ;
-   case CHAR_SINGLE_QUOTE: return '\'' ;
-   case CHAR_b: return '\b' ;
-   case CHAR_v: return '\v' ;
-   case CHAR_f: return '\f' ;
-   case CHAR_t: return '\t' ;
-   case CHAR_r: return '\r' ;
-   case CHAR_n: return '\n' ;
-   case CHAR_u:
+   case CH_BACK_SLASH: return '\\';
+   case CH_MULTI_QUOTE: return'\"' ;
+   case CH_SINGLE_QUOTE: return '\'' ;
+   case CH_b: return '\b' ;
+   case CH_v: return '\v' ;
+   case CH_f: return '\f' ;
+   case CH_t: return '\t' ;
+   case CH_r: return '\r' ;
+   case CH_n: return '\n' ;
+   case CH_u:
       b0 = this.peekUSeq();
       if ( b0 >= 0x0D800 && b0 <= 0x0DBFF ) {
         this.c++;
@@ -1780,7 +1749,7 @@ this.readEsc = function ()  {
       }
       return fromcode(b0);
 
-   case CHAR_x :
+   case CH_x :
       b0 = toNum(this.src.charCodeAt(++this.c));
       if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
         return this.errorHandlerOutput;
@@ -1789,57 +1758,57 @@ this.readEsc = function ()  {
         return this.errorHandlerOutput;
       return String.fromCharCode((b0<<4)|b);
 
-   case CHAR_0: case CHAR_1: case CHAR_2:
-   case CHAR_3:
+   case CH_0: case CH_1: case CH_2:
+   case CH_3:
        b0 = src.charCodeAt(this.c);
        if ( this.tight ) {
-          if ( b0 === CHAR_0 ) {
+          if ( b0 === CH_0 ) {
                b0 = src.charCodeAt(this.c +  1);
-               if ( b0 < CHAR_0 || b0 >= CHAR_8 )
+               if ( b0 < CH_0 || b0 >= CH_8 )
                  return '\0';
           }
           if ( this.err('strict.oct.str.esc') )
             return this.errorHandlerOutput
        }
 
-       b = b0 - CHAR_0;
+       b = b0 - CH_0;
        b0 = src.charCodeAt(this.c + 1 );
-       if ( b0 >= CHAR_0 && b0 < CHAR_8 ) {
+       if ( b0 >= CH_0 && b0 < CH_8 ) {
           this.c++;
           b <<= 3;
-          b += (b0-CHAR_0);
+          b += (b0-CH_0);
           b0 = src.charCodeAt(this.c+1);
-          if ( b0 >= CHAR_0 && b0 < CHAR_8 ) {
+          if ( b0 >= CH_0 && b0 < CH_8 ) {
              this.c++;
              b <<= 3;
-             b += (b0-CHAR_0);
+             b += (b0-CH_0);
           }
        }
        return String.fromCharCode(b)  ;
 
-    case CHAR_4: case CHAR_5: case CHAR_6: case CHAR_7:
+    case CH_4: case CH_5: case CH_6: case CH_7:
        if (this.tight && this.err('strict.oct.str.esc') )
          return this.errorHandlerOutput  ;
 
        b0 = src.charCodeAt(this.c);
-       b  = b0 - CHAR_0;
+       b  = b0 - CH_0;
        b0 = src.charCodeAt(this.c + 1 );
-       if ( b0 >= CHAR_0 && b0 < CHAR_8 ) {
+       if ( b0 >= CH_0 && b0 < CH_8 ) {
           this.c++; 
           b <<= 3; 
-          b += (b0-CHAR_0);
+          b += (b0-CH_0);
        }
        return String.fromCharCode(b)  ;
 
-   case CHAR_8:
-   case CHAR_9:
+   case CH_8:
+   case CH_9:
        if ( this.err('esc.8.or.9') ) 
          return this.errorHandlerOutput ;
        return '';
 
-   case CHAR_CARRIAGE_RETURN:
-      if ( src.charCodeAt(this.c + 1) === CHAR_LINE_FEED ) this.c++;
-   case CHAR_LINE_FEED:
+   case CH_CARRIAGE_RETURN:
+      if ( src.charCodeAt(this.c + 1) === CH_LINE_FEED ) this.c++;
+   case CH_LINE_FEED:
    case 0x2028:
    case 0x2029:
       this.col = 0;
@@ -1854,16 +1823,16 @@ this.readEsc = function ()  {
 this.readStrictEsc = function ()  {
   var src = this.src, b0 = 0, b = 0;
   switch ( src.charCodeAt ( ++this.c ) ) {
-   case CHAR_BACK_SLASH: return '\\';
-   case CHAR_MULTI_QUOTE: return'\"' ;
-   case CHAR_SINGLE_QUOTE: return '\'' ;
-   case CHAR_b: return '\b' ;
-   case CHAR_v: return '\v' ;
-   case CHAR_f: return '\f' ;
-   case CHAR_t: return '\t' ;
-   case CHAR_r: return '\r' ;
-   case CHAR_n: return '\n' ;
-   case CHAR_u:
+   case CH_BACK_SLASH: return '\\';
+   case CH_MULTI_QUOTE: return'\"' ;
+   case CH_SINGLE_QUOTE: return '\'' ;
+   case CH_b: return '\b' ;
+   case CH_v: return '\v' ;
+   case CH_f: return '\f' ;
+   case CH_t: return '\t' ;
+   case CH_r: return '\r' ;
+   case CH_n: return '\n' ;
+   case CH_u:
       b0 = this.peekUSeq();
       if ( b0 >= 0x0D800 && b0 <= 0x0DBFF ) {
         this.c++;
@@ -1871,7 +1840,7 @@ this.readStrictEsc = function ()  {
       }
       return fromcode(b0);
 
-   case CHAR_x :
+   case CH_x :
       b0 = toNum(this.src.charCodeAt(++this.c));
       if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
         return this.errorHandlerOutput;
@@ -1880,29 +1849,29 @@ this.readStrictEsc = function ()  {
         return this.errorHandlerOutput;
       return String.fromCharCode((b0<<4)|b);
 
-   case CHAR_0: case CHAR_1: case CHAR_2:
-   case CHAR_3:
+   case CH_0: case CH_1: case CH_2:
+   case CH_3:
        b0 = src.charCodeAt(this.c);
-       if ( b0 === CHAR_0 ) {
+       if ( b0 === CH_0 ) {
             b0 = src.charCodeAt(this.c +  1);
-            if ( b0 < CHAR_0 || b0 >= CHAR_8 )
+            if ( b0 < CH_0 || b0 >= CH_8 )
               return '\0';
        }
        if ( this.err('strict.oct.str.esc') )
          return this.errorHandlerOutput
 
-    case CHAR_4: case CHAR_5: case CHAR_6: case CHAR_7:
+    case CH_4: case CH_5: case CH_6: case CH_7:
        if (this.err('strict.oct.str.esc') )
          return this.errorHandlerOutput  ;
 
-   case CHAR_8:
-   case CHAR_9:
+   case CH_8:
+   case CH_9:
        if ( this.err('esc.8.or.9') ) 
          return this.errorHandlerOutput ;
 
-   case CHAR_CARRIAGE_RETURN:
-      if ( src.charCodeAt(this.c + 1) === CHAR_LINE_FEED ) this.c++;
-   case CHAR_LINE_FEED:
+   case CH_CARRIAGE_RETURN:
+      if ( src.charCodeAt(this.c + 1) === CH_LINE_FEED ) this.c++;
+   case CH_LINE_FEED:
    case 0x2028:
    case 0x2029:
       this.col = 0;
@@ -1921,8 +1890,8 @@ function(){
 
 this.peekTheSecondByte = function () {
   var e = this.src.charCodeAt(this.c);
-  if (CHAR_BACK_SLASH === e) {
-    if (CHAR_u !== this.src.charCodeAt(++this.c) &&
+  if (CH_BACK_SLASH === e) {
+    if (CH_u !== this.src.charCodeAt(++this.c) &&
         this.err('u.second.esc.not.u') )
       return this.errorHandlerOutput ;
 
@@ -1939,7 +1908,7 @@ this.peekUSeq = function () {
   var c = ++this.c, l = this.src, e = l.length;
   var byteVal = 0;
   var n = l.charCodeAt(c);
-  if (CHAR_LCURLY === n) { // u{ 
+  if (CH_LCURLY === n) { // u{ 
     ++c;
     n = l.charCodeAt(c);
     do {
@@ -1953,9 +1922,9 @@ this.peekUSeq = function () {
         return this.errorHandler ;
 
       n = l.charCodeAt( ++ c);
-    } while (c < e && n !== CHAR_RCURLY);
+    } while (c < e && n !== CH_RCURLY);
 
-    if ( n !== CHAR_RCURLY && this.err('u.curly.is.unfinished',c,byteVal) ) 
+    if ( n !== CH_RCURLY && this.err('u.curly.is.unfinished',c,byteVal) ) 
       return this.errorHandlerOutput ;
 
     this.c = c;
@@ -2644,7 +2613,7 @@ this.readAnIdentifierToken = function (v) {
          continue;
       }
 
-      if ( peek === CHAR_BACK_SLASH ) {
+      if ( peek === CH_BACK_SLASH ) {
          if ( !v ) // if all previous characters have been non-u characters 
             v = src.charAt (startSlice-1); // v = IDHead
 
@@ -2652,7 +2621,7 @@ this.readAnIdentifierToken = function (v) {
             v += src.slice(startSlice,c) ; // v = v + those characters
 
          this.c = ++c;
-         if (CHAR_u !== src.charCodeAt(c) &&
+         if (CH_u !== src.charCodeAt(c) &&
              this.err('id.slash.no.u',c,v) )
            return this.errorHandlerOutput ;
 
@@ -3251,7 +3220,9 @@ this.parseAssignment = function(head, context) {
   }
   else {
     // TODO: further scrutiny, like checking for this.at, is necessary (?)
-    this.ensureSimpAssig(head);
+    if (!this.ensureSimpAssig_soft(head))
+      this.err('assig.not.simple');
+
     this.next();
     right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
       (context & CTX_FOR)|CTX_PAT|CTX_NO_SIMPLE_ERR);
@@ -3648,16 +3619,16 @@ this.next = function () {
   else if (Num(peek))this.readNumberLiteral(peek);
   else {
     switch (peek) {
-      case CHAR_MIN: this.opMin(); break;
-      case CHAR_ADD: this.opAdd() ; break;
-      case CHAR_MULTI_QUOTE:
-      case CHAR_SINGLE_QUOTE:
+      case CH_MIN: this.opMin(); break;
+      case CH_ADD: this.opAdd() ; break;
+      case CH_MULTI_QUOTE:
+      case CH_SINGLE_QUOTE:
         return this.readStrLiteral(peek);
-      case CHAR_SINGLEDOT: this.readDot () ; break ;
-      case CHAR_EQUALITY_SIGN:  this.opEq () ;   break ;
-      case CHAR_LESS_THAN: this.opLess() ;   break ;
-      case CHAR_GREATER_THAN: this.opGrea() ;   break ;
-      case CHAR_MUL:
+      case CH_SINGLEDOT: this.readDot () ; break ;
+      case CH_EQUALITY_SIGN:  this.opEq () ;   break ;
+      case CH_LESS_THAN: this.opLess() ;   break ;
+      case CH_GREATER_THAN: this.opGrea() ;   break ;
+      case CH_MUL:
          this.ltraw = '*';
          this.lttype = 'op';
          c++ ;
@@ -3665,7 +3636,7 @@ this.next = function () {
            this.ltraw = '**';
            c++ ;
          }
-         if (l.charCodeAt(c) === CHAR_EQUALITY_SIGN) {
+         if (l.charCodeAt(c) === CH_EQUALITY_SIGN) {
            c++;
            this. prec = PREC_OP_ASSIG;
            this.ltraw += '=';
@@ -3676,10 +3647,10 @@ this.next = function () {
          this.c=c;
          break ;
 
-      case CHAR_MODULO:
+      case CH_MODULO:
          this.lttype = 'op';
          c++ ;
-         if (l.charCodeAt(c) === CHAR_EQUALITY_SIGN) {
+         if (l.charCodeAt(c) === CH_EQUALITY_SIGN) {
            c++;
            this. prec = PREC_OP_ASSIG;
            this.ltraw = '%=';
@@ -3691,13 +3662,13 @@ this.next = function () {
          this.c=c;
          break ;
 
-      case CHAR_EXCLAMATION:
+      case CH_EXCLAMATION:
          c++ ;
-         if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+         if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
            this. lttype = 'op';
            c++;
            this.prec = PREC_EQUAL;
-           if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+           if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
              this.ltraw = '!==';
              c++;
            }
@@ -3710,24 +3681,24 @@ this.next = function () {
          this.c=c;
          break ;
 
-      case CHAR_COMPLEMENT:
+      case CH_COMPLEMENT:
             c++;
             this.c=c;
             this.ltraw = '~';
             this.lttype = 'u';
             break ;
 
-      case CHAR_OR:
+      case CH_OR:
          c++;
          this.lttype = 'op' ;
          switch ( l.charCodeAt(c) ) {
-            case CHAR_EQUALITY_SIGN:
+            case CH_EQUALITY_SIGN:
                  c++;
                  this.prec = PREC_OP_ASSIG ;
                  this.ltraw = '|=';
                  break ;
 
-            case CHAR_OR:
+            case CH_OR:
                  c++;
                  this.prec = PREC_BOOL_OR;
                  this.ltraw = '||'; break ;
@@ -3740,17 +3711,17 @@ this.next = function () {
          this.c=c;
          break;
 
-      case CHAR_AND:
+      case CH_AND:
           c++ ;
           this.lttype = 'op';
           switch ( l.charCodeAt(c) ) {
-            case CHAR_EQUALITY_SIGN:
+            case CH_EQUALITY_SIGN:
                c++;
                this. prec = PREC_OP_ASSIG;
                this.ltraw = '&=';
                break;
 
-            case CHAR_AND:
+            case CH_AND:
                c ++;
                this.prec = PREC_BOOL_AND;
                this.ltraw = '&&';
@@ -3764,10 +3735,10 @@ this.next = function () {
          this.c=c;
          break ;
 
-      case CHAR_XOR:
+      case CH_XOR:
         c++;
         this.lttype = 'op';
-        if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+        if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
           c++;
           this.prec = PREC_OP_ASSIG;
           this.ltraw = '^=';
@@ -3783,10 +3754,10 @@ this.next = function () {
 
         var mustBeAnID = 0 ;
 
-        if (CHAR_BACK_SLASH === peek) {
+        if (CH_BACK_SLASH === peek) {
             mustBeAnID = 1;
             peek = l.charCodeAt(++ this.c);
-            if (peek !== CHAR_u )
+            if (peek !== CH_u )
                 return this.err('id.u.not.after.slash');
             
             else
@@ -3822,10 +3793,10 @@ this . opEq = function()  {
     this.lttype = 'op';
     c++ ;
 
-    if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+    if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
       c++;
       this.prec = PREC_EQUAL ;
-      if ( l.charCodeAt(c ) === CHAR_EQUALITY_SIGN ){
+      if ( l.charCodeAt(c ) === CH_EQUALITY_SIGN ){
         c++ ;
         this.ltraw = '===';
       }
@@ -3833,7 +3804,7 @@ this . opEq = function()  {
     }
     else {
         this.prec = PREC_SIMP_ASSIG;
-        if ( l.charCodeAt(c) === CHAR_GREATER_THAN) {
+        if ( l.charCodeAt(c) === CH_GREATER_THAN) {
           c++;
           this. ltraw = '=>';
         }
@@ -3849,14 +3820,14 @@ this . opMin = function() {
    c++;
 
    switch( l.charCodeAt(c) ) {
-      case  CHAR_EQUALITY_SIGN:
+      case  CH_EQUALITY_SIGN:
          c++;
          this.prec = PREC_OP_ASSIG;
          this. lttype = 'op';
          this.ltraw = '-=';
          break ;
 
-      case  CHAR_MIN:
+      case  CH_MIN:
          c++;
          this.prec = PREC_OO;
          this. lttype = this.ltraw = '--';
@@ -3875,9 +3846,9 @@ this . opLess = function () {
   this.lttype = 'op';
   c++ ;
 
-  if ( l.charCodeAt(c ) === CHAR_LESS_THAN ) {
+  if ( l.charCodeAt(c ) === CH_LESS_THAN ) {
      c++;
-     if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+     if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
         c++;
         this. prec = PREC_OP_ASSIG ;
         this. ltraw = '<<=' ;
@@ -3889,7 +3860,7 @@ this . opLess = function () {
   }
   else  {
      this. prec = PREC_COMP ;
-     if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+     if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
         c++ ;
         this.ltraw = '<=';
      }
@@ -3905,7 +3876,7 @@ this . opAdd = function() {
    c++ ;
 
    switch ( l.charCodeAt(c) ) {
-       case CHAR_EQUALITY_SIGN:
+       case CH_EQUALITY_SIGN:
          c ++ ;
          this. prec = PREC_OP_ASSIG;
          this. lttype = 'op';
@@ -3913,7 +3884,7 @@ this . opAdd = function() {
 
          break ;
 
-       case CHAR_ADD:
+       case CH_ADD:
          c++ ;
          this. prec = PREC_OO;
          this. lttype = '--';
@@ -3931,11 +3902,11 @@ this . opGrea = function()   {
   this.lttype = 'op';
   c++ ;
 
-  if ( l.charCodeAt(c) === CHAR_GREATER_THAN ) {
+  if ( l.charCodeAt(c) === CH_GREATER_THAN ) {
     c++;
-    if ( l.charCodeAt(c) === CHAR_GREATER_THAN ) {
+    if ( l.charCodeAt(c) === CH_GREATER_THAN ) {
        c++;
-       if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+       if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
          c++ ;
          this. prec = PREC_OP_ASSIG;
          this. ltraw = '>>>=';
@@ -3945,7 +3916,7 @@ this . opGrea = function()   {
          this. prec = PREC_SH;
        }
     }
-    else if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+    else if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
        c++ ;
        this. prec = PREC_OP_ASSIG;
        this.ltraw = '>>=';
@@ -3957,7 +3928,7 @@ this . opGrea = function()   {
   }
   else  {
     this. prec = PREC_COMP  ;
-    if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+    if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
       c++ ;
       this. ltraw = '>=';
     }
@@ -3976,24 +3947,24 @@ this.skipS = function() {
 
      while ( c < e ) {
        switch ( l.charCodeAt ( c ) ) {
-         case CHAR_WHITESPACE :
-             while ( ++c < e &&  l.charCodeAt(c) === CHAR_WHITESPACE );
+         case CH_WHITESPACE :
+             while ( ++c < e &&  l.charCodeAt(c) === CH_WHITESPACE );
              continue ;
-         case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
-         case CHAR_LINE_FEED :
+         case CH_CARRIAGE_RETURN : if ( CH_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
+         case CH_LINE_FEED :
             if ( noNewLine ) noNewLine = false ;
             start = ++ c ;
             this.li ++ ;
             this.col = ( 0)
             continue ;
 
-         case CHAR_VTAB:
-         case CHAR_TAB:
-         case CHAR_FORM_FEED: c++ ; continue ;  
+         case CH_VTAB:
+         case CH_TAB:
+         case CH_FORM_FEED: c++ ; continue ;  
 
-         case CHAR_DIV:
+         case CH_DIV:
              switch ( l.charCodeAt ( c + ( 1) ) ) {
-                 case CHAR_DIV:
+                 case CH_DIV:
                      c ++ ;
                      this.c=c;
                      this.readLineComment () ;
@@ -4001,7 +3972,7 @@ this.skipS = function() {
                      start = c = this.c ;
                      continue ;
 
-                 case CHAR_MUL:
+                 case CH_MUL:
                    c +=  2 ;
                    this.col += (c-start ) ;
                    this.c = c ;
@@ -4034,11 +4005,11 @@ this.skipS = function() {
             this.li ++ ;
             continue;
 
-         case CHAR_LESS_THAN:
+         case CH_LESS_THAN:
             if ( this.isScript &&
-                 l.charCodeAt(c+1) === CHAR_EXCLAMATION &&
-                 l.charCodeAt(c+2) === CHAR_MIN &&
-                 l.charCodeAt(c+ 1 + 2) === CHAR_MIN ) {
+                 l.charCodeAt(c+1) === CH_EXCLAMATION &&
+                 l.charCodeAt(c+2) === CH_MIN &&
+                 l.charCodeAt(c+ 1 + 2) === CH_MIN ) {
                this.c = c + 4;
                this.readLineComment();
                c = this.c;
@@ -4049,10 +4020,10 @@ this.skipS = function() {
             this.nl = !noNewLine ;
             return ;
  
-         case CHAR_MIN:
+         case CH_MIN:
             if ( (!noNewLine || startOffset === 0) &&
                  this.isScript &&
-                 l.charCodeAt(c+1) === CHAR_MIN && l.charCodeAt(c+2) === CHAR_GREATER_THAN ) {
+                 l.charCodeAt(c+1) === CH_MIN && l.charCodeAt(c+2) === CH_GREATER_THAN ) {
                this.c = c + 1 + 2;
                this.readLineComment();
                c = this.c;
@@ -4075,8 +4046,8 @@ this.skipS = function() {
 
 this.readDot = function() {
    ++this.c;
-   if( this.src.charCodeAt(this.c)===CHAR_SINGLEDOT) {
-     if (this.src.charCodeAt(++ this.c) === CHAR_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
+   if( this.src.charCodeAt(this.c)===CH_SINGLEDOT) {
+     if (this.src.charCodeAt(++ this.c) === CH_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
      this.err('Unexpectd ' + this.src[this.c]) ;
    }
    else if ( Num(this.src.charCodeAt(this.c))) {
@@ -4248,7 +4219,7 @@ this .parseO = function(context ) {
   case '--': return true;
   case '-': this.prec = PREC_ADD_MIN; return true;
   case '/':
-    if ( this.src.charCodeAt(this.c) === CHAR_EQUALITY_SIGN ) {
+    if ( this.src.charCodeAt(this.c) === CH_EQUALITY_SIGN ) {
       this.c++ ;
       this.prec = PREC_OP_ASSIG;
       this.ltraw = '/=';
@@ -4379,10 +4350,10 @@ this.readNumberLiteral = function (peek) {
   var b = 10 , val = 0;
   this.lttype  = 'Literal' ;
 
-  if (peek === CHAR_0) { // if our num lit starts with a 0
+  if (peek === CH_0) { // if our num lit starts with a 0
     b = src.charCodeAt(++c);
     switch (b) { // check out what the next is
-      case CHAR_X: case CHAR_x:
+      case CH_X: case CH_x:
          c++;
          if (c >= len && this.err('num.with.no.digits','hex', c) )
            return this.errorHandlerOutput;
@@ -4396,19 +4367,19 @@ this.readNumberLiteral = function (peek) {
          this.c = c;
          break;
 
-      case CHAR_B: case CHAR_b:
+      case CH_B: case CH_b:
         ++c;
         if (c >= len && this.err('num.with.no.digits','bin',c) )
           return this.errorHandlerOutput ;
         b = src.charCodeAt(c);
-        if ( b !== CHAR_0 && b !== CHAR_1 && this.err('num.with.first.not.valid','bin',c) )
+        if ( b !== CH_0 && b !== CH_1 && this.err('num.with.first.not.valid','bin',c) )
           return this.errorHandlerOutput ;
-        val = b - CHAR_0; 
+        val = b - CH_0; 
         ++c;
         while ( c < len &&
-              ( b = src.charCodeAt(c), b === CHAR_0 || b === CHAR_1 ) ) {
+              ( b = src.charCodeAt(c), b === CH_0 || b === CH_1 ) ) {
            val <<= 1;
-           val |= b - CHAR_0; 
+           val |= b - CH_0; 
            c++ ;
         }
         this.ltval = val ;
@@ -4416,20 +4387,20 @@ this.readNumberLiteral = function (peek) {
         this.c = c;
         break;
 
-      case CHAR_O: case CHAR_o:
+      case CH_O: case CH_o:
         ++c;
         if (c >= len && this.err('num.with.no.digits','oct',c) )
           return this.errorHandlerOutput ; 
         b = src.charCodeAt(c);
-        if ( (b < CHAR_0 || b >= CHAR_8) && this.err('num.with.first.not.valid','oct',c)  )
+        if ( (b < CH_0 || b >= CH_8) && this.err('num.with.first.not.valid','oct',c)  )
           return this.errorHandlerOutput ;
 
-        val = b - CHAR_0 ;
+        val = b - CH_0 ;
         ++c; 
         while ( c < len &&
-              ( b = src.charCodeAt(c), b >= CHAR_0 && b < CHAR_8 ) ) {
+              ( b = src.charCodeAt(c), b >= CH_0 && b < CH_8 ) ) {
            val <<= (1 + 2);
-           val |= b - CHAR_0;
+           val |= b - CH_0;
            c++ ;
         } 
         this.ltval = val ;
@@ -4438,14 +4409,14 @@ this.readNumberLiteral = function (peek) {
         break;
 
       default:
-        if ( b >= CHAR_0 && b <= CHAR_9 ) {
+        if ( b >= CH_0 && b <= CH_9 ) {
           if ( this.tight ) this.err('num.legacy.oct');
           var base = 8;
           do {
-            if ( b >= CHAR_8 && base === 8 ) base = 10 ;
+            if ( b >= CH_8 && base === 8 ) base = 10 ;
             c ++;
           } while ( c < len &&
-                  ( b = src.charCodeAt(c), b >= CHAR_0 && b <= CHAR_9) );
+                  ( b = src.charCodeAt(c), b >= CH_0 && b <= CH_9) );
           
           b = this.c;
           this.c = c; 
@@ -4483,16 +4454,16 @@ this . frac = function(n) {
   var c = this.c,
       l = this.src,
       e = l.length ;
-  if ( n === -1 || l.charCodeAt(c)=== CHAR_SINGLEDOT )
+  if ( n === -1 || l.charCodeAt(c)=== CH_SINGLEDOT )
      while( ++c < e && Num(l.charCodeAt (c)))  ;
 
   switch( l.charCodeAt(c) ){
-      case CHAR_E:
-      case CHAR_e:
+      case CH_E:
+      case CH_e:
         c++;
         switch(l.charCodeAt(c)){
-          case CHAR_MIN:
-          case CHAR_ADD:
+          case CH_MIN:
+          case CH_ADD:
                  c++ ;
         }
         if ( !(c < e && Num(l.charCodeAt(c))) )
@@ -5036,18 +5007,18 @@ this.parseRegExpLiteral = function() {
      WHILE:
      while ( c < len ) {
        switch ( src.charCodeAt(c) ) {
-         case CHAR_LSQBRACKET:
+         case CH_LSQBRACKET:
             if ( !inSquareBrackets )
                inSquareBrackets = true;
 
             break;
 
-         case CHAR_BACK_SLASH:
+         case CH_BACK_SLASH:
             ++c;
             if (c < len) switch(src.charCodeAt(c)) {
-               case CHAR_CARRIAGE_RETURN: 
-                  if ( l.charCodeAt(c + 1) === CHAR_LINE_FEED ) c++;
-               case CHAR_LINE_FEED :
+               case CH_CARRIAGE_RETURN: 
+                  if ( l.charCodeAt(c + 1) === CH_LINE_FEED ) c++;
+               case CH_LINE_FEED :
                case 0x2028 :
                case 0x2029 :
                   if ( this.err('regex.newline.esc',c,startLoc) )
@@ -5056,20 +5027,20 @@ this.parseRegExpLiteral = function() {
 
             break;
 
-         case CHAR_RSQBRACKET:
+         case CH_RSQBRACKET:
             if ( inSquareBrackets )
                inSquareBrackets = false;
 
             break;
 
-         case CHAR_DIV :
+         case CH_DIV :
             if ( inSquareBrackets )
                break;
 
             break WHILE;
 
-         case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CHAR_LINE_FEED ) c++ ;
-         case CHAR_LINE_FEED :
+         case CH_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CH_LINE_FEED ) c++ ;
+         case CH_LINE_FEED :
          case 0x2028 :
          case 0x2029 :
            if ( this.err('regex.newline',c,startLoc) )
@@ -5081,7 +5052,7 @@ this.parseRegExpLiteral = function() {
        c++ ;
      }
 
-     if ( src.charCodeAt(c) !== CHAR_DIV && 
+     if ( src.charCodeAt(c) !== CH_DIV && 
           this.err('regex.unfinished',startc,startLoc,c) )
        return this.errorHandlerOutput ;
 
@@ -5090,23 +5061,23 @@ this.parseRegExpLiteral = function() {
      WHILE:
      while ( flagCount <= 5 ) {
         switch ( src.charCodeAt ( ++c ) ) {
-            case CHAR_g:
+            case CH_g:
                 if (flags & gRegexFlag)
                   this.err('regex.flag.is.dup',startc,startLoc,c);
                 flags |= gRegexFlag; break;
-            case CHAR_u:
+            case CH_u:
                 if (flags & uRegexFlag)
                   this.err('regex.flag.is.dup',startc,startLoc,c);
                 flags |= uRegexFlag; break;
-            case CHAR_y:
+            case CH_y:
                 if (flags & yRegexFlag)
                   this.err('regex.flag.is.dup',startc,startLoc,c);
                 flags |= yRegexFlag; break;
-            case CHAR_m:
+            case CH_m:
                 if (flags & mRegexFlag)
                   this.err('regex.flag.is.dup',startc,startLoc,c);
                 flags |= mRegexFlag; break;
-            case CHAR_i:
+            case CH_i:
                 if (flags & iRegexFlag)
                   this.err('regex.flag.is.dup',startc,startLoc,c);
                 flags |= iRegexFlag; break;
@@ -5311,9 +5282,18 @@ this.semiLoc_soft = function () {
 };
 
 this.semiI = function() {
-   return this.lttype === ';' ? this.c : this.nl ? 0 : this.lttype === '}' ? this.c - 1 : this.lttype === 'eof' ? this.c : 0; };
+  switch (this.lttype) {
+  case ';':
+    return this.c;
+  case '}':
+    return this.nl ? 0 : this.c0;
+  case 'eof':
+    return this.nl ? 0 : this.c;
+  default:
+    return 0;
 
-
+  }
+};
 
 },
 function(){
@@ -6012,7 +5992,7 @@ this.readStrLiteral = function (start) {
 
   while (c < e && (i = l.charCodeAt(c)) !== start) {
     switch ( i ) {
-     case CHAR_BACK_SLASH :
+     case CH_BACK_SLASH :
         v  += l.slice(v_start,c );
         this.col += ( c - startC ) ;
         startC =  this.c = c;
@@ -6023,8 +6003,8 @@ this.readStrLiteral = function (start) {
         v_start = ++c ;
         continue ;
 
-     case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CHAR_LINE_FEED ) c++ ;
-     case CHAR_LINE_FEED :
+     case CH_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CH_LINE_FEED ) c++ ;
+     case CH_LINE_FEED :
      case 0x2028 :
      case 0x2029 :
            if ( this.err('str.newline',c,startC,v,v_start) )
@@ -6061,10 +6041,10 @@ this . parseTemplateLiteral = function() {
  
   while ( c < len ) {
     ch = src.charCodeAt(c);
-    if ( ch === CHAR_BACKTICK ) break; 
+    if ( ch === CH_BACKTICK ) break; 
     switch ( ch ) {
-       case CHAR_$ :
-          if ( src.charCodeAt(c+1) === CHAR_LCURLY ) {
+       case CH_$ :
+          if ( src.charCodeAt(c+1) === CH_LCURLY ) {
               currentElemContents += src.slice(startElemFragment, c) ;
               this.col += ( c - startColIndex );
               templStr.push(
@@ -6097,16 +6077,16 @@ this . parseTemplateLiteral = function() {
 
           continue;
 
-       case CHAR_CARRIAGE_RETURN: 
+       case CH_CARRIAGE_RETURN: 
            currentElemContents += src.slice(startElemFragment,c) + '\n' ;
            c++;
-           if ( src.charCodeAt(c) === CHAR_LINE_FEED ) c++;
+           if ( src.charCodeAt(c) === CH_LINE_FEED ) c++;
            startElemFragment = startColIndex = c;
            this.li++;
            this.col = 0;
            continue ;
  
-       case CHAR_LINE_FEED:
+       case CH_LINE_FEED:
            currentElemContents += src.slice(startElemFragment,c) + '\n';
            c++;
            startElemFragment = startColIndex = c;
@@ -6123,7 +6103,7 @@ this . parseTemplateLiteral = function() {
            this.col = 0;           
            continue ;
  
-       case CHAR_BACK_SLASH :
+       case CH_BACK_SLASH :
            this.c = c; 
            currentElemContents += src.slice( startElemFragment, c ) + this.readStrictEsc();
            c  = this.c;
@@ -6138,7 +6118,7 @@ this . parseTemplateLiteral = function() {
     c++ ;
   }
 
-  if ( ch !== CHAR_BACKTICK ) this.err('templ.lit.is.unfinished') ;
+  if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished') ;
   
   if ( startElem < c ) {
      this.col += ( c - startColIndex );

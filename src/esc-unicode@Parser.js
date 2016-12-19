@@ -1,8 +1,8 @@
 
 this.peekTheSecondByte = function () {
   var e = this.src.charCodeAt(this.c);
-  if (CHAR_BACK_SLASH === e) {
-    if (CHAR_u !== this.src.charCodeAt(++this.c) &&
+  if (CH_BACK_SLASH === e) {
+    if (CH_u !== this.src.charCodeAt(++this.c) &&
         this.err('u.second.esc.not.u') )
       return this.errorHandlerOutput ;
 
@@ -19,7 +19,7 @@ this.peekUSeq = function () {
   var c = ++this.c, l = this.src, e = l.length;
   var byteVal = 0;
   var n = l.charCodeAt(c);
-  if (CHAR_LCURLY === n) { // u{ 
+  if (CH_LCURLY === n) { // u{ 
     ++c;
     n = l.charCodeAt(c);
     do {
@@ -33,9 +33,9 @@ this.peekUSeq = function () {
         return this.errorHandler ;
 
       n = l.charCodeAt( ++ c);
-    } while (c < e && n !== CHAR_RCURLY);
+    } while (c < e && n !== CH_RCURLY);
 
-    if ( n !== CHAR_RCURLY && this.err('u.curly.is.unfinished',c,byteVal) ) 
+    if ( n !== CH_RCURLY && this.err('u.curly.is.unfinished',c,byteVal) ) 
       return this.errorHandlerOutput ;
 
     this.c = c;

@@ -7,10 +7,10 @@ function readParen(str, i, eof) {
   var elem = "";
   while (!eof(str, i)) {
     switch (str.charCodeAt(i)) {
-    case CHAR_SINGLEDOT: elem += '.'; break;
-    case CHAR_GREATER_THAN: elem += ')'; break;
-    case CHAR_LESS_THAN: elem += '('; break;
-    case CHAR_RPAREN: return elem;
+    case CH_SINGLEDOT: elem += '.'; break;
+    case CH_GREATER_THAN: elem += ')'; break;
+    case CH_LESS_THAN: elem += '('; break;
+    case CH_RPAREN: return elem;
     default:
       ASSERT.call(this, false, 
         'invalid character at index '+i+' -- "'+str.charAt(i)+'"');
@@ -31,7 +31,7 @@ Template.from = function(str, i, eof) {
   var start = i, needDot = false, list = [], pendingDot = false, elem = "";
   while (!eof(str, i)) {
     var ch = str.charCodeAt(i);
-    if (ch === CHAR_SINGLEDOT) {
+    if (ch === CH_SINGLEDOT) {
       if (pendingDot)
         break;
 
@@ -48,7 +48,7 @@ Template.from = function(str, i, eof) {
       ASSERT.call(this, false, 'dot expected at index'+(i-1));
 
     pendingDot = false;
-    if (ch === CHAR_LPAREN) {
+    if (ch === CH_LPAREN) {
       i++;
       elem += readParen(str, i, eof);
       if (elem.length === 0)

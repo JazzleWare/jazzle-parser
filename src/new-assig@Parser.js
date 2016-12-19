@@ -130,7 +130,9 @@ this.parseAssignment = function(head, context) {
   }
   else {
     // TODO: further scrutiny, like checking for this.at, is necessary (?)
-    this.ensureSimpAssig(head);
+    if (!this.ensureSimpAssig_soft(head))
+      this.err('assig.not.simple');
+
     this.next();
     right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
       (context & CTX_FOR)|CTX_PAT|CTX_NO_SIMPLE_ERR);

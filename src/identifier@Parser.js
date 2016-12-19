@@ -11,7 +11,7 @@ this.readAnIdentifierToken = function (v) {
          continue;
       }
 
-      if ( peek === CHAR_BACK_SLASH ) {
+      if ( peek === CH_BACK_SLASH ) {
          if ( !v ) // if all previous characters have been non-u characters 
             v = src.charAt (startSlice-1); // v = IDHead
 
@@ -19,7 +19,7 @@ this.readAnIdentifierToken = function (v) {
             v += src.slice(startSlice,c) ; // v = v + those characters
 
          this.c = ++c;
-         if (CHAR_u !== src.charCodeAt(c) &&
+         if (CH_u !== src.charCodeAt(c) &&
              this.err('id.slash.no.u',c,v) )
            return this.errorHandlerOutput ;
 
