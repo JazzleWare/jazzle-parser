@@ -79,7 +79,7 @@ this.parseAssignment = function(head, context) {
   if (o === '=>')
     return this.parseArrowFunctionExpression(head);
 
-  if (head.type === PAREN_NODE) {
+  if (head.type === PAREN_NODE && !this.ensureSimpAssig_soft(head.expr)) {
     this.at = ERR_PAREN_UNBINDABLE;
     this.ae = this.ao = head;
     this.throwTricky('a', this.at, this.ae);
@@ -93,7 +93,7 @@ this.parseAssignment = function(head, context) {
     var st = ERR_NONE_YET, se = null, so = null,
         pt = ERR_NONE_YET, pe = null, po = null;
 
-    this.toAssig(head, context);
+    this.toAssig(core(head), context);
     // TODO: crazy to say, but what about _not_ parsing assignments that are
     // potpat elements, having the container (array or object) take over the parse
     // for assignments.

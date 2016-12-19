@@ -13,7 +13,7 @@ this.parseSpreadElement = function(context) {
       this.pt = ERR_PAREN_UNBINDABLE; this.pe = e;
     }
     if ((context & CTX_PAT) && !(context & CTX_HAS_AN_ASSIG_ERR) &&
-       this.at === ERR_NONE_YET) {
+       this.at === ERR_NONE_YET && !this.ensureSimpAssig_soft(e.expr)) {
       this.at = ERR_PAREN_UNBINDABLE; this.ae = e;
     }
   }

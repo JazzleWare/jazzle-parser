@@ -60,7 +60,7 @@ this.parseArrayExpression = function(context) {
     }
  
     if (elem && (elemContext & CTX_PARPAT)) {
-      var elemCore = hasRest ? elem.argument : elem;
+      var elemCore = elem;
       // TODO: [...(a),] = 12
       var t = ERR_NONE_YET;
       if (elemCore.type === PAREN_NODE)
@@ -78,6 +78,11 @@ this.parseArrayExpression = function(context) {
           elemContext |= CTX_HAS_A_PARAM_ERR;
         }
       }
+
+      // (a) = 12
+      if (t === ERR_PAREN_UNBINDABLE && this.ensureSimpAssig_soft(elem.expr))
+        t = ERR_NONE_YET;
+
       if ((elemContext & CTX_PAT) &&
          !(elemContext & CTX_HAS_AN_ASSIG_ERR)) {
         if (this.at === ERR_NONE_YET && t !== ERR_NONE_YET) {
