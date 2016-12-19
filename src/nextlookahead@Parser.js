@@ -384,7 +384,7 @@ this.skipS = function() {
 
                  default:
                      c++ ;
-                     this.newLineBeforeLookAhead = ! noNewLine ;
+                     this.nl = ! noNewLine ;
                      this.col += (c-start ) ;
                      this.c=c ;
                      this.prec  = 0xAD ;
@@ -419,7 +419,7 @@ this.skipS = function() {
             }
             this.col += (c-start ) ;
             this.c=c;
-            this.newLineBeforeLookAhead = !noNewLine ;
+            this.nl = !noNewLine ;
             return ;
  
          case CHAR_MIN:
@@ -436,14 +436,14 @@ this.skipS = function() {
    
             this.col += (c-start ) ;
             this.c=c;
-            this.newLineBeforeLookAhead = !noNewLine ;
+            this.nl = !noNewLine ;
             return ;
        }
      }
 
   this.col += (c-start ) ;
   this.c = c ;
-  this.newLineBeforeLookAhead = !noNewLine ;
+  this.nl = !noNewLine ;
 };
 
 this.readDot = function() {

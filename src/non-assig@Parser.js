@@ -217,7 +217,7 @@ this.parseNonSeqExpr = function (prec, context) {
     }
 
     if ( isMMorAA(currentPrec) ) {
-      if (this.newLineBeforeLookAhead )
+      if (this.nl )
         break;
     
       head = this.parseUpdateExpression(head, context);

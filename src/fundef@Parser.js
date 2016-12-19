@@ -28,10 +28,10 @@ this.parseFunc = function(context, flags) {
     }
 
     if (isStmt) {
-      if (!this.canDeclareFunctionsInScope())
+      if (!this.canDeclareFunctionsInScope(isGen))
         this.err('func.decl.not.allowed');
       if (this.unsatisfiedLabel) {
-        if (!this.canLabelFunctionsInScope())
+        if (!this.canLabelFunctionsInScope(isGen))
           this.err('func.decl.not.alowed');
         this.fixupLabels(false);
       }

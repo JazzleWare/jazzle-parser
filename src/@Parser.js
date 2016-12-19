@@ -4,7 +4,7 @@ var Parser = function (src, isModule) {
 
   this.unsatisfiedLabel = null;
 
-  this.newLineBeforeLookAhead = false;
+  this.nl = false;
 
   this.ltval = null;
   this.lttype= "";

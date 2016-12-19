@@ -32,7 +32,7 @@ this.parseExport = function() {
          
          endI = this.semiI();
          semiLoc = this.semiLoc_soft();
-         if ( !semiLoc && !this.hasNewlineBeforeLookAhead &&
+         if ( !semiLoc && !this.newlineBeforeLookAhead &&
               this.err('no.semi', 'export.all',
               { s:startc, l:startLoc, src: src, endI: endI } ) )
            return this.errorHandlerOutput;
@@ -121,7 +121,7 @@ this.parseExport = function() {
 
          endI = this.semiI() || endI;
          semiLoc = this.semiLoc_soft();
-         if ( !semiLoc && !this.newLineBeforeLookAhead &&
+         if ( !semiLoc && !this.nl &&
               this.err('no.semi','export.named',
                   { s:startc, l:startLoc, list: list, end: [endI,li,col], src: src } ))
            return this.errorHandlerOutput; 
@@ -190,7 +190,7 @@ this.parseExport = function() {
         ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT );
         endI = this.semiI();
         endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
-        if ( !endLoc && !this.newLineBeforeLookAhead &&
+        if ( !endLoc && !this.nl &&
              this.err('no.semi', 'export.named', 
                  { s: startc, l:startLoc, e: ex } ) )
           return this.errorHandlerOutput;

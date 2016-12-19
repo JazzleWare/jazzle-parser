@@ -95,7 +95,7 @@ this.ensureParamIsNotDupe = function(id) {
 };
 
 // TODO: must check whether we are parsing with v > 5, whether we are in an if, etc.
-this.canDeclareFunctionsInScope = function() {
+this.canDeclareFunctionsInScope = function(isGen) {
   if (this.scope.isConcrete())
     return true;
   if (this.scopeFlags & SCOPE_FLAG_IN_BLOCK)
@@ -103,7 +103,7 @@ this.canDeclareFunctionsInScope = function() {
   if (this.tight)
     return false;
   if (this.scopeFlags & SCOPE_FLAG_IN_IF)
-    return true;
+    return !isGen;
   
   return false;
 };
@@ -113,7 +113,7 @@ this.canDeclareClassInScope = function() {
     this.scope.isConcrete();
 };
 
-this.canLabelFunctionsInScope = function() { 
+this.canLabelFunctionsInScope = function(isGen) { 
   // TODO: add something like a 'compat' option so as to actually allow it for v <= 5;
   // this is what happens in reality: versions prior to ES2015 don't officially allow it, but it
   // is supported in most browsers.
@@ -121,6 +121,9 @@ this.canLabelFunctionsInScope = function() {
     return false;
   if (this.tight)
     return false;
+  if (isGen)
+    return false;
+
   return (this.scopeFlag & SCOPE_FLAG_IN_BLOCK) ||
           this.scope.isConcrete(); 
 };

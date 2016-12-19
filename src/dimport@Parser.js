@@ -114,9 +114,9 @@ this.parseImport = function() {
 
    var src = this.numstr();
    var endI = this.semiI() || src.end, 
-       semiLoc = this.semiLoc();
+       semiLoc = this.semiLoc_soft();
 
-   if (!semiLoc && !this.newLineBeforeLookAhead)
+   if (!semiLoc && !this.nl)
      this.err('no.semi','import');
    
    this.foundStatement = true;

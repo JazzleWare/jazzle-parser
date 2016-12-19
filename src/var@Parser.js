@@ -9,6 +9,13 @@ this.parseVariableDeclaration = function(context) {
       kind = this.ltval,
       elem = null;
 
+  if (this.unsatisfiedLabel) {
+    if (kind === 'var')
+      this.fixupLabels(false);
+    else
+      this.err('decl.label');
+  }
+
   this.next();
   this.declMode = kind === 'var' ? 
     DECL_MODE_VAR : DECL_MODE_LET;
@@ -62,9 +69,9 @@ this.parseVariableDeclaration = function(context) {
 
   if (!(context & CTX_FOR)) {
     endI = this.semiI() || lastItem.end;
-    endLoc = this.semiLoc();
+    endLoc = this.semiLoc_soft();
     if (!endLoc) {
-      if (this.newLineBeforeLookAhead)
+      if (this.nl)
         endLoc =  lastItem.loc.end; 
       else  
         this.err('no.semi','var');

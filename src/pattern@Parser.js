@@ -31,7 +31,8 @@ this. parseArrayPattern = function() {
   while ( true ) {
       elem = this.parsePattern();
       if ( elem ) {
-         if ( this.lttype === 'op' && this.ltraw === '=' ) elem = this.parseAssig(elem);
+         if ( this.lttype === 'op' && this.ltraw === '=' )
+           elem = this.parseAssig(elem);
       }
       else {
          if ( this.lttype === '...' ) {
@@ -109,6 +110,12 @@ this.parseObjectPattern  = function() {
          default:
             break LOOP;
       }
+
+      // TODO: this is a subtle case that was only lately noticed;
+      // parsePattern must have a way to throw when the pattern is not supposed to be null 
+      if (val === null)
+        this.err('obj.prop.is.null');
+
       if ( this.lttype === 'op' && this.ltraw === '=' )
         val = this.parseAssig(val);
 

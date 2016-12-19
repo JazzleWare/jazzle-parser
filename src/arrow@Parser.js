@@ -121,7 +121,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   this.currentExprIsParams();
 
-  if (this.newLineBeforeLookAhead)
+  if (this.nl)
     this.err('new.line.before.arrow');
 
   this.next();

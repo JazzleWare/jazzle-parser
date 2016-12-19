@@ -53,7 +53,7 @@ var Parser = function (src, isModule) {
 
   this.unsatisfiedLabel = null;
 
-  this.newLineBeforeLookAhead = false;
+  this.nl = false;
 
   this.ltval = null;
   this.lttype= "";
@@ -853,7 +853,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   this.currentExprIsParams();
 
-  if (this.newLineBeforeLookAhead)
+  if (this.nl)
     this.err('new.line.before.arrow');
 
   this.next();
@@ -1045,6 +1045,9 @@ this.parseSuper = function() {
     if ((this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER) !==
       SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER)
       this.err('class.super.call');
+    
+    if (!this.suspys)
+      this.suspys = n;
  
     break;
  
@@ -1060,74 +1063,70 @@ this.parseSuper = function() {
 
   }
  
-  if (!this.firstYS)
-    this.firstYS = n;
- 
   return n;
 };
 
 },
 function(){
-
 this.readMultiComment = function () {
-   var c = this.c,
-       l = this.src,
-       e = l.length,
-       r,
-       start = c,
-       n = true ;
+  var c = this.c, l = this.src, e = l.length,
+      r = -1, n = true, start = c;
 
-   while ( c < e )
-        switch (r = l.charCodeAt(c++ ) ) {
-          case CHAR_MUL:
-             if ( l.charCodeAt(c) === CHAR_DIV) {
-                c++;
-                this.col += (c-start);
-                this.c=c;
-                return n;
-             }
-             continue ;
+  while (c < e) {
+    switch (r = l.charCodeAt(c++ ) ) {
+    case CHAR_MUL:
+      if (l.charCodeAt(c) === CHAR_DIV) {
+        c++;
+        this.col += (c-start);
+        this.c = c;
+        return n;
+      }
+      continue ;
 
-          case CHAR_CARRIAGE_RETURN: if( CHAR_LINE_FEED === l.charCodeAt(c)) c++;
-          case CHAR_LINE_FEED:
-          case 0x2028:
-          case 0x2029:
-            start = c;
-            if ( n ) n = false ;
-            this.col = 0 ;
-            this.li ++ ;
-            continue;
+    case CHAR_CARRIAGE_RETURN:
+      if (CHAR_LINE_FEED === l.charCodeAt(c))
+        c++;
+    case CHAR_LINE_FEED:
+    case 0x2028:
+    case 0x2029:
+      start = c;
+      if (n)
+        n = false;
+      this.col = 0;
+      this.li++;
+      continue;
 
-//          default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
-        }
+//  default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
 
-   if ( this.err( 'comment.multi.unfinished' ) )
-     return this.errorHandlerOutput ;
+    }
+  }
+
+  this.err( 'comment.multi.unfinished' );
 };
 
 this.readLineComment = function() {
-    var c = this.c,
-        l = this.src,
-        e = l.length,
-        r ;
+    var c = this.c, l = this.src,
+        e = l.length, r = -1;
+
     L:
     while ( c < e )
      switch (r = l.charCodeAt(c++ ) ) {
-        case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED === l . charCodeAt ( c) ) c++ ;
-        case CHAR_LINE_FEED :
-        case 0x2028:
-        case 0x2029 :
-          this.col = 0 ;
-          this.li ++ ;
-          break L ;
+     case CHAR_CARRIAGE_RETURN:
+       if (CHAR_LINE_FEED === l.charCodeAt(c))
+         c++;
+     case CHAR_LINE_FEED :
+     case 0x2028:
+     case 0x2029 :
+       this.col = 0 ;
+       this.li++;
+       break L;
 
-//        default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
+//     default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
      }
+
      this.c=c;
-     return ;
+     return;
 };
-
-
 
 },
 function(){
@@ -1165,7 +1164,7 @@ this.parseExport = function() {
          
          endI = this.semiI();
          semiLoc = this.semiLoc_soft();
-         if ( !semiLoc && !this.hasNewlineBeforeLookAhead &&
+         if ( !semiLoc && !this.newlineBeforeLookAhead &&
               this.err('no.semi', 'export.all',
               { s:startc, l:startLoc, src: src, endI: endI } ) )
            return this.errorHandlerOutput;
@@ -1254,7 +1253,7 @@ this.parseExport = function() {
 
          endI = this.semiI() || endI;
          semiLoc = this.semiLoc_soft();
-         if ( !semiLoc && !this.newLineBeforeLookAhead &&
+         if ( !semiLoc && !this.nl &&
               this.err('no.semi','export.named',
                   { s:startc, l:startLoc, list: list, end: [endI,li,col], src: src } ))
            return this.errorHandlerOutput; 
@@ -1323,7 +1322,7 @@ this.parseExport = function() {
         ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT );
         endI = this.semiI();
         endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
-        if ( !endLoc && !this.newLineBeforeLookAhead &&
+        if ( !endLoc && !this.nl &&
              this.err('no.semi', 'export.named', 
                  { s: startc, l:startLoc, e: ex } ) )
           return this.errorHandlerOutput;
@@ -1454,9 +1453,9 @@ this.parseImport = function() {
 
    var src = this.numstr();
    var endI = this.semiI() || src.end, 
-       semiLoc = this.semiLoc();
+       semiLoc = this.semiLoc_soft();
 
-   if (!semiLoc && !this.newLineBeforeLookAhead)
+   if (!semiLoc && !this.nl)
      this.err('no.semi','import');
    
    this.foundStatement = true;
@@ -2278,10 +2277,10 @@ this.parseFunc = function(context, flags) {
     }
 
     if (isStmt) {
-      if (!this.canDeclareFunctionsInScope())
+      if (!this.canDeclareFunctionsInScope(isGen))
         this.err('func.decl.not.allowed');
       if (this.unsatisfiedLabel) {
-        if (!this.canLabelFunctionsInScope())
+        if (!this.canLabelFunctionsInScope(isGen))
           this.err('func.decl.not.alowed');
         this.fixupLabels(false);
       }
@@ -4012,7 +4011,7 @@ this.skipS = function() {
 
                  default:
                      c++ ;
-                     this.newLineBeforeLookAhead = ! noNewLine ;
+                     this.nl = ! noNewLine ;
                      this.col += (c-start ) ;
                      this.c=c ;
                      this.prec  = 0xAD ;
@@ -4047,7 +4046,7 @@ this.skipS = function() {
             }
             this.col += (c-start ) ;
             this.c=c;
-            this.newLineBeforeLookAhead = !noNewLine ;
+            this.nl = !noNewLine ;
             return ;
  
          case CHAR_MIN:
@@ -4064,14 +4063,14 @@ this.skipS = function() {
    
             this.col += (c-start ) ;
             this.c=c;
-            this.newLineBeforeLookAhead = !noNewLine ;
+            this.nl = !noNewLine ;
             return ;
        }
      }
 
   this.col += (c-start ) ;
   this.c = c ;
-  this.newLineBeforeLookAhead = !noNewLine ;
+  this.nl = !noNewLine ;
 };
 
 this.readDot = function() {
@@ -4340,7 +4339,7 @@ this.parseNonSeqExpr = function (prec, context) {
     }
 
     if ( isMMorAA(currentPrec) ) {
-      if (this.newLineBeforeLookAhead )
+      if (this.nl )
         break;
     
       head = this.parseUpdateExpression(head, context);
@@ -4546,7 +4545,8 @@ this. parseArrayPattern = function() {
   while ( true ) {
       elem = this.parsePattern();
       if ( elem ) {
-         if ( this.lttype === 'op' && this.ltraw === '=' ) elem = this.parseAssig(elem);
+         if ( this.lttype === 'op' && this.ltraw === '=' )
+           elem = this.parseAssig(elem);
       }
       else {
          if ( this.lttype === '...' ) {
@@ -4624,6 +4624,12 @@ this.parseObjectPattern  = function() {
          default:
             break LOOP;
       }
+
+      // TODO: this is a subtle case that was only lately noticed;
+      // parsePattern must have a way to throw when the pattern is not supposed to be null 
+      if (val === null)
+        this.err('obj.prop.is.null');
+
       if ( this.lttype === 'op' && this.ltraw === '=' )
         val = this.parseAssig(val);
 
@@ -5250,7 +5256,7 @@ this.ensureParamIsNotDupe = function(id) {
 };
 
 // TODO: must check whether we are parsing with v > 5, whether we are in an if, etc.
-this.canDeclareFunctionsInScope = function() {
+this.canDeclareFunctionsInScope = function(isGen) {
   if (this.scope.isConcrete())
     return true;
   if (this.scopeFlags & SCOPE_FLAG_IN_BLOCK)
@@ -5258,7 +5264,7 @@ this.canDeclareFunctionsInScope = function() {
   if (this.tight)
     return false;
   if (this.scopeFlags & SCOPE_FLAG_IN_IF)
-    return true;
+    return !isGen;
   
   return false;
 };
@@ -5268,7 +5274,7 @@ this.canDeclareClassInScope = function() {
     this.scope.isConcrete();
 };
 
-this.canLabelFunctionsInScope = function() { 
+this.canLabelFunctionsInScope = function(isGen) { 
   // TODO: add something like a 'compat' option so as to actually allow it for v <= 5;
   // this is what happens in reality: versions prior to ES2015 don't officially allow it, but it
   // is supported in most browsers.
@@ -5276,6 +5282,9 @@ this.canLabelFunctionsInScope = function() {
     return false;
   if (this.tight)
     return false;
+  if (isGen)
+    return false;
+
   return (this.scopeFlag & SCOPE_FLAG_IN_BLOCK) ||
           this.scope.isConcrete(); 
 };
@@ -5283,45 +5292,26 @@ this.canLabelFunctionsInScope = function() {
 
 },
 function(){
-this.semiLoc = function () {
-  switch (this.lttype) {
-    case ';':
-       var n = this.loc();
-       this.next();
-       return n;
-
-    case 'eof':
-       return this.newLineBeforeLookAhead ? null : this.loc();
-
-    case '}':
-       if ( !this.newLineBeforeLookAhead )
-          return this.locOn(1);
-  }
-  if (this.newLineBeforeLookAhead) return null;
-
-  this.err('EOS expected; found ' + this.ltraw ) ;
-};
-
 this.semiLoc_soft = function () {
   switch (this.lttype) {
-    case ';':
-       var n = this.loc();
-       this.next();
-       return n;
+  case ';':
+     var n = this.loc();
+     this.next();
+     return n;
 
-    case 'eof':
-       return this.newLineBeforeLookAhead ? null : this.loc();
+  case 'eof':
+     return this.nl ? null : this.loc();
 
-    case '}':
-       if ( !this.newLineBeforeLookAhead )
-          return this.locOn(1);
+  case '}':
+     if ( !this.nl )
+        return this.locOn(1);
   }
   
   return null;
 };
 
 this.semiI = function() {
-   return this.lttype === ';' ? this.c : this.newLineBeforeLookAhead ? 0 : this.lttype === '}' ? this.c - 1 : this.lttype === 'eof' ? this.c : 0; };
+   return this.lttype === ';' ? this.c : this.nl ? 0 : this.lttype === '}' ? this.c - 1 : this.lttype === 'eof' ? this.c : 0; };
 
 
 
@@ -5378,7 +5368,7 @@ this.parseStatement = function ( allowNull ) {
  
   e  = this.semiI() || head.end;
   l = this.semiLoc_soft ();
-  if ( !l && !this.newLineBeforeLookAhead &&
+  if ( !l && !this.nl &&
        this.err('no.semi','expr',{head:head,e:e}) )
     return this.errorHandlerOutput;
  
@@ -5593,7 +5583,7 @@ this.parseContinueStatement = function () {
 
    var semiLoc = null;
 
-   if ( !this.newLineBeforeLookAhead && this.lttype === 'Identifier' ) {
+   if ( !this.nl && this.lttype === 'Identifier' ) {
        label = this.validateID(null);
        name = this.findLabel(label.name + '%');
        if (!name) this.err('continue.no.such.label',label) ;
@@ -5601,7 +5591,7 @@ this.parseContinueStatement = function () {
 
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
-       if ( !semiLoc && !this.newLineBeforeLookAhead &&
+       if ( !semiLoc && !this.nl &&
              this.err('no.semi','continue',startc,startLoc,c,li,col,semi,label) )
          return this.errorHandlerOutput;
 
@@ -5611,7 +5601,7 @@ this.parseContinueStatement = function () {
    }
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
-   if ( !semiLoc && !this.newLineBeforeLookAhead &&
+   if ( !semiLoc && !this.nl &&
          this.err('no.semi','continue',startc,startLoc,c,li,col,semi,label) )
      return this.errorHandlerOutput;
 
@@ -5635,13 +5625,13 @@ this.parseBreakStatement = function () {
 
    var semiLoc = null;
 
-   if ( !this.newLineBeforeLookAhead && this.lttype === 'Identifier' ) {
+   if ( !this.nl && this.lttype === 'Identifier' ) {
        label = this.validateID(null);
        name = this.findLabel(label.name + '%');
        if (!name) this.err('break.no.such.label',label);
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
-       if ( !semiLoc && !this.newLineBeforeLookAhead &&
+       if ( !semiLoc && !this.nl &&
             this.err('no.semi',startc,startLoc,c,li,col,semi,label) )
          return this.errorHandlerOutput;
 
@@ -5655,7 +5645,7 @@ this.parseBreakStatement = function () {
 
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
-   if ( !semiLoc && !this.newLineBeforeLookAhead &&
+   if ( !semiLoc && !this.nl &&
         this.err('no.semi',startc,startLoc,c,li,col,semi,label) )
      return this.errorHandlerOutput;
 
@@ -5774,12 +5764,12 @@ this.parseReturnStatement = function () {
 
   var semi = 0, semiLoc = null;
 
-  if ( !this.newLineBeforeLookAhead )
+  if ( !this.nl )
      retVal = this.parseExpr(CTX_NULLABLE);
 
   semi = this.semiI();
-  semiLoc = this.semiLoc();
-  if ( !semiLoc && !this.newLineBeforeLookAhead &&
+  semiLoc = this.semiLoc_soft();
+  if ( !semiLoc && !this.nl &&
        this.err('no.semi','return', [startc,startLoc,c,li,col,semi,retVal] ) )
     return this.errorHandlerOutput;
 
@@ -5811,7 +5801,7 @@ this.parseThrowStatement = function () {
   this.next();
 
   var semi = 0 , semiLoc = null ;
-  if ( this.newLineBeforeLookAhead &&
+  if ( this.nl &&
        this.err('throw.has.newline',startc,startLoc,c,li,col) )
     return this.errorHandlerOutput;
 
@@ -5821,8 +5811,8 @@ this.parseThrowStatement = function () {
      return this.errorHandlerOutput;
 
   semi = this.semiI();
-  semiLoc = this.semiLoc();
-  if ( !semiLoc && !this.newLineBeforeLookAhead &&
+  semiLoc = this.semiLoc_soft();
+  if ( !semiLoc && !this.nl &&
         this.err('no.semi','throw',[startc,startLoc,c,li,col,semi,retVal] ) )
     return this.errorHandlerOutput;
 
@@ -5988,7 +5978,7 @@ this . prseDbg = function () {
     col = this.col;
     this.next();
   } 
-  else if ( !this.newLineBeforeLookAhead &&
+  else if ( !this.nl &&
      this.err('no.semi','debugger', [startc,startLoc,c,li,col] ) )
      return this.errorHandlerOutput;
 
@@ -6335,6 +6325,13 @@ this.parseVariableDeclaration = function(context) {
       kind = this.ltval,
       elem = null;
 
+  if (this.unsatisfiedLabel) {
+    if (kind === 'var')
+      this.fixupLabels(false);
+    else
+      this.err('decl.label');
+  }
+
   this.next();
   this.declMode = kind === 'var' ? 
     DECL_MODE_VAR : DECL_MODE_LET;
@@ -6388,9 +6385,9 @@ this.parseVariableDeclaration = function(context) {
 
   if (!(context & CTX_FOR)) {
     endI = this.semiI() || lastItem.end;
-    endLoc = this.semiLoc();
+    endLoc = this.semiLoc_soft();
     if (!endLoc) {
-      if (this.newLineBeforeLookAhead)
+      if (this.nl)
         endLoc =  lastItem.loc.end; 
       else  
         this.err('no.semi','var');
@@ -6456,7 +6453,7 @@ this.parseYield = function(context) {
   var startc = this.c0, startLoc = this.locBegin();
 
   this.next();
-  if (  !this.newLineBeforeLookAhead  ) {
+  if (  !this.nl  ) {
      if ( this.lttype === 'op' && this.ltraw === '*' ) {
             deleg = true;
             this.next();

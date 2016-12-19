@@ -7,7 +7,7 @@ this.parseYield = function(context) {
   var startc = this.c0, startLoc = this.locBegin();
 
   this.next();
-  if (  !this.newLineBeforeLookAhead  ) {
+  if (  !this.nl  ) {
      if ( this.lttype === 'op' && this.ltraw === '*' ) {
             deleg = true;
             this.next();

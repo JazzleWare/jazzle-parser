@@ -49,7 +49,7 @@ this.parseStatement = function ( allowNull ) {
  
   e  = this.semiI() || head.end;
   l = this.semiLoc_soft ();
-  if ( !l && !this.newLineBeforeLookAhead &&
+  if ( !l && !this.nl &&
        this.err('no.semi','expr',{head:head,e:e}) )
     return this.errorHandlerOutput;
  
@@ -264,7 +264,7 @@ this.parseContinueStatement = function () {
 
    var semiLoc = null;
 
-   if ( !this.newLineBeforeLookAhead && this.lttype === 'Identifier' ) {
+   if ( !this.nl && this.lttype === 'Identifier' ) {
        label = this.validateID(null);
        name = this.findLabel(label.name + '%');
        if (!name) this.err('continue.no.such.label',label) ;
@@ -272,7 +272,7 @@ this.parseContinueStatement = function () {
 
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
-       if ( !semiLoc && !this.newLineBeforeLookAhead &&
+       if ( !semiLoc && !this.nl &&
              this.err('no.semi','continue',startc,startLoc,c,li,col,semi,label) )
          return this.errorHandlerOutput;
 
@@ -282,7 +282,7 @@ this.parseContinueStatement = function () {
    }
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
-   if ( !semiLoc && !this.newLineBeforeLookAhead &&
+   if ( !semiLoc && !this.nl &&
          this.err('no.semi','continue',startc,startLoc,c,li,col,semi,label) )
      return this.errorHandlerOutput;
 
@@ -306,13 +306,13 @@ this.parseBreakStatement = function () {
 
    var semiLoc = null;
 
-   if ( !this.newLineBeforeLookAhead && this.lttype === 'Identifier' ) {
+   if ( !this.nl && this.lttype === 'Identifier' ) {
        label = this.validateID(null);
        name = this.findLabel(label.name + '%');
        if (!name) this.err('break.no.such.label',label);
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
-       if ( !semiLoc && !this.newLineBeforeLookAhead &&
+       if ( !semiLoc && !this.nl &&
             this.err('no.semi',startc,startLoc,c,li,col,semi,label) )
          return this.errorHandlerOutput;
 
@@ -326,7 +326,7 @@ this.parseBreakStatement = function () {
 
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
-   if ( !semiLoc && !this.newLineBeforeLookAhead &&
+   if ( !semiLoc && !this.nl &&
         this.err('no.semi',startc,startLoc,c,li,col,semi,label) )
      return this.errorHandlerOutput;
 
@@ -445,12 +445,12 @@ this.parseReturnStatement = function () {
 
   var semi = 0, semiLoc = null;
 
-  if ( !this.newLineBeforeLookAhead )
+  if ( !this.nl )
      retVal = this.parseExpr(CTX_NULLABLE);
 
   semi = this.semiI();
-  semiLoc = this.semiLoc();
-  if ( !semiLoc && !this.newLineBeforeLookAhead &&
+  semiLoc = this.semiLoc_soft();
+  if ( !semiLoc && !this.nl &&
        this.err('no.semi','return', [startc,startLoc,c,li,col,semi,retVal] ) )
     return this.errorHandlerOutput;
 
@@ -482,7 +482,7 @@ this.parseThrowStatement = function () {
   this.next();
 
   var semi = 0 , semiLoc = null ;
-  if ( this.newLineBeforeLookAhead &&
+  if ( this.nl &&
        this.err('throw.has.newline',startc,startLoc,c,li,col) )
     return this.errorHandlerOutput;
 
@@ -492,8 +492,8 @@ this.parseThrowStatement = function () {
      return this.errorHandlerOutput;
 
   semi = this.semiI();
-  semiLoc = this.semiLoc();
-  if ( !semiLoc && !this.newLineBeforeLookAhead &&
+  semiLoc = this.semiLoc_soft();
+  if ( !semiLoc && !this.nl &&
         this.err('no.semi','throw',[startc,startLoc,c,li,col,semi,retVal] ) )
     return this.errorHandlerOutput;
 
@@ -659,7 +659,7 @@ this . prseDbg = function () {
     col = this.col;
     this.next();
   } 
-  else if ( !this.newLineBeforeLookAhead &&
+  else if ( !this.nl &&
      this.err('no.semi','debugger', [startc,startLoc,c,li,col] ) )
      return this.errorHandlerOutput;
 
