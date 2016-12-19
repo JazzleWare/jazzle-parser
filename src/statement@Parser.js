@@ -265,7 +265,7 @@ this.parseContinueStatement = function () {
    var semiLoc = null;
 
    if ( !this.nl && this.lttype === 'Identifier' ) {
-       label = this.validateID(null);
+       label = this.validateID("");
        name = this.findLabel(label.name + '%');
        if (!name) this.err('continue.no.such.label',label) ;
        if (!name.loop) this.err('continue.not.a.loop.label',label);
@@ -307,7 +307,7 @@ this.parseBreakStatement = function () {
    var semiLoc = null;
 
    if ( !this.nl && this.lttype === 'Identifier' ) {
-       label = this.validateID(null);
+       label = this.validateID("");
        name = this.findLabel(label.name + '%');
        if (!name) this.err('break.no.such.label',label);
        semi = this.semiI();

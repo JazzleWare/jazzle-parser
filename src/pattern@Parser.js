@@ -2,7 +2,7 @@
 this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
-       var id = this.validateID(null);
+       var id = this.validateID("");
        this.declare(id);
        if (this.tight && arguments_or_eval(id.name))
          this.err('bind.arguments.or.eval');

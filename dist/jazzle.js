@@ -1328,7 +1328,7 @@ this.parseImport = function() {
 
   var hasMore = true, list = [], local = null;
   if ( this.lttype === 'Identifier' ) {
-    local = this.validateID(null);
+    local = this.validateID("");
     list.push({
       type: 'ImportDefaultSpecifier',
       start: local.start,
@@ -1358,7 +1358,7 @@ this.parseImport = function() {
       if (this.lttype !== 'Identifier')
         this.err('import.namespace.specifier.local.not.id',startc,startLoc,spStartc, spStartLoc );
  
-      local = this.validateID(null);
+      local = this.validateID("");
       list.push({
         type: 'ImportNamespaceSpecifier',
         start: spStartc,
@@ -1385,7 +1385,7 @@ this.parseImport = function() {
              this.err('import.specifier.local.not.id',startc,startLoc,local) )
           return this.errorHandlerOutput ;
  
-        local = this.validateID(null);
+        local = this.validateID("");
       }
       else this.validateID(local.name);
  
@@ -2937,7 +2937,7 @@ this.parseObjElem = function(name, context) {
 
 },
 function(){
-this .memberID = function() { return this.v > 5 ? this.id() : this.validateID(null) ; };
+this .memberID = function() { return this.v > 5 ? this.id() : this.validateID("") ; };
 this .memberExpr = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1);
@@ -4494,7 +4494,7 @@ function(){
 this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
-       var id = this.validateID(null);
+       var id = this.validateID("");
        this.declare(id);
        if (this.tight && arguments_or_eval(id.name))
          this.err('bind.arguments.or.eval');
@@ -5571,7 +5571,7 @@ this.parseContinueStatement = function () {
    var semiLoc = null;
 
    if ( !this.nl && this.lttype === 'Identifier' ) {
-       label = this.validateID(null);
+       label = this.validateID("");
        name = this.findLabel(label.name + '%');
        if (!name) this.err('continue.no.such.label',label) ;
        if (!name.loop) this.err('continue.not.a.loop.label',label);
@@ -5613,7 +5613,7 @@ this.parseBreakStatement = function () {
    var semiLoc = null;
 
    if ( !this.nl && this.lttype === 'Identifier' ) {
-       label = this.validateID(null);
+       label = this.validateID("");
        name = this.findLabel(label.name + '%');
        if (!name) this.err('break.no.such.label',label);
        semi = this.semiI();
@@ -6160,7 +6160,7 @@ this . parseTemplateLiteral = function() {
 },
 function(){
 this .validateID  = function (e) {
-  var n = e || this.ltval;
+  var n = e === "" ? this.ltval : e;
 
   SWITCH:
   switch (n.length) {

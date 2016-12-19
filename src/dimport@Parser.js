@@ -13,7 +13,7 @@ this.parseImport = function() {
 
   var hasMore = true, list = [], local = null;
   if ( this.lttype === 'Identifier' ) {
-    local = this.validateID(null);
+    local = this.validateID("");
     list.push({
       type: 'ImportDefaultSpecifier',
       start: local.start,
@@ -43,7 +43,7 @@ this.parseImport = function() {
       if (this.lttype !== 'Identifier')
         this.err('import.namespace.specifier.local.not.id',startc,startLoc,spStartc, spStartLoc );
  
-      local = this.validateID(null);
+      local = this.validateID("");
       list.push({
         type: 'ImportNamespaceSpecifier',
         start: spStartc,
@@ -70,7 +70,7 @@ this.parseImport = function() {
              this.err('import.specifier.local.not.id',startc,startLoc,local) )
           return this.errorHandlerOutput ;
  
-        local = this.validateID(null);
+        local = this.validateID("");
       }
       else this.validateID(local.name);
  

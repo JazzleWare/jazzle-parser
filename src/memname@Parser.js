@@ -1,4 +1,4 @@
-this .memberID = function() { return this.v > 5 ? this.id() : this.validateID(null) ; };
+this .memberID = function() { return this.v > 5 ? this.id() : this.validateID("") ; };
 this .memberExpr = function() {
   var startc = this.c - 1,
       startLoc = this.locOn(1);

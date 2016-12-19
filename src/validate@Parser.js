@@ -1,5 +1,5 @@
 this .validateID  = function (e) {
-  var n = e || this.ltval;
+  var n = e === "" ? this.ltval : e;
 
   SWITCH:
   switch (n.length) {
