@@ -18,7 +18,7 @@ this.next = function () {
 
   peek  = this.src.charCodeAt(start);
   if ( isIDHead(peek) )this.readAnIdentifierToken('');
-  else if (Num(peek))this.readNumberLiteral(peek);
+  else if (num(peek))this.readNumberLiteral(peek);
   else {
     switch (peek) {
       case CH_MIN: this.opMin(); break;
@@ -452,7 +452,7 @@ this.readDot = function() {
      if (this.src.charCodeAt(++ this.c) === CH_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
      this.err('Unexpectd ' + this.src[this.c]) ;
    }
-   else if ( Num(this.src.charCodeAt(this.c))) {
+   else if ( num(this.src.charCodeAt(this.c))) {
        this.lttype = 'Literal' ;
        this.c0  = this.c - 1;
        this.li0 = this.li;

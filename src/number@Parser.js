@@ -108,7 +108,7 @@ this . frac = function(n) {
       l = this.src,
       e = l.length ;
   if ( n === -1 || l.charCodeAt(c)=== CH_SINGLEDOT )
-     while( ++c < e && Num(l.charCodeAt (c)))  ;
+     while( ++c < e && num(l.charCodeAt (c)))  ;
 
   switch( l.charCodeAt(c) ){
       case CH_E:
@@ -119,10 +119,10 @@ this . frac = function(n) {
           case CH_ADD:
                  c++ ;
         }
-        if ( !(c < e && Num(l.charCodeAt(c))) )
+        if ( !(c < e && num(l.charCodeAt(c))) )
           this.err('num.has.no.mantissa', c, n);
 
-        do { c++;} while ( c < e && Num(l.charCodeAt( c) ));
+        do { c++;} while ( c < e && num(l.charCodeAt( c) ));
   }
 
   if ( c === this.c ) return false  ;

@@ -430,31 +430,38 @@ var DIRECTIVE_TOP = 1,
     DIRECTIVE_MODULE = DIRECTIVE_TOP,
     DIRECTIVE_SCRIPT = DIRECTIVE_MODULE;
 ;
-var Num,num = Num = function (c) { return (c >= CH_0 && c <= CH_9)};
-function isIDHead(c) {
-  return (c <= CH_z && c >= CH_a) ||
-          c === CH_$ ||
-         (c <= CH_Z && c >= CH_A) ||
-          c === CH_UNDERLINE ||
-         (IDS_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN)));
-};
-
-function isIDBody (c) {
-  return (c <= CH_z && c >= CH_a) ||
-          c === CH_$ ||
-         (c <= CH_Z && c >= CH_A) ||
-          c === CH_UNDERLINE ||
-         (c <= CH_9 && c >= CH_0) ||
-         (IDC_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN)));
-};
-
-function isHex(e) {
-    return ( e >= CH_a && e <= CH_f ) ||
-           ( e >= CH_0 && e <= CH_9 ) ||
-           ( e >= CH_A && e <= CH_F );
+function num(c) {
+  return (c >= CH_0 && c <= CH_9);
 }
 
+function isIDHead(c) {
+  return (
+    (c <= CH_z && c >= CH_a) ||
+    (c <= CH_Z && c >= CH_A) ||
+    c === CH_UNDERLINE ||
+    c === CH_$ ||
+    (IDS_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN)))
+  );
+}
 
+function isIDBody (c) {
+  return (
+    (c <= CH_z && c >= CH_a) ||
+    (c <= CH_Z && c >= CH_A) ||
+    (c <= CH_9 && c >= CH_0) ||
+    c === CH_UNDERLINE ||
+    c === CH_$ ||
+    (IDC_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN))) 
+  );
+}
+
+function isHex(e) {
+  return (
+    (e >= CH_a && e <= CH_f) ||
+    (e >= CH_0 && e <= CH_9) ||
+    (e >= CH_A && e <= CH_F)
+  );
+}
 ;
 var ERR_NONE_YET = 0,
     // [(a)] = 12;
@@ -3616,7 +3623,7 @@ this.next = function () {
 
   peek  = this.src.charCodeAt(start);
   if ( isIDHead(peek) )this.readAnIdentifierToken('');
-  else if (Num(peek))this.readNumberLiteral(peek);
+  else if (num(peek))this.readNumberLiteral(peek);
   else {
     switch (peek) {
       case CH_MIN: this.opMin(); break;
@@ -4050,7 +4057,7 @@ this.readDot = function() {
      if (this.src.charCodeAt(++ this.c) === CH_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
      this.err('Unexpectd ' + this.src[this.c]) ;
    }
-   else if ( Num(this.src.charCodeAt(this.c))) {
+   else if ( num(this.src.charCodeAt(this.c))) {
        this.lttype = 'Literal' ;
        this.c0  = this.c - 1;
        this.li0 = this.li;
@@ -4455,7 +4462,7 @@ this . frac = function(n) {
       l = this.src,
       e = l.length ;
   if ( n === -1 || l.charCodeAt(c)=== CH_SINGLEDOT )
-     while( ++c < e && Num(l.charCodeAt (c)))  ;
+     while( ++c < e && num(l.charCodeAt (c)))  ;
 
   switch( l.charCodeAt(c) ){
       case CH_E:
@@ -4466,10 +4473,10 @@ this . frac = function(n) {
           case CH_ADD:
                  c++ ;
         }
-        if ( !(c < e && Num(l.charCodeAt(c))) )
+        if ( !(c < e && num(l.charCodeAt(c))) )
           this.err('num.has.no.mantissa', c, n);
 
-        do { c++;} while ( c < e && Num(l.charCodeAt( c) ));
+        do { c++;} while ( c < e && num(l.charCodeAt( c) ));
   }
 
   if ( c === this.c ) return false  ;
