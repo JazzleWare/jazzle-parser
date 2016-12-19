@@ -47,20 +47,29 @@ function readFile(filePath) {
 var SOURCES_ROOT = './bench-sources';
 var sources = {};
 
-var files = fs .readdirSync ( SOURCES_ROOT );
+var files = null, e = 0;
 
-var e = 0;
-
-while ( e < files.length ) {
-   if ( !fs.statSync (SOURCES_ROOT + '/' + files[e]).isDirectory() )  { 
-     sources[files[e]] = readFile(SOURCES_ROOT+ '/' + files[e]);
-     console.log( 'LOAD', files[e] );
-   }
-
-   e++ ;
+if (process.argv.length-1 <= 2) {
+  files =  fs .readdirSync ( SOURCES_ROOT );
+//sources['lube'] = readFile( './dist/lube.js' );
 }
-  
-sources['lube'] = readFile( './dist/lube.js' );
+else {
+  files = []; e = 2;
+  SOURCES_ROOT = ".";
+  while (++e < process.argv.length)
+    files.push(process.argv[e]);
+  console.log(files);
+}
+
+e = 0;
+while ( e < files.length ) {
+  if ( !fs.statSync (SOURCES_ROOT + '/' + files[e]).isDirectory() )  { 
+    sources[files[e]] = readFile(SOURCES_ROOT+ '/' + files[e]);
+    console.log( 'LOAD', files[e] );
+  }
+
+  e++ ;
+}
 
 var Benchmark = require( 'benchmark' ).Benchmark ;
 var parserName, sourceName;

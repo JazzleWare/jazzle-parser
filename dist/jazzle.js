@@ -5162,6 +5162,7 @@ this.exitScope = function() {
 };
 
 this.declare = function(id) {
+   return;
    ASSERT.call(this, this.declMode !== DECL_NONE, 'Unknown declMode');
    if (this.declMode & DECL_MODE_EITHER) {
      this.declMode |= this.scope.isConcrete() ?
