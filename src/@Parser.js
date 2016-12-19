@@ -42,7 +42,7 @@ var Parser = function (src, isModule) {
   this.scope = null;
   this.directive = DIRECTIVE_NONE;
   
-  this.declMode = DECL_MODE_NONE;
+  this.declMode = DECL_NONE;
  
   // TODO:eliminate
   this.pendingExprHead = null;

@@ -579,7 +579,7 @@ this. parseCatchClause = function () {
    if (this.lttype === 'op' && this.ltraw === '=')
      this.err('catch.param.has.default.val');
 
-   this.declMode = DECL_MODE_NONE;
+   this.declMode = DECL_NONE;
    if (catParam === null)
      this.err('catch.has.no.param');
 

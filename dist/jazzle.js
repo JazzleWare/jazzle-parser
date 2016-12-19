@@ -91,7 +91,7 @@ var Parser = function (src, isModule) {
   this.scope = null;
   this.directive = DIRECTIVE_NONE;
   
-  this.declMode = DECL_MODE_NONE;
+  this.declMode = DECL_NONE;
  
   // TODO:eliminate
   this.pendingExprHead = null;
@@ -132,15 +132,15 @@ function Scope(parent, type) {
 
 Scope.createFunc = function(parent, decl) {
   var scope = new Scope(parent, decl ?
-       SCOPE_TYPE_FUNCTION_DECLARATION :
-       SCOPE_TYPE_FUNCTION_EXPRESSION );
+       ST_FN_STMT :
+       ST_FN_EXPR );
   return scope;
 };
 
 Scope.createLexical = function(parent, loop) {
    return new Scope(parent, !loop ?
-        SCOPE_TYPE_LEXICAL_SIMPLE :
-        SCOPE_TYPE_LEXICAL_LOOP);
+        ST_LEXICAL :
+        ST_LEXICAL|ST_LOOP);
 };
 ;
 function Template(idxList) {
@@ -317,13 +317,25 @@ var HAS = {}.hasOwnProperty;
 
 function ASSERT(cond, message) { if (!cond) throw new Error(message); }
 
-var SCOPE_TYPE_FUNCTION_EXPRESSION = 1;
-var SCOPE_TYPE_FUNCTION_DECLARATION = SCOPE_TYPE_FUNCTION_EXPRESSION|2;
-var SCOPE_TYPE_LEXICAL_SIMPLE = 8;
-var SCOPE_TYPE_LEXICAL_LOOP = SCOPE_TYPE_LEXICAL_SIMPLE|16;
-var SCOPE_TYPE_SCRIPT = 32;
-var SCOPE_TYPE_CATCH = 128;
-var SCOPE_TYPE_GLOBAL = 256;
+// TODO: ST_STRICT and ST_ALLOW_FUNC_DECL
+var ST_FN_EXPR = 1,
+    ST_FN_STMT = ST_FN_EXPR << 1,
+    ST_LEXICAL = ST_FN_STMT << 1,
+    ST_LOOP = ST_LEXICAL << 1,
+    ST_MODULE = ST_LOOP << 1,
+    ST_SCRIPT = ST_MODULE << 1,
+    ST_GLOBAL = ST_SCRIPT << 1,
+    
+    // TODO: only used to determine whether a scope can have a catch var
+    ST_CATCH = ST_GLOBAL << 1,
+
+    ST_CLASS_EXPR = ST_CATCH << 1,
+    ST_CLASS_STMT = ST_CLASS_EXPR << 1,
+
+    ST_FN = ST_FN_EXPR|ST_FN_STMT,
+    ST_TOP = ST_SCRIPT|ST_MODULE,
+    ST_CONCRETE = ST_TOP|ST_FN,
+    ST_HOISTED = ST_FN_STMT|ST_CLASS_STMT;
 
 var CTX_NONE = 0,
     CTX_PARAM = 1,
@@ -389,21 +401,23 @@ var ARGLEN_GET = 0,
     ARGLEN_ANY = -1;
 
 var DECL_MODE_VAR = 1,
-    DECL_MODE_LET = 2,
-    DECL_MODE_NONE = 0,
-    DECL_MODE_FUNCTION_PARAMS = 4|DECL_MODE_VAR,
-    DECL_MODE_CATCH_PARAMS = 8,
-    DECL_MODE_FUNCTION_DECL = 32|DECL_MODE_VAR,
-    DECL_MODE_FUNCTION_EXPR = 128|DECL_MODE_LET,
-    DECL_MODE_CLASS_DECL = 256|DECL_MODE_VAR,
-    DECL_MODE_CLASS_EXPR = 512|DECL_MODE_LET;
+    DECL_MODE_LET = DECL_MODE_VAR << 1,
+    DECL_MODE_FUNC_STMT = DECL_MODE_LET << 1,
+    DECL_DUPE = DECL_MODE_FUNC_STMT << 1,
+    DECL_MODE_FUNC_PARAMS = DECL_DUPE << 1,
+    DECL_MODE_FUNC_EXPR = DECL_MODE_FUNC_PARAMS << 1,
+    DECL_MODE_CATCH_PARAMS = DECL_MODE_FUNC_EXPR << 1,
+    DECL_MODE_CLASS_STMT = DECL_MODE_CATCH_PARAMS << 1,
+    DECL_MODE_CLASS_EXPR = DECL_MODE_FUNC_EXPR,
+    DECL_MODE_VAR_LIKE = DECL_MODE_VAR|DECL_MODE_FUNC_PARAMS,
+    DECL_MODE_LET_LIKE = DECL_MODE_LET|DECL_MODE_CATCH_PARAMS,
+    DECL_MODE_EITHER = DECL_MODE_CLASS_STMT|DECL_MODE_FUNC_STMT,
+    DECL_MODE_FCE = DECL_MODE_FUNC_EXPR|DECL_MODE_CLASS_EXPR;
 
+var DECL_NONE = 0;
 var DECL_NOT_FOUND = 
-  DECL_MODE_NONE;
+  DECL_NONE;
 
-var DECL_BASE = DECL_MODE_VAR|DECL_MODE_LET;
-
-var DECL_DUPE = 64;
 
 var VDT_VOID = 1;
 var VDT_TYPEOF = 2;
@@ -817,7 +831,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   var tight = this.tight;
 
   this.enterFuncScope(false);
-  this.declMode = DECL_MODE_FUNCTION_PARAMS;
+  this.declMode = DECL_MODE_FUNC_PARAMS;
   this.enterComplex();
 
   switch ( arg.type ) {
@@ -955,7 +969,7 @@ this. parseClass = function(context) {
     if (!this.canDeclareClassInScope())
       this.err('class.decl.not.in.block', startc, startLoc);
     if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
-      this.declMode = DECL_MODE_CLASS_DECL;
+      this.declMode = DECL_MODE_CLASS_STMT;
       name = this.parsePattern();
     }
     else if (!(context & CTX_DEFAULT))
@@ -2272,7 +2286,7 @@ this.parseFunc = function(context, flags) {
         this.fixupLabels(false);
       }
       if (this.lttype === 'Identifier') {
-        this.declMode = DECL_MODE_FUNCTION_DECL;
+        this.declMode = DECL_MODE_FUNC_STMT;
         cfn = this.parsePattern();
       }
       else if (!(context & CTX_DEFAULT))
@@ -2287,7 +2301,7 @@ this.parseFunc = function(context, flags) {
       if (this.lttype === 'Identifier') {
         this.enterLexicalScope(false);
         this.scope.synth = true;
-        this.declMode = DECL_MODE_FUNCTION_EXPR;
+        this.declMode = DECL_MODE_FUNC_EXPR;
         cfn = this.parsePattern();
       }
     }
@@ -2296,7 +2310,7 @@ this.parseFunc = function(context, flags) {
     isGen = true;
 
   this.enterFuncScope(isStmt); 
-  this.declMode = DECL_MODE_FUNCTION_PARAMS;
+  this.declMode = DECL_MODE_FUNC_PARAMS;
 
   this.scopeFlags = SCOPE_FLAG_ARG_LIST;
   if (isGen)
@@ -4915,7 +4929,7 @@ this.parseProgram = function () {
   var globalScope = null;
 
  
-  this.scope = new Scope(globalScope, SCOPE_TYPE_SCRIPT);
+  this.scope = new Scope(globalScope, ST_SCRIPT);
   this.scope.parser = this;
   this.next();
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
@@ -5143,7 +5157,7 @@ this.enterFuncScope = function(decl) { this.scope = this.scope.spawnFunc(decl); 
 
 // TODO: it is no longer needed
 this.enterComplex = function() {
-   if (this.declMode === DECL_MODE_FUNCTION_PARAMS ||
+   if (this.declMode === DECL_MODE_FUNC_PARAMS ||
        this.declMode & DECL_MODE_CATCH_PARAMS)
      this.makeComplex();
 };
@@ -5164,8 +5178,15 @@ this.exitScope = function() {
 };
 
 this.declare = function(id) {
-   ASSERT.call(this, this.declMode !== DECL_MODE_NONE, 'Unknown declMode');
-   if (this.declMode === DECL_MODE_FUNCTION_PARAMS) {
+   ASSERT.call(this, this.declMode !== DECL_NONE, 'Unknown declMode');
+   if (this.declMode & DECL_MODE_EITHER) {
+     this.declMode |= this.scope.isConcrete() ?
+       DECL_MODE_VAR : DECL_MODE_LET;
+   }
+   else if (this.declMode & DECL_MODE_FCE)
+     this.declMode = DECL_MODE_FCE;
+
+   if (this.declMode === DECL_MODE_FUNC_PARAMS) {
      if (!this.addParam(id)) // if it was not added, i.e., it is a duplicate
        return;
    }
@@ -5189,7 +5210,7 @@ this.makeComplex = function() {
     return;
   }
 
-  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNC_PARAMS);
   var scope = this.scope;
   if (scope.mustNotHaveAnyDupeParams()) return;
   for (var a in scope.definedNames) {
@@ -5201,7 +5222,7 @@ this.makeComplex = function() {
 };
 
 this.addParam = function(id) {
-  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNC_PARAMS);
   var name = id.name + '%';
   var scope = this.scope;
   if ( HAS.call(scope.definedNames, name) ) {
@@ -5887,7 +5908,7 @@ this. parseCatchClause = function () {
    if (this.lttype === 'op' && this.ltraw === '=')
      this.err('catch.param.has.default.val');
 
-   this.declMode = DECL_MODE_NONE;
+   this.declMode = DECL_NONE;
    if (catParam === null)
      this.err('catch.has.no.param');
 
@@ -6492,18 +6513,17 @@ this.hoistIdToScope = function(id, targetScope, decl) {
    
 var declare = {};
 
-declare[DECL_MODE_FUNCTION_PARAMS] =
-declare[DECL_MODE_FUNCTION_DECL] =
-declare[DECL_MODE_CLASS_DECL] =
+declare[DECL_MODE_CLASS_STMT|DECL_MODE_VAR] = 
+declare[DECL_MODE_FUNC_PARAMS] =
+declare[DECL_MODE_FUNC_STMT|DECL_MODE_VAR] =
 declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
 
    this.hoistIdToScope(id, func, declType );
 };
 
-declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
-declare[DECL_MODE_FUNCTION_EXPR] =
-declare[DECL_MODE_CLASS_EXPR] =
+declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] = declare[DECL_MODE_FCE] =
+declare[DECL_MODE_FUNC_STMT|DECL_MODE_LET] = declare[DECL_MODE_CLASS_STMT|DECL_MODE_LET] =
 declare[DECL_MODE_LET] = function(id, declType) {
    this.insertDecl(id, declType);
 };
@@ -6528,12 +6548,12 @@ this.insertDecl = function(id, decl) {
 
     // if a var name in a catch scope has the same name as a catch var,
     // it will not get hoisted any further
-    if ((declType & DECL_MODE_VAR) && (existingType & DECL_MODE_CATCH_PARAMS))
+    if ((declType & DECL_MODE_VAR_LIKE) && (existingType & DECL_MODE_CATCH_PARAMS))
        return false;
 
     // if a var decl is overriding a var decl of the same name, no matter what scope we are in,
     // it's not a problem.
-    if ((declType & DECL_MODE_VAR) && (existingType & DECL_MODE_VAR))
+    if ((declType & DECL_MODE_VAR_LIKE) && (existingType & DECL_MODE_VAR_LIKE))
       return true; 
      
     this.err('exists.in.current', { id: id });
@@ -6560,19 +6580,15 @@ this.finish = function() {
 };
     
 
-this.isLoop = function() { return this.type & SCOPE_TYPE_LEXICAL_LOOP; };
-this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
-this.isFunc = function() { return this.type & SCOPE_TYPE_FUNCTION_EXPRESSION; };
-this.isDeclaration = function() { return this.type === SCOPE_TYPE_FUNCTION_DECLARATION; };
-this.isCatch = function() { return (this.type & SCOPE_TYPE_CATCH) === SCOPE_TYPE_CATCH; };
-this.isGlobal = function() { return this.type === SCOPE_TYPE_GLOBAL; };
+this.isLoop = function() { return this.type & ST_LOOP; };
+this.isLexical = function() { return this.type & ST_LEXICAL; };
+this.isFunc = function() { return this.type & ST_FN; };
+this.isHoisted = function() { return this.type & ST_HOISTED; };
+this.isCatch = function() { return this.type & ST_CATCH; };
+this.isGlobal = function() { return this.type & ST_GLOBAL; };
 
 // a scope is concrete if a 'var'-declaration gets hoisted to it
-this.isConcrete = function() {
-  return this.type === SCOPE_TYPE_SCRIPT ||
-         this.type === SCOPE_TYPE_GLOBAL ||
-         this.isFunc();
-};
+this.isConcrete = function() { return this.type & ST_CONCRETE; };
 
 
 this.err = function(errType, errParams) {
@@ -6587,8 +6603,8 @@ this.spawnFunc = function(fundecl) {
   return new Scope(
     this,
     fundecl ?
-      SCOPE_TYPE_FUNCTION_DECLARATION :
-      SCOPE_TYPE_FUNCTION_EXPRESSION
+      ST_FN_STMT :
+      ST_FN_EXPR
   );
 };
 
@@ -6596,14 +6612,14 @@ this.spawnLexical = function(loop) {
   return new Scope(
     this,
     !loop ?
-     SCOPE_TYPE_LEXICAL_SIMPLE :
-     SCOPE_TYPE_LEXICAL_LOOP );
+     ST_LEXICAL :
+     ST_LEXICAL|ST_LOOP);
 };
 
 this.spawnCatch = function() {
   return new Scope(
     this,
-    SCOPE_TYPE_CATCH );
+    ST_LEXICAL|ST_CATCH);
 };
 
 this.mustNotHaveAnyDupeParams = function() {

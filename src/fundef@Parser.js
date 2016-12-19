@@ -36,7 +36,7 @@ this.parseFunc = function(context, flags) {
         this.fixupLabels(false);
       }
       if (this.lttype === 'Identifier') {
-        this.declMode = DECL_MODE_FUNCTION_DECL;
+        this.declMode = DECL_MODE_FUNC_STMT;
         cfn = this.parsePattern();
       }
       else if (!(context & CTX_DEFAULT))
@@ -51,7 +51,7 @@ this.parseFunc = function(context, flags) {
       if (this.lttype === 'Identifier') {
         this.enterLexicalScope(false);
         this.scope.synth = true;
-        this.declMode = DECL_MODE_FUNCTION_EXPR;
+        this.declMode = DECL_MODE_FUNC_EXPR;
         cfn = this.parsePattern();
       }
     }
@@ -60,7 +60,7 @@ this.parseFunc = function(context, flags) {
     isGen = true;
 
   this.enterFuncScope(isStmt); 
-  this.declMode = DECL_MODE_FUNCTION_PARAMS;
+  this.declMode = DECL_MODE_FUNC_PARAMS;
 
   this.scopeFlags = SCOPE_FLAG_ARG_LIST;
   if (isGen)

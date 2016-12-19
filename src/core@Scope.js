@@ -64,7 +64,9 @@ this.hoistIdToScope = function(id, targetScope, decl) {
    
 var declare = {};
 
-declare[DECL_MODE_FUNCTION_PARAMS] =
+declare[DECL_MODE_CLASS_STMT|DECL_MODE_VAR] = 
+declare[DECL_MODE_FUNC_PARAMS] =
+declare[DECL_MODE_FUNC_STMT|DECL_MODE_VAR] =
 declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
    // #if V
@@ -77,7 +79,8 @@ declare[DECL_MODE_VAR] = function(id, declType) {
    // #end
 };
 
-declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
+declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] = declare[DECL_MODE_FCE] =
+declare[DECL_MODE_FUNC_STMT|DECL_MODE_LET] = declare[DECL_MODE_CLASS_STMT|DECL_MODE_LET] =
 declare[DECL_MODE_LET] = function(id, declType) {
    // #if V
    if (declType & DECL_MODE_CATCH_PARAMS)
@@ -243,12 +246,12 @@ this.declSynth = function(name) {
 this.isLoop = function() { return this.type & ST_LOOP; };
 this.isLexical = function() { return this.type & ST_LEXICAL; };
 this.isFunc = function() { return this.type & ST_FN; };
-this.isHoisted = function() { return this.type === ST_HOISTED; };
+this.isHoisted = function() { return this.type & ST_HOISTED; };
 this.isCatch = function() { return this.type & ST_CATCH; };
-this.isGlobal = function() { return this.type === ST_GLOBAL; };
+this.isGlobal = function() { return this.type & ST_GLOBAL; };
 
 // a scope is concrete if a 'var'-declaration gets hoisted to it
-this.isConcrete = function() { return this.type === ST_CONCRETE; };
+this.isConcrete = function() { return this.type & ST_CONCRETE; };
 
 // #if V
 this.addChildLexicalDeclaration = function(decl) {

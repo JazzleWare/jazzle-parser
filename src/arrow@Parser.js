@@ -99,7 +99,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   var tight = this.tight;
 
   this.enterFuncScope(false);
-  this.declMode = DECL_MODE_FUNCTION_PARAMS;
+  this.declMode = DECL_MODE_FUNC_PARAMS;
   this.enterComplex();
 
   switch ( arg.type ) {

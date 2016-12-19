@@ -2,7 +2,7 @@ this.enterFuncScope = function(decl) { this.scope = this.scope.spawnFunc(decl); 
 
 // TODO: it is no longer needed
 this.enterComplex = function() {
-   if (this.declMode === DECL_MODE_FUNCTION_PARAMS ||
+   if (this.declMode === DECL_MODE_FUNC_PARAMS ||
        this.declMode & DECL_MODE_CATCH_PARAMS)
      this.makeComplex();
 };
@@ -23,8 +23,15 @@ this.exitScope = function() {
 };
 
 this.declare = function(id) {
-   ASSERT.call(this, this.declMode !== DECL_MODE_NONE, 'Unknown declMode');
-   if (this.declMode === DECL_MODE_FUNCTION_PARAMS) {
+   ASSERT.call(this, this.declMode !== DECL_NONE, 'Unknown declMode');
+   if (this.declMode & DECL_MODE_EITHER) {
+     this.declMode |= this.scope.isConcrete() ?
+       DECL_MODE_VAR : DECL_MODE_LET;
+   }
+   else if (this.declMode & DECL_MODE_FCE)
+     this.declMode = DECL_MODE_FCE;
+
+   if (this.declMode === DECL_MODE_FUNC_PARAMS) {
      if (!this.addParam(id)) // if it was not added, i.e., it is a duplicate
        return;
    }
@@ -48,7 +55,7 @@ this.makeComplex = function() {
     return;
   }
 
-  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNC_PARAMS);
   var scope = this.scope;
   if (scope.mustNotHaveAnyDupeParams()) return;
   for (var a in scope.definedNames) {
@@ -60,7 +67,7 @@ this.makeComplex = function() {
 };
 
 this.addParam = function(id) {
-  ASSERT.call(this, this.declMode === DECL_MODE_FUNCTION_PARAMS);
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNC_PARAMS);
   var name = id.name + '%';
   var scope = this.scope;
   if ( HAS.call(scope.definedNames, name) ) {

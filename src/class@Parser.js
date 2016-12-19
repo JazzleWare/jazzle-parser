@@ -13,7 +13,7 @@ this. parseClass = function(context) {
     if (!this.canDeclareClassInScope())
       this.err('class.decl.not.in.block', startc, startLoc);
     if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
-      this.declMode = DECL_MODE_CLASS_DECL;
+      this.declMode = DECL_MODE_CLASS_STMT;
       name = this.parsePattern();
     }
     else if (!(context & CTX_DEFAULT))
