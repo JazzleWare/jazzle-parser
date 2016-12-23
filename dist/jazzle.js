@@ -3651,20 +3651,19 @@ this.next = function () {
       case CH_LESS_THAN: this.opLess() ;   break ;
       case CH_GREATER_THAN: this.opGrea() ;   break ;
       case CH_MUL:
-         this.ltraw = '*';
+         this.prec = PREC_MUL;
          this.lttype = 'op';
+         this.ltraw = '*';
          c++ ;
-         if ( l.charCodeAt(c+1) === peek) {
+         if ( l.charCodeAt(c) === peek) {
            this.ltraw = '**';
+           this.prec = PREC_EX;
            c++ ;
          }
          if (l.charCodeAt(c) === CH_EQUALITY_SIGN) {
            c++;
            this. prec = PREC_OP_ASSIG;
            this.ltraw += '=';
-         }
-         else {
-           this. prec = PREC_MUL;
          }
          this.c=c;
          break ;
@@ -4346,6 +4345,8 @@ this.parseNonSeqExpr = function (prec, context) {
       break;
     if (currentPrec === prec && !isRassoc(prec))
       break;
+    if (prec === PREC_U && currentPrec === PREC_EX)
+      this.err('unary.before.an.exponentiation');
 
     var o = this.ltraw;
     this.next();

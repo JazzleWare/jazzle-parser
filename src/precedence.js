@@ -32,10 +32,10 @@ var PREC_SH = binPrec['>>'] =
               binPrec['<<'] = PREC_COMP + 2;
 var PREC_ADD_MIN = binPrec['+'] =
                    binPrec['-'] = PREC_SH + 2;
+var PREC_EX = binPrec['**'] = PREC_ADD_MIN + 2;
 var PREC_MUL = binPrec['%'] =
-               binPrec['**'] =
                binPrec['*'] =
-               binPrec['/'] = PREC_ADD_MIN + 2;
+               binPrec['/'] = PREC_EX + 2;
 // #else
 var PREC_BOOL_OR = PREC_COND + 2;
 var PREC_BOOL_AND  = PREC_BOOL_OR + 2 ;
