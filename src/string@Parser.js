@@ -7,6 +7,18 @@ this.readStrLiteral = function (start) {
       v_start = c,
       startC =  c-1;
 
+  if (this.nl &&
+     (this.directive & DIR_STRICT_IF_SINGLE)) {
+    // TODO: makeStrict for all
+    if (this.directive & DIR_FUNC)
+      this.makeStrict();
+    else
+      this.scope.strict = true;
+
+    this.tight = true;
+    this.directive = DIR_BECAME_STRICT;
+  }
+
   while (c < e && (i = l.charCodeAt(c)) !== start) {
     switch ( i ) {
      case CH_BACK_SLASH :

@@ -56,7 +56,7 @@ this.parseFuncBody = function(context) {
   var startc= this.c - 1, startLoc = this.locOn(1);
   this.next() ;
 
-  this.directive = DIRECTIVE_FUNC;
+  this.directive = DIR_FUNC;
   var list = this.blck();
 
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,

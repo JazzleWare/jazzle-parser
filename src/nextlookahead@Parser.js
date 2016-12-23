@@ -9,7 +9,7 @@ this.next = function () {
       l = this.src,
       e = l.length,
       r = 0,
-      peek,
+      peek = -1,
       start =  c;
 
   this.c0 = c;
@@ -17,9 +17,15 @@ this.next = function () {
   this.li0 = this.li;
 
   peek  = this.src.charCodeAt(start);
-  if ( isIDHead(peek) )this.readAnIdentifierToken('');
+  if ( isIDHead(peek) ) {
+    if (this.directive !== DIR_NONE)
+      this.directive = DIR_NONE;
+
+    this.readAnIdentifierToken('');
+  }
   else if (num(peek))this.readNumberLiteral(peek);
   else {
+
     switch (peek) {
       case CH_MIN: this.opMin(); break;
       case CH_ADD: this.opAdd() ; break;
@@ -184,6 +190,9 @@ this.next = function () {
         else 
           this.readMisc();
     }
+
+    if (this.directive !== DIR_NONE)
+      this.directive = DIR_NONE;
   }
 
   this.col += ( this.c - start );

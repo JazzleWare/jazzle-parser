@@ -3,6 +3,16 @@ this.readNumberLiteral = function (peek) {
   var b = 10 , val = 0;
   this.lttype  = 'Literal' ;
 
+  if (this.nl &&
+     (this.directive & DIR_STRICT_IF_SINGLE)) {
+    if (this.directive & DIR_FUNC)
+      this.makeStrict();
+    else
+      this.scope.strict = true;
+    this.tight = true;
+    this.directive = DIR_BECAME_STRICT;
+  }
+
   if (peek === CH_0) { // if our num lit starts with a 0
     b = src.charCodeAt(++c);
     switch (b) { // check out what the next is

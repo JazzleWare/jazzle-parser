@@ -1,7 +1,5 @@
 this.parseStatement = function ( allowNull ) {
   var head = null, l, e , directive = this.directive ;
-  this.directive = DIRECTIVE_NONE;
-
   switch (this.lttype) {
     case '{': return this.parseBlckStatement();
     case ';': return this.parseEmptyStatement() ;
@@ -37,16 +35,17 @@ this.parseStatement = function ( allowNull ) {
     return this.parseLabeledStatement(head, allowNull);
 
   this.fixupLabels(false) ;
-  if ( directive &&
-       head.type === 'Literal' &&
-       typeof head.value === STRING_TYPE )
-     switch ( this.src.substring(head.start, head.end ) ) {
-       case "'use strict'":
-       case '"use strict"':
-          if (directive & DIRECTIVE_FUNC) this.makeStrict();
-          else this.tight = true;
-     }
- 
+  if ((directive & DIR_STRICT_IF_SINGLE) &&
+     this.directive !== DIR_BECAME_STRICT &&
+     head.type === 'Literal') {
+    if (directive & DIR_FUNC)
+      this.makeStrict();
+    else
+      this.scope.strict = true;
+
+    this.tight = true;
+  }
+
   e  = this.semiI() || head.end;
   l = this.semiLoc_soft ();
   if ( !l && !this.nl &&
@@ -673,8 +672,23 @@ this . prseDbg = function () {
 };
 
 this.blck = function () { // blck ([]stmt)
-  var stmts = [], stmt;
-  while (stmt = this.parseStatement(true)) stmts.push(stmt);
+  var isFunc = false, stmt = null, stmts = [];
+  if (this.directive !== DIR_NONE) {
+    if (this.lttype === 'Literal') {
+      var rv = this.src.substring(this.c0+1, this.c-1);
+      if (rv === 'use strict') {
+        this.directive |= DIR_STRICT_IF_SINGLE;
+        isFunc = this.directive & DIR_FUNC;
+        stmt = this.parseStatement(true);
+        stmts.push(stmt);
+      }
+    }
+    this.directive = DIR_NONE;
+  }
+
+  while (stmt = this.parseStatement(true))
+    stmts.push(stmt);
+
   return (stmts);
 };
 

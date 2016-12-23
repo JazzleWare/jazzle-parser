@@ -89,7 +89,7 @@ var Parser = function (src, isModule) {
   this.first__proto__ = false;
 
   this.scope = null;
-  this.directive = DIRECTIVE_NONE;
+  this.directive = DIR_NONE;
   
   this.declMode = DECL_NONE;
  
@@ -424,11 +424,15 @@ var VDT_TYPEOF = 2;
 var VDT_NONE = 0;
 var VDT_DELETE = 4;
 
-var DIRECTIVE_TOP = 1,
-    DIRECTIVE_FUNC = 2,
-    DIRECTIVE_NONE = 0,
-    DIRECTIVE_MODULE = DIRECTIVE_TOP,
-    DIRECTIVE_SCRIPT = DIRECTIVE_MODULE;
+var DIR_MODULE = 1,
+    DIR_SCRIPT = DIR_MODULE << 1,
+    DIR_NONE = 0,
+    DIR_TOP = DIR_MODULE|DIR_SCRIPT,
+    DIR_FUNC = DIR_SCRIPT << 2,
+    DIR_BECAME_STRICT = DIR_FUNC << 2,
+    DIR_STRICT_IF_SINGLE = DIR_BECAME_STRICT << 1;
+
+
 ;
 function num(c) {
   return (c >= CH_0 && c <= CH_9);
@@ -2185,7 +2189,7 @@ this.parseFuncBody = function(context) {
   var startc= this.c - 1, startLoc = this.locOn(1);
   this.next() ;
 
-  this.directive = DIRECTIVE_FUNC;
+  this.directive = DIR_FUNC;
   var list = this.blck();
 
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
@@ -3619,7 +3623,7 @@ this.next = function () {
       l = this.src,
       e = l.length,
       r = 0,
-      peek,
+      peek = -1,
       start =  c;
 
   this.c0 = c;
@@ -3627,9 +3631,15 @@ this.next = function () {
   this.li0 = this.li;
 
   peek  = this.src.charCodeAt(start);
-  if ( isIDHead(peek) )this.readAnIdentifierToken('');
+  if ( isIDHead(peek) ) {
+    if (this.directive !== DIR_NONE)
+      this.directive = DIR_NONE;
+
+    this.readAnIdentifierToken('');
+  }
   else if (num(peek))this.readNumberLiteral(peek);
   else {
+
     switch (peek) {
       case CH_MIN: this.opMin(); break;
       case CH_ADD: this.opAdd() ; break;
@@ -3794,6 +3804,9 @@ this.next = function () {
         else 
           this.readMisc();
     }
+
+    if (this.directive !== DIR_NONE)
+      this.directive = DIR_NONE;
   }
 
   this.col += ( this.c - start );
@@ -4362,6 +4375,16 @@ this.readNumberLiteral = function (peek) {
   var b = 10 , val = 0;
   this.lttype  = 'Literal' ;
 
+  if (this.nl &&
+     (this.directive & DIR_STRICT_IF_SINGLE)) {
+    if (this.directive & DIR_FUNC)
+      this.makeStrict();
+    else
+      this.scope.strict = true;
+    this.tight = true;
+    this.directive = DIR_BECAME_STRICT;
+  }
+
   if (peek === CH_0) { // if our num lit starts with a 0
     b = src.charCodeAt(++c);
     switch (b) { // check out what the next is
@@ -4923,7 +4946,7 @@ this.parseProgram = function () {
   this.next();
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
-  this.directive = DIRECTIVE_FUNC; 
+  this.directive = !this.isScipt ? DIR_SCRIPT : DIR_MODULE; 
   var list = this.blck(); 
  
   var endLoc = null;
@@ -5311,8 +5334,6 @@ this.semiI = function() {
 function(){
 this.parseStatement = function ( allowNull ) {
   var head = null, l, e , directive = this.directive ;
-  this.directive = DIRECTIVE_NONE;
-
   switch (this.lttype) {
     case '{': return this.parseBlckStatement();
     case ';': return this.parseEmptyStatement() ;
@@ -5348,16 +5369,17 @@ this.parseStatement = function ( allowNull ) {
     return this.parseLabeledStatement(head, allowNull);
 
   this.fixupLabels(false) ;
-  if ( directive &&
-       head.type === 'Literal' &&
-       typeof head.value === STRING_TYPE )
-     switch ( this.src.substring(head.start, head.end ) ) {
-       case "'use strict'":
-       case '"use strict"':
-          if (directive & DIRECTIVE_FUNC) this.makeStrict();
-          else this.tight = true;
-     }
- 
+  if ((directive & DIR_STRICT_IF_SINGLE) &&
+     this.directive !== DIR_BECAME_STRICT &&
+     head.type === 'Literal') {
+    if (directive & DIR_FUNC)
+      this.makeStrict();
+    else
+      this.scope.strict = true;
+
+    this.tight = true;
+  }
+
   e  = this.semiI() || head.end;
   l = this.semiLoc_soft ();
   if ( !l && !this.nl &&
@@ -5984,8 +6006,23 @@ this . prseDbg = function () {
 };
 
 this.blck = function () { // blck ([]stmt)
-  var stmts = [], stmt;
-  while (stmt = this.parseStatement(true)) stmts.push(stmt);
+  var isFunc = false, stmt = null, stmts = [];
+  if (this.directive !== DIR_NONE) {
+    if (this.lttype === 'Literal') {
+      var rv = this.src.substring(this.c0+1, this.c-1);
+      if (rv === 'use strict') {
+        this.directive |= DIR_STRICT_IF_SINGLE;
+        isFunc = this.directive & DIR_FUNC;
+        stmt = this.parseStatement(true);
+        stmts.push(stmt);
+      }
+    }
+    this.directive = DIR_NONE;
+  }
+
+  while (stmt = this.parseStatement(true))
+    stmts.push(stmt);
+
   return (stmts);
 };
 
@@ -6001,6 +6038,18 @@ this.readStrLiteral = function (start) {
       v = "",
       v_start = c,
       startC =  c-1;
+
+  if (this.nl &&
+     (this.directive & DIR_STRICT_IF_SINGLE)) {
+    // TODO: makeStrict for all
+    if (this.directive & DIR_FUNC)
+      this.makeStrict();
+    else
+      this.scope.strict = true;
+
+    this.tight = true;
+    this.directive = DIR_BECAME_STRICT;
+  }
 
   while (c < e && (i = l.charCodeAt(c)) !== start) {
     switch ( i ) {

@@ -40,7 +40,7 @@ var Parser = function (src, isModule) {
   this.first__proto__ = false;
 
   this.scope = null;
-  this.directive = DIRECTIVE_NONE;
+  this.directive = DIR_NONE;
   
   this.declMode = DECL_NONE;
  

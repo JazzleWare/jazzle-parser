@@ -12,7 +12,7 @@ this.parseProgram = function () {
   this.next();
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
-  this.directive = DIRECTIVE_FUNC; 
+  this.directive = !this.isScipt ? DIR_SCRIPT : DIR_MODULE; 
   var list = this.blck(); 
  
   var endLoc = null;
