@@ -224,12 +224,12 @@ this.parseNonSeqExpr = function (prec, context) {
       continue;
     }
     
+    if (prec === PREC_U && currentPrec === PREC_EX)
+      this.err('unary.before.an.exponentiation');
     if (currentPrec < prec)
       break;
     if (currentPrec === prec && !isRassoc(prec))
       break;
-    if (prec === PREC_U && currentPrec === PREC_EX)
-      this.err('unary.before.an.exponentiation');
 
     var o = this.ltraw;
     this.next();

@@ -1,5 +1,5 @@
 this.readEsc = function ()  {
-  var src = this.src, b0 = 0, b = 0;
+  var src = this.src, b0 = 0, b = 0, start = -1;
   switch ( src.charCodeAt ( ++this.c ) ) {
    case CH_BACK_SLASH: return '\\';
    case CH_MULTI_QUOTE: return'\"' ;
@@ -23,7 +23,7 @@ this.readEsc = function ()  {
       if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
         return this.errorHandlerOutput;
       b = toNum(this.src.charCodeAt(++this.c));
-      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
+      if ( b === -1 && this.err('hex.esc.byte.not.hex') )
         return this.errorHandlerOutput;
       return String.fromCharCode((b0<<4)|b);
 
@@ -38,6 +38,13 @@ this.readEsc = function ()  {
           }
           if ( this.err('strict.oct.str.esc') )
             return this.errorHandlerOutput
+       }
+       else if (this.directive !== DIR_NONE) {
+         if (this.strictError.stringNode === null) {
+           this.strictError.offset = this.c;
+           this.strictError.line = this.li;
+           this.strictError.column = this.col + (this.c-start);
+         }
        }
 
        b = b0 - CH_0;
@@ -56,8 +63,16 @@ this.readEsc = function ()  {
        return String.fromCharCode(b)  ;
 
     case CH_4: case CH_5: case CH_6: case CH_7:
-       if (this.tight && this.err('strict.oct.str.esc') )
-         return this.errorHandlerOutput  ;
+       if (this.tight)
+         this.err('strict.oct.str.esc');
+       else if (this.directive !== DIR_NONE) {
+         if (this.strictError.stringNode === null) {
+           this.strictError.offset = this.c;
+           this.strictError.line = this.li;
+           this.strictError.column = this.col + (this.c-start);
+         }
+       }
+       
 
        b0 = src.charCodeAt(this.c);
        b  = b0 - CH_0;
@@ -80,6 +95,7 @@ this.readEsc = function ()  {
    case CH_LINE_FEED:
    case 0x2028:
    case 0x2029:
+      start = this.c;
       this.col = 0;
       this.li++;
       return '';

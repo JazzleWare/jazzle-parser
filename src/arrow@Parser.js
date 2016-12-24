@@ -69,14 +69,14 @@ this.asArrowFuncArg = function(arg) {
     return;
 
   case 'SpreadElement':
-    if (arg.argument.type !== 'Identifier')
+    if (this.e < 7 && arg.argument.type !== 'Identifier')
       this.err('binding.rest.arg.not.id', {tn:arg});
     this.asArrowFuncArg(arg.argument);
     arg.type = 'RestElement';
     return;
 
   case 'RestElement':
-    if (arg.argument.type !== 'Identifier')
+    if (this.e < 7 && arg.argument.type !== 'Identifier')
       this.err('binding.rest.arg.not.id',{tn:arg});
     this.asArrowFuncArg(arg.argument);
     return;

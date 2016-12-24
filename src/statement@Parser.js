@@ -35,15 +35,14 @@ this.parseStatement = function ( allowNull ) {
     return this.parseLabeledStatement(head, allowNull);
 
   this.fixupLabels(false) ;
-  if ((directive & DIR_STRICT_IF_SINGLE) &&
-     this.directive !== DIR_BECAME_STRICT &&
-     head.type === 'Literal') {
-    if (directive & DIR_FUNC)
-      this.makeStrict();
-    else
-      this.scope.strict = true;
 
-    this.tight = true;
+  if (DIR_MAYBE & directive) {
+    if (head.type !== 'Literal')
+      this.directive = directive|DIR_LAST;
+    else if (!(this.directive & DIR_HANDLED_BY_NEWLINE))
+      this.gotDirective(this.dv, directive);
+    if (this.strictError.offset !== -1 && this.strictError.stringNode === null)
+      this.strictError.stringNode = head;
   }
 
   e  = this.semiI() || head.end;
@@ -673,18 +672,8 @@ this . prseDbg = function () {
 
 this.blck = function () { // blck ([]stmt)
   var isFunc = false, stmt = null, stmts = [];
-  if (this.directive !== DIR_NONE) {
-    if (this.lttype === 'Literal') {
-      var rv = this.src.substring(this.c0+1, this.c-1);
-      if (rv === 'use strict') {
-        this.directive |= DIR_STRICT_IF_SINGLE;
-        isFunc = this.directive & DIR_FUNC;
-        stmt = this.parseStatement(true);
-        stmts.push(stmt);
-      }
-    }
-    this.directive = DIR_NONE;
-  }
+  if (this.directive !== DIR_NONE)
+    this.parseDirectives(stmts);
 
   while (stmt = this.parseStatement(true))
     stmts.push(stmt);
@@ -692,4 +681,56 @@ this.blck = function () { // blck ([]stmt)
   return (stmts);
 };
 
+this.checkForStrictError = function() {
+  if (this.strictError.stringNode !== null)
+    this.err('strict.err.esc.not.valid');
+};
 
+this.parseDirectives = function(list) {
+  if (this.v < 5)
+    return;
+
+  var r = this.directive;
+
+  // TODO: maybe find a way to let the `readStringLiteral` take over this process (partially, at the very least);
+  // that way, there will no longer be a need to check ltval's type
+  while (this.lttype === 'Literal' && typeof this.ltval === STRING_TYPE) {
+    this.directive = DIR_MAYBE|r;
+    var rv = this.src.substring(this.c0+1, this.c-1);
+
+    // other directives might actually come after "use strict",
+    // but that is the only one we are interested to find; TODO: this behavior ought to change
+    if (rv === 'use strict')
+      this.directive |= DIR_LAST;
+
+    this.dv.value = this.ltval;
+    this.dv.raw = rv;
+
+    var elem = this.parseStatement(true);
+    list.push(elem);
+
+    if (this.directive & DIR_LAST)
+      break;
+  }
+
+  this.directive = DIR_NONE;
+};
+
+this.gotDirective = function(dv, flags) {
+  if (dv.raw === 'use strict') {
+    if (flags & DIR_FUNC)
+      this.makeStrict()
+    else {
+      this.tight = true;
+      this.scope.strict = true;
+    }
+
+    this.checkForStrictError();
+  }
+};
+
+this.clearAllStrictErrors = function() {
+  this.strictError.stringNode = null;
+  this.strictError.offset = -1;
+};
+  

@@ -169,6 +169,9 @@ this.next = function () {
             
             else
                peek = this.peekUSeq();
+
+            if (peek >= 0x0D800 && peek <= 0x0DBFF )
+              this.err('id.name.has.surrogate.pair');
         }
         if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
             mustBeAnID = 2 ;

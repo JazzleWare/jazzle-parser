@@ -65,11 +65,12 @@ this.parseFunc = function(context, flags) {
   this.scopeFlags = SCOPE_FLAG_ARG_LIST;
   if (isGen)
     this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
-  else if (flags & MEM_SUPER)
+
+  if (flags & MEM_SUPER)
     this.scopeFlags |= (flags & (MEM_SUPER|MEM_CONSTRUCTOR));
 
   // TODO: super is allowed in methods of a class regardless of whether the class
-  // has an actual heritage clause; but this could probably be better implemented
+  // has an actual heritage clause; but this could probably be implemented better
   else if (!isWhole && !(flags & MEM_CONSTRUCTOR))
     this.scopeFlags |= SCOPE_FLAG_ALLOW_SUPER;
  
@@ -85,6 +86,7 @@ this.parseFunc = function(context, flags) {
   this.scopeFlags |= SCOPE_FLAG_FN;  
 
   this.labels = {};
+
   var nbody = this.parseFuncBody(context & CTX_FOR);
 
   var n = {

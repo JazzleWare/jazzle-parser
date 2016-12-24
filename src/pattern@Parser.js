@@ -145,10 +145,10 @@ this .parseAssig = function (head) {
            right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
 };
 
-
+// TODO: needs reconsideration,
 this.parseRestElement = function() {
-   var startc = this.c-1-2,
-       startLoc = this.locOn(1+2);
+   var startc = this.c0,
+       startLoc = this.locBegin();
 
    this.next ();
    var e = this.parsePattern();
@@ -157,9 +157,10 @@ this.parseRestElement = function() {
       if (this.err('rest.has.no.arg',starc, startLoc))
        return this.errorHandlerOutput ;
    }
-   else if ( e.type !== 'Identifier' ) {
-      if (this.err('rest.arg.not.id', startc, startLoc, e) )
-        return this.errorHandlerOutput;
+   // TODO (cont.): this one in particular -- it need not parse a whole pattern to know
+   // whether it is an identifier
+   else if ( this.v < 7 && e.type !== 'Identifier' ) {
+      this.err('rest.arg.not.id', startc, startLoc, e);
    }
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };

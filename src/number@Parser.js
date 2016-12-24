@@ -3,14 +3,9 @@ this.readNumberLiteral = function (peek) {
   var b = 10 , val = 0;
   this.lttype  = 'Literal' ;
 
-  if (this.nl &&
-     (this.directive & DIR_STRICT_IF_SINGLE)) {
-    if (this.directive & DIR_FUNC)
-      this.makeStrict();
-    else
-      this.scope.strict = true;
-    this.tight = true;
-    this.directive = DIR_BECAME_STRICT;
+  if (this.nl && (this.directive & DIR_MAYBE)) {
+    this.gotDirective(this.dv, this.directive);
+    this.directive |= DIR_HANDLED_BY_NEWLINE;
   }
 
   if (peek === CH_0) { // if our num lit starts with a 0

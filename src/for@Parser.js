@@ -67,9 +67,11 @@ this.parseFor = function() {
 
     case 'in':
       if (headIsExpr) {
-        if (head.type === 'AssignmentExpression' && this.v < 7)
-          this.err('for.in.has.init.assig');
-
+        if (head.type === 'AssignmentExpression') { // TODO: not in the spec
+          // TODO: squash with the `else if (head.init)` below
+        //if (this.tight || kind === 'ForOfStatement' || this.v < 7)
+            this.err('for.in.has.init.assig');
+        }
         this.adjustErrors()
         this.toAssig(head, CTX_FOR|CTX_PAT);
         this.currentExprIsAssig();
@@ -78,8 +80,11 @@ this.parseFor = function() {
         this.err('for.decl.multi');
       else if (this.missingInit)
         this.missingInit = false;
-      else if (head.init && this.v < 7)
-        this.err('for.in.has.decl.init');
+      else if (head.declarations[0].init) {
+        if (this.tight || kind === 'ForOfStatement' ||
+            this.v < 7 || head.declarations[0].id.type !== 'Identifier' || head.kind !== 'var')
+          this.err('for.in.has.decl.init');
+      }
 
       this.next();
       afterHead = kind === 'ForOfStatement' ? 

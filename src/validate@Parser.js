@@ -44,6 +44,7 @@ this .validateID  = function (e) {
      case 5: switch (n) {
          case 'await':
             if ( this. isScript ) break SWITCH;
+            else this.errorReservedID(e);
          case 'final':
          case 'float':
          case 'short':

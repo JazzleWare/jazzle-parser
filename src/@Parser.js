@@ -30,7 +30,7 @@ var Parser = function (src, isModule) {
   this.firstNonSimpArg = null;
 
   this.isScript = !isModule;
-  this.v = 12/2;
+  this.v = 7;
 
   this.throwReserved = true;
  
@@ -54,5 +54,8 @@ var Parser = function (src, isModule) {
 
   this.suspys = null;
   this.missingInit = false;
+
+  this.dv = { value: "", raw: "" };
+  this.strictError = { offset: -1, line: -1, column: -1, stringNode: null };
 };
 

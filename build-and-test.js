@@ -152,7 +152,7 @@ builder.build();
 console.log("TESTING.....");
 try {
    new Function(builder.str).call(exports);
-   var summary = require('./test-runner.js').runTestSuite('test/tests',exports.Parser);
+   var summary = require('./test-runner.js').runTestSuite('test/fixtures',exports.Parser);
    if (summary.pass - summary.skipPass !== summary.passAsExpected) {
       console.log("SOME TESTS WEREN'T PASSED.");
 //      dist += '_incomplete-tests'; 

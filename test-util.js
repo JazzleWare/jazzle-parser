@@ -8,10 +8,13 @@ function JazzleTest(testJS) {
   this.compError = null;
   this.rawSource = "";
   this.error = null;
+  this.parser = null;
 }
 
 JazzleTest.prototype.runWith = function(Parser) {
-   var parser = new Parser(this.src, this.isModuleTest());
+   var parser = this.parser = new Parser(this.src, this.isModuleTest());
+   console.log("isModule:", !parser.isScript, "testconfig:", this.jsonType);
+
    var result = null;
    try {
      result = parser.parseProgram(); 
@@ -29,7 +32,15 @@ JazzleTest.prototype.isExpected = function(result) {
 };
 
 JazzleTest.prototype.isModuleTest = function() {
-   return this.jsonType === 'module' || this.testJSON.sourceType === 'module'; 
+   switch ('module') { 
+   case this.jsonType:
+   case this.testJSON.sourceType:
+   case this.jsType:
+     return true;
+   default:
+     return false;
+  
+   } 
 };
 
 function JazzleTestSuite(Parser) {
@@ -65,6 +76,10 @@ JazzleTestSuite.prototype.loadSource = function(test) {
    if (test.testMode !== -1) return;
    test.rawSource = readFile(test.testURI);
    var sufidx = util.tailIndex(test.testURI, '.source.js');
+   test.jsType = 'script';
+   if (util.tailIndex(test.testURI, '.module.js') !== -1)
+     test.jsType = 'module';
+
    if (sufidx !== -1) {
      test.src = eval("(function(){"+test.rawSource+"; return source;})()");
    }

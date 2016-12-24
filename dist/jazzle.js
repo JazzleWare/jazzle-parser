@@ -79,7 +79,7 @@ var Parser = function (src, isModule) {
   this.firstNonSimpArg = null;
 
   this.isScript = !isModule;
-  this.v = 12/2;
+  this.v = 7;
 
   this.throwReserved = true;
  
@@ -103,6 +103,9 @@ var Parser = function (src, isModule) {
 
   this.suspys = null;
   this.missingInit = false;
+
+  this.dv = { value: "", raw: "" };
+  this.strictError = { offset: -1, line: -1, column: -1, stringNode: null };
 };
 
 ;
@@ -429,10 +432,9 @@ var DIR_MODULE = 1,
     DIR_NONE = 0,
     DIR_TOP = DIR_MODULE|DIR_SCRIPT,
     DIR_FUNC = DIR_SCRIPT << 2,
-    DIR_BECAME_STRICT = DIR_FUNC << 2,
-    DIR_STRICT_IF_SINGLE = DIR_BECAME_STRICT << 1;
-
-
+    DIR_LAST = DIR_FUNC << 1,
+    DIR_MAYBE = DIR_LAST << 1,
+    DIR_HANDLED_BY_NEWLINE = DIR_MAYBE << 1;
 ;
 function num(c) {
   return (c >= CH_0 && c <= CH_9);
@@ -512,7 +514,8 @@ var PREC_EQUAL = PREC_BIT_AND + 2;
 var PREC_COMP = PREC_EQUAL + 2;
 var PREC_SH = PREC_COMP + 2;
 var PREC_ADD_MIN = PREC_SH + 2;
-var PREC_MUL = PREC_ADD_MIN + 2;
+var PREC_EX = PREC_ADD_MIN + 2;
+var PREC_MUL = PREC_EX + 2;
 var PREC_U = PREC_MUL + 1;
 
 function isAssignment(prec) { return prec === PREC_SIMP_ASSIG || prec === PREC_OP_ASSIG ;  }
@@ -812,14 +815,14 @@ this.asArrowFuncArg = function(arg) {
     return;
 
   case 'SpreadElement':
-    if (arg.argument.type !== 'Identifier')
+    if (this.e < 7 && arg.argument.type !== 'Identifier')
       this.err('binding.rest.arg.not.id', {tn:arg});
     this.asArrowFuncArg(arg.argument);
     arg.type = 'RestElement';
     return;
 
   case 'RestElement':
-    if (arg.argument.type !== 'Identifier')
+    if (this.e < 7 && arg.argument.type !== 'Identifier')
       this.err('binding.rest.arg.not.id',{tn:arg});
     this.asArrowFuncArg(arg.argument);
     return;
@@ -1741,7 +1744,7 @@ a('block.dependent.no.opening.curly',
 },
 function(){
 this.readEsc = function ()  {
-  var src = this.src, b0 = 0, b = 0;
+  var src = this.src, b0 = 0, b = 0, start = -1;
   switch ( src.charCodeAt ( ++this.c ) ) {
    case CH_BACK_SLASH: return '\\';
    case CH_MULTI_QUOTE: return'\"' ;
@@ -1765,7 +1768,7 @@ this.readEsc = function ()  {
       if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
         return this.errorHandlerOutput;
       b = toNum(this.src.charCodeAt(++this.c));
-      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
+      if ( b === -1 && this.err('hex.esc.byte.not.hex') )
         return this.errorHandlerOutput;
       return String.fromCharCode((b0<<4)|b);
 
@@ -1780,6 +1783,13 @@ this.readEsc = function ()  {
           }
           if ( this.err('strict.oct.str.esc') )
             return this.errorHandlerOutput
+       }
+       else if (this.directive !== DIR_NONE) {
+         if (this.strictError.stringNode === null) {
+           this.strictError.offset = this.c;
+           this.strictError.line = this.li;
+           this.strictError.column = this.col + (this.c-start);
+         }
        }
 
        b = b0 - CH_0;
@@ -1798,8 +1808,16 @@ this.readEsc = function ()  {
        return String.fromCharCode(b)  ;
 
     case CH_4: case CH_5: case CH_6: case CH_7:
-       if (this.tight && this.err('strict.oct.str.esc') )
-         return this.errorHandlerOutput  ;
+       if (this.tight)
+         this.err('strict.oct.str.esc');
+       else if (this.directive !== DIR_NONE) {
+         if (this.strictError.stringNode === null) {
+           this.strictError.offset = this.c;
+           this.strictError.line = this.li;
+           this.strictError.column = this.col + (this.c-start);
+         }
+       }
+       
 
        b0 = src.charCodeAt(this.c);
        b  = b0 - CH_0;
@@ -1822,6 +1840,7 @@ this.readEsc = function ()  {
    case CH_LINE_FEED:
    case 0x2028:
    case 0x2029:
+      start = this.c;
       this.col = 0;
       this.li++;
       return '';
@@ -2040,9 +2059,11 @@ this.parseFor = function() {
 
     case 'in':
       if (headIsExpr) {
-        if (head.type === 'AssignmentExpression' && this.v < 7)
-          this.err('for.in.has.init.assig');
-
+        if (head.type === 'AssignmentExpression') { // TODO: not in the spec
+          // TODO: squash with the `else if (head.init)` below
+        //if (this.tight || kind === 'ForOfStatement' || this.v < 7)
+            this.err('for.in.has.init.assig');
+        }
         this.adjustErrors()
         this.toAssig(head, CTX_FOR|CTX_PAT);
         this.currentExprIsAssig();
@@ -2051,8 +2072,11 @@ this.parseFor = function() {
         this.err('for.decl.multi');
       else if (this.missingInit)
         this.missingInit = false;
-      else if (head.init && this.v < 7)
-        this.err('for.in.has.decl.init');
+      else if (head.declarations[0].init) {
+        if (this.tight || kind === 'ForOfStatement' ||
+            this.v < 7 || head.declarations[0].id.type !== 'Identifier' || head.kind !== 'var')
+          this.err('for.in.has.decl.init');
+      }
 
       this.next();
       afterHead = kind === 'ForOfStatement' ? 
@@ -2187,9 +2211,13 @@ this.parseFuncBody = function(context) {
 
   this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
   var startc= this.c - 1, startLoc = this.locOn(1);
-  this.next() ;
+
 
   this.directive = DIR_FUNC;
+  this.clearAllStrictErrors();
+
+  this.next() ;
+
   var list = this.blck();
 
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
@@ -2294,11 +2322,12 @@ this.parseFunc = function(context, flags) {
   this.scopeFlags = SCOPE_FLAG_ARG_LIST;
   if (isGen)
     this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
-  else if (flags & MEM_SUPER)
+
+  if (flags & MEM_SUPER)
     this.scopeFlags |= (flags & (MEM_SUPER|MEM_CONSTRUCTOR));
 
   // TODO: super is allowed in methods of a class regardless of whether the class
-  // has an actual heritage clause; but this could probably be better implemented
+  // has an actual heritage clause; but this could probably be implemented better
   else if (!isWhole && !(flags & MEM_CONSTRUCTOR))
     this.scopeFlags |= SCOPE_FLAG_ALLOW_SUPER;
  
@@ -2314,6 +2343,7 @@ this.parseFunc = function(context, flags) {
   this.scopeFlags |= SCOPE_FLAG_FN;  
 
   this.labels = {};
+
   var nbody = this.parseFuncBody(context & CTX_FOR);
 
   var n = {
@@ -3783,6 +3813,9 @@ this.next = function () {
             
             else
                peek = this.peekUSeq();
+
+            if (peek >= 0x0D800 && peek <= 0x0DBFF )
+              this.err('id.name.has.surrogate.pair');
         }
         if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
             mustBeAnID = 2 ;
@@ -4341,12 +4374,12 @@ this.parseNonSeqExpr = function (prec, context) {
       continue;
     }
     
+    if (prec === PREC_U && currentPrec === PREC_EX)
+      this.err('unary.before.an.exponentiation');
     if (currentPrec < prec)
       break;
     if (currentPrec === prec && !isRassoc(prec))
       break;
-    if (prec === PREC_U && currentPrec === PREC_EX)
-      this.err('unary.before.an.exponentiation');
 
     var o = this.ltraw;
     this.next();
@@ -4376,14 +4409,9 @@ this.readNumberLiteral = function (peek) {
   var b = 10 , val = 0;
   this.lttype  = 'Literal' ;
 
-  if (this.nl &&
-     (this.directive & DIR_STRICT_IF_SINGLE)) {
-    if (this.directive & DIR_FUNC)
-      this.makeStrict();
-    else
-      this.scope.strict = true;
-    this.tight = true;
-    this.directive = DIR_BECAME_STRICT;
+  if (this.nl && (this.directive & DIR_MAYBE)) {
+    this.gotDirective(this.dv, this.directive);
+    this.directive |= DIR_HANDLED_BY_NEWLINE;
   }
 
   if (peek === CH_0) { // if our num lit starts with a 0
@@ -4666,10 +4694,10 @@ this .parseAssig = function (head) {
            right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
 };
 
-
+// TODO: needs reconsideration,
 this.parseRestElement = function() {
-   var startc = this.c-1-2,
-       startLoc = this.locOn(1+2);
+   var startc = this.c0,
+       startLoc = this.locBegin();
 
    this.next ();
    var e = this.parsePattern();
@@ -4678,9 +4706,10 @@ this.parseRestElement = function() {
       if (this.err('rest.has.no.arg',starc, startLoc))
        return this.errorHandlerOutput ;
    }
-   else if ( e.type !== 'Identifier' ) {
-      if (this.err('rest.arg.not.id', startc, startLoc, e) )
-        return this.errorHandlerOutput;
+   // TODO (cont.): this one in particular -- it need not parse a whole pattern to know
+   // whether it is an identifier
+   else if ( this.v < 7 && e.type !== 'Identifier' ) {
+      this.err('rest.arg.not.id', startc, startLoc, e);
    }
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
@@ -4942,12 +4971,14 @@ this.parseProgram = function () {
   var globalScope = null;
 
  
+  this.directive = !this.isScipt ? DIR_SCRIPT : DIR_MODULE; 
+  this.clearAllStrictErrors();
+
   this.scope = new Scope(globalScope, ST_SCRIPT);
   this.scope.parser = this;
   this.next();
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
-  this.directive = !this.isScipt ? DIR_SCRIPT : DIR_MODULE; 
   var list = this.blck(); 
  
   var endLoc = null;
@@ -5370,15 +5401,14 @@ this.parseStatement = function ( allowNull ) {
     return this.parseLabeledStatement(head, allowNull);
 
   this.fixupLabels(false) ;
-  if ((directive & DIR_STRICT_IF_SINGLE) &&
-     this.directive !== DIR_BECAME_STRICT &&
-     head.type === 'Literal') {
-    if (directive & DIR_FUNC)
-      this.makeStrict();
-    else
-      this.scope.strict = true;
 
-    this.tight = true;
+  if (DIR_MAYBE & directive) {
+    if (head.type !== 'Literal')
+      this.directive = directive|DIR_LAST;
+    else if (!(this.directive & DIR_HANDLED_BY_NEWLINE))
+      this.gotDirective(this.dv, directive);
+    if (this.strictError.offset !== -1 && this.strictError.stringNode === null)
+      this.strictError.stringNode = head;
   }
 
   e  = this.semiI() || head.end;
@@ -6008,18 +6038,8 @@ this . prseDbg = function () {
 
 this.blck = function () { // blck ([]stmt)
   var isFunc = false, stmt = null, stmts = [];
-  if (this.directive !== DIR_NONE) {
-    if (this.lttype === 'Literal') {
-      var rv = this.src.substring(this.c0+1, this.c-1);
-      if (rv === 'use strict') {
-        this.directive |= DIR_STRICT_IF_SINGLE;
-        isFunc = this.directive & DIR_FUNC;
-        stmt = this.parseStatement(true);
-        stmts.push(stmt);
-      }
-    }
-    this.directive = DIR_NONE;
-  }
+  if (this.directive !== DIR_NONE)
+    this.parseDirectives(stmts);
 
   while (stmt = this.parseStatement(true))
     stmts.push(stmt);
@@ -6027,7 +6047,59 @@ this.blck = function () { // blck ([]stmt)
   return (stmts);
 };
 
+this.checkForStrictError = function() {
+  if (this.strictError.stringNode !== null)
+    this.err('strict.err.esc.not.valid');
+};
 
+this.parseDirectives = function(list) {
+  if (this.v < 5)
+    return;
+
+  var r = this.directive;
+
+  // TODO: maybe find a way to let the `readStringLiteral` take over this process (partially, at the very least);
+  // that way, there will no longer be a need to check ltval's type
+  while (this.lttype === 'Literal' && typeof this.ltval === STRING_TYPE) {
+    this.directive = DIR_MAYBE|r;
+    var rv = this.src.substring(this.c0+1, this.c-1);
+
+    // other directives might actually come after "use strict",
+    // but that is the only one we are interested to find; TODO: this behavior ought to change
+    if (rv === 'use strict')
+      this.directive |= DIR_LAST;
+
+    this.dv.value = this.ltval;
+    this.dv.raw = rv;
+
+    var elem = this.parseStatement(true);
+    list.push(elem);
+
+    if (this.directive & DIR_LAST)
+      break;
+  }
+
+  this.directive = DIR_NONE;
+};
+
+this.gotDirective = function(dv, flags) {
+  if (dv.raw === 'use strict') {
+    if (flags & DIR_FUNC)
+      this.makeStrict()
+    else {
+      this.tight = true;
+      this.scope.strict = true;
+    }
+
+    this.checkForStrictError();
+  }
+};
+
+this.clearAllStrictErrors = function() {
+  this.strictError.stringNode = null;
+  this.strictError.offset = -1;
+};
+  
 
 },
 function(){
@@ -6040,16 +6112,9 @@ this.readStrLiteral = function (start) {
       v_start = c,
       startC =  c-1;
 
-  if (this.nl &&
-     (this.directive & DIR_STRICT_IF_SINGLE)) {
-    // TODO: makeStrict for all
-    if (this.directive & DIR_FUNC)
-      this.makeStrict();
-    else
-      this.scope.strict = true;
-
-    this.tight = true;
-    this.directive = DIR_BECAME_STRICT;
+  if (this.nl && (this.directive & DIR_MAYBE)) {
+    this.gotDirective(this.dv, this.directive);
+    this.directive |= DIR_HANDLED_BY_NEWLINE;
   }
 
   while (c < e && (i = l.charCodeAt(c)) !== start) {
@@ -6260,6 +6325,7 @@ this .validateID  = function (e) {
      case 5: switch (n) {
          case 'await':
             if ( this. isScript ) break SWITCH;
+            else this.errorReservedID(e);
          case 'final':
          case 'float':
          case 'short':

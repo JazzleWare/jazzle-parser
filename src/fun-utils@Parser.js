@@ -54,9 +54,13 @@ this.parseFuncBody = function(context) {
 
   this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
   var startc= this.c - 1, startLoc = this.locOn(1);
-  this.next() ;
+
 
   this.directive = DIR_FUNC;
+  this.clearAllStrictErrors();
+
+  this.next() ;
+
   var list = this.blck();
 
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,

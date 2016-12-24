@@ -7,12 +7,14 @@ this.parseProgram = function () {
   globalScope = new Scope(null, ST_GLOBAL);
   // #end
  
+  this.directive = !this.isScipt ? DIR_SCRIPT : DIR_MODULE; 
+  this.clearAllStrictErrors();
+
   this.scope = new Scope(globalScope, ST_SCRIPT);
   this.scope.parser = this;
   this.next();
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
-  this.directive = !this.isScipt ? DIR_SCRIPT : DIR_MODULE; 
   var list = this.blck(); 
  
   var endLoc = null;
