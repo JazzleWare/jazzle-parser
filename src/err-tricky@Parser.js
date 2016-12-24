@@ -25,7 +25,7 @@ tm[ERR_ARGUMENTS_OR_EVAL_ASSIGNED] = 'assig.to.arguments.or.eval';
 tm[ERR_YIELD_OR_SUPER] = 'param.has.yield.or.super';
 tm[ERR_UNEXPECTED_REST] = 'unexpected.rest';
 tm[ERR_EMPTY_LIST_MISSING_ARROW] = 'arrow.missing.after.empty.list';
-
+tm[ERR_NON_TAIL_EXPR] = 'seq.non.tail.expr';
 // TODO: trickyContainer
 this.throwTricky = function(source, trickyType, trickyCore) {
   if (!HAS.call(tm, trickyType))

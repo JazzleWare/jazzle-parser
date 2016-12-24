@@ -491,7 +491,10 @@ var ERR_NONE_YET = 0,
     // ()
     ERR_EMPTY_LIST_MISSING_ARROW = ERR_UNEXPECTED_REST + 1,
 
-    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_EMPTY_LIST_MISSING_ARROW + 1;
+    // (a,)
+    ERR_NON_TAIL_EXPR = ERR_EMPTY_LIST_MISSING_ARROW + 1,
+
+    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_NON_TAIL_EXPR + 1;
 
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
@@ -1484,7 +1487,7 @@ tm[ERR_ARGUMENTS_OR_EVAL_ASSIGNED] = 'assig.to.arguments.or.eval';
 tm[ERR_YIELD_OR_SUPER] = 'param.has.yield.or.super';
 tm[ERR_UNEXPECTED_REST] = 'unexpected.rest';
 tm[ERR_EMPTY_LIST_MISSING_ARROW] = 'arrow.missing.after.empty.list';
-
+tm[ERR_NON_TAIL_EXPR] = 'seq.non.tail.expr';
 // TODO: trickyContainer
 this.throwTricky = function(source, trickyType, trickyCore) {
   if (!HAS.call(tm, trickyType))
@@ -2156,7 +2159,7 @@ this.ensureVarsAreNotResolvingToCatchParams = function() {
 },
 function(){
 this.parseArgs = function (argLen) {
-  var list = [], elem = null;
+  var tail = true, list = [], elem = null;
 
   if (!this.expectType_soft('('))
     this.err('func.args.no.opening.paren',argLen);
@@ -2173,13 +2176,19 @@ this.parseArgs = function (argLen) {
         firstNonSimpArg =  elem;
       list.push(elem);
     }
-    else break ;
-    
+    else {
+      if (list.length !== 0) {
+        if (this.v < 7)
+          this.err('arg.non.tail.in.func');
+      }
+      break ;
+    }
+
     if (this.lttype === ',' ) this.next();
-    else break;
+    else { tail = false; break; }
   }
   if (argLen === ARGLEN_ANY) {
-    if (this.lttype === '...') {
+    if (tail && this.lttype === '...') {
       this.makeComplex();
       elem = this.parseRestElement();
       list.push( elem  );
@@ -3405,8 +3414,10 @@ this.parseParen = function(context) {
   else
     context |= CTX_NO_SIMPLE_ERR;
 
+  var lastElem = null, hasTailElem = false;
   this.next();
   while (true) {
+    lastElem = elem;
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
     if (elem === null) {
       if (this.lttype === '...') {
@@ -3418,15 +3429,19 @@ this.parseParen = function(context) {
         elem = this.parseSpreadElement(elemContext);
         hasRest = true;
       }
-      else if (list)
-        this.err('unexpected.lookahead');
+      else if (list) {
+        if (this.v < 7)
+          this.err('unexpected.lookahead');
+        else 
+          hasTailElem = true;
+      } 
       else break;
     }
 
     if (elemContext & CTX_PARAM) {
       // TODO: could be `pt === ERR_NONE_YET`
       if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
-        if (this.pt === ERR_NONE_YET) {
+        if (this.pt === ERR_NONE_YET && !hasTailElem) {
           // TODO: function* l() { ({[yield]: (a)})=>12 }
           if (elem.type === PAREN_NODE) {
             this.pt = ERR_PAREN_UNBINDABLE;
@@ -3445,16 +3460,25 @@ this.parseParen = function(context) {
 
       // TODO: could be `st === ERR_NONE_YET`
       if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
-        if (this.st === ERR_NONE_YET && hasRest) {
-          this.st = ERR_UNEXPECTED_REST;
-          this.se = elem;
+        if (this.st === ERR_NONE_YET) {
+          if (hasRest) {
+            this.st = ERR_UNEXPECTED_REST;
+            this.se = elem;
+          }
+          else if (hasTailElem) {
+            this.st = ERR_NON_TAIL_EXPR;
+            this.se = lastElem;
+          }
         }
         if (this.st !== ERR_NONE_YET) {
-          st = this.st; se = this.se; so = core(elem);
+          st = this.st; se = this.se; so = elem && core(elem);
           elemContext |= CTX_HAS_A_SIMPLE_ERR;
         }
       }
     }
+
+    if (hasTailElem)
+      break;
 
     if (list) list.push(core(elem));
     if (this.lttype === ',') {
@@ -4944,24 +4968,26 @@ this.parseThis = function() {
 };
 
 this.parseArgList = function () {
-    var elem = null;
-    var list = [];
+  var elem = null, list = [];
 
-    do { 
-       this.next();
-       elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE ); 
-       if ( elem )
-         list.push (core(elem));
-       else if ( this.lttype === '...' )
-         list.push(this.parseSpreadElement(CTX_NONE));
-       else
-         break ;
-    } while ( this.lttype === ',' );
+  do { 
+    this.next();
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE); 
+    if (elem)
+      list.push(core(elem));
+    else if (this.lttype === '...')
+      list.push(this.parseSpreadElement(CTX_NONE));
+    else {
+      if (list.length !== 0) {
+        if (this.v < 7)
+          this.err('arg.non.tail');
+      }
+      break;
+    }
+  } while ( this.lttype === ',' );
 
-    return list ;
+  return list ;
 };
-
-
 
 },
 function(){

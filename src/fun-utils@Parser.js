@@ -1,5 +1,5 @@
 this.parseArgs = function (argLen) {
-  var list = [], elem = null;
+  var tail = true, list = [], elem = null;
 
   if (!this.expectType_soft('('))
     this.err('func.args.no.opening.paren',argLen);
@@ -16,13 +16,19 @@ this.parseArgs = function (argLen) {
         firstNonSimpArg =  elem;
       list.push(elem);
     }
-    else break ;
-    
+    else {
+      if (list.length !== 0) {
+        if (this.v < 7)
+          this.err('arg.non.tail.in.func');
+      }
+      break ;
+    }
+
     if (this.lttype === ',' ) this.next();
-    else break;
+    else { tail = false; break; }
   }
   if (argLen === ARGLEN_ANY) {
-    if (this.lttype === '...') {
+    if (tail && this.lttype === '...') {
       this.makeComplex();
       elem = this.parseRestElement();
       list.push( elem  );

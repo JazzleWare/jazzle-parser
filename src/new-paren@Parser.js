@@ -20,8 +20,10 @@ this.parseParen = function(context) {
   else
     context |= CTX_NO_SIMPLE_ERR;
 
+  var lastElem = null, hasTailElem = false;
   this.next();
   while (true) {
+    lastElem = elem;
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
     if (elem === null) {
       if (this.lttype === '...') {
@@ -33,15 +35,19 @@ this.parseParen = function(context) {
         elem = this.parseSpreadElement(elemContext);
         hasRest = true;
       }
-      else if (list)
-        this.err('unexpected.lookahead');
+      else if (list) {
+        if (this.v < 7)
+          this.err('unexpected.lookahead');
+        else 
+          hasTailElem = true;
+      } 
       else break;
     }
 
     if (elemContext & CTX_PARAM) {
       // TODO: could be `pt === ERR_NONE_YET`
       if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
-        if (this.pt === ERR_NONE_YET) {
+        if (this.pt === ERR_NONE_YET && !hasTailElem) {
           // TODO: function* l() { ({[yield]: (a)})=>12 }
           if (elem.type === PAREN_NODE) {
             this.pt = ERR_PAREN_UNBINDABLE;
@@ -60,16 +66,25 @@ this.parseParen = function(context) {
 
       // TODO: could be `st === ERR_NONE_YET`
       if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
-        if (this.st === ERR_NONE_YET && hasRest) {
-          this.st = ERR_UNEXPECTED_REST;
-          this.se = elem;
+        if (this.st === ERR_NONE_YET) {
+          if (hasRest) {
+            this.st = ERR_UNEXPECTED_REST;
+            this.se = elem;
+          }
+          else if (hasTailElem) {
+            this.st = ERR_NON_TAIL_EXPR;
+            this.se = lastElem;
+          }
         }
         if (this.st !== ERR_NONE_YET) {
-          st = this.st; se = this.se; so = core(elem);
+          st = this.st; se = this.se; so = elem && core(elem);
           elemContext |= CTX_HAS_A_SIMPLE_ERR;
         }
       }
     }
+
+    if (hasTailElem)
+      break;
 
     if (list) list.push(core(elem));
     if (this.lttype === ',') {

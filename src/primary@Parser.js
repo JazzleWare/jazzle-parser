@@ -227,21 +227,23 @@ this.parseThis = function() {
 };
 
 this.parseArgList = function () {
-    var elem = null;
-    var list = [];
+  var elem = null, list = [];
 
-    do { 
-       this.next();
-       elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE ); 
-       if ( elem )
-         list.push (core(elem));
-       else if ( this.lttype === '...' )
-         list.push(this.parseSpreadElement(CTX_NONE));
-       else
-         break ;
-    } while ( this.lttype === ',' );
+  do { 
+    this.next();
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE); 
+    if (elem)
+      list.push(core(elem));
+    else if (this.lttype === '...')
+      list.push(this.parseSpreadElement(CTX_NONE));
+    else {
+      if (list.length !== 0) {
+        if (this.v < 7)
+          this.err('arg.non.tail');
+      }
+      break;
+    }
+  } while ( this.lttype === ',' );
 
-    return list ;
+  return list ;
 };
-
-
