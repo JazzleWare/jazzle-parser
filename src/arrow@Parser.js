@@ -1,11 +1,7 @@
 this.asArrowFuncArgList = function(argList) {
-  if (argList.type === 'SequenceExpression') {
-    var i = 0, list = argList.expressions;
-    while (i < list.length)
-      this.asArrowFuncArg(list[i++]);
-  }
-  else 
-    this.asArrowFuncArg(argList);
+  var i = 0, list = argList;
+  while (i < list.length)
+    this.asArrowFuncArg(list[i++]);
 };
 
 this.asArrowFuncArg = function(arg) {
@@ -19,7 +15,10 @@ this.asArrowFuncArg = function(arg) {
 
   switch  ( arg.type ) {
   case 'Identifier':
-
+    if ((this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) &&
+       arg.name === 'await')
+      this.err('arrow.param.is.await.in.an.async');
+     
     // TODO: this can also get checked in the scope manager rather than below
     if (this.tight && arguments_or_eval(arg.name))
       this.err('binding.to.arguments.or.eval');
@@ -96,11 +95,14 @@ this.asArrowFuncArg = function(arg) {
 
 this.parseArrowFunctionExpression = function(arg, context)   {
 
-  var tight = this.tight;
+  var tight = this.tight, async = false;
 
   this.enterFuncScope(false);
   this.declMode = DECL_MODE_FUNC_PARAMS;
   this.enterComplex();
+
+  var scopeFlags = this.scopeFlags;
+  this.scopeFlags &= INHERITED_SCOPE_FLAGS;
 
   switch ( arg.type ) {
   case 'Identifier':
@@ -110,8 +112,27 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   case PAREN_NODE:
     this.firstNonSimpArg = null;
-    if (arg.expr)
-      this.asArrowFuncArgList(core(arg));
+    if (arg.expr) {
+      if (arg.expr.type === 'SequenceExpression')
+        this.asArrowFuncArgList(arg.expr.expressions);
+      else
+        this.asArrowFuncArg(arg.expr);
+    }
+    break;
+
+  case 'CallExpression':
+    if (arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
+      this.err('not.a.valid.arg.list',{tn:arg});
+
+    async = true;
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+    this.asArrowFuncArgList(arg.arguments);
+    break;
+
+  case INTERMEDIATE_ASYNC:
+    async = true;
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+    this.asArrowFuncArg(arg.id);
     break;
 
   default:
@@ -125,9 +146,6 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     this.err('new.line.before.arrow');
 
   this.next();
-
-  var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= INHERITED_SCOPE_FLAGS;
 
   var isExpr = true, nbody = null;
 
@@ -152,8 +170,13 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     params = [];
   else if (params.type === 'SequenceExpression')
     params = params.expressions;
-  else
+  else if (params.type === 'CallExpression')
+    params = params.arguments;
+  else {
+    if (params.type === INTERMEDIATE_ASYNC)
+      params = params.id;
     params = [params];
+  }
 
   return {
     type: 'ArrowFunctionExpression', params: params, 
@@ -163,6 +186,8 @@ this.parseArrowFunctionExpression = function(arg, context)   {
       end: nbody.loc.end
     },
     generator: false, expression: isExpr,
-    body: core(nbody), id : null
+    body: core(nbody), id : null,
+    async: async
   }; 
 };
+

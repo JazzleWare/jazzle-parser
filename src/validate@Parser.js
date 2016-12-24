@@ -43,8 +43,11 @@ this .validateID  = function (e) {
      }
      case 5: switch (n) {
          case 'await':
-            if ( this. isScript ) break SWITCH;
-            else this.errorReservedID(e);
+            if (this.isScript &&
+               !(this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR))
+              break SWITCH;
+            else
+              this.errorReservedID(e);
          case 'final':
          case 'float':
          case 'short':

@@ -52,3 +52,10 @@ test/fixtures/invalid-syntax/migrated_0235
 test/fixtures/invalid-syntax/migrated_0236
 test/fixtures/statement/iteration/for-let-let
 test/fixtures/statement/iteration/migrated_0012
+test/fixtures/ES6/identifier/module_await
+test/fixtures/es2017/async/methods/invalid-async-class-getter
+test/fixtures/es2017/async/methods/invalid-async-class-setter
+test/fixtures/es2017/async/methods/invalid-static-async-class-getter
+test/fixtures/es2017/async/methods/invalid-static-async-class-setter
+test/fixtures/es2017/async/arrows/async-arrow-object-expression-parameter
+test/fixtures/es2017/async/arrows/async-arrow-pattern-parameter

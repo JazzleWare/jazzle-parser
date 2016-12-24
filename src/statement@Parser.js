@@ -5,7 +5,7 @@ this.parseStatement = function ( allowNull ) {
     case ';': return this.parseEmptyStatement() ;
     case 'Identifier':
        this.canBeStatement = true;
-       head = this.parseIdStatementOrId(CTX_NONE);
+       head = this.parseIdStatementOrId(CTX_NONE|CTX_PAT);
        if ( this.foundStatement ) {
           this.foundStatement = false ;
           return head;

@@ -62,7 +62,8 @@ this.parseFunc = function(context, flags) {
   this.enterFuncScope(isStmt); 
   this.declMode = DECL_MODE_FUNC_PARAMS;
 
-  this.scopeFlags = SCOPE_FLAG_ARG_LIST;
+  this.scopeFlags = SCOPE_FLAG_NONE;
+
   if (isGen)
     this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
 
@@ -74,15 +75,23 @@ this.parseFunc = function(context, flags) {
   else if (!isWhole && !(flags & MEM_CONSTRUCTOR))
     this.scopeFlags |= SCOPE_FLAG_ALLOW_SUPER;
  
+  if (flags & MEM_ASYNC) {
+    if (isGen)
+      this.err('async.gen.not.yet.supported');
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+  }
+
   // class members, along with obj-methods, have strict formal parameter lists,
   // which is a rather misleading name for a parameter list in which dupes are not allowed
   if (!this.tight && !isWhole)
     this.enterComplex();
 
   this.firstNonSimpArg = null;
-  var argList = this.parseArgs(argLen);
 
+  this.scopeFlags |= SCOPE_FLAG_ARG_LIST;
+  var argList = this.parseArgs(argLen);
   this.scopeFlags &= ~SCOPE_FLAG_ARG_LIST;
+
   this.scopeFlags |= SCOPE_FLAG_FN;  
 
   this.labels = {};
@@ -93,7 +102,10 @@ this.parseFunc = function(context, flags) {
     type: isStmt ? 'FunctionDeclaration' : 'FunctionExpression', id: cfn,
     start: startc, end: nbody.end, generator: isGen,
     body: nbody, loc: { start: startLoc, end: nbody.loc.end },
-    expression: nbody.type !== 'BlockStatement', params: argList 
+    expression: nbody.type !== 'BlockStatement', params: argList,
+
+    // TODO: this should go in parseAsync
+    async: (flags & MEM_ASYNC) !== 0
   };
 
   if (isStmt)

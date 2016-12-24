@@ -168,6 +168,18 @@ this.parseExport = function() {
              this.canBeStatement = true;
              ex = this.parseFunc( context, 0 );
              break ;
+
+          case 'async':
+            this.canBeStatement = true;
+            ex = this.parseAsync(context|CTX_ASYNC_NO_NEWLINE_FN);
+            if (ex === null && !(context & CTX_DEFAULT)) {
+              if (this.lttype === 'Identifier' && this.ltval === 'function') {
+                ASSERT.call(this, this.nl, 'no newline before the "function" and still errors? -- impossible!');
+                this.err('export.newline.before.the.function');
+              } 
+              else
+                this.err('export.async.but.no.function');
+            }
         }
    }
 
@@ -186,14 +198,20 @@ this.parseExport = function() {
    }
 
    var endLoc = null;
+
    if ( ex === null ) {
-        ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT );
-        endI = this.semiI();
-        endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
-        if ( !endLoc && !this.nl &&
-             this.err('no.semi', 'export.named', 
-                 { s: startc, l:startLoc, e: ex } ) )
-          return this.errorHandlerOutput;
+     // TODO: this can exclusively happen as a result of calling `parseAsync` for parsing an async declaration;
+     // eliminate
+     if (this.canBeStatement)
+       this.canBeStatement = false
+
+     ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT );
+     endI = this.semiI();
+     endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
+     if ( !endLoc && !this.nl &&
+          this.err('no.semi', 'export.named', 
+              { s: startc, l:startLoc, e: ex } ) )
+       return this.errorHandlerOutput;
    }
 
    this.foundStatement = true;

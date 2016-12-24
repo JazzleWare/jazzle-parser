@@ -15,8 +15,6 @@ function runTestSuite(testRoot, Parser) {
   testSuite.exclude(function(test) { return test.testURI.indexOf('JSX') !== -1 }, '.js.xml');
   testSuite.exclude(function(test) { return test.jsonType === 'tokens' }, '.tokens');
 
-  testSuite.exclude(function(test) { return test.testURI.indexOf('async') !== -1 }, '.async');
-
   fs.readFileSync('.ignore').toString().split('\n').forEach( function(item){
      if (item) {
        testSuite.exclude(path.join(item+'.js'), 'ignore-.js');

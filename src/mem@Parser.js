@@ -19,33 +19,64 @@ this.parseMem = function(context, flags) {
   var c0 = 0, li0 = 0, col0 = 0, nmod = 0,
       nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "", latestFlag = 0;
 
+  var asyncNewLine = false;
   if (this.lttype === 'Identifier') {
-    c0 = this.c0; li0 = this.li; col0 = this.col0;
     LOOP:  
     // TODO: check version number when parsing get/set
     do {
+      if (nmod === 0) {
+        c0 = this.c0; li0 = this.li; col0 = this.col0;
+      }
       switch (this.ltval) {
       case 'static':
         if (!(flags & MEM_CLASS)) break LOOP;
         if (flags & MEM_STATIC) break LOOP;
+        if (flags & MEM_ASYNC) break LOOP;
+
         nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
+
+        flags |= latestFlag = MEM_STATIC;
         nmod++;
-        flags |= latestFlag = MEM_STATIC; this.next();
+        this.next();
         break;
 
       case 'get':
       case 'set':
         if (flags & MEM_ACCESSOR) break LOOP;
+        if (flags & MEM_ASYNC) break LOOP;
+
         nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
+        
         flags |= latestFlag = this.ltval === 'get' ? MEM_GET : MEM_SET;
-        nmod++; this.next();
+        nmod++;
+        this.next();
         break;
 
-      default: break LOOP;
+      case 'async':
+        if (flags & MEM_ACCESSOR) break LOOP;
+        if (flags & MEM_ASYNC) break LOOP;
+
+        nc0 = this.c0; nli0 = this.li0;
+        ncol0 = this.col0; nraw = this.ltraw;
+        nval = this.ltval;
+
+        flags |= latestFlag = MEM_ASYNC;
+        nmod++;
+        this.next();
+        if (this.nl) {
+          asyncNewLine = true;
+          break;
+        }
+
+        break;
+
+      default:
+        break LOOP;
+
       }
     } while (this.lttype === 'Identifier');
   }
@@ -61,6 +92,9 @@ this.parseMem = function(context, flags) {
   var nmem = null;
   switch (this.lttype) {
   case 'Identifier':
+    if (asyncNewLine)
+      this.err('async.newline');
+
     if ((flags & MEM_CLASS)) {
       if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
       if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
@@ -71,6 +105,9 @@ this.parseMem = function(context, flags) {
     nmem = this.memberID();
     break;
   case 'Literal':
+    if (asyncNewLine)
+      this.err('async.newline');
+
     if ((flags & MEM_CLASS)) {
       if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
       if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
@@ -81,6 +118,9 @@ this.parseMem = function(context, flags) {
     nmem = this.numstr();
     break;
   case '[':
+    if (asyncNewLine)
+      this.err('async.newline');
+
     nmem = this.memberExpr();
     break;
   default:
@@ -100,7 +140,7 @@ this.parseMem = function(context, flags) {
   if (this.lttype === '(') {
 
     var mem = this.parseMeth(nmem, flags);
-    if (c0) {
+    if (c0 && c0 !== mem.start) {
       mem.start = c0;
       mem.loc.start = { line: li0, column: col0 };
     }

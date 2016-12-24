@@ -314,6 +314,8 @@ while ( M_INTBITLEN >> (++D_INTBITLEN) );
 var PAREN = 'paren';
 var PAREN_NODE = PAREN;
 
+var INTERMEDIATE_ASYNC = 'intermediate-async';
+
 var STRING_TYPE = typeof "string";
 var NUMBER_TYPE = typeof 0;
 var HAS = {}.hasOwnProperty;
@@ -351,6 +353,7 @@ var CTX_NONE = 0,
     CTX_HAS_AN_ASSIG_ERR = CTX_HAS_A_PARAM_ERR << 1,
     CTX_HAS_A_SIMPLE_ERR = CTX_HAS_AN_ASSIG_ERR << 1,
     CTX_NO_SIMPLE_ERR = CTX_HAS_A_SIMPLE_ERR << 1,
+    CTX_ASYNC_NO_NEWLINE_FN = CTX_NO_SIMPLE_ERR << 1,
     CTX_PARPAT = CTX_PARAM|CTX_PAT,
     CTX_PARPAT_ERR = CTX_HAS_A_PARAM_ERR|CTX_HAS_AN_ASSIG_ERR|CTX_HAS_A_SIMPLE_ERR;
 
@@ -372,7 +375,10 @@ var MEM_CLASS = 1,
     MEM_CONSTRUCTOR = MEM_SUPER << 1,
     SCOPE_FLAG_IN_CONSTRUCTOR = MEM_CONSTRUCTOR,
 
-    SCOPE_FLAG_BREAK = SCOPE_FLAG_IN_CONSTRUCTOR << 1,
+    MEM_ASYNC = MEM_CONSTRUCTOR << 1,
+    SCOPE_FLAG_ALLOW_AWAIT_EXPR = MEM_ASYNC,
+
+    SCOPE_FLAG_BREAK = SCOPE_FLAG_ALLOW_AWAIT_EXPR << 1,
     SCOPE_FLAG_CONTINUE = SCOPE_FLAG_BREAK << 1,
     SCOPE_FLAG_FN = SCOPE_FLAG_CONTINUE << 1,
     SCOPE_FLAG_ARG_LIST = SCOPE_FLAG_FN << 1,
@@ -384,7 +390,7 @@ var MEM_CLASS = 1,
     INHERITED_SCOPE_FLAGS = SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR,
     CLEAR_IB = ~(SCOPE_FLAG_IN_BLOCK|SCOPE_FLAG_IN_IF),
 
-    MEM_OBJ = MEM_CONSTRUCTOR << 1,
+    MEM_OBJ = MEM_ASYNC << 1,
     MEM_SET = MEM_OBJ << 1,
     MEM_GET = MEM_SET << 1,
     MEM_STATIC = MEM_GET << 1,
@@ -393,10 +399,7 @@ var MEM_CLASS = 1,
     MEM_PROTO = MEM_OBJ_METH << 1,
     MEM_HAS_CONSTRUCTOR = MEM_PROTO << 1,
     MEM_ACCESSOR = MEM_GET|MEM_SET,
-    MEM_SPECIAL = MEM_ACCESSOR|MEM_GEN,
-    MEM_FLAGS = MEM_CLASS|MEM_SPECIAL|MEM_CONSTRUCTOR|
-                MEM_PROTO|MEM_SUPER|MEM_OBJ_METH|MEM_PROTOTYPE,
-    MEM_ANY = MEM_CLASS|MEM_OBJ_METH|MEM_SPECIAL|MEM_ACCESSOR|MEM_GEN,
+    MEM_SPECIAL = MEM_ACCESSOR|MEM_GEN|MEM_ASYNC,
     MEM_CLASS_OR_OBJ = MEM_CLASS|MEM_OBJ;
 
 var ARGLEN_GET = 0,
@@ -421,11 +424,11 @@ var DECL_NONE = 0;
 var DECL_NOT_FOUND = 
   DECL_NONE;
 
-
 var VDT_VOID = 1;
 var VDT_TYPEOF = 2;
 var VDT_NONE = 0;
 var VDT_DELETE = 4;
+var VDT_AWAIT = 8;
 
 var DIR_MODULE = 1,
     DIR_SCRIPT = DIR_MODULE << 1,
@@ -494,7 +497,10 @@ var ERR_NONE_YET = 0,
     // (a,)
     ERR_NON_TAIL_EXPR = ERR_EMPTY_LIST_MISSING_ARROW + 1,
 
-    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_NON_TAIL_EXPR + 1;
+    // async a
+    ERR_INTERMEDIATE_ASYNC = ERR_NON_TAIL_EXPR + 1,
+
+    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_INTERMEDIATE_ASYNC + 1;
 
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
@@ -748,13 +754,9 @@ this.applyTo = function(obj) {
 }]  ],
 [Parser.prototype, [function(){
 this.asArrowFuncArgList = function(argList) {
-  if (argList.type === 'SequenceExpression') {
-    var i = 0, list = argList.expressions;
-    while (i < list.length)
-      this.asArrowFuncArg(list[i++]);
-  }
-  else 
-    this.asArrowFuncArg(argList);
+  var i = 0, list = argList;
+  while (i < list.length)
+    this.asArrowFuncArg(list[i++]);
 };
 
 this.asArrowFuncArg = function(arg) {
@@ -768,7 +770,10 @@ this.asArrowFuncArg = function(arg) {
 
   switch  ( arg.type ) {
   case 'Identifier':
-
+    if ((this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) &&
+       arg.name === 'await')
+      this.err('arrow.param.is.await.in.an.async');
+     
     // TODO: this can also get checked in the scope manager rather than below
     if (this.tight && arguments_or_eval(arg.name))
       this.err('binding.to.arguments.or.eval');
@@ -845,11 +850,14 @@ this.asArrowFuncArg = function(arg) {
 
 this.parseArrowFunctionExpression = function(arg, context)   {
 
-  var tight = this.tight;
+  var tight = this.tight, async = false;
 
   this.enterFuncScope(false);
   this.declMode = DECL_MODE_FUNC_PARAMS;
   this.enterComplex();
+
+  var scopeFlags = this.scopeFlags;
+  this.scopeFlags &= INHERITED_SCOPE_FLAGS;
 
   switch ( arg.type ) {
   case 'Identifier':
@@ -859,8 +867,27 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   case PAREN_NODE:
     this.firstNonSimpArg = null;
-    if (arg.expr)
-      this.asArrowFuncArgList(core(arg));
+    if (arg.expr) {
+      if (arg.expr.type === 'SequenceExpression')
+        this.asArrowFuncArgList(arg.expr.expressions);
+      else
+        this.asArrowFuncArg(arg.expr);
+    }
+    break;
+
+  case 'CallExpression':
+    if (arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
+      this.err('not.a.valid.arg.list',{tn:arg});
+
+    async = true;
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+    this.asArrowFuncArgList(arg.arguments);
+    break;
+
+  case INTERMEDIATE_ASYNC:
+    async = true;
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+    this.asArrowFuncArg(arg.id);
     break;
 
   default:
@@ -874,9 +901,6 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     this.err('new.line.before.arrow');
 
   this.next();
-
-  var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= INHERITED_SCOPE_FLAGS;
 
   var isExpr = true, nbody = null;
 
@@ -901,8 +925,13 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     params = [];
   else if (params.type === 'SequenceExpression')
     params = params.expressions;
-  else
+  else if (params.type === 'CallExpression')
+    params = params.arguments;
+  else {
+    if (params.type === INTERMEDIATE_ASYNC)
+      params = params.id;
     params = [params];
+  }
 
   return {
     type: 'ArrowFunctionExpression', params: params, 
@@ -912,9 +941,11 @@ this.parseArrowFunctionExpression = function(arg, context)   {
       end: nbody.loc.end
     },
     generator: false, expression: isExpr,
-    body: core(nbody), id : null
+    body: core(nbody), id : null,
+    async: async
   }; 
 };
+
 
 },
 function(){
@@ -936,6 +967,118 @@ this.ensureSpreadToRestArgument_soft = function(head) {
   return head.type !== 'AssignmentExpression';
 };
 
+
+
+},
+function(){
+function idAsync(c0,li0,col0,raw) {
+  return {
+    type: 'Identifier', name: 'async',
+    start: c0, end: c0 + raw.length,
+    loc: {
+      start: { line: li0, column: col0 }, 
+      end: { line: li0, column: col0 + raw.length }
+    }, raw: raw
+  };
+}
+
+this.parseAsync = function(context) {
+  var c0 = this.c0,
+      li0 = this.li0,
+      col0 = this.col0,
+      raw = this.ltraw;
+
+  var stmt = this.canBeStatement;
+  if (stmt)
+    this.canBeStatement = false;
+
+  this.next();
+
+  var n = null;
+  switch (this.lttype) {
+  case 'Identifier':
+    if (this.nl) {
+      if ((context & CTX_ASYNC_NO_NEWLINE_FN) &&
+         this.ltval === 'function')
+        n = null;
+      else
+        n = idAsync(c0,li0,col0,raw);
+      break;
+    }
+    if (this.ltval === 'function') {
+      // TODO: eliminate
+      if (stmt) {
+        this.canBeStatement = stmt;
+        stmt = false;
+      }
+
+      n = this.parseFunc(context, MEM_ASYNC);
+      n.start = c0;
+      n.loc.start.line = li0;
+      n.loc.start.column = col0;
+      break;
+    }
+    if (context & CTX_ASYNC_NO_NEWLINE_FN) {
+      n = null;
+      break;
+    }
+    n = this.parseAsync_intermediate(c0,li0,col0);
+    this.st = ERR_INTERMEDIATE_ASYNC;
+    this.se = n;
+    break;
+
+  case '(':
+    if (context & CTX_ASYNC_NO_NEWLINE_FN) {
+      n = null;
+      break; 
+    }
+    var hasNewLineBeforeParen = this.nl;
+    var args = this.parseParen(context & CTX_PAT), async = idAsync(c0,li0,col0,raw);
+    n = {
+      type: 'CallExpression', callee: async,
+      start: c0, end: args.end,
+      loc: {
+        start: async.loc.start,
+        end: args.loc.end
+      }, arguments: args.expr ?
+        args.expr.type === 'SequenceExpression' ?
+          args.expr.expressions :
+          [args.expr] :
+        []
+    };
+    
+    if ((context & CTX_PAT) && hasNewLineBeforeParen) {
+      this.pt = ERR_ASYNC_NEWLINE_BEFORE_PAREN;
+      this.pe = n;
+    }
+
+    break;
+
+  default:
+    if (context & CTX_ASYNC_NO_NEWLINE_FN)
+      n = null;
+    else
+      n = idAsync(c0,li0,col0,raw);
+    break;
+  }
+
+  if (stmt)
+    this.canBeStatement = stmt;
+
+  return n;
+};
+
+this.parseAsync_intermediate = function(c0, li0, col0) {
+  var id = this.validateID("");
+  return {
+    type: INTERMEDIATE_ASYNC,
+    id: id,
+    start: c0,
+    loc: { 
+      start: { line: li0, column: col0 }
+    }
+  };
+};
 
 
 },
@@ -1283,6 +1426,18 @@ this.parseExport = function() {
              this.canBeStatement = true;
              ex = this.parseFunc( context, 0 );
              break ;
+
+          case 'async':
+            this.canBeStatement = true;
+            ex = this.parseAsync(context|CTX_ASYNC_NO_NEWLINE_FN);
+            if (ex === null && !(context & CTX_DEFAULT)) {
+              if (this.lttype === 'Identifier' && this.ltval === 'function') {
+                ASSERT.call(this, this.nl, 'no newline before the "function" and still errors? -- impossible!');
+                this.err('export.newline.before.the.function');
+              } 
+              else
+                this.err('export.async.but.no.function');
+            }
         }
    }
 
@@ -1301,14 +1456,20 @@ this.parseExport = function() {
    }
 
    var endLoc = null;
+
    if ( ex === null ) {
-        ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT );
-        endI = this.semiI();
-        endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
-        if ( !endLoc && !this.nl &&
-             this.err('no.semi', 'export.named', 
-                 { s: startc, l:startLoc, e: ex } ) )
-          return this.errorHandlerOutput;
+     // TODO: this can exclusively happen as a result of calling `parseAsync` for parsing an async declaration;
+     // eliminate
+     if (this.canBeStatement)
+       this.canBeStatement = false
+
+     ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT );
+     endI = this.semiI();
+     endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
+     if ( !endLoc && !this.nl &&
+          this.err('no.semi', 'export.named', 
+              { s: startc, l:startLoc, e: ex } ) )
+       return this.errorHandlerOutput;
    }
 
    this.foundStatement = true;
@@ -2325,7 +2486,8 @@ this.parseFunc = function(context, flags) {
   this.enterFuncScope(isStmt); 
   this.declMode = DECL_MODE_FUNC_PARAMS;
 
-  this.scopeFlags = SCOPE_FLAG_ARG_LIST;
+  this.scopeFlags = SCOPE_FLAG_NONE;
+
   if (isGen)
     this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
 
@@ -2337,15 +2499,23 @@ this.parseFunc = function(context, flags) {
   else if (!isWhole && !(flags & MEM_CONSTRUCTOR))
     this.scopeFlags |= SCOPE_FLAG_ALLOW_SUPER;
  
+  if (flags & MEM_ASYNC) {
+    if (isGen)
+      this.err('async.gen.not.yet.supported');
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+  }
+
   // class members, along with obj-methods, have strict formal parameter lists,
   // which is a rather misleading name for a parameter list in which dupes are not allowed
   if (!this.tight && !isWhole)
     this.enterComplex();
 
   this.firstNonSimpArg = null;
-  var argList = this.parseArgs(argLen);
 
+  this.scopeFlags |= SCOPE_FLAG_ARG_LIST;
+  var argList = this.parseArgs(argLen);
   this.scopeFlags &= ~SCOPE_FLAG_ARG_LIST;
+
   this.scopeFlags |= SCOPE_FLAG_FN;  
 
   this.labels = {};
@@ -2356,7 +2526,10 @@ this.parseFunc = function(context, flags) {
     type: isStmt ? 'FunctionDeclaration' : 'FunctionExpression', id: cfn,
     start: startc, end: nbody.end, generator: isGen,
     body: nbody, loc: { start: startLoc, end: nbody.loc.end },
-    expression: nbody.type !== 'BlockStatement', params: argList 
+    expression: nbody.type !== 'BlockStatement', params: argList,
+
+    // TODO: this should go in parseAsync
+    async: (flags & MEM_ASYNC) !== 0
   };
 
   if (isStmt)
@@ -2430,208 +2603,236 @@ this. parseIdStatementOrId = function ( context ) {
 
   SWITCH:
   switch (id.length) {
-    case 1:
-       pendingExprHead = this.id(); break SWITCH ;
+  case 1:
+    pendingExprHead = this.id(); break SWITCH ;
 
-    case 2: switch (id) {
-        case 'do': return this.parseDoWhileStatement();
-        case 'if': return this.parseIfStatement();
-        case 'in':
-           if ( context & CTX_FOR )
-             return null;
+  case 2:
+    switch (id) {
+    case 'do': return this.parseDoWhileStatement();
+    case 'if': return this.parseIfStatement();
+    case 'in':
+       if ( context & CTX_FOR )
+         return null;
  
-           this.notId() ;
-        default: pendingExprHead = this.id(); break SWITCH ;
+       this.notId() ;
+    default: pendingExprHead = this.id(); break SWITCH ;
     }
 
-    case 3: switch (id) {
-        case 'new':
-             if ( this.canBeStatement ) {
-                this.canBeStatement = false ;
-                this.pendingExprHead = this.parseNewHead();
-                return null;
-             }
-             return this.parseNewHead();
+  case 3:
+    switch (id) {
+    case 'new':
+      if ( this.canBeStatement ) {
+        this.canBeStatement = false ;
+        this.pendingExprHead = this.parseNewHead();
+        return null;
+      }
+      return this.parseNewHead();
 
-        case 'for': return this.parseFor();
-        case 'try': return this.parseTryStatement();
-        case 'let':
-             if ( this.canBeStatement && this.v >= 5 )
-               return this.parseLet(CTX_NONE);
+    case 'for': return this.parseFor();
+    case 'try': return this.parseTryStatement();
+    case 'let':
+      if ( this.canBeStatement && this.v >= 5 )
+        return this.parseLet(CTX_NONE);
 
-             if (this.tight ) this.err('strict.let.is.id',context);
+      if (this.tight ) this.err('strict.let.is.id',context);
 
-             pendingExprHead = this.id();
-             break SWITCH;
+      pendingExprHead = this.id();
+      break SWITCH;
 
-        case 'var': return this.parseVariableDeclaration( context & CTX_FOR );
-        case 'int':
-            if ( this.v <= 5 )
-              this.errorReservedID();
+    case 'var': return this.parseVariableDeclaration( context & CTX_FOR );
+    case 'int':
+      if ( this.v <= 5 )
+        this.errorReservedID();
 
-        default: pendingExprHead = this.id(); break SWITCH  ;
+    default: pendingExprHead = this.id(); break SWITCH  ;
     }
 
-    case 4: switch (id) {
-        case 'null':
-            pendingExprHead = this.parseNull();
-            break SWITCH;
-        case 'void':
-            if ( this.canBeStatement )
-               this.canBeStatement = false;
-            this.lttype = 'u'; 
-            this.isVDT = VDT_VOID;
-            return null;
-        case 'this':
-            pendingExprHead = this. parseThis();
-            break SWITCH;
-        case 'true':
-            pendingExprHead = this.parseTrue();
-            break SWITCH;
-        case 'case':
-            if ( this.canBeStatement ) {
-              this.foundStatement = true;
-              this.canBeStatement = false ;
-              return null;
-            }
+  case 4:
+    switch (id) {
+    case 'null':
+      pendingExprHead = this.parseNull();
+      break SWITCH;
+    case 'void':
+      if ( this.canBeStatement )
+         this.canBeStatement = false;
+      this.lttype = 'u'; 
+      this.isVDT = VDT_VOID;
+      return null;
+    case 'this':
+      pendingExprHead = this. parseThis();
+      break SWITCH;
+    case 'true':
+      pendingExprHead = this.parseTrue();
+      break SWITCH;
+    case 'case':
+      if ( this.canBeStatement ) {
+        this.foundStatement = true;
+        this.canBeStatement = false ;
+        return null;
+      }
 
-        case 'else':
-            this.notId();
-        case 'with':
-            return this.parseWithStatement();
-        case 'enum': case 'byte': case 'char': case 'goto':
-        case 'long':
-            if ( this. v <= 5 ) this.errorReservedID();
+    case 'else':
+      this.notId();
+    case 'with':
+      return this.parseWithStatement();
+    case 'enum': case 'byte': case 'char':
+    case 'goto': case 'long':
+      if ( this. v <= 5 ) this.errorReservedID();
 
-        default: pendingExprHead = this.id(); break SWITCH  ;
+    default: pendingExprHead = this.id(); break SWITCH  ;
+  }
+
+  case 5:
+    switch (id) {
+    case 'super': pendingExprHead = this.parseSuper(); break SWITCH;
+    case 'break': return this.parseBreakStatement();
+    case 'catch': this.notId ()  ;
+    case 'class': return this.parseClass(CTX_NONE ) ;
+    case 'const':
+      if (this.v<5) this.err('const.not.in.v5',context) ;
+      return this.parseVariableDeclaration(CTX_NONE);
+
+    case 'throw': return this.parseThrowStatement();
+    case 'while': return this.parseWhileStatement();
+    case 'yield': 
+      if ( this.scopeFlags & SCOPE_FLAG_GEN ) {
+        if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
+          this.err('yield.args');
+
+        if ( this.canBeStatement )
+          this.canBeStatement = false;
+
+        this.lttype = 'yield';
+        return null;
+      }
+      else if (this.tight) this.errorReservedID(null);
+
+      pendingExprHead = this.id();
+      break SWITCH;
+          
+    case 'false':
+      pendingExprHead = this.parseFalse();
+      break SWITCH;
+
+    case 'await':
+      if (this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) {
+        if (this.scopeFlag & SCOPE_FLAG_ARG_LIST)
+          this.err('await.args');
+        if (this.canBeStatement)
+          this.canBeStatement = false;
+        this.isVDT = VDT_AWAIT;
+        this.lttype = 'u';
+        return null;
+      }
+      if (this.tight)
+        this.err('await.in.strict');
+
+      pendingExprHead = this.id();
+      break SWITCH;
+
+    case 'async':
+      pendingExprHead = this.parseAsync(context);
+      break SWITCH;
+
+    case 'final':
+    case 'float':
+    case 'short':
+      if ( this. v <= 5 ) this.errorReservedID() ;
+    default: pendingExprHead = this.id(); break SWITCH ;
     }
 
-    case 5: switch (id) {
-        case 'super': pendingExprHead = this.parseSuper(); break SWITCH;
-        case 'break': return this.parseBreakStatement();
-        case 'catch': this.notId ()  ;
-        case 'class': return this.parseClass(CTX_NONE ) ;
-        case 'const':
-            if (this.v<5) this.err('const.not.in.v5',context) ;
-            return this.parseVariableDeclaration(CTX_NONE);
+  case 6: switch (id) {
+    case 'static':
+      if ( this.tight || this.v <= 5 )
+        this.error();
 
-        case 'throw': return this.parseThrowStatement();
-        case 'while': return this.parseWhileStatement();
-        case 'yield': 
-             if ( this.scopeFlags & SCOPE_FLAG_GEN ) {
-                if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
-                  this.err('yield.args');
+    case 'delete':
+    case 'typeof':
+      if ( this.canBeStatement )
+        this.canBeStatement = false ;
+      this.lttype = 'u'; 
+      this.isVDT = id === 'delete' ? VDT_DELETE : VDT_VOID;
+      return null;
 
-                if ( this.canBeStatement )
-                     this.canBeStatement = false;
+    case 'export': 
+      if ( this.isScript && this.err('export.not.in.module',context) )
+        return this.errorHandlerOutput;
 
-                this.lttype = 'yield';
-                return null;
-             }
-             else if (this.tight) this.errorReservedID(null);
+      return this.parseExport() ;
 
-             pendingExprHead = this.id();
-             break SWITCH;
-                 
-        case 'false':
-                pendingExprHead = this.parseFalse();
-                break  SWITCH;
-        case 'final':
-        case 'float':
-        case 'short':
-            if ( this. v <= 5 ) this.errorReservedID() ;
-        case 'await':
-        default: pendingExprHead = this.id(); break SWITCH ;
+    case 'import':
+      if ( this.isScript && this.err('import.not.in.module',context) )
+        return this.errorHandlerOutput;
+
+      return this.parseImport();
+
+    case 'return': return this.parseReturnStatement();
+    case 'switch': return this.parseSwitchStatement();
+    case 'public':
+      if (this.tight) this.errorReservedID();
+    case 'double': case 'native': case 'throws':
+      if ( this. v <= 5 ) this.errorReservedID();
+
+    default: pendingExprHead = this.id(); break SWITCH ;
     }
 
-    case 6: switch (id) {
-        case 'static':
-            if ( this.tight || this.v <= 5 )
-               this.error();
+  case 7:
+    switch (id) {
+    case 'default':
+      if ( this.canBeStatement ) this.canBeStatement = false ;
+      return null;
 
-        case 'delete':
-        case 'typeof':
-            if ( this.canBeStatement )
-               this.canBeStatement = false ;
-            this.lttype = 'u'; 
-            this.isVDT = id === 'delete' ? VDT_DELETE : VDT_VOID;
-            return null;
+    case 'extends': case 'finally':
+      this.notId() ;
 
-        case 'export': 
-            if ( this.isScript && this.err('export.not.in.module',context) )
-              return this.errorHandlerOutput;
+    case 'package': case 'private':
+      if ( this. tight  )
+        this.errorReservedID();
 
-            return this.parseExport() ;
+    case 'boolean':
+      if (this.v <= 5)
+        this.errorReservedID();
 
-        case 'import':
-            if ( this.isScript && this.err('import.not.in.module',context) )
-              return this.errorHandlerOutput;
-
-            return this.parseImport();
-
-        case 'return': return this.parseReturnStatement();
-        case 'switch': return this.parseSwitchStatement();
-        case 'public':
-            if (this.tight) this.errorReservedID();
-        case 'double': case 'native': case 'throws':
-            if ( this. v <= 5 ) this.errorReservedID();
-
-        default: pendingExprHead = this.id(); break SWITCH ;
+    default: pendingExprHead = this.id(); break SWITCH  ;
     }
 
-    case 7: switch (id) {
-        case 'default':
-           if ( this.canBeStatement ) this.canBeStatement = false ;
-           return null;
+  case 8:
+    switch (id) {
+    case 'function': return this.parseFunc(context&CTX_FOR, 0 );
+    case 'debugger': return this.prseDbg();
+    case 'continue': return this.parseContinueStatement();
+    case 'abstract': case 'volatile':
+      if ( this. v <= 5 ) this.errorReservedID();
 
-        case 'extends': case 'finally':
-           this.notId() ;
-
-        case 'package': case 'private':
-            if ( this. tight  )
-               this.errorReservedID();
-
-        case 'boolean':
-            if ( this. v <= 5 )
-               this.errorReservedID();
-
-        default: pendingExprHead = this.id(); break SWITCH  ;
+    default: pendingExprHead = this.id(); break SWITCH  ;
     }
 
-    case 8: switch (id) {
-        case 'function': return this.parseFunc(context&CTX_FOR, 0 );
-        case 'debugger': return this.prseDbg();
-        case 'continue': return this.parseContinueStatement();
-        case 'abstract': case 'volatile':
-           if ( this. v <= 5 ) this.errorReservedID();
+  case 9:
+    switch (id ) {
+    case 'interface': case 'protected':
+      if (this.tight) this.errorReservedID() ;
 
-        default: pendingExprHead = this.id(); break SWITCH  ;
+    case 'transient':
+      if (this.v <= 5) this.errorReservedID();
+
+    default: pendingExprHead = this.id(); break SWITCH  ;
     }
 
-    case 9: switch (id ) {
-        case 'interface': case 'protected':
-           if (this.tight) this.errorReservedID() ;
+  case 10:
+    switch ( id ) {
+    case 'instanceof':
+       this.notId();
+    case 'implements':
+      if ( this.v <= 5 || this.tight )
+        this.errorReservedID(id);
 
-        case 'transient':
-           if (this.v <= 5) this.errorReservedID();
-
-        default: pendingExprHead = this.id(); break SWITCH  ;
+    default: pendingExprHead = this.id(); break SWITCH ;
     }
 
-    case 10: switch ( id ) {
-        case 'instanceof':
-           this.notId()  ;
-        case 'implements':
-           if ( this.v <= 5 || this.tight )
-             this.resv();
+  case 12:
+     if ( this.v <= 5 && id === 'synchronized' ) this.errorReservedID();
 
-        default: pendingExprHead = this.id(); break SWITCH ;
-    }
-
-    case 12:
-       if ( this.v <= 5 && id === 'synchronized' ) this.errorReservedID();
-
-    default: pendingExprHead = this.id();
+  default: pendingExprHead = this.id();
 
   }
 
@@ -2795,33 +2996,64 @@ this.parseMem = function(context, flags) {
   var c0 = 0, li0 = 0, col0 = 0, nmod = 0,
       nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "", latestFlag = 0;
 
+  var asyncNewLine = false;
   if (this.lttype === 'Identifier') {
-    c0 = this.c0; li0 = this.li; col0 = this.col0;
     LOOP:  
     // TODO: check version number when parsing get/set
     do {
+      if (nmod === 0) {
+        c0 = this.c0; li0 = this.li; col0 = this.col0;
+      }
       switch (this.ltval) {
       case 'static':
         if (!(flags & MEM_CLASS)) break LOOP;
         if (flags & MEM_STATIC) break LOOP;
+        if (flags & MEM_ASYNC) break LOOP;
+
         nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
+
+        flags |= latestFlag = MEM_STATIC;
         nmod++;
-        flags |= latestFlag = MEM_STATIC; this.next();
+        this.next();
         break;
 
       case 'get':
       case 'set':
         if (flags & MEM_ACCESSOR) break LOOP;
+        if (flags & MEM_ASYNC) break LOOP;
+
         nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
+        
         flags |= latestFlag = this.ltval === 'get' ? MEM_GET : MEM_SET;
-        nmod++; this.next();
+        nmod++;
+        this.next();
         break;
 
-      default: break LOOP;
+      case 'async':
+        if (flags & MEM_ACCESSOR) break LOOP;
+        if (flags & MEM_ASYNC) break LOOP;
+
+        nc0 = this.c0; nli0 = this.li0;
+        ncol0 = this.col0; nraw = this.ltraw;
+        nval = this.ltval;
+
+        flags |= latestFlag = MEM_ASYNC;
+        nmod++;
+        this.next();
+        if (this.nl) {
+          asyncNewLine = true;
+          break;
+        }
+
+        break;
+
+      default:
+        break LOOP;
+
       }
     } while (this.lttype === 'Identifier');
   }
@@ -2837,6 +3069,9 @@ this.parseMem = function(context, flags) {
   var nmem = null;
   switch (this.lttype) {
   case 'Identifier':
+    if (asyncNewLine)
+      this.err('async.newline');
+
     if ((flags & MEM_CLASS)) {
       if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
       if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
@@ -2847,6 +3082,9 @@ this.parseMem = function(context, flags) {
     nmem = this.memberID();
     break;
   case 'Literal':
+    if (asyncNewLine)
+      this.err('async.newline');
+
     if ((flags & MEM_CLASS)) {
       if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
       if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
@@ -2857,6 +3095,9 @@ this.parseMem = function(context, flags) {
     nmem = this.numstr();
     break;
   case '[':
+    if (asyncNewLine)
+      this.err('async.newline');
+
     nmem = this.memberExpr();
     break;
   default:
@@ -2876,7 +3117,7 @@ this.parseMem = function(context, flags) {
   if (this.lttype === '(') {
 
     var mem = this.parseMeth(nmem, flags);
-    if (c0) {
+    if (c0 && c0 !== mem.start) {
       mem.start = c0;
       mem.loc.start = { line: li0, column: col0 };
     }
@@ -4242,15 +4483,24 @@ this.parseUnaryExpression = function(context) {
       core(arg).type !== 'MemberExpression')
     this.err('delete.arg.not.a.mem');
 
+  if (isVDT === VDT_AWAIT) {
+    var n = {
+      type: 'AwaitExpression', argument: core(arg),
+      start: startc, end: arg.end,
+      loc: { start: startLoc, end: arg.loc.end }
+    };
+    this.suspys = n;
+    return n;
+  }
+  
   return {
     type: 'UnaryExpression', operator: u,
     start: startc, end: arg.end,
     loc: {
       start: startLoc,
       end: arg.loc.end
-    },
-    prefix: true,
-    argument: core(arg)
+    }, argument: core(arg),
+    prefix: true
   };
 };
 
@@ -5394,7 +5644,7 @@ this.parseStatement = function ( allowNull ) {
     case ';': return this.parseEmptyStatement() ;
     case 'Identifier':
        this.canBeStatement = true;
-       head = this.parseIdStatementOrId(CTX_NONE);
+       head = this.parseIdStatementOrId(CTX_NONE|CTX_PAT);
        if ( this.foundStatement ) {
           this.foundStatement = false ;
           return head;
@@ -6347,8 +6597,11 @@ this .validateID  = function (e) {
      }
      case 5: switch (n) {
          case 'await':
-            if ( this. isScript ) break SWITCH;
-            else this.errorReservedID(e);
+            if (this.isScript &&
+               !(this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR))
+              break SWITCH;
+            else
+              this.errorReservedID(e);
          case 'final':
          case 'float':
          case 'short':

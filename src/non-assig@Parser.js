@@ -71,15 +71,24 @@ this.parseUnaryExpression = function(context) {
       core(arg).type !== 'MemberExpression')
     this.err('delete.arg.not.a.mem');
 
+  if (isVDT === VDT_AWAIT) {
+    var n = {
+      type: 'AwaitExpression', argument: core(arg),
+      start: startc, end: arg.end,
+      loc: { start: startLoc, end: arg.loc.end }
+    };
+    this.suspys = n;
+    return n;
+  }
+  
   return {
     type: 'UnaryExpression', operator: u,
     start: startc, end: arg.end,
     loc: {
       start: startLoc,
       end: arg.loc.end
-    },
-    prefix: true,
-    argument: core(arg)
+    }, argument: core(arg),
+    prefix: true
   };
 };
 
