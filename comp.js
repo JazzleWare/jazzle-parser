@@ -11,9 +11,12 @@ contents = testFile[0] === ':' ?
   testFile.substr(1) :
   fs.readFileSync(testFile, 'utf-8');
 
-var isModule = process.argv[i] !== 'n';
-var ast_esprima = esprima.parse(contents,
-  {loc: true, range: true, sourceType: isModule ? 'module' : 'script'});
+var isModule = process.argv[i++] !== 'n';
+var astLocation = i < process.argv.length ? process.argv[i++] : "";
+var ast_esprima = astLocation === "" ? esprima.parse(contents,
+  {loc: true, range: true, sourceType: isModule ? 'module' : 'script'}) :
+  JSON.parse(fs.readFileSync(astLocation, 'utf-8'));
+
 var ast_jazzle = jazzle.parse(contents, isModule);
 
 var comp = util.compare(ast_esprima, ast_jazzle);

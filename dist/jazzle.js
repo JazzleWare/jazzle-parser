@@ -514,9 +514,9 @@ var PREC_EQUAL = PREC_BIT_AND + 2;
 var PREC_COMP = PREC_EQUAL + 2;
 var PREC_SH = PREC_COMP + 2;
 var PREC_ADD_MIN = PREC_SH + 2;
-var PREC_EX = PREC_ADD_MIN + 2;
-var PREC_MUL = PREC_EX + 2;
-var PREC_U = PREC_MUL + 1;
+var PREC_MUL = PREC_ADD_MIN + 2;
+var PREC_EX = PREC_MUL + 2;
+var PREC_U = PREC_EX + 1;
 
 function isAssignment(prec) { return prec === PREC_SIMP_ASSIG || prec === PREC_OP_ASSIG ;  }
 function isRassoc(prec) { return prec === PREC_U ; }

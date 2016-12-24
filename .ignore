@@ -53,3 +53,5 @@ test/fixtures/invalid-syntax/migrated_0216
 test/fixtures/invalid-syntax/migrated_0234
 test/fixtures/invalid-syntax/migrated_0235
 test/fixtures/invalid-syntax/migrated_0236
+test/fixtures/statement/iteration/for-let-let
+test/fixtures/statement/iteration/migrated_0012

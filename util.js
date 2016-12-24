@@ -227,6 +227,7 @@
     if ( actual.type === 'AssignmentProperty' )
          actual.type = 'Property';
 
+    delete expected.async;
     if ( name === 'params' ) {
       var i = 0;
       while ( i < actual.length ) {
