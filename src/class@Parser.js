@@ -89,9 +89,6 @@ this.parseSuper = function() {
     if ((this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER) !==
       SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER)
       this.err('class.super.call');
-    
-    if (!this.suspys)
-      this.suspys = n;
  
     break;
  
