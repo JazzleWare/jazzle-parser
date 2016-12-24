@@ -38,9 +38,6 @@ test/fixtures/ES6/yield/yield-generator-arrow-default
 test/fixtures/ES6/yield/yield-generator-default-parameter
 test/fixtures/declaration/function/dupe-param
 test/fixtures/declaration/function/invalid-strict-labelled-function-declaration
-test/fixtures/es2017/trailing-commas/trailing-comma-arrow-multi
-test/fixtures/es2017/trailing-commas/trailing-comma-arrow-single
-test/fixtures/es2017/trailing-commas/trailing-comma-arrow
 test/fixtures/expression/primary/object/invalid-getter
 test/fixtures/expression/primary/object/invalid-setter1
 test/fixtures/expression/primary/object/invalid-setter2
