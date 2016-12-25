@@ -104,6 +104,11 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   var scopeFlags = this.scopeFlags;
   this.scopeFlags &= INHERITED_SCOPE_FLAGS;
 
+  if (this.pt === ERR_ASYNC_NEWLINE_BEFORE_PAREN) {
+    ASSERT.call(this, arg === this.pe, 'how can an error core not be equal to the erroneous argument?!');
+    this.err('arrow.newline.before.paren.async');
+  }
+
   switch ( arg.type ) {
   case 'Identifier':
     this.firstNonSimpArg = null;
@@ -123,6 +128,8 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   case 'CallExpression':
     if (arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
       this.err('not.a.valid.arg.list',{tn:arg});
+    if (this.parenAsync !== null && arg.call === this.parenAsync.expr)
+      this.err('arrow.has.a.paren.async');
 
     async = true;
     this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;

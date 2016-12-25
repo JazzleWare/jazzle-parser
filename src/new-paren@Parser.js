@@ -128,6 +128,9 @@ this.parseParen = function(context) {
     if (st !== ERR_NONE_YET) {
       this.st = st; this.se = se; this.so = so;
     }
+    if (list === null && elem !== null &&
+       elem.type === 'Identifier' && elem.name === 'async')
+      this.parenAsync = n;
   }
 
   if (prevys !== null)

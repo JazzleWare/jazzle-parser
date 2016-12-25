@@ -118,7 +118,7 @@ this. parseIdStatementOrId = function ( context ) {
 
     case 'await':
       if (this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) {
-        if (this.scopeFlag & SCOPE_FLAG_ARG_LIST)
+        if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
           this.err('await.args');
         if (this.canBeStatement)
           this.canBeStatement = false;

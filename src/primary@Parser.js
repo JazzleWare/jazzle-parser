@@ -227,7 +227,7 @@ this.parseThis = function() {
 };
 
 this.parseArgList = function () {
-  var elem = null, list = [];
+  var parenAsync = this.parenAsync, elem = null, list = [];
 
   do { 
     this.next();
@@ -244,6 +244,9 @@ this.parseArgList = function () {
       break;
     }
   } while ( this.lttype === ',' );
+
+  if (parenAsync !== null)
+    this.parenAsync = parenAsync;
 
   return list ;
 };

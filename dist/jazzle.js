@@ -106,6 +106,8 @@ var Parser = function (src, isModule) {
 
   this.dv = { value: "", raw: "" };
   this.strictError = { offset: -1, line: -1, column: -1, stringNode: null };
+
+  this.parenAsync = null; // so that things like (async)(a,b)=>12 will not get to parse.
 };
 
 ;
@@ -500,7 +502,8 @@ var ERR_NONE_YET = 0,
     // async a
     ERR_INTERMEDIATE_ASYNC = ERR_NON_TAIL_EXPR + 1,
 
-    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_INTERMEDIATE_ASYNC + 1;
+    ERR_ASYNC_NEWLINE_BEFORE_PAREN = ERR_INTERMEDIATE_ASYNC + 1,
+    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_ASYNC_NEWLINE_BEFORE_PAREN + 1;
 
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
@@ -859,6 +862,11 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   var scopeFlags = this.scopeFlags;
   this.scopeFlags &= INHERITED_SCOPE_FLAGS;
 
+  if (this.pt === ERR_ASYNC_NEWLINE_BEFORE_PAREN) {
+    ASSERT.call(this, arg === this.pe, 'how can an error core not be equal to the erroneous argument?!');
+    this.err('arrow.newline.before.paren.async');
+  }
+
   switch ( arg.type ) {
   case 'Identifier':
     this.firstNonSimpArg = null;
@@ -878,6 +886,8 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   case 'CallExpression':
     if (arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
       this.err('not.a.valid.arg.list',{tn:arg});
+    if (this.parenAsync !== null && arg.call === this.parenAsync.expr)
+      this.err('arrow.has.a.paren.async');
 
     async = true;
     this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
@@ -2716,7 +2726,7 @@ this. parseIdStatementOrId = function ( context ) {
 
     case 'await':
       if (this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) {
-        if (this.scopeFlag & SCOPE_FLAG_ARG_LIST)
+        if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
           this.err('await.args');
         if (this.canBeStatement)
           this.canBeStatement = false;
@@ -3760,6 +3770,9 @@ this.parseParen = function(context) {
     if (st !== ERR_NONE_YET) {
       this.st = st; this.se = se; this.so = so;
     }
+    if (list === null && elem !== null &&
+       elem.type === 'Identifier' && elem.name === 'async')
+      this.parenAsync = n;
   }
 
   if (prevys !== null)
@@ -4621,6 +4634,7 @@ this.parseNonSeqExpr = function (prec, context) {
     else
       this.err('assig.not.first');
   }
+
   if ((context & CTX_PAT) &&
      (context & CTX_NO_SIMPLE_ERR))
       this.currentExprIsSimple();
@@ -5215,7 +5229,7 @@ this.parseThis = function() {
 };
 
 this.parseArgList = function () {
-  var elem = null, list = [];
+  var parenAsync = this.parenAsync, elem = null, list = [];
 
   do { 
     this.next();
@@ -5232,6 +5246,9 @@ this.parseArgList = function () {
       break;
     }
   } while ( this.lttype === ',' );
+
+  if (parenAsync !== null)
+    this.parenAsync = parenAsync;
 
   return list ;
 };

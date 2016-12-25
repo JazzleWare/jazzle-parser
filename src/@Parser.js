@@ -57,5 +57,7 @@ var Parser = function (src, isModule) {
 
   this.dv = { value: "", raw: "" };
   this.strictError = { offset: -1, line: -1, column: -1, stringNode: null };
+
+  this.parenAsync = null; // so that things like (async)(a,b)=>12 will not get to parse.
 };
 
