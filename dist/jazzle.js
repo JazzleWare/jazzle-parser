@@ -993,6 +993,9 @@ function idAsync(c0,li0,col0,raw) {
 }
 
 this.parseAsync = function(context) {
+  if (this.v < 7) 
+    return this.id();
+
   var c0 = this.c0,
       li0 = this.li0,
       col0 = this.col0,
