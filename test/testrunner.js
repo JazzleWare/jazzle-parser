@@ -30,7 +30,7 @@ function runTests(parserFactory, testRoot) {
   fs.readFileSync('.ignore').toString().split('\n')
     .forEach(function(line) {
 
-      line = line.replace(/^\s*([^#]*)\s*(#.*)?$/, "$1");
+      line = line.replace(/^\s*([^#\s]*)\s*(#.*)?$/, "$1");
       if (line === "")
         return;
 

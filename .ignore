@@ -23,48 +23,48 @@ test/test-esprima/fixtures/ES2016/strict-directive/invalid-strict-setter-default
 test/test-esprima/fixtures/ES2016/strict-directive/invalid-strict-setter-object-destructuring
 test/test-esprima/fixtures/ES2016/strict-directive/invalid-strict-setter-rest
 test/test-esprima/fixtures/ES6/binding-pattern/array-pattern/dupe-param
-test/test-esprima/fixtures/ES6/binding-pattern/array-pattern/for-let-let
-test/test-esprima/fixtures/ES6/binding-pattern/object-pattern/for-let-let
-test/test-esprima/fixtures/ES6/export-declaration/export-named-keyword-as-specifier
-test/test-esprima/fixtures/ES6/export-declaration/export-named-keyword-specifier
+test/test-esprima/fixtures/ES6/binding-pattern/array-pattern/for-let-let #initialiser
+test/test-esprima/fixtures/ES6/binding-pattern/object-pattern/for-let-let #initialiser
+test/test-esprima/fixtures/ES6/export-declaration/export-named-keyword-as-specifier # try
+test/test-esprima/fixtures/ES6/export-declaration/export-named-keyword-specifier # try
 test/test-esprima/fixtures/ES6/generator/invalid-labelled-generator
-test/test-esprima/fixtures/ES6/identifier/invalid_expression_await.module
+# test/test-esprima/fixtures/ES6/identifier/invalid_expression_await.module
 test/test-esprima/fixtures/ES6/program/module/invalid-export-in-function.module
 test/test-esprima/fixtures/ES6/program/module/invalid-import-in-function.module
-test/test-esprima/fixtures/ES6/template-literals/literal-escape-sequences
-test/test-esprima/fixtures/ES6/yield/invalid-yield-strict-function-declaration
-test/test-esprima/fixtures/ES6/yield/invalid-yield-strict-function-expression
-test/test-esprima/fixtures/ES6/yield/yield-generator-arrow-default
-test/test-esprima/fixtures/ES6/yield/yield-generator-default-parameter
+test/test-esprima/fixtures/ES6/template-literals/literal-escape-sequences # \u0
+test/test-esprima/fixtures/ES6/yield/invalid-yield-strict-function-declaration # valid
+test/test-esprima/fixtures/ES6/yield/invalid-yield-strict-function-expression # valid
+test/test-esprima/fixtures/ES6/yield/yield-generator-arrow-default # yield in an arrow
+test/test-esprima/fixtures/ES6/yield/yield-generator-default-parameter # yield in a generator param
 test/test-esprima/fixtures/declaration/function/dupe-param
 test/test-esprima/fixtures/declaration/function/invalid-strict-labelled-function-declaration
 test/test-esprima/fixtures/expression/primary/object/invalid-getter
 test/test-esprima/fixtures/expression/primary/object/invalid-setter1
 test/test-esprima/fixtures/expression/primary/object/invalid-setter2
-test/test-esprima/fixtures/invalid-syntax/migrated_0201
-test/test-esprima/fixtures/invalid-syntax/migrated_0202
-test/test-esprima/fixtures/invalid-syntax/migrated_0205
-test/test-esprima/fixtures/invalid-syntax/migrated_0206
-test/test-esprima/fixtures/invalid-syntax/migrated_0208
-test/test-esprima/fixtures/invalid-syntax/migrated_0216
-test/test-esprima/fixtures/invalid-syntax/migrated_0234
-test/test-esprima/fixtures/invalid-syntax/migrated_0235
-test/test-esprima/fixtures/invalid-syntax/migrated_0236
+test/test-esprima/fixtures/invalid-syntax/migrated_0201 # valid
+test/test-esprima/fixtures/invalid-syntax/migrated_0202 # valid
+test/test-esprima/fixtures/invalid-syntax/migrated_0205 # valid
+test/test-esprima/fixtures/invalid-syntax/migrated_0206 # valid
+test/test-esprima/fixtures/invalid-syntax/migrated_0208 # valid
+#test/test-esprima/fixtures/invalid-syntax/migrated_0216
+test/test-esprima/fixtures/invalid-syntax/migrated_0234 # valid
+test/test-esprima/fixtures/invalid-syntax/migrated_0235 # valid
+test/test-esprima/fixtures/invalid-syntax/migrated_0236 # valid
 test/test-esprima/fixtures/statement/iteration/for-let-let
 test/test-esprima/fixtures/statement/iteration/migrated_0012
 test/test-esprima/fixtures/ES6/identifier/module_await
-test/test-esprima/fixtures/es2017/async/methods/invalid-async-class-getter
-test/test-esprima/fixtures/es2017/async/methods/invalid-async-class-setter
-test/test-esprima/fixtures/es2017/async/methods/invalid-static-async-class-getter
-test/test-esprima/fixtures/es2017/async/methods/invalid-static-async-class-setter
-test/test-esprima/fixtures/es2017/async/arrows/async-arrow-object-expression-parameter
-test/test-esprima/fixtures/es2017/async/arrows/async-arrow-pattern-parameter
-test/test-esprima/fixtures/es2017/async/arrows/async-arrow-spread
-test/test-esprima/fixtures/es2017/async/functions/export-default-async-function-expression.module
-test/test-esprima/fixtures/es2017/async/functions/export-default-async-named-function-expression-await.module
-test/test-esprima/fixtures/es2017/async/functions/export-default-async-named-function-expression.module
-test/test-esprima/fixtures/es2017/async/methods/async-method-await
-test/test-esprima/fixtures/es2017/async/methods/async-method-literal
-test/test-esprima/fixtures/es2017/async/methods/async-method-number
-test/test-esprima/fixtures/es2017/async/methods/async-method
-test/test-esprima/fixtures/es2017/async/methods/class-async-method-computed
+test/test-esprima/fixtures/es2017/async/methods/invalid-async-class-getter ## valid
+test/test-esprima/fixtures/es2017/async/methods/invalid-async-class-setter ## valid
+test/test-esprima/fixtures/es2017/async/methods/invalid-static-async-class-getter ## valid
+test/test-esprima/fixtures/es2017/async/methods/invalid-static-async-class-setter ## valid
+test/test-esprima/fixtures/es2017/async/arrows/async-arrow-object-expression-parameter ##ObjectExpression
+test/test-esprima/fixtures/es2017/async/arrows/async-arrow-pattern-parameter ##ObjectExpression
+test/test-esprima/fixtures/es2017/async/arrows/async-arrow-spread ## SpreadExpression
+test/test-esprima/fixtures/es2017/async/functions/export-default-async-function-expression.module ##FunctionExpression
+test/test-esprima/fixtures/es2017/async/functions/export-default-async-named-function-expression-await.module ##FunctionExpression
+test/test-esprima/fixtures/es2017/async/functions/export-default-async-named-function-expression.module ##FunctionExpression
+test/test-esprima/fixtures/es2017/async/methods/async-method-await ## 'f' location
+test/test-esprima/fixtures/es2017/async/methods/async-method-literal ## Identifier rather than Literal
+test/test-esprima/fixtures/es2017/async/methods/async-method-number ## Identifier rather than Literal
+test/test-esprima/fixtures/es2017/async/methods/async-method ## 'f' location
+test/test-esprima/fixtures/es2017/async/methods/class-async-method-computed ## computed is false 
