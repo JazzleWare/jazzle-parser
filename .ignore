@@ -59,3 +59,12 @@ test/test-esprima/fixtures/es2017/async/methods/invalid-static-async-class-gette
 test/test-esprima/fixtures/es2017/async/methods/invalid-static-async-class-setter
 test/test-esprima/fixtures/es2017/async/arrows/async-arrow-object-expression-parameter
 test/test-esprima/fixtures/es2017/async/arrows/async-arrow-pattern-parameter
+test/test-esprima/fixtures/es2017/async/arrows/async-arrow-spread
+test/test-esprima/fixtures/es2017/async/functions/export-default-async-function-expression.module
+test/test-esprima/fixtures/es2017/async/functions/export-default-async-named-function-expression-await.module
+test/test-esprima/fixtures/es2017/async/functions/export-default-async-named-function-expression.module
+test/test-esprima/fixtures/es2017/async/methods/async-method-await
+test/test-esprima/fixtures/es2017/async/methods/async-method-literal
+test/test-esprima/fixtures/es2017/async/methods/async-method-number
+test/test-esprima/fixtures/es2017/async/methods/async-method
+test/test-esprima/fixtures/es2017/async/methods/class-async-method-computed

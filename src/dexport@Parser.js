@@ -171,8 +171,19 @@ this.parseExport = function() {
 
           case 'async':
             this.canBeStatement = true;
+            if (context & CTX_DEFAULT) {
+              ex = this.parseAsync(context);
+              if (this.foundStatement)
+                this.foundStatement = false;
+              else {
+                this.pendingExprHead = ex;
+                ex = null;
+              }
+              break;
+            }
+
             ex = this.parseAsync(context|CTX_ASYNC_NO_NEWLINE_FN);
-            if (ex === null && !(context & CTX_DEFAULT)) {
+            if (ex === null) {
               if (this.lttype === 'Identifier' && this.ltval === 'function') {
                 ASSERT.call(this, this.nl, 'no newline before the "function" and still errors? -- impossible!');
                 this.err('export.newline.before.the.function');
