@@ -8,6 +8,7 @@ early-error*
 yield-container*
 scrap/
 errLoc
+cat-ignore.js
 *-
 .s*
 cond
