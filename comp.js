@@ -1,5 +1,5 @@
 var jazzle = require('./dist/jazzle.js');
-var util = require('./util.js');
+var util = require('./common/util.js');
 var fs = require('fs');
 var esprima = require('esprima');
 
@@ -19,7 +19,7 @@ var ast_esprima = astLocation === "" ? esprima.parse(contents,
 
 var ast_jazzle = jazzle.parse(contents, isModule);
 
-var comp = util.compare(ast_esprima, ast_jazzle);
+var comp = util.compare_ea(ast_esprima, ast_jazzle, null, util.ej_adjust);
 if (comp === null)
   console.log('equal parses.');
 else {

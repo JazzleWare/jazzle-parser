@@ -61,7 +61,7 @@ TestSuite.prototype.runTest = function(test) {
     if (!test.isFail())
       return this.notify('fail', 'contrary', test);
 
-    comp = util.compare(test.json, test.result);
+    comp = util.compare_ea(test.json, test.result, null, util.ej_adjust);
     test.comp = comp;
 
     if (test.comp === null)
@@ -75,7 +75,7 @@ TestSuite.prototype.runTest = function(test) {
   if (test.isFail())
     return this.notify('pass', 'contrary', test);
 
-  comp = util.compare(test.json, test.result);
+  comp = util.compare_ea(test.json, test.result, null, util.ej_adjust);
   test.comp = comp;
 
   if (test.comp === null)
