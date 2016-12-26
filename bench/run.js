@@ -15,12 +15,12 @@ try {
 } catch ( e ) {} 
 
 try {
-   var pLube = require( './dist/jazzle.js' );
+   var pLube = require( '../dist/jazzle.js' );
    parsers.jazzle = function( src, withLoc ) {
       return new pLube.Parser(src).parseProgram();
    }
 } catch ( e ) {
-   var pLube = require( './dist/jazzle_error.js' );
+   var pLube = require( '../dist/jazzle_error.js' );
    parsers.jazzle = function( src, withLoc ) {
       return new pLube.Parser(src).parseProgram();
    }
@@ -33,7 +33,7 @@ try {
    };
 } catch ( e ) {}
 
-var fs = require( 'fs' ), util = require( './util.js' ) ;
+var fs = require( 'fs' ), util = require( '../common/util.js' ) ;
 
 function readFile(filePath) {
    try {
@@ -44,7 +44,7 @@ function readFile(filePath) {
    }
 }
 
-var SOURCES_ROOT = './bench-sources';
+var SOURCES_ROOT = './bench/sources';
 var sources = {};
 
 var files = null, e = 0;

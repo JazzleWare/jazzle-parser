@@ -1,19 +1,17 @@
 'use strict';
 
 var fs = require( 'fs' );
-var util = require( 'util' );
+var macro = require('../common/macro.js');
 var src = './src';
 var dist = './dist/jazzle';
-var macro = require('./macro.js');
 
 var buildMacro = new macro.Macro();
 
 function Builder() {
-
-   this.moduleNames = {};
-   this.moduleList = [];
-   this.strExports = "";  
-   this.str = "";
+  this.moduleNames = {};
+  this.moduleList = [];
+  this.strExports = "";  
+  this.str = "";
 }
 
 Builder.prototype.addModule = function(name, path) {
@@ -150,15 +148,11 @@ var exports = {};
 console.log("BUILD STARTED");
 builder.build();
 console.log("TESTING.....");
+
 try {
    new Function(builder.str).call(exports);
-   var summary = require('./test-runner.js').runTestSuite('test/fixtures',exports.Parser);
-   if (summary.pass - summary.skipPass !== summary.passAsExpected) {
-      console.log("SOME TESTS WEREN'T PASSED.");
-//      dist += '_incomplete-tests'; 
-   }
+   require('../test/testrunner.js').runTests(exports.Parser, './test/test-esprima');
    console.log("TESTING COMPLETE.");
-
 }
 catch (e) {
    console.log("ERROR:\n", e);
