@@ -33,9 +33,6 @@ var Parser = function (src, isModule) {
   this.v = 7;
 
   this.throwReserved = true;
- 
-  this.errorHandlers = {};
-  this.errorHandlerOutput = null;
 
   this.first__proto__ = false;
 
@@ -59,5 +56,8 @@ var Parser = function (src, isModule) {
   this.strictError = { offset: -1, line: -1, column: -1, stringNode: null };
 
   this.parenAsync = null; // so that things like (async)(a,b)=>12 will not get to parse.
+
+  this.errorListener = this; // any object with an `onErr(errType "string", errParams {*})` will do
+
 };
 

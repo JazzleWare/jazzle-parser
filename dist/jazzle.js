@@ -82,9 +82,6 @@ var Parser = function (src, isModule) {
   this.v = 7;
 
   this.throwReserved = true;
- 
-  this.errorHandlers = {};
-  this.errorHandlerOutput = null;
 
   this.first__proto__ = false;
 
@@ -108,6 +105,9 @@ var Parser = function (src, isModule) {
   this.strictError = { offset: -1, line: -1, column: -1, stringNode: null };
 
   this.parenAsync = null; // so that things like (async)(a,b)=>12 will not get to parse.
+
+  this.errorListener = this; // any object with an `onErr(errType "string", errParams {*})` will do
+
 };
 
 ;
@@ -1632,56 +1632,7 @@ this.parseImport = function() {
 
 },
 function(){
-this.currentExprIsParams = function() {
-  this.st = this.pt = this.at = this.st = ERR_NONE_YET;
-};
-
-this.currentExprIsAssig = function() {
-  this.st = this.pt = this.at = ERR_NONE_YET;
-};
-
-this.currentExprIsSimple = function() {
-  this.pt = this.at = ERR_NONE_YET;
-  if (this.st !== ERR_NONE_YET) {
-    var st = this.st;
-    var se = this.se;
-    this.throwTricky('s', st, se);
-  }
-};
-
-// tricky map
-var tm = {};
-
-tm[ERR_PAREN_UNBINDABLE] = 'paren.unbindable';
-tm[ERR_SHORTHAND_UNASSIGNED] = 'shorthand.unassigned';
-tm[ERR_NON_TAIL_REST] = 'non.tail.rest';
-tm[ERR_ARGUMENTS_OR_EVAL_ASSIGNED] = 'assig.to.arguments.or.eval';
-tm[ERR_YIELD_OR_SUPER] = 'param.has.yield.or.super';
-tm[ERR_UNEXPECTED_REST] = 'unexpected.rest';
-tm[ERR_EMPTY_LIST_MISSING_ARROW] = 'arrow.missing.after.empty.list';
-tm[ERR_NON_TAIL_EXPR] = 'seq.non.tail.expr';
-// TODO: trickyContainer
-this.throwTricky = function(source, trickyType, trickyCore) {
-  if (!HAS.call(tm, trickyType))
-    throw new Error("Unknown error value: "+trickyType);
-  
-  this.err(tm[trickyType], {tn:trickyCore, extra:{source:source}});
-}; 
-
-this.adjustErrors = function() { 
-  if (this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
-    this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
-  else
-    this.st = ERR_NONE_YET;
-};
-
-
-},
-function(){
-this.err = function(errorType, errParams) {
-   if ( has.call(this.errorHandlers, errorType) )
-     return this.handleError(this.errorHandlers[errorType], errParams);
-
+this.onErr = function(errorType, errParams) {
    var message = "";
    if (!HAS.call(ErrorBuilders, errorType))
      message = "Error: " + errorType + "\n" +
@@ -1708,16 +1659,6 @@ this.err = function(errorType, errParams) {
    throw new Error(message);
 };
   
-this.handleError = function(handlerFunction, errorTok, args ) {
-   var output = handlerFunction.call( this, params, coords );
-   if ( output ) {
-     this.errorHandlerOutput = output;
-     return true;
-   }
-
-   return false;
-};
-
 var exclusivity = {
   c0: {tn: 1}, c: {tn: 1},
   li0: {loc0: 1,tn: 1}, li: {loc: 1,tn: 1},
@@ -1915,6 +1856,58 @@ a('block.dependent.no.opening.curly',
     m: 'curly brace was expected after this {extra.blockOwner}; instead, got a token with type {parser.lttype}' },
   'try (', 'try {} catch (e) return');
 
+
+},
+function(){
+this.currentExprIsParams = function() {
+  this.st = this.pt = this.at = this.st = ERR_NONE_YET;
+};
+
+this.currentExprIsAssig = function() {
+  this.st = this.pt = this.at = ERR_NONE_YET;
+};
+
+this.currentExprIsSimple = function() {
+  this.pt = this.at = ERR_NONE_YET;
+  if (this.st !== ERR_NONE_YET) {
+    var st = this.st;
+    var se = this.se;
+    this.throwTricky('s', st, se);
+  }
+};
+
+// tricky map
+var tm = {};
+
+tm[ERR_PAREN_UNBINDABLE] = 'paren.unbindable';
+tm[ERR_SHORTHAND_UNASSIGNED] = 'shorthand.unassigned';
+tm[ERR_NON_TAIL_REST] = 'non.tail.rest';
+tm[ERR_ARGUMENTS_OR_EVAL_ASSIGNED] = 'assig.to.arguments.or.eval';
+tm[ERR_YIELD_OR_SUPER] = 'param.has.yield.or.super';
+tm[ERR_UNEXPECTED_REST] = 'unexpected.rest';
+tm[ERR_EMPTY_LIST_MISSING_ARROW] = 'arrow.missing.after.empty.list';
+tm[ERR_NON_TAIL_EXPR] = 'seq.non.tail.expr';
+// TODO: trickyContainer
+this.throwTricky = function(source, trickyType, trickyCore) {
+  if (!HAS.call(tm, trickyType))
+    throw new Error("Unknown error value: "+trickyType);
+  
+  this.err(tm[trickyType], {tn:trickyCore, extra:{source:source}});
+}; 
+
+this.adjustErrors = function() { 
+  if (this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
+    this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
+  else
+    this.st = ERR_NONE_YET;
+};
+
+
+},
+function(){
+this.err = function(errorType, errParams) {
+  return this.errorListener.onErr(errorType, errParams);
+};
 
 },
 function(){
