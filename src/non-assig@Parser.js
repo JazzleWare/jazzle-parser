@@ -112,7 +112,7 @@ this.parseUpdateExpression = function(arg, context) {
   }
 
   if (!this.ensureSimpAssig_soft(core(arg)))
-    this.err('incdec.post.not.simple.assig',arg);
+    this.err('incdec.post.not.simple.assig');
 
   c  = this.c;
   loc = {

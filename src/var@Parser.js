@@ -1,6 +1,6 @@
 this.parseVariableDeclaration = function(context) {
   if (!this.canBeStatement)
-    this.err('not.stmt','var',context);
+    this.err('not.stmt');
 
   this.canBeStatement = false;
 
@@ -74,7 +74,7 @@ this.parseVariableDeclaration = function(context) {
       if (this.nl)
         endLoc =  lastItem.loc.end; 
       else  
-        this.err('no.semi','var');
+        this.err('no.semi');
     }
   }
   else {

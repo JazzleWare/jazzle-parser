@@ -2,7 +2,7 @@ this .ensureSimpAssig_soft = function(head) {
   switch(head.type) {
     case 'Identifier':
        if ( this.tight && arguments_or_eval(head.name) )
-         this.err('assig.to.eval.or.arguments',{tn:head});
+         this.err('assig.to.eval.or.arguments');
 
     case 'MemberExpression':
        return true ;

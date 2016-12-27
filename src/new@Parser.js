@@ -37,7 +37,7 @@ this.parseNewHead = function () {
        break ;
 
     default:
-       this.err('new.head.is.not.valid',startc, startLoc);
+       this.err('new.head.is.not.valid');
   }
 
   // #if V
@@ -66,7 +66,7 @@ this.parseNewHead = function () {
                     loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: true/* ,y:-1*/ };
           inner = head ;
           if ( !this.expectType_soft (']') ) {
-            this.err('mem.unfinished',startc,startLoc,head)  ;
+            this.err('mem.unfinished')  ;
           }
  
           continue;
@@ -76,7 +76,7 @@ this.parseNewHead = function () {
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
                     loc: { start: startLoc, end: this.loc() }, arguments: elem /* ,y:-1*/};
           if ( !this. expectType_soft (')') ) {
-            this.err('new.args.is.unfinished',startc,startLoc,inner) ;
+            this.err('new.args.is.unfinished') ;
           }
 
           return inner;

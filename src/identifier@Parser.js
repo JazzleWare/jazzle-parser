@@ -20,7 +20,7 @@ this.readAnIdentifierToken = function (v) {
 
          this.c = ++c;
          if (CH_u !== src.charCodeAt(c) &&
-             this.err('id.slash.no.u',c,v) )
+             this.err('id.slash.no.u') )
            return this.errorHandlerOutput ;
 
          peek = this. peekUSeq() ;
@@ -28,14 +28,14 @@ this.readAnIdentifierToken = function (v) {
            this.c++;
            byte2 = this.peekTheSecondByte();
            if (!isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000) &&
-                this.err('id.multi.must.be.idbody',peek,byte2,c,v) )
+                this.err('id.multi.must.be.idbody') )
              return this.errorHandlerOutput ;
 
            v += String.fromCharCode(peek, byte2);
          }
          else {
             if ( !isIDBody(peek) &&
-                  this.err('id.esc.must.be.idbody',peek,c,v) )
+                  this.err('id.esc.must.be.idbody') )
               return this.errorHandlerOutput;
        
             v += fromcode(peek);
@@ -51,7 +51,7 @@ this.readAnIdentifierToken = function (v) {
          this.c = c; 
          byte2 = this.peekTheSecondByte() ;
          if (!isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000) &&
-              this.err('id.multi.must.be.idbody',peek,byte2,c,v) )
+              this.err('id.multi.must.be.idbody') )
            return this.errorHandlerOutput ;
 
          v += String.fromCharCode(peek, byte2);

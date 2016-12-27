@@ -13,7 +13,7 @@ this.parseYield = function(context) {
             this.next();
             arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CTX_FOR );
             if (!arg &&
-                 this.err('yield.has.no.expr.deleg',startc,startLoc,c,li,col,context) )
+                 this.err('yield.has.no.expr.deleg') )
               return this.errorHandlerOutput ;
      }
      else

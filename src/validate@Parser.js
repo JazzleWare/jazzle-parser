@@ -36,7 +36,7 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
 
 //       case 'eval':
-//          if (this.tight) return this.err('eval.arguments.in.strict', n);
+//          if (this.tight) return this.err('eval.arguments.in.strict');
 
          default:
             break SWITCH;
@@ -108,7 +108,7 @@ this .validateID  = function (e) {
             if ( this.v <= 5 )
               return this.errorReservedID(e) ;
 //       case 'arguments':
-//          if (this.tight) return this.err('eval.arguments.in.strict', n);
+//          if (this.tight) return this.err('eval.arguments.in.strict');
 
          default: break SWITCH;
      }
@@ -137,7 +137,7 @@ this.errorReservedID = function(id) {
        this.throwReserved = true;
        return null;
     }
-    if ( this.err('reserved.id',id) ) return this.errorHandlerOutput;
+    if ( this.err('reserved.id') ) return this.errorHandlerOutput;
 }
 
 

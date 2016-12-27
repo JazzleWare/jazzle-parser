@@ -29,7 +29,7 @@ this.readStrLiteral = function (start) {
      case CH_LINE_FEED :
      case 0x2028 :
      case 0x2029 :
-           if ( this.err('str.newline',c,startC,v,v_start) )
+           if ( this.err('str.newline') )
              return this.errorHandlerOutput ;
     }
     c++;
@@ -37,7 +37,7 @@ this.readStrLiteral = function (start) {
 
   if ( v_start !== c ) { v += l.slice(v_start,c ) ; }
   if (!(c < e && (l.charCodeAt(c)) === start) &&
-       this.err('str.unfinished',c,v) ) return this.errorHandlerOutput;
+       this.err('str.unfinished') ) return this.errorHandlerOutput;
 
   this.c = c + 1 ;
   this.col += (this. c - startC   )  ;

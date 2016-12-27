@@ -102,8 +102,11 @@ for ( sourceName in sources ) {
  var l = 1;
  while ( l-- ) {
      if ( parsers.esprima && parsers.jazzle ) {
-          var comp =  util.compare(parsers.esprima(sources[sourceName],!false),
-                                  parsers.jazzle(sources[sourceName],!false));
+          var comp =  util.compare_ea(
+            parsers.esprima(sources[sourceName],!false),
+            parsers.jazzle(sources[sourceName],!false),
+            "", util.ej_adjust);
+
           if ( comp ) {
             console.log( util.obj2str(comp) );
             throw new Error( 'Incompatible Parsing for ' + sourceName );

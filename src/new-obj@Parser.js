@@ -83,7 +83,7 @@ this.parseObjectExpression = function(context) {
   };
 
   if (!this.expectType_soft('}'))
-    this.err('obj.unfinished',{tn:n});
+    this.err('obj.unfinished');
 
   return n;
 };

@@ -55,7 +55,7 @@ this. parseArrayPattern = function() {
            start: startc, end: this.c, elements : list/* ,y:-1*/};
 
   if ( !this. expectType_soft ( ']' ) &&
-        this.err('pat.array.is.unfinished',elem) )
+        this.err('pat.array.is.unfinished') )
     return this.errorHandlerOutput ;
 
   return elem;
@@ -132,7 +132,7 @@ this.parseObjectPattern  = function() {
               end: this.c,
               properties: list/* ,y:-1*/ };
 
-    if ( ! this.expectType_soft ('}') && this.err('pat.obj.is.unfinished',n) )
+    if ( ! this.expectType_soft ('}') && this.err('pat.obj.is.unfinished') )
       return this.errorHandlerOutput ;
 
     return n;
@@ -154,13 +154,13 @@ this.parseRestElement = function() {
    var e = this.parsePattern();
 
    if (!e) {
-      if (this.err('rest.has.no.arg',starc, startLoc))
+      if (this.err('rest.has.no.arg'))
        return this.errorHandlerOutput ;
    }
    // TODO (cont.): this one in particular -- it need not parse a whole pattern to know
    // whether it is an identifier
    else if ( this.v < 7 && e.type !== 'Identifier' ) {
-      this.err('rest.arg.not.id', startc, startLoc, e);
+      this.err('rest.arg.not.id');
    }
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };

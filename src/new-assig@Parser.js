@@ -40,7 +40,7 @@ this.toAssig = function(head, context) {
     // TODO: operator is the one that must be pinned,
     // but head is pinned currently
     if (head.operator !== '=')
-      this.err('complex.assig.not.pattern',{tn:head});
+      this.err('complex.assig.not.pattern');
 
     // TODO: the left is not re-checked for errors
     // because it is already an assignable pattern;
@@ -59,7 +59,7 @@ this.toAssig = function(head, context) {
 
   case 'SpreadElement':
     if (head.argument.type === 'AssignmentExpression')
-      this.err('rest.arg.not.valid',{tn:head});
+      this.err('rest.arg.not.valid');
     this.toAssig(head.argument, context);
     head.type = 'RestElement';
     return;
@@ -69,7 +69,7 @@ this.toAssig = function(head, context) {
     return;
 
   default:
-    this.err('not.assignable',{tn:head});
+    this.err('not.assignable');
  
   }
 };

@@ -36,7 +36,7 @@ this.parseProgram = function () {
            loc: { start: startLoc, end: endLoc } };
 
   if ( !this.expectType_soft ('eof') &&
-        this.err('program.unfinished',n) )
+        this.err('program.unfinished') )
     return this.errorHandlerOutput ;
 
   return n;

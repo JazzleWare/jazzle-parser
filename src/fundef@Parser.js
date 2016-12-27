@@ -40,7 +40,7 @@ this.parseFunc = function(context, flags) {
         cfn = this.parsePattern();
       }
       else if (!(context & CTX_DEFAULT))
-        this.err('missing.name', 'func');
+        this.err('missing.name');
     }
     else {
       // FunctionExpression's BindingIdentifier can be yield regardless of context;
@@ -123,22 +123,22 @@ this.parseFunc = function(context, flags) {
   
 this.parseMeth = function(name, flags) {
   if (this.lttype !== '(')
-    this.err('meth.paren', name, flags);
+    this.err('meth.paren');
   var val = null;
   if (flags & MEM_CLASS) {
     // all modifiers come at the beginning
     if (flags & MEM_STATIC) {
       if (flags & MEM_PROTOTYPE)
-        this.err('class.prototype.is.static.mem', name, flags);
+        this.err('class.prototype.is.static.mem');
 
       flags &= ~(MEM_CONSTRUCTOR|MEM_SUPER);
     }
 
     if (flags & MEM_CONSTRUCTOR) {
       if (flags & MEM_SPECIAL)
-        this.err('class.constructor.is.special.mem', name, flags);
+        this.err('class.constructor.is.special.mem');
       if (flags & MEM_HAS_CONSTRUCTOR)
-        this.err('class.constructor.is.a.dup', name, flags);
+        this.err('class.constructor.is.a.dup');
     }
 
     val = this.parseFunc(CTX_NONE, flags);

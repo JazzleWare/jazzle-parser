@@ -181,8 +181,8 @@ this.next = function () {
         if (mustBeAnID) {
            if (!isIDHead(mustBeAnID === 1 ? peek :
                   ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
-              if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead',peek);
-              else return this.err('id.multi.must.be.idhead',peek,r);
+              if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead');
+              else return this.err('id.multi.must.be.idhead');
             }
             this.readAnIdentifierToken( mustBeAnID === 2 ?
                 String.fromCharCode( peek, r ) :
@@ -461,7 +461,7 @@ this.readDot = function() {
    ++this.c;
    if( this.src.charCodeAt(this.c)===CH_SINGLEDOT) {
      if (this.src.charCodeAt(++ this.c) === CH_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
-     this.err('Unexpectd ' + this.src[this.c]) ;
+     this.err('Unexpectd ') ;
    }
    else if ( num(this.src.charCodeAt(this.c))) {
        this.lttype = 'Literal' ;

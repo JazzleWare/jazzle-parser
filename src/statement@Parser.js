@@ -48,7 +48,7 @@ this.parseStatement = function ( allowNull ) {
   e  = this.semiI() || head.end;
   l = this.semiLoc_soft ();
   if ( !l && !this.nl &&
-       this.err('no.semi','expr',{head:head,e:e}) )
+       this.err('no.semi') )
     return this.errorHandlerOutput;
  
   return {
@@ -69,7 +69,7 @@ this .parseLabeledStatement = function(label, allowNull) {
    this.next();
    var l = label.name;
    l += '%';
-   if ( this.findLabel(l) && this.err('label.is.a.dup',label,allowNull) )
+   if ( this.findLabel(l) && this.err('label.is.a.dup') )
      return this.errorHandlerOutput ;
 
    this.labels[l] =
@@ -109,7 +109,7 @@ this .parseEmptyStatement = function() {
 };
 
 this.parseIfStatement = function () {
-  if ( !this.ensureStmt_soft () && this.err('not.stmt','if') )
+  if ( !this.ensureStmt_soft () && this.err('not.stmt') )
     return this.errorHandlerOutput;
 
   this.fixupLabels(false);
@@ -119,12 +119,12 @@ this.parseIfStatement = function () {
       startLoc  = this.locBegin();
   this.next () ;
   if ( !this.expectType_soft('(') &&
-        this.err('if.has.no.opening.paren',startc,startLoc) )
+        this.err('if.has.no.opening.paren') )
     return this.errorHanlerOutput;
 
   var cond = core( this.parseExpr(CTX_NONE) );
   if ( !this.expectType_soft (')' ) &&
-        this.err('if.has.no.closing.paren',startc,startLoc) )
+        this.err('if.has.no.closing.paren') )
     return this.errorHandlerOutput ;
 
   var scopeFlags = this.scopeFlags ;
@@ -148,7 +148,7 @@ this.parseIfStatement = function () {
 this.parseWhileStatement = function () {
    this.enterLexicalScope(true);
    if ( ! this.ensureStmt_soft () &&
-          this.err('not.stmt','while') )
+          this.err('not.stmt') )
      return this.errorHandlerOutput;
 
    this.fixupLabels(true);
@@ -157,12 +157,12 @@ this.parseWhileStatement = function () {
        startLoc = this.locBegin();
    this.next();
    if ( !this.expectType_soft ('(') &&
-         this.err('while.has.no.opening.paren',startc,startLoc) )
+         this.err('while.has.no.opening.paren') )
      return this.errorHandlerOutput;
  
    var cond = core( this.parseExpr(CTX_NONE) );
    if ( !this.expectType_soft (')') &&
-         this.err('while.has.no.closing.paren' ,startc,startLoc) )
+         this.err('while.has.no.closing.paren') )
      return this.errorHandlerOutput;
 
    var scopeFlags = this.scopeFlags;
@@ -191,7 +191,7 @@ this.parseBlckStatement = function () {
         loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/};
 
   if ( !this.expectType_soft ('}' ) &&
-        this.err('block.unfinished',n) )
+        this.err('block.unfinished') )
     return this.errorHandlerOutput ;
 
   this.exitScope(); 
@@ -201,7 +201,7 @@ this.parseBlckStatement = function () {
 
 this.parseDoWhileStatement = function () {
   if ( !this.ensureStmt_soft () &&
-        this.err('not.stmt','do-while') )
+        this.err('not.stmt') )
     return this.errorHandlerOutput ;
 
   this.enterLexicalScope(true); 
@@ -216,17 +216,17 @@ this.parseDoWhileStatement = function () {
   var nbody = this.parseStatement (true) ;
   this.scopeFlags = scopeFlags;
   if ( !this.expectID_soft('while') &&
-        this.err('do.has.no.while',startc,startLoc,scopeFlags,nbody) )
+        this.err('do.has.no.while') )
     return this.errorHandlerOutput;
 
   if ( !this.expectType_soft('(') &&
-        this.err('do.has.no.opening.paren',startc,startLoc,scopeFlags,nbody) )
+        this.err('do.has.no.opening.paren') )
     return this.errorHandlerOutput;
 
   var cond = core(this.parseExpr(CTX_NONE));
   var c = this.c, li = this.li, col = this.col;
   if ( !this.expectType_soft (')') &&
-        this.err('do.has.no.closing.paren',startc,startLoc,scopeFlags,nbody,c,li,col,cond) )
+        this.err('do.has.no.closing.paren') )
     return this.errorHandlerOutput;
 
   if (this.lttype === ';' ) {
@@ -245,7 +245,7 @@ this.parseDoWhileStatement = function () {
 
 this.parseContinueStatement = function () {
    if ( ! this.ensureStmt_soft   () &&
-          this.err('not.stmt','continue') )
+          this.err('not.stmt') )
      return this.errorHandlerOutput ;
 
    this.fixupLabels(false);
@@ -265,13 +265,13 @@ this.parseContinueStatement = function () {
    if ( !this.nl && this.lttype === 'Identifier' ) {
        label = this.validateID("");
        name = this.findLabel(label.name + '%');
-       if (!name) this.err('continue.no.such.label',label) ;
-       if (!name.loop) this.err('continue.not.a.loop.label',label);
+       if (!name) this.err('continue.no.such.label') ;
+       if (!name.loop) this.err('continue.not.a.loop.label');
 
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
        if ( !semiLoc && !this.nl &&
-             this.err('no.semi','continue',startc,startLoc,c,li,col,semi,label) )
+             this.err('no.semi') )
          return this.errorHandlerOutput;
 
        this.foundStatement = true;
@@ -281,7 +281,7 @@ this.parseContinueStatement = function () {
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
    if ( !semiLoc && !this.nl &&
-         this.err('no.semi','continue',startc,startLoc,c,li,col,semi,label) )
+         this.err('no.semi') )
      return this.errorHandlerOutput;
 
    this.foundStatement = true;
@@ -291,7 +291,7 @@ this.parseContinueStatement = function () {
 
 this.parseBreakStatement = function () {
    if (! this.ensureStmt_soft   () &&
-         this.err('not.stmt','break') )
+         this.err('not.stmt') )
      return this.errorHandlerOutput ;
 
    this.fixupLabels(false);
@@ -307,11 +307,11 @@ this.parseBreakStatement = function () {
    if ( !this.nl && this.lttype === 'Identifier' ) {
        label = this.validateID("");
        name = this.findLabel(label.name + '%');
-       if (!name) this.err('break.no.such.label',label);
+       if (!name) this.err('break.no.such.label');
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
        if ( !semiLoc && !this.nl &&
-            this.err('no.semi',startc,startLoc,c,li,col,semi,label) )
+            this.err('no.semi') )
          return this.errorHandlerOutput;
 
        this.foundStatement = true;
@@ -325,7 +325,7 @@ this.parseBreakStatement = function () {
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();
    if ( !semiLoc && !this.nl &&
-        this.err('no.semi',startc,startLoc,c,li,col,semi,label) )
+        this.err('no.semi') )
      return this.errorHandlerOutput;
 
    this.foundStatement = true;
@@ -335,7 +335,7 @@ this.parseBreakStatement = function () {
 
 this.parseSwitchStatement = function () {
   if ( ! this.ensureStmt_soft () &&
-         this.err('not.stmt','switch') )
+         this.err('not.stmt') )
     return this.errorHandlerOutput ;
 
   this.fixupLabels(false) ;
@@ -349,23 +349,23 @@ this.parseSwitchStatement = function () {
 
   this.next() ;
   if ( !this.expectType_soft ('(') &&
-       this.err('switch.has.no.opening.paren',startc,startLoc) )
+       this.err('switch.has.no.opening.paren') )
     return this.errorHandlerOutput;
 
   var switchExpr = core(this.parseExpr(CTX_NONE));
   if ( !this.expectType_soft (')') &&
-        this.err('switch.has.no.closing.paren',startc,startLoc) )
+        this.err('switch.has.no.closing.paren') )
     return this.errorHandlerOutput ;
 
   if ( !this.expectType_soft ('{') &&
-        this.err('switch.has.no.opening.curly',startc,stratLoc) )
+        this.err('switch.has.no.opening.curly') )
     return this.errorHandlerOutput ;
 
   this.enterLexicalScope(false); 
   this.scopeFlags |=  (SCOPE_FLAG_BREAK|SCOPE_FLAG_IN_BLOCK);
   while ( elem = this.parseSwitchCase()) {
     if (elem.test === null) {
-       if (hasDefault ) this.err('switch.has.a.dup.default',elem );
+       if (hasDefault ) this.err('switch.has.a.dup.default');
        hasDefault = true ;
     }
     cases.push(elem);
@@ -378,7 +378,7 @@ this.parseSwitchStatement = function () {
   var n = { type: 'SwitchStatement', cases: cases, start: startc, discriminant: switchExpr,
             end: this.c, loc: { start: startLoc, end: this.loc() }/*,scope:  scope  ,y:-1*/};
   if ( !this.expectType_soft ('}' ) &&
-        this.err('switch.unfinished',n) )
+        this.err('switch.unfinished') )
     return this.errorHandlerOutput ;
 
   return n;
@@ -412,7 +412,7 @@ this.parseSwitchCase = function () {
 
   var c = this.c, li = this.li, col = this.col;
   if ( ! this.expectType_soft (':') &&
-       this.err('switch.case.has.no.colon',startc,startLoc,c,li,cond,col) )
+       this.err('switch.case.has.no.colon') )
     return this.errorHandlerOutput;
 
   nbody = this.blck();
@@ -423,7 +423,7 @@ this.parseSwitchCase = function () {
 
 this.parseReturnStatement = function () {
   if (! this.ensureStmt_soft () &&
-       this.err('not.stmt','return') )
+       this.err('not.stmt') )
     return this.errorHandlerOutput ;
 
   this.fixupLabels(false ) ;
@@ -449,7 +449,7 @@ this.parseReturnStatement = function () {
   semi = this.semiI();
   semiLoc = this.semiLoc_soft();
   if ( !semiLoc && !this.nl &&
-       this.err('no.semi','return', [startc,startLoc,c,li,col,semi,retVal] ) )
+       this.err('no.semi') )
     return this.errorHandlerOutput;
 
   if ( retVal ) {
@@ -465,7 +465,7 @@ this.parseReturnStatement = function () {
 
 this.parseThrowStatement = function () {
   if ( ! this.ensureStmt_soft () &&
-         this.err('not.stmt','throw') )
+         this.err('not.stmt') )
     return this.errorHandlerOutput ;
 
   this.fixupLabels(false ) ;
@@ -481,18 +481,18 @@ this.parseThrowStatement = function () {
 
   var semi = 0 , semiLoc = null ;
   if ( this.nl &&
-       this.err('throw.has.newline',startc,startLoc,c,li,col) )
+       this.err('throw.has.newline') )
     return this.errorHandlerOutput;
 
   retVal = this.parseExpr(CTX_NULLABLE );
   if ( retVal === null &&
-       this.err('throw.has.no.argument',[startc,startLoc,c,li,col,semi,retVal]) )
+       this.err('throw.has.no.argument') )
      return this.errorHandlerOutput;
 
   semi = this.semiI();
   semiLoc = this.semiLoc_soft();
   if ( !semiLoc && !this.nl &&
-        this.err('no.semi','throw',[startc,startLoc,c,li,col,semi,retVal] ) )
+        this.err('no.semi') )
     return this.errorHandlerOutput;
 
   this.foundStatement = true;
@@ -506,14 +506,14 @@ this. parseBlockStatement_dependent = function(owner) {
         startLoc = this.locOn(1);
 
     if (!this.expectType_soft ('{'))
-      this.err('block.dependent.no.opening.curly',{extra:{blockOwner:owner}});
+      this.err('block.dependent.no.opening.curly');
     var scopeFlags = this.scopeFlags;
     this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/ };
     if ( ! this.expectType_soft ('}') &&
-         this.err('block.dependent.is.unfinished' , n)  )
+         this.err('block.dependent.is.unfinished')  )
       return this.errorHandlerOutput;
 
     this.scopeFlags = scopeFlags;
@@ -522,7 +522,7 @@ this. parseBlockStatement_dependent = function(owner) {
 
 this.parseTryStatement = function () {
   if ( ! this.ensureStmt_soft () &&
-         this.err('not.stmt' ,'try' ) )
+         this.err('not.stmt') )
     return this.errorHandlerOutput ;
 
   this.fixupLabels(false);
@@ -549,7 +549,7 @@ this.parseTryStatement = function () {
 
   var finOrCat = finBlock || catBlock;
   if ( ! finOrCat &&
-       this.err('try.has.no.tail',startc,startLoc,tryBlock)  )
+       this.err('try.has.no.tail')  )
     return this.errorHandlerOutput ;
 
   this.foundStatement = true;
@@ -569,7 +569,7 @@ this. parseCatchClause = function () {
 
    this.enterCatchScope();
    if ( !this.expectType_soft ('(') &&
-        this.err('catch.has.no.opening.paren',startc,startLoc) )
+        this.err('catch.has.no.opening.paren') )
      return this.errorHandlerOutput ;
 
    this.declMode = DECL_MODE_CATCH_PARAMS;
@@ -582,7 +582,7 @@ this. parseCatchClause = function () {
      this.err('catch.has.no.param');
 
    if ( !this.expectType_soft (')') &&
-         this.err('catch.has.no.end.paren' , startc,startLoc,catParam)  )
+         this.err('catch.has.no.end.paren')  )
      return this.errorHandlerOutput    ;
 
    var catBlock = this.parseBlockStatement_dependent('catch');
@@ -600,7 +600,7 @@ this. parseCatchClause = function () {
 
 this . parseWithStatement = function() {
    if ( !this.ensureStmt_soft () &&
-         this.err('not.stmt','with' ) )
+         this.err('not.stmt') )
      return this.errorHandlerOutput ;
 
    if ( this.tight) this.err('with.strict')  ;
@@ -613,12 +613,12 @@ this . parseWithStatement = function() {
 
    this.next();
    if (! this.expectType_soft ('(') &&
-         this.err('with.has.no.opening.paren', startc, startLoc) )
+         this.err('with.has.no.opening.paren') )
      return this.errorHandlerOutput ;
 
    var obj = this.parseExpr(CTX_NONE);
    if (! this.expectType_soft (')' ) &&
-         this.err('with.has.no.end.paren',startc,startLoc,obj ) )
+         this.err('with.has.no.end.paren') )
      return this.errorHandlerOutput ;
 
    var scopeFlags = this.scopeFlags;
@@ -641,7 +641,7 @@ this . parseWithStatement = function() {
 
 this . prseDbg = function () {
   if (! this.ensureStmt_soft () &&
-        this.err('not.stmt','debugger') )
+        this.err('not.stmt') )
     return this.errorHandlerOutput ;
 
   this.fixupLabels(false);
@@ -658,7 +658,7 @@ this . prseDbg = function () {
     this.next();
   } 
   else if ( !this.nl &&
-     this.err('no.semi','debugger', [startc,startLoc,c,li,col] ) )
+     this.err('no.semi') )
      return this.errorHandlerOutput;
 
   this.foundStatement = true;

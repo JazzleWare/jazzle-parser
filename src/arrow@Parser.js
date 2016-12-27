@@ -69,14 +69,14 @@ this.asArrowFuncArg = function(arg) {
 
   case 'SpreadElement':
     if (this.e < 7 && arg.argument.type !== 'Identifier')
-      this.err('binding.rest.arg.not.id', {tn:arg});
+      this.err('binding.rest.arg.not.id');
     this.asArrowFuncArg(arg.argument);
     arg.type = 'RestElement';
     return;
 
   case 'RestElement':
     if (this.e < 7 && arg.argument.type !== 'Identifier')
-      this.err('binding.rest.arg.not.id',{tn:arg});
+      this.err('binding.rest.arg.not.id');
     this.asArrowFuncArg(arg.argument);
     return;
 
@@ -87,7 +87,7 @@ this.asArrowFuncArg = function(arg) {
     return;
 
   default:
-    this.err('not.bindable',{tn:head});
+    this.err('not.bindable');
 
   }
 };
@@ -127,7 +127,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   case 'CallExpression':
     if (arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
-      this.err('not.a.valid.arg.list',{tn:arg});
+      this.err('not.a.valid.arg.list');
     if (this.parenAsync !== null && arg.callee === this.parenAsync.expr)
       this.err('arrow.has.a.paren.async');
 
@@ -143,7 +143,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     break;
 
   default:
-    this.err('not.a.valid.arg.list',{tn:arg});
+    this.err('not.a.valid.arg.list');
 
   }
 

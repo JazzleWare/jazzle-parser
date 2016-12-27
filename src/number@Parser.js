@@ -13,10 +13,10 @@ this.readNumberLiteral = function (peek) {
     switch (b) { // check out what the next is
       case CH_X: case CH_x:
          c++;
-         if (c >= len && this.err('num.with.no.digits','hex', c) )
+         if (c >= len && this.err('num.with.no.digits') )
            return this.errorHandlerOutput;
          b = src.charCodeAt(c);
-         if ( ! isHex(b) && this.err('num.with.first.not.valid','hex', c)  )
+         if ( ! isHex(b) && this.err('num.with.first.not.valid')  )
            return this.errorHandlerOutput ;
          c++;
          while ( c < len && isHex( b = src.charCodeAt(c) ) )
@@ -27,10 +27,10 @@ this.readNumberLiteral = function (peek) {
 
       case CH_B: case CH_b:
         ++c;
-        if (c >= len && this.err('num.with.no.digits','bin',c) )
+        if (c >= len && this.err('num.with.no.digits') )
           return this.errorHandlerOutput ;
         b = src.charCodeAt(c);
-        if ( b !== CH_0 && b !== CH_1 && this.err('num.with.first.not.valid','bin',c) )
+        if ( b !== CH_0 && b !== CH_1 && this.err('num.with.first.not.valid') )
           return this.errorHandlerOutput ;
         val = b - CH_0; 
         ++c;
@@ -47,10 +47,10 @@ this.readNumberLiteral = function (peek) {
 
       case CH_O: case CH_o:
         ++c;
-        if (c >= len && this.err('num.with.no.digits','oct',c) )
+        if (c >= len && this.err('num.with.no.digits') )
           return this.errorHandlerOutput ; 
         b = src.charCodeAt(c);
-        if ( (b < CH_0 || b >= CH_8) && this.err('num.with.first.not.valid','oct',c)  )
+        if ( (b < CH_0 || b >= CH_8) && this.err('num.with.first.not.valid')  )
           return this.errorHandlerOutput ;
 
         val = b - CH_0 ;
@@ -125,7 +125,7 @@ this . frac = function(n) {
                  c++ ;
         }
         if ( !(c < e && num(l.charCodeAt(c))) )
-          this.err('num.has.no.mantissa', c, n);
+          this.err('num.has.no.mantissa');
 
         do { c++;} while ( c < e && num(l.charCodeAt( c) ));
   }

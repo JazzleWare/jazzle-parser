@@ -39,7 +39,7 @@ this.declare = function(id) {
      // TODO: eliminate it because it must've been verified in somewhere else,
      // most probably in parseVariableDeclaration
      if ( !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK) )
-       this.err('let.decl.not.in.block', id );
+       this.err('let.decl.not.in.block');
 
      if ( id.name === 'let' )
        this.err('lexical.name.is.let');
@@ -61,7 +61,7 @@ this.makeComplex = function() {
   for (var a in scope.definedNames) {
      if (!HAS.call(scope.definedNames, a)) continue;
      if (scope.definedNames[a]/* #if V */.type/* #end */ & DECL_DUPE)
-       this.err('func.args.has.dup', a);
+       this.err('func.args.has.dup');
   }
   scope.isInComplexArgs = true;
 };
@@ -72,7 +72,7 @@ this.addParam = function(id) {
   var scope = this.scope;
   if ( HAS.call(scope.definedNames, name) ) {
     if (scope.mustNotHaveAnyDupeParams())
-      this.err('func.args.has.dup', id);
+      this.err('func.args.has.dup');
 
     // TODO: this can be avoided with a dedicated 'dupes' dictionary,
     // but then again, that might be too much.
@@ -91,7 +91,7 @@ this.ensureParamIsNotDupe = function(id) {
    var name = id.name + '%';
    var scope = this.scope;
    if (HAS.call(scope.idNames, name) && scope.idNames[name])
-     this.err('func.args.has.dup', id );
+     this.err('func.args.has.dup');
 };
 
 // TODO: must check whether we are parsing with v > 5, whether we are in an if, etc.

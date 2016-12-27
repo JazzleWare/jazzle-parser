@@ -1,6 +1,6 @@
 this.parseFor = function() {
   if (!this.ensureStmt_soft())
-    this.err('not.stmt', 'for');
+    this.err('not.stmt');
 
   this.fixupLabels(true) ;
 
@@ -99,7 +99,7 @@ this.parseFor = function() {
 
       nbody = this.parseStatement(true);
       if (!nbody)
-        this.err('null.stmt','for.iter');
+        this.err('null.stmt');
 
       this.scopeFlags = scopeFlags;
       this.foundStatement = true;
@@ -139,7 +139,7 @@ this.parseFor = function() {
 
   nbody = this.parseStatement(true);
   if (!nbody)
-    this.err('null.stmt','for.simple');
+    this.err('null.stmt');
 
   this.scopeFlags = scopeFlags;
   this.foundStatement = true;
@@ -159,13 +159,13 @@ this.ensureVarsAreNotResolvingToCatchParams = function() {
   var list = this.scope.nameList, e = 0;
   while (e < list.length) {
     if (list[e].type & DECL_MODE_CATCH_PARAMS)
-      this.err('for.of.var.overrides.catch', list[e].name);
+      this.err('for.of.var.overrides.catch');
     e++;
   }
 // #else
   for (var name in this.scope.definedNames) {
     if (this.scope.definedNames[name] & DECL_MODE_CATCH_PARAMS)
-      this.err('for.of.var.overrides.catch', name.substr(0, name.length-1));
+      this.err('for.of.var.overrides.catch');
   }
 // #end
 };

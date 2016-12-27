@@ -206,11 +206,11 @@ this.parseObjElem = function(name, context) {
  
   case 'op':
     if (name.type !== 'Identifier')
-      this.err('obj.prop.assig.not.id', name, context);
+      this.err('obj.prop.assig.not.id');
     if (this.ltraw !== '=')
-      this.err('obj.prop.assig.not.assigop', name, context);
+      this.err('obj.prop.assig.not.assigop');
     if (context & CTX_NO_SIMPLE_ERR)
-      this.err('obj.prop.assig.not.allowed', name, context);
+      this.err('obj.prop.assig.not.allowed');
 
     val = this.parseAssignment(name, context);
     if (!(context & CTX_HAS_A_SIMPLE_ERR) &&
@@ -222,7 +222,7 @@ this.parseObjElem = function(name, context) {
 
   default:
     if (name.type !== 'Identifier')
-      this.err('obj.prop.assig.not.id', name, context);
+      this.err('obj.prop.assig.not.id');
     this.validateID(name.name);
     val = name;
     break;

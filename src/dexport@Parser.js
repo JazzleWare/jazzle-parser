@@ -1,5 +1,5 @@
 this.parseExport = function() {
-   if ( !this.canBeStatement && this.err('not.stmt', 'export') )
+   if ( !this.canBeStatement && this.err('not.stmt') )
      return this.errorHandlerOutput ;
 
    this.canBeStatement = false;
@@ -15,17 +15,17 @@ this.parseExport = function() {
    switch ( this.lttype ) {
       case 'op':
          if (this.ltraw !== '*' &&
-             this.err('export.all.not.*',startc,startLoc) )
+             this.err('export.all.not.*') )
            return this.errorHandlerOutput;
  
          this.next();
          if ( !this.expectID_soft('from') &&
-               this.err('export.all.no.from',startc, startLoc) )
+               this.err('export.all.no.from') )
            return this.errorHandlerOutput;
 
          if (!(this.lttype === 'Literal' &&
               typeof this.ltval === STRING_TYPE ) && 
-              this.err('export.all.source.not.str',startc,startLoc) )
+              this.err('export.all.source.not.str') )
            return this.errorHandlerOutput;
 
          src = this.numstr();
@@ -33,8 +33,7 @@ this.parseExport = function() {
          endI = this.semiI();
          semiLoc = this.semiLoc_soft();
          if ( !semiLoc && !this.newlineBeforeLookAhead &&
-              this.err('no.semi', 'export.all',
-              { s:startc, l:startLoc, src: src, endI: endI } ) )
+              this.err('no.semi') )
            return this.errorHandlerOutput;
 
          this.foundStatement = true;
@@ -62,14 +61,12 @@ this.parseExport = function() {
             ex = local;
             if ( this.lttype === 'Identifier' ) {
               if ( this.ltval !== 'as' && 
-                   this.err('export.specifier.not.as',
-                     { s: startc, l: startLoc, list: list, local, ex: ex }) )
+                   this.err('export.specifier.not.as') )
                 return this.errorHandlerOutput ;
 
               this.next();
               if ( this.lttype !== 'Identifier' ) { 
-                 if (  this.err('export.specifier.after.as.id',
-                       { s:startc, l:startLoc, list:list, ex:ex }) )
+                 if (  this.err('export.specifier.after.as.id') )
                 return this.errorHandlerOutput;
               }
               else
@@ -91,22 +88,18 @@ this.parseExport = function() {
          var li = this.li, col = this.col;
    
          if ( !this.expectType_soft('}') && 
-               this.err('export.named.list.not.finished',
-                  {s: startc,l: loc, list:list}) )
+               this.err('export.named.list.not.finished') )
            return this.errorHandlerOutput  ;
 
          if ( this.lttype === 'Identifier' ) {
            if ( this.ltval !== 'from' &&
-                this.err('export.named.not.id.from',
-                    {s: startc, l:startLoc, list:list, end: [endI, li, col]}
-              ) )
+                this.err('export.named.not.id.from') )
               return this.errorHandlerOutput;
 
            else this.next();
            if ( !( this.lttype === 'Literal' &&
                   typeof this.ltval ===  STRING_TYPE) &&
-                this.err('export.named.source.not.str',
-                   { s:startc,l:startLoc,list:list,end:[endI,li,col] }) )
+                this.err('export.named.source.not.str') )
              return this.errorHandlerOutput ;
 
            else {
@@ -115,15 +108,13 @@ this.parseExport = function() {
            }
          }
          else
-            if (firstReserved && this.err('export.named.has.reserved',
-               { s:startc, l:startLoc, list:list, end:[endI,li,col], resv: firstReserved}) )
+            if (firstReserved && this.err('export.named.has.reserved') )
               return this.errorHandlerOutput ;
 
          endI = this.semiI() || endI;
          semiLoc = this.semiLoc_soft();
          if ( !semiLoc && !this.nl &&
-              this.err('no.semi','export.named',
-                  { s:startc, l:startLoc, list: list, end: [endI,li,col], src: src } ))
+              this.err('no.semi'))
            return this.errorHandlerOutput; 
 
          this.foundStatement = true;
@@ -147,7 +138,7 @@ this.parseExport = function() {
           case 'let':
           case 'const':
              if (context === CTX_DEFAULT && 
-                 this.err('export.default.const.let',startc,startLoc) )
+                 this.err('export.default.const.let') )
                return this.errorHandlerOutput;
                  
              this.canBeStatement = true;
@@ -196,7 +187,7 @@ this.parseExport = function() {
 
    if ( context !== CTX_DEFAULT ) {
 
-     if (!ex && this.err('export.named.no.exports',startc, startLoc) )
+     if (!ex && this.err('export.named.no.exports') )
        return this.errorHandlerOutput ;
      
      this.foundStatement = true;
@@ -220,8 +211,7 @@ this.parseExport = function() {
      endI = this.semiI();
      endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
      if ( !endLoc && !this.nl &&
-          this.err('no.semi', 'export.named', 
-              { s: startc, l:startLoc, e: ex } ) )
+          this.err('no.semi') )
        return this.errorHandlerOutput;
    }
 

@@ -11,7 +11,7 @@ this. parseClass = function(context) {
 
   if (isStmt) {
     if (!this.canDeclareClassInScope())
-      this.err('class.decl.not.in.block', startc, startLoc);
+      this.err('class.decl.not.in.block');
     if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
       this.declMode = DECL_MODE_CLASS_STMT;
       name = this.parsePattern();

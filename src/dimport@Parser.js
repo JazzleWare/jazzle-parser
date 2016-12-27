@@ -1,7 +1,7 @@
 // TODO: needs a thorough simplification
 this.parseImport = function() {
   if (!this.canBeStatement)
-    this.err('not.stmt','import');
+    this.err('not.stmt');
 
   this.canBeStatement = false;
 
@@ -32,16 +32,16 @@ this.parseImport = function() {
   if (hasMore) switch (this.lttype) {   
   case 'op':
     if (this.ltraw !== '*')
-      this.err('import.namespace.specifier.not.*',startc, startLoc);
+      this.err('import.namespace.specifier.not.*');
     else {
       spStartc = this.c - 1;
       spStartLoc = this.locOn(1);
   
       this.next();
       if (!this.expectID_soft('as'))
-        this.err('import.namespace.specifier.no.as',startc, startLoc, spStartc, spStartLoc);
+        this.err('import.namespace.specifier.no.as');
       if (this.lttype !== 'Identifier')
-        this.err('import.namespace.specifier.local.not.id',startc,startLoc,spStartc, spStartLoc );
+        this.err('import.namespace.specifier.local.not.id');
  
       local = this.validateID("");
       list.push({
@@ -62,12 +62,12 @@ this.parseImport = function() {
       var im = local; 
       if ( this.lttype === 'Identifier' ) {
         if ( this.ltval !== 'as' && 
-             this.err('import.specifier.no.as',startc,startLoc,local) )
+             this.err('import.specifier.no.as') )
           return this.errorHandlerOutput ;
  
         this.next();
         if ( this.lttype !== 'Identifier' &&
-             this.err('import.specifier.local.not.id',startc,startLoc,local) )
+             this.err('import.specifier.local.not.id') )
           return this.errorHandlerOutput ;
  
         local = this.validateID("");
@@ -89,7 +89,7 @@ this.parseImport = function() {
     }
  
     if (!this.expectType_soft('}')) 
-      this.err('import.specifier.list.unfinished',startc,startLoc,list);
+      this.err('import.specifier.list.unfinished');
  
     break ;
 
@@ -103,7 +103,7 @@ this.parseImport = function() {
 
    if (list.length || hasList) {
      if (!this.expectID_soft('from'))
-       this.err('import.from',startc,startLoc,list);
+       this.err('import.from');
    }
 
    // TODO: even though it's working the way it should, errors might be misleading for cases like:
@@ -117,7 +117,7 @@ this.parseImport = function() {
        semiLoc = this.semiLoc_soft();
 
    if (!semiLoc && !this.nl)
-     this.err('no.semi','import');
+     this.err('no.semi');
    
    this.foundStatement = true;
 

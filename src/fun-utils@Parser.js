@@ -2,7 +2,7 @@ this.parseArgs = function (argLen) {
   var tail = true, list = [], elem = null;
 
   if (!this.expectType_soft('('))
-    this.err('func.args.no.opening.paren',argLen);
+    this.err('func.args.no.opening.paren');
 
   var firstNonSimpArg = null;
   while (list.length !== argLen) {
@@ -37,10 +37,10 @@ this.parseArgs = function (argLen) {
     }
   }
   else if (list.length !== argLen)
-    this.err('func.args.not.enough',argLen,list);
+    this.err('func.args.not.enough');
 
   if (!this.expectType_soft (')'))
-    this.err('func.args.no.end.paren',argLen,list);
+    this.err('func.args.no.end.paren');
 
   if (firstNonSimpArg)
     this.firstNonSimpArg = firstNonSimpArg;
@@ -54,7 +54,7 @@ this.parseFuncBody = function(context) {
   if ( this.lttype !== '{' ) {
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_NULLABLE|CTX_PAT);
     if ( elem === null )
-      return this.err('func.body.is.empty.expr',context);
+      return this.err('func.body.is.empty.expr');
     return elem;
   }
 
@@ -73,7 +73,7 @@ this.parseFuncBody = function(context) {
            loc: { start: startLoc, end: this.loc() }/* ,scope: this.scope ,y:-1*/ };
 
   if ( ! this.expectType_soft ( '}' ) &&
-         this.err('func.body.is.unfinished',n) )
+         this.err('func.body.is.unfinished') )
     return this.errorHandlerOutput ;
 
   return  n;
@@ -92,7 +92,7 @@ this . makeStrict  = function() {
    while (a < argNames.length) {
      var decl = argNames[a];
      if (decl.type&DECL_DUPE)
-       this.err('func.args.has.dup',decl.name);
+       this.err('func.args.has.dup');
      ASSERT.call(this, !arguments_or_eval(decl.name));
      this.validateID(decl.name);
 
@@ -116,7 +116,7 @@ this . makeStrict  = function() {
      var declType = argNames[a];
      a = a.substring(0,a.length-1);
      if (declType&DECL_DUPE)
-       this.err('func.args.has.dup',a);
+       this.err('func.args.has.dup');
 
      ASSERT.call(this, !arguments_or_eval(a));
      this.validateID(a);

@@ -13,12 +13,12 @@ this .memberExpr = function() {
   // TODO: it is not necessary to reset <pt:at>
   this.pt = this.at = this.st = 0;
   var e = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR); // TODO: should be CTX_NULLABLE, or else the next line is in vain 
-  if (!e && this.err('prop.dyna.no.expr',startc,startLoc) ) // 
+  if (!e && this.err('prop.dyna.no.expr') ) // 
     return this.errorHandlerOutput ;
 
   var n = { type: PAREN, expr: e, start: startc, end: this.c, loc: { start: startLoc, end: this.loc() } } ;
   if ( !this.expectType_soft (']') &&
-        this.err('prop.dyna.is.unfinished',n) )
+        this.err('prop.dyna.is.unfinished') )
     return this.errorHandlerOutput ;
  
   return n;

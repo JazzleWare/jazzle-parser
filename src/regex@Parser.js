@@ -74,7 +74,7 @@ this.parseRegExpLiteral = function() {
                case CH_LINE_FEED :
                case 0x2028 :
                case 0x2029 :
-                  if ( this.err('regex.newline.esc',c,startLoc) )
+                  if ( this.err('regex.newline.esc') )
                     return this.errorHandlerOutput ;
             }
 
@@ -96,7 +96,7 @@ this.parseRegExpLiteral = function() {
          case CH_LINE_FEED :
          case 0x2028 :
          case 0x2029 :
-           if ( this.err('regex.newline',c,startLoc) )
+           if ( this.err('regex.newline') )
              return this.errorHandlerOutput ;
 
 //       default:if ( o >= 0x0D800 && o <= 0x0DBFF ) { this.col-- ; }
@@ -106,7 +106,7 @@ this.parseRegExpLiteral = function() {
      }
 
      if ( src.charCodeAt(c) !== CH_DIV && 
-          this.err('regex.unfinished',startc,startLoc,c) )
+          this.err('regex.unfinished') )
        return this.errorHandlerOutput ;
 
      var flags = 0;
@@ -116,23 +116,23 @@ this.parseRegExpLiteral = function() {
         switch ( src.charCodeAt ( ++c ) ) {
             case CH_g:
                 if (flags & gRegexFlag)
-                  this.err('regex.flag.is.dup',startc,startLoc,c);
+                  this.err('regex.flag.is.dup');
                 flags |= gRegexFlag; break;
             case CH_u:
                 if (flags & uRegexFlag)
-                  this.err('regex.flag.is.dup',startc,startLoc,c);
+                  this.err('regex.flag.is.dup');
                 flags |= uRegexFlag; break;
             case CH_y:
                 if (flags & yRegexFlag)
-                  this.err('regex.flag.is.dup',startc,startLoc,c);
+                  this.err('regex.flag.is.dup');
                 flags |= yRegexFlag; break;
             case CH_m:
                 if (flags & mRegexFlag)
-                  this.err('regex.flag.is.dup',startc,startLoc,c);
+                  this.err('regex.flag.is.dup');
                 flags |= mRegexFlag; break;
             case CH_i:
                 if (flags & iRegexFlag)
-                  this.err('regex.flag.is.dup',startc,startLoc,c);
+                  this.err('regex.flag.is.dup');
                 flags |= iRegexFlag; break;
 
             default : break WHILE;
@@ -166,7 +166,7 @@ this.parseRegExpLiteral = function() {
         val = verifyRegex( patternString, flagsString ) ;
 
      if ( !val &&
-        this.err('regex.not.valid',startc,startLoc,flagsString,patternString) )
+        this.err('regex.not.valid') )
        return this.errorHandlerOutput;
 
      this.col += (c-this.c);

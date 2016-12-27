@@ -31,7 +31,7 @@ this.readMultiComment = function () {
     }
   }
 
-  this.err( 'comment.multi.unfinished' );
+  this.err( 'comment.multi.unfinished');
 };
 
 this.readLineComment = function() {
