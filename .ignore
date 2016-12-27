@@ -59,7 +59,7 @@ test/test-esprima/fixtures/es2017/async/methods/invalid-static-async-class-gette
 test/test-esprima/fixtures/es2017/async/methods/invalid-static-async-class-setter ## valid
 test/test-esprima/fixtures/es2017/async/arrows/async-arrow-object-expression-parameter ##ObjectExpression
 test/test-esprima/fixtures/es2017/async/arrows/async-arrow-pattern-parameter ##ObjectExpression
-test/test-esprima/fixtures/es2017/async/arrows/async-arrow-spread ## SpreadExpression
+test/test-esprima/fixtures/es2017/async/arrows/async-arrow-spread ## SpreadElement
 test/test-esprima/fixtures/es2017/async/functions/export-default-async-function-expression.module ##FunctionExpression
 test/test-esprima/fixtures/es2017/async/functions/export-default-async-named-function-expression-await.module ##FunctionExpression
 test/test-esprima/fixtures/es2017/async/functions/export-default-async-named-function-expression.module ##FunctionExpression
