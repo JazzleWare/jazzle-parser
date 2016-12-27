@@ -3,7 +3,7 @@
   "main": "dist/jazzle.js",
   "version": "0.5.80",
   "description": "A dazzlingly fast ECMAScript parser written in vanilla ES3",
-  "homepage": "https://github.com/icefapper/jsrube",
+  "homepage": "https://github.com/JazzleWare/jazzle-parser",
   "engines": { "node": ">=6.20.0" },
   "author": {
     "name": "Neni Onoda",
@@ -23,10 +23,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/icefapper/jsRube.git"
+    "url": "https://github.com/JazzleWare/jazzle-parser.git"
   },
   "bugs": {
-    "url": "https://github.com/icefapper/jsRube/issues"
+    "url": "https://github.com/JazzleWare/jazzle-parser/issues"
   },
   "license": "MIT",
   "keywords": [
