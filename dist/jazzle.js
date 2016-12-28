@@ -102,7 +102,22 @@ var Parser = function (src, isModule) {
   this.missingInit = false;
 
   this.dv = { value: "", raw: "" };
-  this.strictError = { offset: -1, line: -1, column: -1, stringNode: null };
+
+  // "pin" location; for errors that might not have been precisely cause by a syntax node, like:
+  // function l() { '\12'; 'use strict' }
+  //                 ^
+  // 
+  // for (a i\u0074 e) break;
+  //         ^
+  //
+  // var e = [a -= 12] = 5
+  //            ^
+  this.ploc = { c0: -1, li0: -1, col0: -1 }; // paramErr locPin; currently only for the last error above
+  this.aloc = { c0: -1, li0: -1, col0: -1 }; // assigErr locPin; currently only for the last error above
+
+  // escErr locPin; like the name suggests, it's not a simpleErr -- none of the simpleErrs needs a pinpoint
+  this.esct = ERR_NONE_YET;
+  this.eloc = { c0: -1, li0: -1, col0: -1 };
 
   this.parenAsync = null; // so that things like (async)(a,b)=>12 will not get to parse.
 
@@ -439,7 +454,8 @@ var DIR_MODULE = 1,
     DIR_FUNC = DIR_SCRIPT << 2,
     DIR_LAST = DIR_FUNC << 1,
     DIR_MAYBE = DIR_LAST << 1,
-    DIR_HANDLED_BY_NEWLINE = DIR_MAYBE << 1;
+    DIR_HANDLED_BY_NEWLINE = DIR_MAYBE << 1,
+    DIR_HAS_OCTAL_ERROR = DIR_HANDLED_BY_NEWLINE << 1;
 ;
 function num(c) {
   return (c >= CH_0 && c <= CH_9);
@@ -502,9 +518,26 @@ var ERR_NONE_YET = 0,
     // async a
     ERR_INTERMEDIATE_ASYNC = ERR_NON_TAIL_EXPR + 1,
 
+    /* async
+       (a)=>12 */
     ERR_ASYNC_NEWLINE_BEFORE_PAREN = ERR_INTERMEDIATE_ASYNC + 1,
-    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_ASYNC_NEWLINE_BEFORE_PAREN + 1;
 
+    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_ASYNC_NEWLINE_BEFORE_PAREN + 1,
+ 
+    ERR_PIN_START = ERR_ARGUMENTS_OR_EVAL_DEFAULT + 1,
+
+    // function l() { '\12'; 'use strict'; }
+    ERR_PIN_OCTAL_IN_STRICT = ERR_PIN_START,
+
+    // for (a i\u0074 e) break;
+    ERR_PIN_UNICODE_IN_RESV = ERR_PIN_OCTAL_IN_STRICT + 1,
+
+    // [ a -= 12 ] = 12
+    ERR_PIN_NOT_AN_EQ = ERR_PIN_UNICODE_IN_RESV;
+
+function pinErr(err) {
+  return err >= ERR_PIN_START;
+}
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
 // > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
@@ -1954,10 +1987,11 @@ this.readEsc = function ()  {
             return this.errorHandlerOutput
        }
        else if (this.directive !== DIR_NONE) {
-         if (this.strictError.stringNode === null) {
-           this.strictError.offset = this.c;
-           this.strictError.line = this.li;
-           this.strictError.column = this.col + (this.c-start);
+         if (this.esct === ERR_NONE_YET) {
+           this.eloc.c0 = this.c;
+           this.eloc.li0 = this.li;
+           this.eloc.col0 = this.col + (this.c-start);
+           this.esct = ERR_PIN_OCTAL_IN_STRICT;
          }
        }
 
@@ -1980,13 +2014,13 @@ this.readEsc = function ()  {
        if (this.tight)
          this.err('strict.oct.str.esc');
        else if (this.directive !== DIR_NONE) {
-         if (this.strictError.stringNode === null) {
-           this.strictError.offset = this.c;
-           this.strictError.line = this.li;
-           this.strictError.column = this.col + (this.c-start);
+         if (this.esct === ERR_NONE_YET) {
+           this.eloc.c0 = this.c;
+           this.eloc.li0 = this.li;
+           this.eloc.col0 = this.col + (this.c-start);
+           this.esct = ERR_PIN_OCTAL_IN_STRICT;
          }
        }
-       
 
        b0 = src.charCodeAt(this.c);
        b  = b0 - CH_0;
@@ -5652,7 +5686,16 @@ this.semiI = function() {
 },
 function(){
 this.parseStatement = function ( allowNull ) {
-  var head = null, l, e , directive = this.directive ;
+  var head = null, l, e , directive = DIR_NONE;
+
+  if (this.directive !== DIR_NONE) {
+    directive = this.directive;
+    if (this.st === ERR_PIN_OCTAL_IN_STRICT) {
+      directive |= DIR_HAS_OCTAL_ERROR;
+      this.st = ERR_NONE_YET;
+    }
+  }
+
   switch (this.lttype) {
     case '{': return this.parseBlckStatement();
     case ';': return this.parseEmptyStatement() ;
@@ -5692,10 +5735,15 @@ this.parseStatement = function ( allowNull ) {
   if (DIR_MAYBE & directive) {
     if (head.type !== 'Literal')
       this.directive = directive|DIR_LAST;
-    else if (!(this.directive & DIR_HANDLED_BY_NEWLINE))
-      this.gotDirective(this.dv, directive);
-    if (this.strictError.offset !== -1 && this.strictError.stringNode === null)
-      this.strictError.stringNode = head;
+    else {
+      if (!(this.directive & DIR_HANDLED_BY_NEWLINE)) {
+        ASSERT.call(this.directive === DIR_NONE,
+          'an expression that is going to become a statement must have either set a non-null directive to none if it has not handled it');
+        this.gotDirective(this.dv, directive);
+      }
+    }
+    if (this.esct !== ERR_NONE_YET && this.se === null)
+      this.se = head;
   }
 
   e  = this.semiI() || head.end;
@@ -6334,8 +6382,8 @@ this.blck = function () { // blck ([]stmt)
   return (stmts);
 };
 
-this.checkForStrictError = function() {
-  if (this.strictError.stringNode !== null)
+this.checkForStrictError = function(directive) {
+  if (this.esct !== ERR_NONE_YET)
     this.err('strict.err.esc.not.valid');
 };
 
@@ -6364,6 +6412,7 @@ this.parseDirectives = function(list) {
 
     if (this.directive & DIR_LAST)
       break;
+
   }
 
   this.directive = DIR_NONE;
@@ -6378,15 +6427,15 @@ this.gotDirective = function(dv, flags) {
       this.scope.strict = true;
     }
 
-    this.checkForStrictError();
+    this.checkForStrictError(flags);
   }
 };
-
+ 
 this.clearAllStrictErrors = function() {
-  this.strictError.stringNode = null;
-  this.strictError.offset = -1;
+  this.esct = ERR_NONE_YET;
+  this.se = null;
 };
-  
+ 
 
 },
 function(){

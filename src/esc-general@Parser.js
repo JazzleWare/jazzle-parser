@@ -40,10 +40,11 @@ this.readEsc = function ()  {
             return this.errorHandlerOutput
        }
        else if (this.directive !== DIR_NONE) {
-         if (this.strictError.stringNode === null) {
-           this.strictError.offset = this.c;
-           this.strictError.line = this.li;
-           this.strictError.column = this.col + (this.c-start);
+         if (this.esct === ERR_NONE_YET) {
+           this.eloc.c0 = this.c;
+           this.eloc.li0 = this.li;
+           this.eloc.col0 = this.col + (this.c-start);
+           this.esct = ERR_PIN_OCTAL_IN_STRICT;
          }
        }
 
@@ -66,13 +67,13 @@ this.readEsc = function ()  {
        if (this.tight)
          this.err('strict.oct.str.esc');
        else if (this.directive !== DIR_NONE) {
-         if (this.strictError.stringNode === null) {
-           this.strictError.offset = this.c;
-           this.strictError.line = this.li;
-           this.strictError.column = this.col + (this.c-start);
+         if (this.esct === ERR_NONE_YET) {
+           this.eloc.c0 = this.c;
+           this.eloc.li0 = this.li;
+           this.eloc.col0 = this.col + (this.c-start);
+           this.esct = ERR_PIN_OCTAL_IN_STRICT;
          }
        }
-       
 
        b0 = src.charCodeAt(this.c);
        b  = b0 - CH_0;

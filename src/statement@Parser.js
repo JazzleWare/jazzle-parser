@@ -1,5 +1,14 @@
 this.parseStatement = function ( allowNull ) {
-  var head = null, l, e , directive = this.directive ;
+  var head = null, l, e , directive = DIR_NONE;
+
+  if (this.directive !== DIR_NONE) {
+    directive = this.directive;
+    if (this.st === ERR_PIN_OCTAL_IN_STRICT) {
+      directive |= DIR_HAS_OCTAL_ERROR;
+      this.st = ERR_NONE_YET;
+    }
+  }
+
   switch (this.lttype) {
     case '{': return this.parseBlckStatement();
     case ';': return this.parseEmptyStatement() ;
@@ -39,10 +48,15 @@ this.parseStatement = function ( allowNull ) {
   if (DIR_MAYBE & directive) {
     if (head.type !== 'Literal')
       this.directive = directive|DIR_LAST;
-    else if (!(this.directive & DIR_HANDLED_BY_NEWLINE))
-      this.gotDirective(this.dv, directive);
-    if (this.strictError.offset !== -1 && this.strictError.stringNode === null)
-      this.strictError.stringNode = head;
+    else {
+      if (!(this.directive & DIR_HANDLED_BY_NEWLINE)) {
+        ASSERT.call(this.directive === DIR_NONE,
+          'an expression that is going to become a statement must have either set a non-null directive to none if it has not handled it');
+        this.gotDirective(this.dv, directive);
+      }
+    }
+    if (this.esct !== ERR_NONE_YET && this.se === null)
+      this.se = head;
   }
 
   e  = this.semiI() || head.end;
@@ -681,8 +695,8 @@ this.blck = function () { // blck ([]stmt)
   return (stmts);
 };
 
-this.checkForStrictError = function() {
-  if (this.strictError.stringNode !== null)
+this.checkForStrictError = function(directive) {
+  if (this.esct !== ERR_NONE_YET)
     this.err('strict.err.esc.not.valid');
 };
 
@@ -711,6 +725,7 @@ this.parseDirectives = function(list) {
 
     if (this.directive & DIR_LAST)
       break;
+
   }
 
   this.directive = DIR_NONE;
@@ -725,12 +740,12 @@ this.gotDirective = function(dv, flags) {
       this.scope.strict = true;
     }
 
-    this.checkForStrictError();
+    this.checkForStrictError(flags);
   }
 };
-
+ 
 this.clearAllStrictErrors = function() {
-  this.strictError.stringNode = null;
-  this.strictError.offset = -1;
+  this.esct = ERR_NONE_YET;
+  this.se = null;
 };
-  
+ 

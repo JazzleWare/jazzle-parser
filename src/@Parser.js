@@ -53,7 +53,22 @@ var Parser = function (src, isModule) {
   this.missingInit = false;
 
   this.dv = { value: "", raw: "" };
-  this.strictError = { offset: -1, line: -1, column: -1, stringNode: null };
+
+  // "pin" location; for errors that might not have been precisely cause by a syntax node, like:
+  // function l() { '\12'; 'use strict' }
+  //                 ^
+  // 
+  // for (a i\u0074 e) break;
+  //         ^
+  //
+  // var e = [a -= 12] = 5
+  //            ^
+  this.ploc = { c0: -1, li0: -1, col0: -1 }; // paramErr locPin; currently only for the last error above
+  this.aloc = { c0: -1, li0: -1, col0: -1 }; // assigErr locPin; currently only for the last error above
+
+  // escErr locPin; like the name suggests, it's not a simpleErr -- none of the simpleErrs needs a pinpoint
+  this.esct = ERR_NONE_YET;
+  this.eloc = { c0: -1, li0: -1, col0: -1 };
 
   this.parenAsync = null; // so that things like (async)(a,b)=>12 will not get to parse.
 

@@ -26,6 +26,23 @@ var ERR_NONE_YET = 0,
     // async a
     ERR_INTERMEDIATE_ASYNC = ERR_NON_TAIL_EXPR + 1,
 
+    /* async
+       (a)=>12 */
     ERR_ASYNC_NEWLINE_BEFORE_PAREN = ERR_INTERMEDIATE_ASYNC + 1,
-    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_ASYNC_NEWLINE_BEFORE_PAREN + 1;
 
+    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_ASYNC_NEWLINE_BEFORE_PAREN + 1,
+ 
+    ERR_PIN_START = ERR_ARGUMENTS_OR_EVAL_DEFAULT + 1,
+
+    // function l() { '\12'; 'use strict'; }
+    ERR_PIN_OCTAL_IN_STRICT = ERR_PIN_START,
+
+    // for (a i\u0074 e) break;
+    ERR_PIN_UNICODE_IN_RESV = ERR_PIN_OCTAL_IN_STRICT + 1,
+
+    // [ a -= 12 ] = 12
+    ERR_PIN_NOT_AN_EQ = ERR_PIN_UNICODE_IN_RESV;
+
+function pinErr(err) {
+  return err >= ERR_PIN_START;
+}
