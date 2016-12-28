@@ -5686,7 +5686,15 @@ this.semiI = function() {
 },
 function(){
 this.parseStatement = function ( allowNull ) {
-  var head = null, l, e , directive = this.directive;
+  var head = null,
+      l,
+      e ,
+      directive = this.directive,
+      esct = ERR_NONE_YET;
+
+  if (directive !== DIR_NONE) {
+    esct = this.esct; // does the current literal contain any octal escapes?
+  }
 
   switch (this.lttype) {
     case '{': return this.parseBlckStatement();
@@ -5734,7 +5742,7 @@ this.parseStatement = function ( allowNull ) {
         this.gotDirective(this.dv, directive);
       }
     }
-    if (this.esct !== ERR_NONE_YET && this.se === null)
+    if (esct !== ERR_NONE_YET && this.se === null)
       this.se = head;
   }
 
