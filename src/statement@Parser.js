@@ -1,13 +1,5 @@
 this.parseStatement = function ( allowNull ) {
-  var head = null, l, e , directive = DIR_NONE;
-
-  if (this.directive !== DIR_NONE) {
-    directive = this.directive;
-    if (this.st === ERR_PIN_OCTAL_IN_STRICT) {
-      directive |= DIR_HAS_OCTAL_ERROR;
-      this.st = ERR_NONE_YET;
-    }
-  }
+  var head = null, l, e , directive = this.directive;
 
   switch (this.lttype) {
     case '{': return this.parseBlckStatement();
