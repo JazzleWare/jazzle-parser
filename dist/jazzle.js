@@ -3563,8 +3563,8 @@ this.toAssig = function(head, context) {
         this.st = ERR_ARGUMENTS_OR_EVAL_ASSIGNED;
         this.se = head;
       }
-      if (context & CTX_NO_SIMPLE_ERR)
-        this.currentExprIsSimple();
+//    if (context & CTX_NO_SIMPLE_ERR)
+//      this.currentExprIsSimple();
     }
     return;
 
@@ -3645,6 +3645,10 @@ this.parseAssignment = function(head, context) {
         pt = ERR_NONE_YET, pe = null, po = null;
 
     this.toAssig(core(head), context);
+
+    // flush any remaining simple error, now that there are no more assignment errors
+    if ((context & CTX_NO_SIMPLE_ERR) && this.st !== ERR_NONE_YET)
+      this.throwTricky('s', this.st);
 
     var sc0 = -1, sli0 = -1, scol0 = -1,
         pc0 = -1, pli0 = -1, pcol0 = -1;
