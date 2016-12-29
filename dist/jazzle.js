@@ -5829,12 +5829,18 @@ this.parseStatement = function ( allowNull ) {
 
   if (DIR_MAYBE & directive) {
     if (head.type !== 'Literal')
+      // TODO: technically it should instead get turned off: this.directive = DIR_NONE
+      // Otherwise, if the next token to be recognized is a string literal, the octal sequence it may
+      // contain is going to be unnecessarily recorded in to the error variables
       this.directive = directive|DIR_LAST;
     else {
       if (!(this.directive & DIR_HANDLED_BY_NEWLINE)) {
         ASSERT.call(this.directive === DIR_NONE,
-          'an expression that is going to become a statement must have either set a non-null directive to none if it has not handled it');
+          'an expression that is going to become a statement must have set a non-null directive to none if it has not handled it');
         this.gotDirective(this.dv, directive);
+ 
+        // so that the escaped octals are recorded if the next token to be extracted is a string literal
+        this.directive = directive; 
       }
     }
     if (esct !== ERR_NONE_YET && this.se === null)
