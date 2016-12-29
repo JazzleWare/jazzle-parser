@@ -1,5 +1,5 @@
 this.readEsc = function ()  {
-  var src = this.src, b0 = 0, b = 0, start = -1;
+  var src = this.src, b0 = 0, b = 0, start = this.c;
   switch ( src.charCodeAt ( ++this.c ) ) {
    case CH_BACK_SLASH: return '\\';
    case CH_MULTI_QUOTE: return'\"' ;
