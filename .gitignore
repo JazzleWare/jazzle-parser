@@ -7,6 +7,7 @@ early-error*
 yield-container*
 scrap/
 errLoc
+bench-all.sh
 cat-ignore.js
 *-
 .s*
