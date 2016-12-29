@@ -11,7 +11,7 @@ function Test() {
 }
 
 Test.prototype.isFail = function() {
-  return this.json.error || this.jsonMode === 'err';
+  return this.json.errors || this.jsonMode === 'err';
 };
 
 Test.prototype.isModule = function() {

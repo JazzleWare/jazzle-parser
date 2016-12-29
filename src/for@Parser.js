@@ -66,6 +66,9 @@ this.parseFor = function() {
        this.ensureVarsAreNotResolvingToCatchParams();
 
     case 'in':
+      if (this.ltval === 'in')
+        this.resvchk();
+
       if (headIsExpr) {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec
           // TODO: squash with the `else if (head.init)` below

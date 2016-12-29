@@ -1,5 +1,5 @@
 this.readAnIdentifierToken = function (v) {
-   var c = this.c, src = this.src, len = src.length, peek;
+   var c = this.c, src = this.src, len = src.length, peek, start = c;
    c++; // start reading the body
 
    var byte2, startSlice = c; // the head is already supplied in v
@@ -12,6 +12,12 @@ this.readAnIdentifierToken = function (v) {
       }
 
       if ( peek === CH_BACK_SLASH ) {
+         if (this.esct === ERR_NONE_YET) {
+           this.esct = ERR_PIN_UNICODE_IN_RESV;
+           this.eloc.c0 = c;
+           this.eloc.li0 = this.li;
+           this.eloc.col0 = this.col + (c-start);
+         }
          if ( !v ) // if all previous characters have been non-u characters 
             v = src.charAt (startSlice-1); // v = IDHead
 

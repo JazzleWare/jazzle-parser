@@ -133,11 +133,12 @@ this .validateID  = function (e) {
 };
 
 this.errorReservedID = function(id) {
-    if ( !this.throwReserved ) {
-       this.throwReserved = true;
-       return null;
-    }
-    if ( this.err('reserved.id') ) return this.errorHandlerOutput;
+  this.resvchk();
+  if ( !this.throwReserved ) {
+     this.throwReserved = true;
+     return null;
+  }
+  if ( this.err('reserved.id') ) return this.errorHandlerOutput;
 }
 
 

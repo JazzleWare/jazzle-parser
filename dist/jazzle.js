@@ -1130,6 +1130,10 @@ this.parseAsync_intermediate = function(c0, li0, col0) {
 },
 function(){
 this. parseClass = function(context) {
+
+  if (this.unsatisfiedLabel)
+    this.err('class.label.not.allowed');
+
   var startc = this.c0,
       startLoc = this.locBegin();
 
@@ -1139,6 +1143,12 @@ this. parseClass = function(context) {
     this.canBeStatement = false;
   }
   this.next(); // 'class'
+
+  var prevStrict = this.tight;
+
+  // TODO: this is highly unnecessary, and prone to many errors if missed
+  this.tight = true;
+//this.scope.strict = true;
 
   if (isStmt) {
     if (!this.canDeclareClassInScope())
@@ -1198,6 +1208,8 @@ this. parseClass = function(context) {
       body: list/* ,y:-1*/
     }/* ,y:-1*/ 
   };
+
+  this.tight = prevStrict;
 
   if (!this.expectType_soft('}'))
     this.err('class.unfinished');
@@ -2261,6 +2273,9 @@ this.parseFor = function() {
        this.ensureVarsAreNotResolvingToCatchParams();
 
     case 'in':
+      if (this.ltval === 'in')
+        this.resvchk();
+
       if (headIsExpr) {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec
           // TODO: squash with the `else if (head.init)` below
@@ -2650,11 +2665,17 @@ this. parseIdStatementOrId = function ( context ) {
 
   case 2:
     switch (id) {
-    case 'do': return this.parseDoWhileStatement();
-    case 'if': return this.parseIfStatement();
+    case 'do':
+      this.resvchk();
+      return this.parseDoWhileStatement();
+    case 'if':
+      this.resvchk();
+      return this.parseIfStatement();
     case 'in':
-       if ( context & CTX_FOR )
-         return null;
+      this.resvchk();
+      // TODO: is it actually needed anymore?
+      if ( context & CTX_FOR )
+        return null;
  
        this.notId() ;
     default: pendingExprHead = this.id(); break SWITCH ;
@@ -2663,6 +2684,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 3:
     switch (id) {
     case 'new':
+      this.resvchk();
       if ( this.canBeStatement ) {
         this.canBeStatement = false ;
         this.pendingExprHead = this.parseNewHead();
@@ -2670,21 +2692,28 @@ this. parseIdStatementOrId = function ( context ) {
       }
       return this.parseNewHead();
 
-    case 'for': return this.parseFor();
-    case 'try': return this.parseTryStatement();
+    case 'for':
+      this.resvchk();
+      return this.parseFor();
+    case 'try':
+      this.resvchk();
+      return this.parseTryStatement();
     case 'let':
       if ( this.canBeStatement && this.v >= 5 )
         return this.parseLet(CTX_NONE);
 
-      if (this.tight ) this.err('strict.let.is.id');
+      if (this.tight) this.err('strict.let.is.id');
 
       pendingExprHead = this.id();
       break SWITCH;
 
-    case 'var': return this.parseVariableDeclaration( context & CTX_FOR );
+    case 'var':
+      this.resvchk();
+      return this.parseVariableDeclaration( context & CTX_FOR );
     case 'int':
-      if ( this.v <= 5 )
+      if (this.v <= 5) {
         this.errorReservedID();
+      }
 
     default: pendingExprHead = this.id(); break SWITCH  ;
     }
@@ -2692,21 +2721,26 @@ this. parseIdStatementOrId = function ( context ) {
   case 4:
     switch (id) {
     case 'null':
+      this.resvchk();
       pendingExprHead = this.parseNull();
       break SWITCH;
     case 'void':
+      this.resvchk();
       if ( this.canBeStatement )
          this.canBeStatement = false;
       this.lttype = 'u'; 
       this.isVDT = VDT_VOID;
       return null;
     case 'this':
+      this.resvchk();
       pendingExprHead = this. parseThis();
       break SWITCH;
     case 'true':
+      this.resvchk();
       pendingExprHead = this.parseTrue();
       break SWITCH;
     case 'case':
+      this.resvchk();
       if ( this.canBeStatement ) {
         this.foundStatement = true;
         this.canBeStatement = false ;
@@ -2714,30 +2748,47 @@ this. parseIdStatementOrId = function ( context ) {
       }
 
     case 'else':
+      this.resvchk();
       this.notId();
     case 'with':
+      this.resvchk();
       return this.parseWithStatement();
     case 'enum': case 'byte': case 'char':
     case 'goto': case 'long':
-      if ( this. v <= 5 ) this.errorReservedID();
+      if (this. v <= 5 ) this.errorReservedID();
 
     default: pendingExprHead = this.id(); break SWITCH  ;
   }
 
   case 5:
     switch (id) {
-    case 'super': pendingExprHead = this.parseSuper(); break SWITCH;
-    case 'break': return this.parseBreakStatement();
-    case 'catch': this.notId ()  ;
-    case 'class': return this.parseClass(CTX_NONE ) ;
+    case 'super':
+      this.resvchk();
+      pendingExprHead = this.parseSuper();
+      break SWITCH;
+    case 'break':
+      this.resvchk();
+      return this.parseBreakStatement();
+    case 'catch':
+      this.resvchk();
+      this.notId();
+    case 'class':
+      this.resvchk();
+      return this.parseClass(CTX_NONE ) ;
     case 'const':
+      this.resvchk();
       if (this.v<5) this.err('const.not.in.v5') ;
       return this.parseVariableDeclaration(CTX_NONE);
 
-    case 'throw': return this.parseThrowStatement();
-    case 'while': return this.parseWhileStatement();
+    case 'throw':
+      this.resvchk();
+      return this.parseThrowStatement();
+    case 'while':
+      this.resvchk();
+      return this.parseWhileStatement();
     case 'yield': 
       if ( this.scopeFlags & SCOPE_FLAG_GEN ) {
+        this.resvchk();
         if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
           this.err('yield.args');
 
@@ -2753,11 +2804,13 @@ this. parseIdStatementOrId = function ( context ) {
       break SWITCH;
           
     case 'false':
+      this.resvchk();
       pendingExprHead = this.parseFalse();
       break SWITCH;
 
     case 'await':
       if (this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) {
+        this.resvchk();
         if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
           this.err('await.args');
         if (this.canBeStatement)
@@ -2766,8 +2819,10 @@ this. parseIdStatementOrId = function ( context ) {
         this.lttype = 'u';
         return null;
       }
-      if (this.tight)
+      if (this.tight) {
+        this.resvchk();
         this.err('await.in.strict');
+      }
 
       pendingExprHead = this.id();
       break SWITCH;
@@ -2785,11 +2840,12 @@ this. parseIdStatementOrId = function ( context ) {
 
   case 6: switch (id) {
     case 'static':
-      if ( this.tight || this.v <= 5 )
-        this.error();
+      if (this.tight || this.v <= 5)
+        this.errorReservedID();
 
     case 'delete':
     case 'typeof':
+      this.resvchk();
       if ( this.canBeStatement )
         this.canBeStatement = false ;
       this.lttype = 'u'; 
@@ -2797,19 +2853,25 @@ this. parseIdStatementOrId = function ( context ) {
       return null;
 
     case 'export': 
+      this.resvchk();
       if ( this.isScript && this.err('export.not.in.module') )
         return this.errorHandlerOutput;
 
       return this.parseExport() ;
 
     case 'import':
+      this.resvchk();
       if ( this.isScript && this.err('import.not.in.module') )
         return this.errorHandlerOutput;
 
       return this.parseImport();
 
-    case 'return': return this.parseReturnStatement();
-    case 'switch': return this.parseSwitchStatement();
+    case 'return':
+      this.resvchk();
+      return this.parseReturnStatement();
+    case 'switch':
+      this.resvchk();
+      return this.parseSwitchStatement();
     case 'public':
       if (this.tight) this.errorReservedID();
     case 'double': case 'native': case 'throws':
@@ -2821,14 +2883,16 @@ this. parseIdStatementOrId = function ( context ) {
   case 7:
     switch (id) {
     case 'default':
+      this.resvchk();
       if ( this.canBeStatement ) this.canBeStatement = false ;
       return null;
 
     case 'extends': case 'finally':
-      this.notId() ;
+      this.resvchk();
+      this.notId();
 
     case 'package': case 'private':
-      if ( this. tight  )
+      if (this.tight)
         this.errorReservedID();
 
     case 'boolean':
@@ -2840,9 +2904,15 @@ this. parseIdStatementOrId = function ( context ) {
 
   case 8:
     switch (id) {
-    case 'function': return this.parseFunc(context&CTX_FOR, 0 );
-    case 'debugger': return this.prseDbg();
-    case 'continue': return this.parseContinueStatement();
+    case 'function':
+      this.resvchk();
+      return this.parseFunc(context&CTX_FOR, 0 );
+    case 'debugger':
+      this.resvchk();
+      return this.prseDbg();
+    case 'continue':
+      this.resvchk();
+      return this.parseContinueStatement();
     case 'abstract': case 'volatile':
       if ( this. v <= 5 ) this.errorReservedID();
 
@@ -2863,6 +2933,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 10:
     switch ( id ) {
     case 'instanceof':
+       this.resvchk();
        this.notId();
     case 'implements':
       if ( this.v <= 5 || this.tight )
@@ -2887,11 +2958,19 @@ this. parseIdStatementOrId = function ( context ) {
   return pendingExprHead;
 };
  
+this.resvchk = function() {
+  if (this.esct !== ERR_NONE_YET) {
+    ASSERT.call(this.esct === ERR_PIN_UNICODE_IN_RESV,
+      'the error in this.esct is something other than ERR_PIN_UNICODE_IN_RESV: ' + this.esct);
+    this.err('resv.unicode');
+  }
+};
+
 
 },
 function(){
 this.readAnIdentifierToken = function (v) {
-   var c = this.c, src = this.src, len = src.length, peek;
+   var c = this.c, src = this.src, len = src.length, peek, start = c;
    c++; // start reading the body
 
    var byte2, startSlice = c; // the head is already supplied in v
@@ -2904,6 +2983,12 @@ this.readAnIdentifierToken = function (v) {
       }
 
       if ( peek === CH_BACK_SLASH ) {
+         if (this.esct === ERR_NONE_YET) {
+           this.esct = ERR_PIN_UNICODE_IN_RESV;
+           this.eloc.c0 = c;
+           this.eloc.li0 = this.li;
+           this.eloc.col0 = this.col + (c-start);
+         }
          if ( !v ) // if all previous characters have been non-u characters 
             v = src.charAt (startSlice-1); // v = IDHead
 
@@ -3971,6 +4056,7 @@ this.next = function () {
     if (this.directive !== DIR_NONE)
       this.directive = DIR_NONE;
 
+    this.esct = ERR_NONE_YET;
     this.readAnIdentifierToken('');
   }
   else if (num(peek))this.readNumberLiteral(peek);
@@ -4112,16 +4198,21 @@ this.next = function () {
         var mustBeAnID = 0 ;
 
         if (CH_BACK_SLASH === peek) {
-            mustBeAnID = 1;
-            peek = l.charCodeAt(++ this.c);
-            if (peek !== CH_u )
-                return this.err('id.u.not.after.slash');
-            
-            else
-               peek = this.peekUSeq();
+          this.esct = ERR_PIN_UNICODE_IN_RESV;
+          this.eloc.c0 = this.c;
+          this.eloc.li0 = this.li;
+          this.eloc.col0 = this.col;
 
-            if (peek >= 0x0D800 && peek <= 0x0DBFF )
-              this.err('id.name.has.surrogate.pair');
+          mustBeAnID = 1;
+          peek = l.charCodeAt(++ this.c);
+          if (peek !== CH_u )
+              return this.err('id.u.not.after.slash');
+          
+          else
+             peek = this.peekUSeq();
+
+          if (peek >= 0x0D800 && peek <= 0x0DBFF )
+            this.err('id.name.has.surrogate.pair');
         }
         if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
             mustBeAnID = 2 ;
@@ -4129,15 +4220,16 @@ this.next = function () {
             r = this.peekTheSecondByte();
         }
         if (mustBeAnID) {
-           if (!isIDHead(mustBeAnID === 1 ? peek :
-                  ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
-              if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead');
-              else return this.err('id.multi.must.be.idhead');
-            }
-            this.readAnIdentifierToken( mustBeAnID === 2 ?
-                String.fromCharCode( peek, r ) :
-                fromcode( peek )
-            );
+          if (!isIDHead(mustBeAnID === 1 ? peek :
+             ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
+            if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead');
+            else return this.err('id.multi.must.be.idhead');
+          }
+ 
+          this.readAnIdentifierToken( mustBeAnID === 2 ?
+              String.fromCharCode( peek, r ) :
+              fromcode( peek )
+          );
         }
         else 
           this.readMisc();
@@ -4604,17 +4696,20 @@ this .parseO = function(context ) {
 
   case 'Identifier':
     switch ( this. ltval ) {
+    case 'in':
+      this.resvchk();
+    case 'of':
+      if (context & CTX_FOR) break ;
+      this.prec = PREC_COMP ;
+      this.ltraw = this.ltval;
+      return true;
+
     case 'instanceof':
+      this.resvchk();
       this.prec = PREC_COMP  ;
       this.ltraw = this.ltval ;
       return true;
 
-    case 'of':
-    case 'in':
-      if ( context & CTX_FOR ) break ;
-      this.prec = PREC_COMP ;
-      this.ltraw = this.ltval;
-      return true;
     }
     break;
 
@@ -6750,11 +6845,12 @@ this .validateID  = function (e) {
 };
 
 this.errorReservedID = function(id) {
-    if ( !this.throwReserved ) {
-       this.throwReserved = true;
-       return null;
-    }
-    if ( this.err('reserved.id') ) return this.errorHandlerOutput;
+  this.resvchk();
+  if ( !this.throwReserved ) {
+     this.throwReserved = true;
+     return null;
+  }
+  if ( this.err('reserved.id') ) return this.errorHandlerOutput;
 }
 
 

@@ -21,6 +21,7 @@ this.next = function () {
     if (this.directive !== DIR_NONE)
       this.directive = DIR_NONE;
 
+    this.esct = ERR_NONE_YET;
     this.readAnIdentifierToken('');
   }
   else if (num(peek))this.readNumberLiteral(peek);
@@ -162,16 +163,21 @@ this.next = function () {
         var mustBeAnID = 0 ;
 
         if (CH_BACK_SLASH === peek) {
-            mustBeAnID = 1;
-            peek = l.charCodeAt(++ this.c);
-            if (peek !== CH_u )
-                return this.err('id.u.not.after.slash');
-            
-            else
-               peek = this.peekUSeq();
+          this.esct = ERR_PIN_UNICODE_IN_RESV;
+          this.eloc.c0 = this.c;
+          this.eloc.li0 = this.li;
+          this.eloc.col0 = this.col;
 
-            if (peek >= 0x0D800 && peek <= 0x0DBFF )
-              this.err('id.name.has.surrogate.pair');
+          mustBeAnID = 1;
+          peek = l.charCodeAt(++ this.c);
+          if (peek !== CH_u )
+              return this.err('id.u.not.after.slash');
+          
+          else
+             peek = this.peekUSeq();
+
+          if (peek >= 0x0D800 && peek <= 0x0DBFF )
+            this.err('id.name.has.surrogate.pair');
         }
         if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
             mustBeAnID = 2 ;
@@ -179,15 +185,16 @@ this.next = function () {
             r = this.peekTheSecondByte();
         }
         if (mustBeAnID) {
-           if (!isIDHead(mustBeAnID === 1 ? peek :
-                  ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
-              if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead');
-              else return this.err('id.multi.must.be.idhead');
-            }
-            this.readAnIdentifierToken( mustBeAnID === 2 ?
-                String.fromCharCode( peek, r ) :
-                fromcode( peek )
-            );
+          if (!isIDHead(mustBeAnID === 1 ? peek :
+             ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
+            if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead');
+            else return this.err('id.multi.must.be.idhead');
+          }
+ 
+          this.readAnIdentifierToken( mustBeAnID === 2 ?
+              String.fromCharCode( peek, r ) :
+              fromcode( peek )
+          );
         }
         else 
           this.readMisc();

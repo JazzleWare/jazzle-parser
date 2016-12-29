@@ -1,4 +1,8 @@
 this. parseClass = function(context) {
+
+  if (this.unsatisfiedLabel)
+    this.err('class.label.not.allowed');
+
   var startc = this.c0,
       startLoc = this.locBegin();
 
@@ -8,6 +12,12 @@ this. parseClass = function(context) {
     this.canBeStatement = false;
   }
   this.next(); // 'class'
+
+  var prevStrict = this.tight;
+
+  // TODO: this is highly unnecessary, and prone to many errors if missed
+  this.tight = true;
+//this.scope.strict = true;
 
   if (isStmt) {
     if (!this.canDeclareClassInScope())
@@ -67,6 +77,8 @@ this. parseClass = function(context) {
       body: list/* ,y:-1*/
     }/* ,y:-1*/ 
   };
+
+  this.tight = prevStrict;
 
   if (!this.expectType_soft('}'))
     this.err('class.unfinished');

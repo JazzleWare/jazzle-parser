@@ -148,17 +148,20 @@ this .parseO = function(context ) {
 
   case 'Identifier':
     switch ( this. ltval ) {
+    case 'in':
+      this.resvchk();
+    case 'of':
+      if (context & CTX_FOR) break ;
+      this.prec = PREC_COMP ;
+      this.ltraw = this.ltval;
+      return true;
+
     case 'instanceof':
+      this.resvchk();
       this.prec = PREC_COMP  ;
       this.ltraw = this.ltval ;
       return true;
 
-    case 'of':
-    case 'in':
-      if ( context & CTX_FOR ) break ;
-      this.prec = PREC_COMP ;
-      this.ltraw = this.ltval;
-      return true;
     }
     break;
 
