@@ -490,53 +490,71 @@ function isHex(e) {
   );
 }
 ;
+var ERR_FLAG_LEN = 0;
+
+var ERR_P_SYN = 1 << ERR_FLAG_LEN++,
+    ERR_A_SYN = 1 << ERR_FLAG_LEN++,
+    ERR_S_SYN = 1 << ERR_FLAG_LEN++,
+    ERR_P_SEM = 1 << ERR_FLAG_LEN++,
+    ERR_A_SEM = 1 << ERR_FLAG_LEN++,
+    ERR_S_SEM = 1 << ERR_FLAG_LEN++,
+    ERR_PIN = 1 << ERR_FLAG_LEN, // looks like it need not have any sub-type yet
+    ERR_SYN = ERR_P_SYN|ERR_A_SYN|ERR_S_SYN,
+    ERR_SEM = ERR_P_SEM|ERR_A_SEM|ERR_S_SEM,
+    ERR_I = 0;
+
+function newErr(flags) {
+  return (ERR_I++ << ERR_FLAG_LEN)|flags;
+}
+
 var ERR_NONE_YET = 0,
-    // [(a)] = 12;
-    ERR_PAREN_UNBINDABLE = ERR_NONE_YET + 1,
+    // [([a])] = 12; <p syntactic, a syntactic, s none>
+    ERR_PAREN_UNBINDABLE = newErr(ERR_P_SYN|ERR_A_SYN),
 
-    // { a = 12 };
-    ERR_SHORTHAND_UNASSIGNED = ERR_PAREN_UNBINDABLE + 1,
+    // { a = 12 }; <p none, a none, s syntactic>@pin@
+    ERR_SHORTHAND_UNASSIGNED = newErr(ERR_S_SYN|ERR_PIN),
 
-    // [...a, b] = [...e,] = 12 
-    ERR_NON_TAIL_REST = ERR_SHORTHAND_UNASSIGNED + 1,
+    // [...a, b] = [...e,] = 12 ; <p syntactic, a syntactic, s none>@pin@
+    ERR_NON_TAIL_REST = newErr(ERR_P_SYN|ERR_PIN|ERR_A_SYN),
 
-    // [arguments, [arguments=12], [arguments]=12, eval] = 'l'
-    ERR_ARGUMENTS_OR_EVAL_ASSIGNED = ERR_NON_TAIL_REST + 1,
+    // [arguments, [arguments=12], [arguments]=12, eval] = 'l'; <p none, a none, s semantic>
+    ERR_ARGUMENTS_OR_EVAL_ASSIGNED = newErr(ERR_S_SEM),
 
-    // function* l() { ([e=yield])=>12 }
-    ERR_YIELD_OR_SUPER = ERR_ARGUMENTS_OR_EVAL_ASSIGNED + 1,
+    // function* l() { ([e=yield])=>12 }; <p semantic or syntactic, a semantic or syntactic, s none>
+    ERR_YIELD_OR_SUPER = newErr(ERR_P_SEM|ERR_A_SEM),
 
-    // (a, ...b)
-    ERR_UNEXPECTED_REST = ERR_YIELD_OR_SUPER + 1,
+    // (a, ...b); <p none, a none, s syntactic>
+    ERR_UNEXPECTED_REST = newErr(ERR_S_SYN),
 
-    // ()
-    ERR_EMPTY_LIST_MISSING_ARROW = ERR_UNEXPECTED_REST + 1,
+    // (); <p none, a none, s syntactic>
+    ERR_EMPTY_LIST_MISSING_ARROW = newErr(ERR_S_SYN),
 
-    // (a,)
-    ERR_NON_TAIL_EXPR = ERR_EMPTY_LIST_MISSING_ARROW + 1,
+    // (a,); <p none, a none, s syntactic>@pin@
+    ERR_NON_TAIL_EXPR = newErr(ERR_S_SYN|ERR_PIN),
 
     // async a
-    ERR_INTERMEDIATE_ASYNC = ERR_NON_TAIL_EXPR + 1,
+    ERR_INTERMEDIATE_ASYNC = newErr(ERR_S_SYN),
 
     /* async
        (a)=>12 */
-    ERR_ASYNC_NEWLINE_BEFORE_PAREN = ERR_INTERMEDIATE_ASYNC + 1,
+    ERR_ASYNC_NEWLINE_BEFORE_PAREN = newErr(ERR_P_SYN),
 
-    ERR_ARGUMENTS_OR_EVAL_DEFAULT = ERR_ASYNC_NEWLINE_BEFORE_PAREN + 1,
+    ERR_ARGUMENTS_OR_EVAL_DEFAULT = newErr(ERR_S_SYN),
  
-    ERR_PIN_START = ERR_ARGUMENTS_OR_EVAL_DEFAULT + 1,
-
     // function l() { '\12'; 'use strict'; }
-    ERR_PIN_OCTAL_IN_STRICT = ERR_PIN_START,
+    ERR_PIN_OCTAL_IN_STRICT = newErr(ERR_S_SYN|ERR_PIN),
 
     // for (a i\u0074 e) break;
-    ERR_PIN_UNICODE_IN_RESV = ERR_PIN_OCTAL_IN_STRICT + 1,
+    ERR_PIN_UNICODE_IN_RESV = newErr(ERR_S_SYN|ERR_PIN),
 
-    // [ a -= 12 ] = 12
-    ERR_PIN_NOT_AN_EQ = ERR_PIN_UNICODE_IN_RESV;
+    // [ a -= 12 ] = 12; <p syntactic, a syntactic, s none>@pin@
+    ERR_PIN_NOT_AN_EQ = newErr(ERR_S_SYN|ERR_PIN);
 
-function pinErr(err) {
-  return err >= ERR_PIN_START;
+// if a new error is a syntactic error, and the current error is a semantic one, then replace
+function agtb(a, b) {
+  return (a & ERR_SYN) ?
+    (b & ERR_SYN) === 0 :
+    false;
 }
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
@@ -3396,6 +3414,10 @@ this.parseArrayExpression = function(context) {
   var at = ERR_NONE_YET, ae = null, ao = null;
   var st = ERR_NONE_YET, se = null, so = null;
 
+  var pc0 = -1, pli0 = -1, pcol0 = -1;
+  var ac0 = -1, ali0 = -1, acol0 = -1;
+  var sc0 = -1, sli0 = -1, scol0 = -1;
+
   if (context & CTX_PARPAT) {
     if ((context & CTX_PARAM) &&
        !(context & CTX_HAS_A_PARAM_ERR)) {
@@ -3450,12 +3472,17 @@ this.parseArrayExpression = function(context) {
           this.pt = t; this.pe = elemCore;
         }
         if (this.pt !== ERR_NONE_YET) {
-          pt = this.pt; pe = this.pe; po = core(elem);
-          elemContext |= CTX_HAS_A_PARAM_ERR;
+          if (pt === ERR_NONE_YET || agtb(this.pt, pt)) {
+            pt = this.pt; pe = this.pe; po = core(elem);
+            if (pt & ERR_P_SYN)
+              elemContext |= CTX_HAS_A_PARAM_ERR;
+            if (pt & ERR_PIN) 
+              pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
+          }
         }
       }
 
-      // (a) = 12
+      // ([a]) = 12
       if (t === ERR_PAREN_UNBINDABLE && this.ensureSimpAssig_soft(elem.expr))
         t = ERR_NONE_YET;
 
@@ -3465,32 +3492,31 @@ this.parseArrayExpression = function(context) {
           this.at = t; this.ae = elemCore;
         }
         if (this.at !== ERR_NONE_YET) {
-          at = this.at; ae = this.ae; ao = core(elem);
-          elemContext |= CTX_HAS_AN_ASSIG_ERR;
+          if (at === ERR_NONE_YET || agtb(this.at, at)) {
+            at = this.at; ae = this.ae; ao = core(elem);
+            if (at & ERR_A_SYN)
+              elemContext |= CTX_HAS_AN_ASSIG_ERR;
+            if (at & ERR_PIN)
+              ac0 = this.aloc.c0, ali0 = this.aloc.li0, acol0 = this.aloc.col0;
+          }
         }
       }
       if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
         if (this.st !== ERR_NONE_YET) {
-          st = this.st; se = this.se; so = core(elem);
-          elemContext |= CTX_HAS_A_SIMPLE_ERR;
+          if (st === ERR_NONE_YET || agtb(this.st, st)) {
+            st = this.st; se = this.se; so = core(elem);
+            if (st & ERR_S_SYN)
+              elemContext |= CTX_HAS_A_SIMPLE_ERR;
+            if (st & ERR_PIN)
+              sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
+          }
         }
       }
     }
 
     hasRest = hasNonTailRest = false;
   }
-
   
-  if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
-    this.pt = pt; this.pe = pe; this.po = po; 
-  }
-  if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
-    this.at = at; this.ae = ae; this.ao = ao;
-  }
-  if ((context & CTX_PARPAT) && st !== ERR_NONE_YET) {
-    this.st = st; this.se = se; this.so = so;
-  }
-
   var n = {
     type: 'ArrayExpression',
     loc: { start: startLoc, end: this.loc() },
@@ -3498,6 +3524,22 @@ this.parseArrayExpression = function(context) {
     end: this.c,
     elements : list /* ,y:-1*/
   };
+
+  if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
+    this.pt = pt; this.pe = pe; this.po = po;
+    if (pt & ERR_PIN)
+      this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0;
+  }
+  if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
+    this.at = at; this.ae = ae; this.ao = ao;
+    if (at & ERR_PIN)
+      this.aloc.c0 = ac0, this.aloc.li0 = ali0, this.aloc.col0 = acol0;
+  }
+  if ((context & CTX_PARPAT) && st !== ERR_NONE_YET) {
+    this.st = st; this.se = se; this.so = so;
+    if (st & ERR_PIN)
+      this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.col0 = scol0;
+  }
 
   if (!this.expectType_soft(']'))
     this.err('array.unfinished');
@@ -3603,26 +3645,19 @@ this.parseAssignment = function(head, context) {
         pt = ERR_NONE_YET, pe = null, po = null;
 
     this.toAssig(core(head), context);
-    // TODO: crazy to say, but what about _not_ parsing assignments that are
-    // potpat elements, having the container (array or object) take over the parse
-    // for assignments.
-    // example:
-    // [ a = b, e = l] = 12:
-    //   elem = nextElem() -> a
-    //   if this.lttype == '=': this.toAssig(elem)
-    //   <update tricky>
-    //   if '=': elem = parsePatAssig(elem) -> a = b
-    //   elem = nextElem() -> e
-    //   if this.lttype == '=': this.toAssig(elem)
-    //   <update tricky>
-    //   if '=':  elem = parsePatAssig(elem) -> e = l
-    // 
-    // the approach above might be a fit replacement for the approach below
-    if ((context & CTX_PARAM) && this.pt !== ERR_NONE_YET) {
-      pt = this.pt; pe = this.pe; po = this.po; 
-    }
+
+    var sc0 = -1, sli0 = -1, scol0 = -1,
+        pc0 = -1, pli0 = -1, pcol0 = -1;
+
     if ((context & CTX_PARPAT) && this.st !== ERR_NONE_YET) {
       st = this.st; se = this.se; so = this.so;
+      if (st & ERR_PIN)
+        sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
+    }
+    if ((context & CTX_PARAM) && this.pt !== ERR_NONE_YET) {
+      pt = this.pt; pe = this.pe; po = this.po;
+      if (pt & ERR_PIN)
+        pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
     }
 
     this.currentExprIsAssig();
@@ -3632,19 +3667,36 @@ this.parseAssignment = function(head, context) {
 
     if (pt !== ERR_NONE_YET) {
       this.pt = pt; this.pe = pe; this.po = po;
+      if (pt & ERR_PIN)
+        this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0 = pcol0;
     }
     if (st !== ERR_NONE_YET) {
       this.st = st; this.se = se; this.so = so;
+      if (st & ERR_PIN)
+        this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.scol0;
     }
   }
   else {
     // TODO: further scrutiny, like checking for this.at, is necessary (?)
-    if (!this.ensureSimpAssig_soft(head))
+    if (!this.ensureSimpAssig_soft(core(head)))
       this.err('assig.not.simple');
 
+    var c0 = -1, li0 = -1, col0 = -1;
+    if (context & CTX_PARPAT) {
+      c0 = this.c0; li0 = this.li0; col0 = this.col0;
+    }
     this.next();
     right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
       (context & CTX_FOR)|CTX_PAT|CTX_NO_SIMPLE_ERR);
+
+    if (context & CTX_PARAM) {
+      this.ploc.c0 = c0, this.ploc.li0 = li0, this.ploc.col0 = col0;
+      this.pt = ERR_PIN_NOT_AN_EQ;
+    }
+    if (context & CTX_PAT) {
+      this.aloc.c0 = c0, this.aloc.li0 = li0, this.aloc.col0 = col0;
+      this.at = ERR_PIN_NOT_AN_EQ;
+    }
   }
  
   return {
@@ -3696,6 +3748,10 @@ this.parseObjectExpression = function(context) {
     }
   }
   
+  var pc0 = -1, pli0 = -1, pcol0 = -1;
+  var ac0 = -1, ali0 = -1, acol0 = -1;
+  var sc0 = -1, sli0 = -1, scol0 = -1;
+
   do {
     this.next();
     this.first__proto__ = first__proto__;
@@ -3708,36 +3764,43 @@ this.parseObjectExpression = function(context) {
       first__proto__ = this.first__proto__;
 
     list.push(core(elem));
-    if (!(context & CTX_PARPAT))
+    if (!(elemContext & CTX_PARPAT))
       continue;
 
-    if ((context & CTX_PARAM) &&
-       !(context & CTX_HAS_A_PARAM_ERR) &&
+    if ((elemContext & CTX_PARAM) &&
+       !(elemContext & CTX_HAS_A_PARAM_ERR) &&
        this.pt !== ERR_NONE_YET) {
-      pt = this.pt; pe = this.pe; po = elem;
+      if (pt === ERR_NONE_YET || agtb(this.pt, pt)) {
+        pt = this.pt, pe = this.pe, po = elem;
+        if (pt & ERR_PIN)
+          pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
+        if (pt & ERR_P_SYN)
+          elemContext |= CTX_HAS_A_PARAM_ERR;
+      }
     }
-    if ((context & CTX_PAT) &&
-       !(context & CTX_HAS_AN_ASSIG_ERR) &&
+    if ((elemContext & CTX_PAT) &&
+       !(elemContext & CTX_HAS_AN_ASSIG_ERR) &&
        this.at !== ERR_NONE_YET) {
-      at = this.at; ae = this.ae; ao = elem;
+      if (at === ERR_NONE_YET || agtb(this.at, at)) {
+        at = this.at; ae = this.ae; ao = elem;
+        if (at & ERR_PIN)
+          ac0 = this.aloc.c0, ali0 = this.aloc.li0, acol0 = this.aloc.col0;
+        if (at & ERR_A_SYN)
+          elemContext |= CTX_HAS_AN_ASSIG_ERR;
+      }
     }
-    if (!(context & CTX_HAS_A_SIMPLE_ERR) &&
+    // TODO: (elemContext & CTX_PARPAT) maybe?
+    if (!(elemContext & CTX_HAS_A_SIMPLE_ERR) &&
        this.st !== ERR_NONE_YET) {
-      st = this.st; se = this.se; so = elem;
+      if (st === ERR_NONE_YET || agtb(this.st, st)) {
+        st = this.st; se = this.se; so = elem;
+        if (st & ERR_PIN)
+          sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
+        if (st & ERR_S_SYN)
+          elemContext |= CTX_HAS_A_SIMPLE_ERR;
+      }
     }
   } while (this.lttype === ',');
-
-  if (context & CTX_PARPAT) {
-    if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
-      this.pt = pt; this.pe = pe; this.po = po;
-    }
-    if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
-      this.at = at; this.ae = ae; this.ao = ao;
-    }
-    if (st !== ERR_NONE_YET) {
-      this.st = st; this.se = se; this.so = so;
-    }
-  }
 
   n = {
     properties: list,
@@ -3746,6 +3809,24 @@ this.parseObjectExpression = function(context) {
     end: this.c,
     loc: { start: startLoc, end: this.loc() }/* ,y:-1*/
   };
+
+  // TODO: this is a slightly unnecessary work if the parent container already has an err;
+  // (context & CTX_HAS_A(N)_<p:a:s>_ERR) should be also present in the conditions below
+  if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
+    this.pt = pt; this.pe = pe; this.po = po;
+    if (pt & ERR_PIN)
+      this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0 = pcol0;
+  }
+  if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
+    this.at = at; this.ae = ae; this.ao = ao;
+    if (at & ERR_PIN)
+      this.aloc.c0 = ac0, this.aloc.li0 = ali0, this.aloc.col0 = acol0;
+  }
+  if ((context & CTX_PARPAT) && st !== ERR_NONE_YET) {
+    this.st = st; this.se = se; this.so = so;
+    if (st & ERR_PIN)
+      this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.col0 = scol0;
+  }
 
   if (!this.expectType_soft('}'))
     this.err('obj.unfinished');
@@ -3761,12 +3842,13 @@ this.parseParen = function(context) {
       startLoc = this.locBegin(),
       elem = null,
       elemContext = CTX_NULLABLE|CTX_PAT,
-      list = null;
-  
-  var prevys = this.suspys,
+      list = null,
+      prevys = this.suspys,
       hasRest = false,
+      pc0 = -1, pli0 = -1, pcol0 = -1,
+      sc0 = -1, sli0 = -1, scol0 = -1,
       st = ERR_NONE_YET, se = null, so = null,
-      pt = ERR_NONE_YET, pe = null, po = null; 
+      pt = ERR_NONE_YET, pe = null, po = null;
 
   if (context & CTX_PAT) {
     this.pt = this.st = ERR_NONE_YET;
@@ -3776,7 +3858,7 @@ this.parseParen = function(context) {
     elemContext |= CTX_PARAM;
   }
   else
-    context |= CTX_NO_SIMPLE_ERR;
+    elemContext |= CTX_NO_SIMPLE_ERR;
 
   var lastElem = null, hasTailElem = false;
   this.next();
@@ -3805,6 +3887,7 @@ this.parseParen = function(context) {
     if (elemContext & CTX_PARAM) {
       // TODO: could be `pt === ERR_NONE_YET`
       if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
+        // hasTailElem -> elem === null
         if (this.pt === ERR_NONE_YET && !hasTailElem) {
           // TODO: function* l() { ({[yield]: (a)})=>12 }
           if (elem.type === PAREN_NODE) {
@@ -3817,8 +3900,13 @@ this.parseParen = function(context) {
           }
         }
         if (this.pt !== ERR_NONE_YET) {
-          pt = this.pt; pe = this.pe; po = core(elem);
-          elemContext |= CTX_HAS_A_PARAM_ERR;
+          if (pt === ERR_NONE_YET || agtb(this.pt, pt)) {
+            pt = this.pt, pe = this.pe, po = core(elem);
+            if (pt & ERR_PIN)
+              pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
+            if (pt & ERR_P_SYN)
+              elemContext |= CTX_HAS_A_PARAM_ERR;
+          }
         }
       }
 
@@ -3835,8 +3923,13 @@ this.parseParen = function(context) {
           }
         }
         if (this.st !== ERR_NONE_YET) {
-          st = this.st; se = this.se; so = elem && core(elem);
-          elemContext |= CTX_HAS_A_SIMPLE_ERR;
+          if (st === ERR_NONE_YET || agtb(this.st, st)) {
+            st = this.st, se = this.se, so = elem && core(elem);
+            if (st & ERR_PIN)
+              sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
+            if (st & ERR_S_SYN)
+              elemContext |= CTX_HAS_A_SIMPLE_ERR;
+          }
         }
       }
     }
@@ -3875,16 +3968,29 @@ this.parseParen = function(context) {
   if (!this.expectType_soft(')'))
     this.err('unfinished.paren');
 
-  if (context & CTX_PAT) {
-    if (elem === null && list === null) {
+  if (elem === null && list === null) {
+    if (context & CTX_PARPAT) {
       st = ERR_EMPTY_LIST_MISSING_ARROW;
       se = so = n;
     }
+    else {
+      this.st = ERR_EMPTY_LIST_MISSING_ARROW;
+      this.se = n;
+      this.so = n;
+      this.throwTricky('s', this.st);
+    }
+  }
+
+  if (context & CTX_PAT) {
     if (pt !== ERR_NONE_YET) {
       this.pt = pt; this.pe = pe; this.po = po;
+      if (pt & ERR_PIN)
+        this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0 = pcol0;
     }
     if (st !== ERR_NONE_YET) {
       this.st = st; this.se = se; this.so = so;
+      if (st & ERR_PIN)
+        this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.col0 = scol0;
     }
     if (list === null && elem !== null &&
        elem.type === 'Identifier' && elem.name === 'async')
@@ -5359,7 +5465,7 @@ this.parseArgList = function () {
 
   do { 
     this.next();
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE); 
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR); 
     if (elem)
       list.push(core(elem));
     else if (this.lttype === '...')

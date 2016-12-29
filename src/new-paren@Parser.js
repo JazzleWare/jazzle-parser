@@ -3,12 +3,13 @@ this.parseParen = function(context) {
       startLoc = this.locBegin(),
       elem = null,
       elemContext = CTX_NULLABLE|CTX_PAT,
-      list = null;
-  
-  var prevys = this.suspys,
+      list = null,
+      prevys = this.suspys,
       hasRest = false,
+      pc0 = -1, pli0 = -1, pcol0 = -1,
+      sc0 = -1, sli0 = -1, scol0 = -1,
       st = ERR_NONE_YET, se = null, so = null,
-      pt = ERR_NONE_YET, pe = null, po = null; 
+      pt = ERR_NONE_YET, pe = null, po = null;
 
   if (context & CTX_PAT) {
     this.pt = this.st = ERR_NONE_YET;
@@ -18,7 +19,7 @@ this.parseParen = function(context) {
     elemContext |= CTX_PARAM;
   }
   else
-    context |= CTX_NO_SIMPLE_ERR;
+    elemContext |= CTX_NO_SIMPLE_ERR;
 
   var lastElem = null, hasTailElem = false;
   this.next();
@@ -47,6 +48,7 @@ this.parseParen = function(context) {
     if (elemContext & CTX_PARAM) {
       // TODO: could be `pt === ERR_NONE_YET`
       if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
+        // hasTailElem -> elem === null
         if (this.pt === ERR_NONE_YET && !hasTailElem) {
           // TODO: function* l() { ({[yield]: (a)})=>12 }
           if (elem.type === PAREN_NODE) {
@@ -59,8 +61,13 @@ this.parseParen = function(context) {
           }
         }
         if (this.pt !== ERR_NONE_YET) {
-          pt = this.pt; pe = this.pe; po = core(elem);
-          elemContext |= CTX_HAS_A_PARAM_ERR;
+          if (pt === ERR_NONE_YET || agtb(this.pt, pt)) {
+            pt = this.pt, pe = this.pe, po = core(elem);
+            if (pt & ERR_PIN)
+              pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
+            if (pt & ERR_P_SYN)
+              elemContext |= CTX_HAS_A_PARAM_ERR;
+          }
         }
       }
 
@@ -77,8 +84,13 @@ this.parseParen = function(context) {
           }
         }
         if (this.st !== ERR_NONE_YET) {
-          st = this.st; se = this.se; so = elem && core(elem);
-          elemContext |= CTX_HAS_A_SIMPLE_ERR;
+          if (st === ERR_NONE_YET || agtb(this.st, st)) {
+            st = this.st, se = this.se, so = elem && core(elem);
+            if (st & ERR_PIN)
+              sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
+            if (st & ERR_S_SYN)
+              elemContext |= CTX_HAS_A_SIMPLE_ERR;
+          }
         }
       }
     }
@@ -117,16 +129,29 @@ this.parseParen = function(context) {
   if (!this.expectType_soft(')'))
     this.err('unfinished.paren');
 
-  if (context & CTX_PAT) {
-    if (elem === null && list === null) {
+  if (elem === null && list === null) {
+    if (context & CTX_PARPAT) {
       st = ERR_EMPTY_LIST_MISSING_ARROW;
       se = so = n;
     }
+    else {
+      this.st = ERR_EMPTY_LIST_MISSING_ARROW;
+      this.se = n;
+      this.so = n;
+      this.throwTricky('s', this.st);
+    }
+  }
+
+  if (context & CTX_PAT) {
     if (pt !== ERR_NONE_YET) {
       this.pt = pt; this.pe = pe; this.po = po;
+      if (pt & ERR_PIN)
+        this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0 = pcol0;
     }
     if (st !== ERR_NONE_YET) {
       this.st = st; this.se = se; this.so = so;
+      if (st & ERR_PIN)
+        this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.col0 = scol0;
     }
     if (list === null && elem !== null &&
        elem.type === 'Identifier' && elem.name === 'async')

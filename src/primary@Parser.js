@@ -231,7 +231,7 @@ this.parseArgList = function () {
 
   do { 
     this.next();
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE); 
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR); 
     if (elem)
       list.push(core(elem));
     else if (this.lttype === '...')
