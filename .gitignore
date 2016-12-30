@@ -9,6 +9,7 @@ scrap/
 errLoc
 bench-all.sh
 cat-ignore.js
+err.pl
 *-
 .s*
 cond
