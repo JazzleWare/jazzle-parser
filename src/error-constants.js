@@ -64,3 +64,6 @@ function agtb(a, b) {
     (b & ERR_SYN) === 0 :
     false;
 }
+
+// TODO: choose a more descriptive name
+var NORMALIZE_COMMON = ['li0', 'c0', 'col0', 'li', 'c', 'col'];

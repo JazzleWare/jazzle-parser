@@ -17,7 +17,7 @@ this.asArrowFuncArg = function(arg) {
   case 'Identifier':
     if ((this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) &&
        arg.name === 'await')
-      this.err('arrow.param.is.await.in.an.async');
+      this.err('arrow.param.is.await.in.an.async',{tn:arg});
      
     // TODO: this can also get checked in the scope manager rather than below
     if (this.tight && arguments_or_eval(arg.name))

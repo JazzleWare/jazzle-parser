@@ -1,5 +1,6 @@
 this.parseArgs = function (argLen) {
-  var tail = true, list = [], elem = null;
+  var c0 = -1, li0 = -1, col0 = -1, tail = true,
+      list = [], elem = null;
 
   if (!this.expectType_soft('('))
     this.err('func.args.no.opening.paren');
@@ -19,12 +20,16 @@ this.parseArgs = function (argLen) {
     else {
       if (list.length !== 0) {
         if (this.v < 7)
-          this.err('arg.non.tail.in.func');
+          this.err('arg.non.tail.in.func',
+            {c0:c0,li0:li0,col0:col0,extra:{list:list}});
       }
       break ;
     }
 
-    if (this.lttype === ',' ) this.next();
+    if (this.lttype === ',' ) {
+      c0 = this.c0, li0 = this.li0, col0 = this.col0;
+      this.next();
+    }
     else { tail = false; break; }
   }
   if (argLen === ARGLEN_ANY) {

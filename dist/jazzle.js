@@ -556,6 +556,9 @@ function agtb(a, b) {
     (b & ERR_SYN) === 0 :
     false;
 }
+
+// TODO: choose a more descriptive name
+var NORMALIZE_COMMON = ['li0', 'c0', 'col0', 'li', 'c', 'col'];
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
 // > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
@@ -1796,6 +1799,13 @@ function set(newErrorType, existingErrorType) {
 // TODO: the argument that is coming last is a sample error code; builders must have this value as a property.
 // also a list of options may come after each of these "samples" signifying which options they should be parsed with
 
+a('arg.non.tail', {c0:'c0', li0:'li0',col0:'col0', m: 'unexpected comma -- tail arguments not allowed in versions before 7'}, 'a(b,)');
+
+a('arg.non.tail.in.func', {c0:'c0',li0:'li0',col0:'col0', m: 'unexpected comma -- tail parameters not allowed in versions before 7'}, 'function a(b,) {}', '(a,)=>b');
+
+a('array.unfinished', {c0:'parser.c0', li0: 'parser.li0', col0: 'parser.col0', m: 'a \']\' was expected -- got {parser.lttype}'}, '[a 12');
+
+a('arrow.has.a.paren.async', {tn: 'parser.parenAsync', m: '\'async\' can not have parentheses around it (the \'=>\' at {parser.li0}:{parser.col0} (offset {parser.c0}) requires this to hold'}, '(async)(a,b)=>12');
 
 
 },
@@ -1886,9 +1896,6 @@ this.verifyExclusivity = this.veri = function(name, obj) {
       
   throw new Error("clashing error; name '"+name+"'; clash list: ["+e.join(", ")+"]");
 };
-
-// TODO: choose a more descriptive name
-var NORMALIZE_COMMON = ['li0', 'c0', 'col0', 'li', 'c', 'col'];
 
 this.normalize = function(err) {
   // normalized err
@@ -2351,7 +2358,8 @@ this.ensureVarsAreNotResolvingToCatchParams = function() {
 },
 function(){
 this.parseArgs = function (argLen) {
-  var tail = true, list = [], elem = null;
+  var c0 = -1, li0 = -1, col0 = -1, tail = true,
+      list = [], elem = null;
 
   if (!this.expectType_soft('('))
     this.err('func.args.no.opening.paren');
@@ -2371,12 +2379,16 @@ this.parseArgs = function (argLen) {
     else {
       if (list.length !== 0) {
         if (this.v < 7)
-          this.err('arg.non.tail.in.func');
+          this.err('arg.non.tail.in.func',
+            {c0:c0,li0:li0,col0:col0,extra:{list:list}});
       }
       break ;
     }
 
-    if (this.lttype === ',' ) this.next();
+    if (this.lttype === ',' ) {
+      c0 = this.c0, li0 = this.li0, col0 = this.col0;
+      this.next();
+    }
     else { tail = false; break; }
   }
   if (argLen === ARGLEN_ANY) {
@@ -5424,7 +5436,8 @@ this.parseThis = function() {
 };
 
 this.parseArgList = function () {
-  var parenAsync = this.parenAsync, elem = null, list = [];
+  var c0 = -1, li0 = -1, col0 = -1, parenAsync = this.parenAsync,
+      elem = null, list = [];
 
   do { 
     this.next();
@@ -5436,11 +5449,20 @@ this.parseArgList = function () {
     else {
       if (list.length !== 0) {
         if (this.v < 7)
-          this.err('arg.non.tail');
+          this.err('arg.non.tail',
+            {c0:c0, li0:li0, col0:col0,
+            extra: {list: list, async: parenAsync}});
       }
       break;
     }
-  } while ( this.lttype === ',' );
+
+    if (this.lttype === ',') {
+      c0 = this.c0;
+      li0 = this.li0;
+      col0 = this.col0;
+    }
+    else break;
+  } while (true);
 
   if (parenAsync !== null)
     this.parenAsync = parenAsync;

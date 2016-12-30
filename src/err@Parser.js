@@ -39,9 +39,6 @@ this.verifyExclusivity = this.veri = function(name, obj) {
   throw new Error("clashing error; name '"+name+"'; clash list: ["+e.join(", ")+"]");
 };
 
-// TODO: choose a more descriptive name
-var NORMALIZE_COMMON = ['li0', 'c0', 'col0', 'li', 'c', 'col'];
-
 this.normalize = function(err) {
   // normalized err
   var e = {
