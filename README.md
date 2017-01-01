@@ -42,10 +42,10 @@ var result = new Parser(code, /*-->*/true/*<--*/).parseProgram();
 ```
 
 #Building
-In jazzle repository's root, run the build script, i.e., `./build-and-test.js`; 
+In jazzle repository's root, run the build script, i.e., `./builder/run.js`; 
 
 ```sh
-node ./build-and-test.js
+node ./builder/run.js
 ```
 
 It bundles the sources under the 'src' directory in to a single file, to be found under `dist/lube.js`.
@@ -55,7 +55,7 @@ It also runs a self-test after bundling is complete; the parser should only be u
 Even though a thorough test is performed during the build process (that is, while building via `build-and-test.js`), quick tests occasionally come in handy. To run quick tests, do:
 
 ```sh
- node quick-test.js
+node ./test/run.js
 ```
 
 #Benchmarking
@@ -69,7 +69,7 @@ npm install benchmark@latest
 Then run the actual benchmarking facility this way:
 
 ```sh
- node quick-bench.js
+node ./bench/run.js
 ```
 
 This will feed the corpus located under `sources` into each parser, asks them to parse each file while recording node location data, collects the timings for each parser, and prints the results.
