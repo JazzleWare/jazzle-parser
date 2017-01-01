@@ -66,4 +66,4 @@ function agtb(a, b) {
 }
 
 // TODO: choose a more descriptive name
-var NORMALIZE_COMMON = ['li0', 'c0', 'col0', 'li', 'c', 'col'];
+var NORMALIZE_COMMON = ['li0', 'c0', 'col0', 'li', 'c', 'col', 'loc0', 'loc'];

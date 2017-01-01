@@ -82,6 +82,9 @@ this.parseMem = function(context, flags) {
   }
   
   if (this.lttype === 'op' && this.ltraw === '*') {
+    if (flags & MEM_ASYNC)
+      this.err('async.gen.not.yet.supported');
+
     if (!c0) { c0 = this.c-1; li0 = this.li; col0 = this.col-1; }
 
     flags |= latestFlag = MEM_GEN;

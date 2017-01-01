@@ -23,6 +23,8 @@ this.parseFunc = function(context, flags) {
   if (isWhole) { 
     this.next();
     if (this.lttype === 'op' && this.ltraw === '*') {
+      if (flags & MEM_ASYNC)
+        this.err('async.gen.not.yet.supported');
       isGen = true;
       this.next();
     }
@@ -76,8 +78,6 @@ this.parseFunc = function(context, flags) {
     this.scopeFlags |= SCOPE_FLAG_ALLOW_SUPER;
  
   if (flags & MEM_ASYNC) {
-    if (isGen)
-      this.err('async.gen.not.yet.supported');
     this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
   }
 

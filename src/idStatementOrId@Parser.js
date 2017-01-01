@@ -164,7 +164,7 @@ this. parseIdStatementOrId = function ( context ) {
         this.lttype = 'u';
         return null;
       }
-      if (this.tight) {
+      if (!this.isScript) {
         this.resvchk();
         this.err('await.in.strict');
       }

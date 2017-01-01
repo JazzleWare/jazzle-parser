@@ -558,7 +558,7 @@ function agtb(a, b) {
 }
 
 // TODO: choose a more descriptive name
-var NORMALIZE_COMMON = ['li0', 'c0', 'col0', 'li', 'c', 'col'];
+var NORMALIZE_COMMON = ['li0', 'c0', 'col0', 'li', 'c', 'col', 'loc0', 'loc'];
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
 // > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
@@ -823,7 +823,7 @@ this.asArrowFuncArg = function(arg) {
     this.firstNonSimpArg = arg;
 
   if (arg === this.po)
-    this.err('invalid.arg');
+    this.throwTricky('p', this.pt);
 
   switch  ( arg.type ) {
   case 'Identifier':
@@ -833,7 +833,7 @@ this.asArrowFuncArg = function(arg) {
      
     // TODO: this can also get checked in the scope manager rather than below
     if (this.tight && arguments_or_eval(arg.name))
-      this.err('binding.to.arguments.or.eval');
+      this.err('binding.to.arguments.or.eval',{tn:arg});
 
     this.declare(arg);
     return;
@@ -880,15 +880,15 @@ this.asArrowFuncArg = function(arg) {
     return;
 
   case 'SpreadElement':
-    if (this.e < 7 && arg.argument.type !== 'Identifier')
-      this.err('binding.rest.arg.not.id');
+    if (this.v < 7 && arg.argument.type !== 'Identifier')
+      this.err('rest.binding.arg.not.id', {tn:arg});
     this.asArrowFuncArg(arg.argument);
     arg.type = 'RestElement';
     return;
 
   case 'RestElement':
-    if (this.e < 7 && arg.argument.type !== 'Identifier')
-      this.err('binding.rest.arg.not.id');
+    if (this.v < 7 && arg.argument.type !== 'Identifier')
+      this.err('rest.binding.arg.not.id',{tn:arg});
     this.asArrowFuncArg(arg.argument);
     return;
 
@@ -1017,7 +1017,7 @@ this .ensureSimpAssig_soft = function(head) {
   switch(head.type) {
     case 'Identifier':
        if ( this.tight && arguments_or_eval(head.name) )
-         this.err('assig.to.eval.or.arguments');
+         this.err('assig.to.arguments.or.eval');
 
     case 'MemberExpression':
        return true ;
@@ -1807,6 +1807,37 @@ a('array.unfinished', {c0:'parser.c0', li0: 'parser.li0', col0: 'parser.col0', m
 
 a('arrow.has.a.paren.async', {tn: 'parser.parenAsync', m: '\'async\' can not have parentheses around it (the \'=>\' at {parser.li0}:{parser.col0} (offset {parser.c0}) requires this to hold'}, '(async)(a,b)=>12');
 
+a('arrow.newline.before.paren.async', {tn:'parser.pe', m: '\'async\' of an async can not have a newline after it'}, 'async\n(a)=>12');
+
+a('arrow.arg.is.await.in.an.async', {tn:'tn', m: 'await is not allowed as an async arrow\'s parameter'}, 'async(a=await)=>12');
+
+a('arrow.missing.after.empty.list', {c0:'parser.se.end', li0:'parser.se.loc.end.line', col0: 'parser.se.loc.end.column', m:'unexpected \')\''}, '()');
+
+a('assig.not.first', {c0:'parser.c0', li0:'parser.li0', col0:'parser.col0', m: 'Unexpected \'=\''}, 'a-b=12');
+
+a('assig.not.simple', {tn:'tn', m: 'an identifier or a member expression was expected; instead got a {tn.type}'}, '([a])--');
+
+a('assig.to.arguments.or.eval', {tn:'parser.se', m:'can not assign to {parser.se.name} while in strict mode'}, '"use strict"; [arguments] = 12');
+
+a('async.gen.not.yet.supported', {c0:'parser.c0', li0:'parser.li0',col0:'parser.col0', m:'unexpected \'*\' -- async generators not yet supported'}, 'async function *l() {}');
+
+a('async.newline', {c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'unexpected newline after async -- async modifier in an object can not have a newline after it'}, '({async l(){}})');
+
+a('await.args', {c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'an async function may not contain \'await\' anywhere in its parameter list'}, 'async function l(e=[await]) {}', 'async function l(await) {}');
+
+// TODO: await.label
+
+a('await.in.strict', {c0:'parser.c0',li0:'parserl.li0',col0:'parser.col0',m: 'await is a reserved word when in a module, no matter it is in an async function or not'}, 'await = 12');
+
+a('rest.binding.arg.not.id', {tn:'tn.argument',m:'binding rests can only have an argument of type \'Identifier\'(which {tn.argument.type} isn\'t) in versions before 7; current version is {parser.v}.'}, 'function a(...[b]){}');
+
+a('binding.to.arguments.or.eval',{tn:'tn',m:'invalid binding name in strict mode: {tn.name}'}, '"use strict"; (arguments)=>12');
+
+a('<unfinished>', {'tn':'tn', m:'unexpected {parser.lttype} -- a {extra.delim} was expected to end the {tn.type} at {tn.loc.start.line}:{tn.loc.start.column} (offset {tn.start})'});
+
+set('block.dependent.is.unfinished', '<unfinished>', 'try { 12');
+
+a('block.dependent.no.opening.curly', {c0:'parser.c0', li0:'parser.li', col0: 'parser.col0', m:'unexpected {parser.lttype} after {extra.name} -- expected {}'}, 'try 12');
 
 
 },
@@ -1839,11 +1870,15 @@ tm[ERR_YIELD_OR_SUPER] = 'param.has.yield.or.super';
 tm[ERR_UNEXPECTED_REST] = 'unexpected.rest';
 tm[ERR_EMPTY_LIST_MISSING_ARROW] = 'arrow.missing.after.empty.list';
 tm[ERR_NON_TAIL_EXPR] = 'seq.non.tail.expr';
+
 // TODO: trickyContainer
-this.throwTricky = function(source, trickyType, trickyCore) {
+this.throwTricky = function(source, trickyType) {
   if (!HAS.call(tm, trickyType))
     throw new Error("Unknown error value: "+trickyType);
-  
+
+  var trickyCore = source === 'p' ? this.pe :
+                   source === 'a' ? this.ae :
+                   source === 's' ? this.se : null;
   this.err(tm[trickyType], {tn:trickyCore, extra:{source:source}});
 }; 
 
@@ -2494,6 +2529,8 @@ this.parseFunc = function(context, flags) {
   if (isWhole) { 
     this.next();
     if (this.lttype === 'op' && this.ltraw === '*') {
+      if (flags & MEM_ASYNC)
+        this.err('async.gen.not.yet.supported');
       isGen = true;
       this.next();
     }
@@ -2547,8 +2584,6 @@ this.parseFunc = function(context, flags) {
     this.scopeFlags |= SCOPE_FLAG_ALLOW_SUPER;
  
   if (flags & MEM_ASYNC) {
-    if (isGen)
-      this.err('async.gen.not.yet.supported');
     this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
   }
 
@@ -2809,7 +2844,7 @@ this. parseIdStatementOrId = function ( context ) {
         this.lttype = 'u';
         return null;
       }
-      if (this.tight) {
+      if (!this.isScript) {
         this.resvchk();
         this.err('await.in.strict');
       }
@@ -3173,6 +3208,9 @@ this.parseMem = function(context, flags) {
   }
   
   if (this.lttype === 'op' && this.ltraw === '*') {
+    if (flags & MEM_ASYNC)
+      this.err('async.gen.not.yet.supported');
+
     if (!c0) { c0 = this.c-1; li0 = this.li; col0 = this.col-1; }
 
     flags |= latestFlag = MEM_GEN;
@@ -3653,7 +3691,7 @@ this.parseAssignment = function(head, context) {
   else {
     // TODO: further scrutiny, like checking for this.at, is necessary (?)
     if (!this.ensureSimpAssig_soft(core(head)))
-      this.err('assig.not.simple');
+      this.err('assig.not.simple',{tn:core(head)});
 
     var c0 = -1, li0 = -1, col0 = -1;
     if (context & CTX_PARPAT) {
@@ -6393,19 +6431,19 @@ this.parseThrowStatement = function () {
 
 };
 
-this. parseBlockStatement_dependent = function(owner) {
+this. parseBlockStatement_dependent = function(name) {
     var startc = this.c - 1,
         startLoc = this.locOn(1);
 
     if (!this.expectType_soft ('{'))
-      this.err('block.dependent.no.opening.curly');
+      this.err('block.dependent.no.opening.curly',{extra:{name:name}});
     var scopeFlags = this.scopeFlags;
     this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/ };
     if ( ! this.expectType_soft ('}') &&
-         this.err('block.dependent.is.unfinished')  )
+         this.err('block.dependent.is.unfinished',{tn:n, extra:{delim:'}'}})  )
       return this.errorHandlerOutput;
 
     this.scopeFlags = scopeFlags;

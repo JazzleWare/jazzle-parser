@@ -26,11 +26,15 @@ tm[ERR_YIELD_OR_SUPER] = 'param.has.yield.or.super';
 tm[ERR_UNEXPECTED_REST] = 'unexpected.rest';
 tm[ERR_EMPTY_LIST_MISSING_ARROW] = 'arrow.missing.after.empty.list';
 tm[ERR_NON_TAIL_EXPR] = 'seq.non.tail.expr';
+
 // TODO: trickyContainer
-this.throwTricky = function(source, trickyType, trickyCore) {
+this.throwTricky = function(source, trickyType) {
   if (!HAS.call(tm, trickyType))
     throw new Error("Unknown error value: "+trickyType);
-  
+
+  var trickyCore = source === 'p' ? this.pe :
+                   source === 'a' ? this.ae :
+                   source === 's' ? this.se : null;
   this.err(tm[trickyType], {tn:trickyCore, extra:{source:source}});
 }; 
 

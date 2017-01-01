@@ -11,7 +11,7 @@ this.asArrowFuncArg = function(arg) {
     this.firstNonSimpArg = arg;
 
   if (arg === this.po)
-    this.err('invalid.arg');
+    this.throwTricky('p', this.pt);
 
   switch  ( arg.type ) {
   case 'Identifier':
@@ -21,7 +21,7 @@ this.asArrowFuncArg = function(arg) {
      
     // TODO: this can also get checked in the scope manager rather than below
     if (this.tight && arguments_or_eval(arg.name))
-      this.err('binding.to.arguments.or.eval');
+      this.err('binding.to.arguments.or.eval',{tn:arg});
 
     this.declare(arg);
     return;
@@ -68,15 +68,15 @@ this.asArrowFuncArg = function(arg) {
     return;
 
   case 'SpreadElement':
-    if (this.e < 7 && arg.argument.type !== 'Identifier')
-      this.err('binding.rest.arg.not.id');
+    if (this.v < 7 && arg.argument.type !== 'Identifier')
+      this.err('rest.binding.arg.not.id', {tn:arg});
     this.asArrowFuncArg(arg.argument);
     arg.type = 'RestElement';
     return;
 
   case 'RestElement':
-    if (this.e < 7 && arg.argument.type !== 'Identifier')
-      this.err('binding.rest.arg.not.id');
+    if (this.v < 7 && arg.argument.type !== 'Identifier')
+      this.err('rest.binding.arg.not.id',{tn:arg});
     this.asArrowFuncArg(arg.argument);
     return;
 

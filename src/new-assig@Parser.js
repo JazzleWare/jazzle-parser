@@ -132,7 +132,7 @@ this.parseAssignment = function(head, context) {
   else {
     // TODO: further scrutiny, like checking for this.at, is necessary (?)
     if (!this.ensureSimpAssig_soft(core(head)))
-      this.err('assig.not.simple');
+      this.err('assig.not.simple',{tn:core(head)});
 
     var c0 = -1, li0 = -1, col0 = -1;
     if (context & CTX_PARPAT) {
