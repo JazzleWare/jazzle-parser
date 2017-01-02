@@ -211,7 +211,7 @@ this.parseBlckStatement = function () {
         loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/};
 
   if ( !this.expectType_soft ('}' ) &&
-        this.err('block.unfinished') )
+        this.err('block.unfinished',{tn:n,extra:{delim:'}'}}))
     return this.errorHandlerOutput ;
 
   this.exitScope(); 
@@ -327,7 +327,7 @@ this.parseBreakStatement = function () {
    if ( !this.nl && this.lttype === 'Identifier' ) {
        label = this.validateID("");
        name = this.findLabel(label.name + '%');
-       if (!name) this.err('break.no.such.label');
+       if (!name) this.err('break.no.such.label',{tn:label});
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
        if ( !semiLoc && !this.nl &&
@@ -339,7 +339,7 @@ this.parseBreakStatement = function () {
            loc: { start: startLoc, end: semiLoc || label.loc.end } };
    }
    else if (!(this.scopeFlags & SCOPE_FLAG_BREAK) &&
-         this.err('break.not.in.breakable') )
+         this.err('break.not.in.breakable', {c0:startc,loc0:startLoc}) )
      return this.errorHandlerOutput ;
 
    semi = this.semiI();
@@ -589,20 +589,20 @@ this. parseCatchClause = function () {
 
    this.enterCatchScope();
    if ( !this.expectType_soft ('(') &&
-        this.err('catch.has.no.opening.paren') )
+        this.err('catch.has.no.opening.paren',{c0:startc,loc0:startLoc}) )
      return this.errorHandlerOutput ;
 
    this.declMode = DECL_MODE_CATCH_PARAMS;
    var catParam = this.parsePattern();
    if (this.lttype === 'op' && this.ltraw === '=')
-     this.err('catch.param.has.default.val');
+     this.err('catch.has.an.assig.param',{c0:startc,loc0:startLoc,extra:catParam});
 
    this.declMode = DECL_NONE;
    if (catParam === null)
-     this.err('catch.has.no.param');
+     this.err('catch.has.no.param',{c0:startc,loc0:startLoc});
 
    if ( !this.expectType_soft (')') &&
-         this.err('catch.has.no.end.paren')  )
+         this.err('catch.has.no.end.paren',{c0:startc,loc0:startLoc,extra:catParam})  )
      return this.errorHandlerOutput    ;
 
    var catBlock = this.parseBlockStatement_dependent('catch');

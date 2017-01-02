@@ -115,7 +115,7 @@ this.parseExprHead = function (context) {
       };
 
       if (!this.expectType_soft (')'))
-        this.err('call.args.is.unfinished');
+        this.err('call.args.is.unfinished', {tn:elem,extra:{delim:')'}});
 
       inner = head  ;
       continue;
