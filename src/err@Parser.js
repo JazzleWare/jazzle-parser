@@ -3,79 +3,61 @@ this.err = function(errorType, errParams) {
   return this.errorListener.onErr(errorType, errParams);
 };
 
-var exclusivity = {
-  c0: {tn: 1}, c: {tn: 1},
-  li0: {loc0: 1,tn: 1}, li: {loc: 1,tn: 1},
-  col0: {loc0: 1, tn: 1}, col: {loc: 1, tn: 1},
-  parser: {}, extra: {},
-  loc0: {tn: 1, li0: 1, col0: 1},
-  loc: {tn: 1, li: 1, col: 1},
-  tn: { 
-    c0: 1, c: 1,
-    col0: 1, li0: 1,
-    col: 1, li: 1,
-    loc0: 1, loc: 1
-  }
-}; 
-
-this.getExclusivity = function(name, obj) {
-  if (!HAS.call(exclusivity, name))
-    throw new Error('no map for ' + name);
-  var clashes = null;
-  for (var n in exclusivity[name]) {
-    if (!HAS.call(obj, n))
-      continue;
-    if (clashes === null)
-      clashes = [];
-    clashes.push(n);
-  }
-  return clashes;
-};
-
-this.verifyExclusivity = this.veri = function(name, obj) {
-  var e = this.getExclusivity(name, obj);
-  if (!e) return; 
-      
-  throw new Error("clashing error; name '"+name+"'; clash list: ["+e.join(", ")+"]");
-};
-
 this.normalize = function(err) {
   // normalized err
+  var loc0 = { li: this.li0, col: this.col0 },
+      loc = { li: this.li, col: this.col };
+
   var e = {
-    c0: -1, li0: -1, col0: -1,
-    c: -1, li: -1, col: -1,
+    cur0: { c: this.c0, loc: loc0 },
+    cur: { c: this.c, loc: loc },
     tn: null,
     parser: this,
     extra: null
   };
   
   if (err) {
-    var i = 0;
-    while (i < NORMALIZE_COMMON.length) {
-      var name = NORMALIZE_COMMON[i];
-      if (HAS.call(err, name)) {
-        this.veri(name, err);
-        e[name] = err[name];
+    if (err.tn) {
+      var tn = err.tn;
+      if (HAS.call(tn,'start')) e.cur0.c = tn.start;
+      if (HAS.call(tn,'end')) e.cur.c = tn.end;
+      if (tn.loc) {
+	if (HAS.call(tn.loc, 'start')) {
+          e.cur0.loc.li = tn.loc.start.line;
+          e.cur0.loc.col =  tn.loc.start.column;
+        }
+        if (HAS.call(tn.loc, 'start')) {
+          e.cur.loc.li = tn.loc.end.line;
+          e.cur.loc.col = tn.loc.end.column;
+        }
       }
-      i++;
-    } 
-    if (HAS.call(err, 'tn')) {
-      this.veri('tn', err);
-      var t = err.tn;
-      e.c0 = t.start; e.li0 = t.loc.start.line; e.col0 = t.loc.start.column;
-      e.c = t.end; e.li = t.loc.end.line; e.col = t.loc.end.column;
-      e.tn = err.tn; 
     }
-    if (HAS.call(err, 'loc0')) {
-      this.veri('loc0', err);
-      e.li0 = err.loc0.line; e.col0 = err.loc0.column; 
+    if (err.loc0) {
+      var loc0 = err.loc0;
+      e.cur.loc.li = loc0.line;
+      e.cur.loc.col = loc0.column;
     }
-    if (HAS.call(err, 'loc')) {
-      this.veri('loc', err);
-      e.li = err.loc.line; e.col = err.loc.column;
+    if (err.loc) {
+      var loc = err.loc;
+      e.cur.loc.li = loc.line;
+      e.cur.loc.col = loc.column;
     }
-    if (HAS.call(err, 'extra')) { e.extra = err.extra; }
+
+    if (HAS.call(err,'c0'))
+      e.cur0.c = err.c0;
+    
+    if (HAS.call(err,'c'))
+      e.cur.c = err.c;
+
+    if (HAS.call(err, 'extra')) 
+      e.extra = err.extra;
   }
+
+  e.c0 = e.cur0.c; e.li0 = e.cur0.li; e.col0 = e.cur0.col;
+  e.c = e.cur.c; e.li = e.cur.li; e.col = e.cur.col;
+
+  e.loc0 = e.cur0.loc;
+  e.loc = e.cur.loc;
 
   return e;
 };

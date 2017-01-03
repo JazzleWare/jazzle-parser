@@ -31,10 +31,10 @@ this.parseFunc = function(context, flags) {
 
     if (isStmt) {
       if (!this.canDeclareFunctionsInScope(isGen))
-        this.err('func.decl.not.allowed');
+        this.err('func.decl.not.allowed',{c0:startc,loc0:startLoc});
       if (this.unsatisfiedLabel) {
         if (!this.canLabelFunctionsInScope(isGen))
-          this.err('func.decl.not.alowed');
+          this.err('func.label.not.allowed',{c0:startc,loc0:startLoc});
         this.fixupLabels(false);
       }
       if (this.lttype === 'Identifier') {

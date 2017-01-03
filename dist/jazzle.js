@@ -1723,7 +1723,7 @@ this.onErr = function(errorType, errParams) {
 
      message += "Error: "+line+":"+column+" (src@"+offset+"): "+errMessage;
 
-     // TODO: add a way to print a 'pinpoint', i.e., the particular chunk of the
+     // TODO: add a way to print a 'pin-range', i.e., the particular chunk of the
      // source code that is causing the error
    }
 
@@ -1733,41 +1733,62 @@ this.onErr = function(errorType, errParams) {
 // TODO: find a way to squash it with normalize
 this.buildErrorInfo = function(builder, params) {
   var errInfo = {
-    messageTemplate: null,
+    messageTemplate: builder.messageTemplate,
     c: -1, li: -1, col: -1,
     c0: -1, li0: -1, col0: -1
   };
 
-  // TODO: find a way to run this verification when the
-  // builder is first added to the ErrorBuilders obj, rather than when the builder
-  // is applied to the params given to it
-  var i = 0;
-  while (i < NORMALIZE_COMMON.length) {
-    var name = NORMALIZE_COMMON[i];
-    if (HAS.call(builder, name)) {
-      this.veri(name, builder);
-      errInfo[name] = builder[name].applyTo(params);
-    }
-    i++;
-  }
+  var cur0 = params.cur0, cur = params.cur;
 
   if (HAS.call(builder, 'tn')) {
-    this.veri('tn', builder);
-    var t = builder.tn.applyTo(params);
-    errInfo.li0 = t.loc.start.line;
-    errInfo.c0 = t.start;
-    errInfo.col0 = t.loc.start.column;
-    errInfo.li = t.loc.end.line;
-    errInfo.c = t.end;
-    errInfo.col = t.loc.end.column;
+    var tn = builder.tn.applyTo(params);
+    if (HAS.call(tn,'start')) cur0.c = tn.start;
+    if (HAS.call(tn,'end')) cur.c = tn.end;
+    if (HAS.call(tn,'loc')) {
+      if (HAS.call(tn.loc, 'start')) {
+        cur0.loc.li = tn.loc.start.line;
+        cur0.loc.col = tn.loc.start.column;
+      }
+      if (HAS.call(tn.loc, 'end')) {
+        cur.loc.li = tn.loc.end.line;
+        cur.loc.col = tn.loc.end.column;
+      }
+    }
   }
- 
-  errInfo.messageTemplate = builder.messageTemplate;
 
-  if (builder.preprocessor)
-    builder.preprocessor.call(errInfo);
- 
-  return errInfo;
+  if (HAS.call(builder, 'cur0'))
+    cur0 = builder.cur0.applyTo(params);
+
+  if (HAS.call(builder, 'cur'))
+    cur = builder.cur.applyTo(params);
+
+  if (HAS.call(builder, 'loc0'))
+    cur0.loc = builder.loc0.applyTo(params);
+
+  if (HAS.call(builder, 'loc'))
+    cur.loc = builder.loc.applyTo(params);
+
+  if (HAS.call(builder, 'li0'))
+    cur0.loc.li = builder.li0.applyTo(params);
+
+  if (HAS.call(builder, 'li'))
+    cur.loc.co = builder.li.applyTo(params);
+
+  if (HAS.call(builder, 'col0'))
+    cur0.loc.col = builder.col0.applyTo(params);
+
+  if (HAS.call(builder, 'col'))
+    cur.loc.col = builder.col.applyTo(params);
+
+  if (HAS.call(builder, 'c0'))
+    cur0.c0 = builder.c0.applyTo(params);
+
+  if (HAS.call(builder, 'c'))
+    cur.c = builder.c.applyTo(params);
+
+  errInfo.c0 = cur0.c; errInfo.li0 = cur0.loc.li; errInfo.col0 = cur0.loc.col;
+  errInfo.c = cur.c; errInfo.li = cur.loc.li; errInfo.col = cur.loc.col;
+
 };
 
 var ErrorBuilders = {};
@@ -1969,6 +1990,24 @@ set('for.simple.no.test.semi', 'for.simple.no.init.semi');
 
 set('for.with.no.opening.paren', '<opening>');
 
+// TODO: precision
+a('func.args.has.dup',{tn:'tn',m:'{tn.name}: duplicate params are not allowed'}, 'function l([a,a]) {}');
+
+set('func.args.no.end.paren', '<closing>');
+
+set('func.args.no.opening.paren', '<opening>');
+
+a('func.args.not.enough', {m:'unexpected {parser.lttype}'}, '({ get a(l) {} })', '({set a() {}})');
+
+a('func.body.is.unfinished', {m:'a } was expected to end the current function\'s body; got {parser.lttype}'}, 'function l() { 12');
+
+a('func.decl.not.allowed', {m:'the current scope does not allow a function to be declared in it'}, 'while (false) function l() {}');
+
+a('func.label.not.allowed', {m:'can not label this declaration'}, 'L:function* l() {}');
+
+a('func.strict.non.simple.param', {tn:'parser.firstNonSimpArg', m:'a function containing a Use Strict directive can not have any non-simple paramer -- all must be Identifiers'});
+
+a('hex.esc.byte.not.hex', {c0:'parser.c',li0:'parser.li',col0:'parser.col',m:'a hex byte was expected'}, '"\\xab\\xel"');
 
 
 },
@@ -2041,79 +2080,61 @@ this.err = function(errorType, errParams) {
   return this.errorListener.onErr(errorType, errParams);
 };
 
-var exclusivity = {
-  c0: {tn: 1}, c: {tn: 1},
-  li0: {loc0: 1,tn: 1}, li: {loc: 1,tn: 1},
-  col0: {loc0: 1, tn: 1}, col: {loc: 1, tn: 1},
-  parser: {}, extra: {},
-  loc0: {tn: 1, li0: 1, col0: 1},
-  loc: {tn: 1, li: 1, col: 1},
-  tn: { 
-    c0: 1, c: 1,
-    col0: 1, li0: 1,
-    col: 1, li: 1,
-    loc0: 1, loc: 1
-  }
-}; 
-
-this.getExclusivity = function(name, obj) {
-  if (!HAS.call(exclusivity, name))
-    throw new Error('no map for ' + name);
-  var clashes = null;
-  for (var n in exclusivity[name]) {
-    if (!HAS.call(obj, n))
-      continue;
-    if (clashes === null)
-      clashes = [];
-    clashes.push(n);
-  }
-  return clashes;
-};
-
-this.verifyExclusivity = this.veri = function(name, obj) {
-  var e = this.getExclusivity(name, obj);
-  if (!e) return; 
-      
-  throw new Error("clashing error; name '"+name+"'; clash list: ["+e.join(", ")+"]");
-};
-
 this.normalize = function(err) {
   // normalized err
+  var loc0 = { li: this.li0, col: this.col0 },
+      loc = { li: this.li, col: this.col };
+
   var e = {
-    c0: -1, li0: -1, col0: -1,
-    c: -1, li: -1, col: -1,
+    cur0: { c: this.c0, loc: loc0 },
+    cur: { c: this.c, loc: loc },
     tn: null,
     parser: this,
     extra: null
   };
   
   if (err) {
-    var i = 0;
-    while (i < NORMALIZE_COMMON.length) {
-      var name = NORMALIZE_COMMON[i];
-      if (HAS.call(err, name)) {
-        this.veri(name, err);
-        e[name] = err[name];
+    if (err.tn) {
+      var tn = err.tn;
+      if (HAS.call(tn,'start')) e.cur0.c = tn.start;
+      if (HAS.call(tn,'end')) e.cur.c = tn.end;
+      if (tn.loc) {
+	if (HAS.call(tn.loc, 'start')) {
+          e.cur0.loc.li = tn.loc.start.line;
+          e.cur0.loc.col =  tn.loc.start.column;
+        }
+        if (HAS.call(tn.loc, 'start')) {
+          e.cur.loc.li = tn.loc.end.line;
+          e.cur.loc.col = tn.loc.end.column;
+        }
       }
-      i++;
-    } 
-    if (HAS.call(err, 'tn')) {
-      this.veri('tn', err);
-      var t = err.tn;
-      e.c0 = t.start; e.li0 = t.loc.start.line; e.col0 = t.loc.start.column;
-      e.c = t.end; e.li = t.loc.end.line; e.col = t.loc.end.column;
-      e.tn = err.tn; 
     }
-    if (HAS.call(err, 'loc0')) {
-      this.veri('loc0', err);
-      e.li0 = err.loc0.line; e.col0 = err.loc0.column; 
+    if (err.loc0) {
+      var loc0 = err.loc0;
+      e.cur.loc.li = loc0.line;
+      e.cur.loc.col = loc0.column;
     }
-    if (HAS.call(err, 'loc')) {
-      this.veri('loc', err);
-      e.li = err.loc.line; e.col = err.loc.column;
+    if (err.loc) {
+      var loc = err.loc;
+      e.cur.loc.li = loc.line;
+      e.cur.loc.col = loc.column;
     }
-    if (HAS.call(err, 'extra')) { e.extra = err.extra; }
+
+    if (HAS.call(err,'c0'))
+      e.cur0.c = err.c0;
+    
+    if (HAS.call(err,'c'))
+      e.cur.c = err.c;
+
+    if (HAS.call(err, 'extra')) 
+      e.extra = err.extra;
   }
+
+  e.c0 = e.cur0.c; e.li0 = e.cur0.li; e.col0 = e.cur0.col;
+  e.c = e.cur.c; e.li = e.cur.li; e.col = e.cur.col;
+
+  e.loc0 = e.cur0.loc;
+  e.loc = e.cur.loc;
 
   return e;
 };
@@ -2637,10 +2658,10 @@ this . makeStrict  = function() {
    var a = null, argNames = this.scope.definedNames;
    for (a in argNames) {
      var declType = argNames[a];
-     a = a.substring(0,a.length-1);
      if (declType&DECL_DUPE)
-       this.err('func.args.has.dup');
+       this.err('func.args.has.dup',{tn:this.idNames[a]});
 
+     a = a.substring(0,a.length-1);
      ASSERT.call(this, !arguments_or_eval(a));
      this.validateID(a);
    }
@@ -2682,10 +2703,10 @@ this.parseFunc = function(context, flags) {
 
     if (isStmt) {
       if (!this.canDeclareFunctionsInScope(isGen))
-        this.err('func.decl.not.allowed');
+        this.err('func.decl.not.allowed',{c0:startc,loc0:startLoc});
       if (this.unsatisfiedLabel) {
         if (!this.canLabelFunctionsInScope(isGen))
-          this.err('func.decl.not.alowed');
+          this.err('func.label.not.allowed',{c0:startc,loc0:startLoc});
         this.fixupLabels(false);
       }
       if (this.lttype === 'Identifier') {
@@ -5949,7 +5970,7 @@ this.makeComplex = function() {
   for (var a in scope.definedNames) {
      if (!HAS.call(scope.definedNames, a)) continue;
      if (scope.definedNames[a] & DECL_DUPE)
-       this.err('func.args.has.dup');
+       this.err('func.args.has.dup',{tn:this.idNames[a]});
   }
   scope.isInComplexArgs = true;
 };
@@ -5960,7 +5981,7 @@ this.addParam = function(id) {
   var scope = this.scope;
   if ( HAS.call(scope.definedNames, name) ) {
     if (scope.mustNotHaveAnyDupeParams())
-      this.err('func.args.has.dup');
+      this.err('func.args.has.dup',{tn:id});
 
     // TODO: this can be avoided with a dedicated 'dupes' dictionary,
     // but then again, that might be too much.
@@ -5979,7 +6000,7 @@ this.ensureParamIsNotDupe = function(id) {
    var name = id.name + '%';
    var scope = this.scope;
    if (HAS.call(scope.idNames, name) && scope.idNames[name])
-     this.err('func.args.has.dup');
+     this.err('func.args.has.dup',{tn:id});
 };
 
 // TODO: must check whether we are parsing with v > 5, whether we are in an if, etc.

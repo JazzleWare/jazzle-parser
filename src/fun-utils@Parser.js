@@ -97,7 +97,7 @@ this . makeStrict  = function() {
    while (a < argNames.length) {
      var decl = argNames[a];
      if (decl.type&DECL_DUPE)
-       this.err('func.args.has.dup');
+       this.err('func.args.has.dup',{tn:this.idNames[decl.id.name+'%']});
      ASSERT.call(this, !arguments_or_eval(decl.name));
      this.validateID(decl.name);
 
@@ -119,10 +119,10 @@ this . makeStrict  = function() {
    var a = null, argNames = this.scope.definedNames;
    for (a in argNames) {
      var declType = argNames[a];
-     a = a.substring(0,a.length-1);
      if (declType&DECL_DUPE)
-       this.err('func.args.has.dup');
+       this.err('func.args.has.dup',{tn:this.idNames[a]});
 
+     a = a.substring(0,a.length-1);
      ASSERT.call(this, !arguments_or_eval(a));
      this.validateID(a);
    }

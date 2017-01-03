@@ -17,7 +17,7 @@ this.onErr = function(errorType, errParams) {
 
      message += "Error: "+line+":"+column+" (src@"+offset+"): "+errMessage;
 
-     // TODO: add a way to print a 'pinpoint', i.e., the particular chunk of the
+     // TODO: add a way to print a 'pin-range', i.e., the particular chunk of the
      // source code that is causing the error
    }
 
@@ -27,41 +27,62 @@ this.onErr = function(errorType, errParams) {
 // TODO: find a way to squash it with normalize
 this.buildErrorInfo = function(builder, params) {
   var errInfo = {
-    messageTemplate: null,
+    messageTemplate: builder.messageTemplate,
     c: -1, li: -1, col: -1,
     c0: -1, li0: -1, col0: -1
   };
 
-  // TODO: find a way to run this verification when the
-  // builder is first added to the ErrorBuilders obj, rather than when the builder
-  // is applied to the params given to it
-  var i = 0;
-  while (i < NORMALIZE_COMMON.length) {
-    var name = NORMALIZE_COMMON[i];
-    if (HAS.call(builder, name)) {
-      this.veri(name, builder);
-      errInfo[name] = builder[name].applyTo(params);
-    }
-    i++;
-  }
+  var cur0 = params.cur0, cur = params.cur;
 
   if (HAS.call(builder, 'tn')) {
-    this.veri('tn', builder);
-    var t = builder.tn.applyTo(params);
-    errInfo.li0 = t.loc.start.line;
-    errInfo.c0 = t.start;
-    errInfo.col0 = t.loc.start.column;
-    errInfo.li = t.loc.end.line;
-    errInfo.c = t.end;
-    errInfo.col = t.loc.end.column;
+    var tn = builder.tn.applyTo(params);
+    if (HAS.call(tn,'start')) cur0.c = tn.start;
+    if (HAS.call(tn,'end')) cur.c = tn.end;
+    if (HAS.call(tn,'loc')) {
+      if (HAS.call(tn.loc, 'start')) {
+        cur0.loc.li = tn.loc.start.line;
+        cur0.loc.col = tn.loc.start.column;
+      }
+      if (HAS.call(tn.loc, 'end')) {
+        cur.loc.li = tn.loc.end.line;
+        cur.loc.col = tn.loc.end.column;
+      }
+    }
   }
- 
-  errInfo.messageTemplate = builder.messageTemplate;
 
-  if (builder.preprocessor)
-    builder.preprocessor.call(errInfo);
- 
-  return errInfo;
+  if (HAS.call(builder, 'cur0'))
+    cur0 = builder.cur0.applyTo(params);
+
+  if (HAS.call(builder, 'cur'))
+    cur = builder.cur.applyTo(params);
+
+  if (HAS.call(builder, 'loc0'))
+    cur0.loc = builder.loc0.applyTo(params);
+
+  if (HAS.call(builder, 'loc'))
+    cur.loc = builder.loc.applyTo(params);
+
+  if (HAS.call(builder, 'li0'))
+    cur0.loc.li = builder.li0.applyTo(params);
+
+  if (HAS.call(builder, 'li'))
+    cur.loc.co = builder.li.applyTo(params);
+
+  if (HAS.call(builder, 'col0'))
+    cur0.loc.col = builder.col0.applyTo(params);
+
+  if (HAS.call(builder, 'col'))
+    cur.loc.col = builder.col.applyTo(params);
+
+  if (HAS.call(builder, 'c0'))
+    cur0.c0 = builder.c0.applyTo(params);
+
+  if (HAS.call(builder, 'c'))
+    cur.c = builder.c.applyTo(params);
+
+  errInfo.c0 = cur0.c; errInfo.li0 = cur0.loc.li; errInfo.col0 = cur0.loc.col;
+  errInfo.c = cur.c; errInfo.li = cur.loc.li; errInfo.col = cur.loc.col;
+
 };
 
 var ErrorBuilders = {};
@@ -263,4 +284,22 @@ set('for.simple.no.test.semi', 'for.simple.no.init.semi');
 
 set('for.with.no.opening.paren', '<opening>');
 
+// TODO: precision
+a('func.args.has.dup',{tn:'tn',m:'{tn.name}: duplicate params are not allowed'}, 'function l([a,a]) {}');
+
+set('func.args.no.end.paren', '<closing>');
+
+set('func.args.no.opening.paren', '<opening>');
+
+a('func.args.not.enough', {m:'unexpected {parser.lttype}'}, '({ get a(l) {} })', '({set a() {}})');
+
+a('func.body.is.unfinished', {m:'a } was expected to end the current function\'s body; got {parser.lttype}'}, 'function l() { 12');
+
+a('func.decl.not.allowed', {m:'the current scope does not allow a function to be declared in it'}, 'while (false) function l() {}');
+
+a('func.label.not.allowed', {m:'can not label this declaration'}, 'L:function* l() {}');
+
+a('func.strict.non.simple.param', {tn:'parser.firstNonSimpArg', m:'a function containing a Use Strict directive can not have any non-simple paramer -- all must be Identifiers'});
+
+a('hex.esc.byte.not.hex', {c0:'parser.c',li0:'parser.li',col0:'parser.col',m:'a hex byte was expected'}, '"\\xab\\xel"');
 
