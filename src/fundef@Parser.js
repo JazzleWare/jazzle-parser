@@ -129,16 +129,16 @@ this.parseMeth = function(name, flags) {
     // all modifiers come at the beginning
     if (flags & MEM_STATIC) {
       if (flags & MEM_PROTOTYPE)
-        this.err('class.prototype.is.static.mem');
+        this.err('class.prototype.is.static.mem',{tn:name,extra:flags});
 
       flags &= ~(MEM_CONSTRUCTOR|MEM_SUPER);
     }
 
     if (flags & MEM_CONSTRUCTOR) {
       if (flags & MEM_SPECIAL)
-        this.err('class.constructor.is.special.mem');
+        this.err('class.constructor.is.special.mem',{tn:name, extra:{flags:flags}});
       if (flags & MEM_HAS_CONSTRUCTOR)
-        this.err('class.constructor.is.a.dup');
+        this.err('class.constructor.is.a.dup',{tn:name});
     }
 
     val = this.parseFunc(CTX_NONE, flags);

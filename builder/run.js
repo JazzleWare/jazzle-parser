@@ -57,7 +57,7 @@ Builder.prototype.build = function() {
       this.writeSubmodules( this.moduleList[e++ ] );
    }
 
-   this. write_string(  ']);\n' + this.strExports + ';}).call (this)' );
+   this. write_string(  ']);\n' + this.strExports + ';}).call (function(){try{return module.exports;}catch(e){return this;}}.call(this))' );
 };  
 
 Builder.prototype.write = function(output) {

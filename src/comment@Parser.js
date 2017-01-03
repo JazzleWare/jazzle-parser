@@ -2,6 +2,8 @@ this.readMultiComment = function () {
   var c = this.c, l = this.src, e = l.length,
       r = -1, n = true, start = c;
 
+  var c0 = c, li0 = this.li, col0 = this.col;
+
   while (c < e) {
     switch (r = l.charCodeAt(c++ ) ) {
     case CH_MUL:
@@ -31,7 +33,10 @@ this.readMultiComment = function () {
     }
   }
 
-  this.err( 'comment.multi.unfinished');
+  this.col += (c-start);
+  this.c = c;
+
+  this.err( 'comment.multi.unfinished',{extra:{c0:c0,li0:li0,col0:col0}});
 };
 
 this.readLineComment = function() {

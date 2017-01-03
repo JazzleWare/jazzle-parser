@@ -13,7 +13,7 @@ this.parseVariableDeclaration = function(context) {
     if (kind === 'var')
       this.fixupLabels(false);
     else
-      this.err('decl.label');
+      this.err('decl.label',{c0:startc,loc0:startLoc});
   }
 
   this.next();
@@ -29,7 +29,7 @@ this.parseVariableDeclaration = function(context) {
   elem = this.parseVariableDeclarator(context);
   if (elem === null) {
     if (kind !== 'let') 
-      this.err('var.has.no.declarators');
+      this.err('var.has.no.declarators',{extra:[startc,startLoc,context,elem,kind]});
 
     return null; 
   }
@@ -39,7 +39,7 @@ this.parseVariableDeclaration = function(context) {
   // this is no longer needed
   if (isConst && !elem.init && !this.missingInit) {
     if (!(context & CTX_FOR))
-      this.err('const.has.no.init');
+      this.err('const.has.no.init',{extra:[startc,startLoc,context,elem]});
     else this.missingInit = true;
   }
 
@@ -47,18 +47,18 @@ this.parseVariableDeclaration = function(context) {
   if (this.missingInit) {
     if (context & CTX_FOR)
       list = [elem];
-    else this.err('var.must.have.init');
+    else this.err('var.must.have.init',{extra:[startc,startLoc,context,elem,kind]});
   }
   else {
     list = [elem];
     while (this.lttype === ',') {
-      this.next();     
+      this.next();
       elem = this.parseVariableDeclarator(context);
       if (!elem)
-        this.err('var.has.an.empty.declarator');
+        this.err('var.has.an.empty.declarator',{extra:[startc,startLoc,context,list,kind]});
    
       if (this.missingInit || (isConst && !elem.init))
-        this.err('var.init.is.missing');
+        this.err('var.init.is.missing',{extra:[startc,startLoc,context,list,kind],elem:elem});
    
       list.push(elem);
     }
@@ -105,11 +105,11 @@ this.parseVariableDeclarator = function(context) {
        init = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
     }
     else 
-      this.err('var.decl.not.=');
+      this.err('var.decl.not.=',{extra:[context,head]});
   }
   else if (head.type !== 'Identifier') { // our pattern is an arr or an obj?
     if (!( context & CTX_FOR))  // bail out in case it is not a 'for' loop's init
-      this.err('var.decl.neither.of.in');
+      this.err('var.decl.neither.of.in',{extra:[context,head]});
 
     this.missingInit = true;
   }

@@ -9,7 +9,7 @@ this.parseFor = function() {
 
   this.next () ;
   if (!this.expectType_soft ('('))
-    this.err('for.with.no.opening.paren');
+    this.err('for.with.no.opening.paren',{extra:[startc,startLoc]});
 
   var head = null, headIsExpr = false;
 
@@ -37,7 +37,7 @@ this.parseFor = function() {
 
     case 'const' :
       if (this.v < 5)
-        this.err('const.not.in.v5');
+        this.err('for.const.not.in.v5',{extra:[startc,startLoc,scopeFlags]});
 
       this.canBeStatement = true;
       head = this. parseVariableDeclaration(CTX_FOR);
@@ -73,20 +73,20 @@ this.parseFor = function() {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec
           // TODO: squash with the `else if (head.init)` below
         //if (this.tight || kind === 'ForOfStatement' || this.v < 7)
-            this.err('for.in.has.init.assig');
+            this.err('for.in.has.init.assig',{tn:head,extra:[startc,startLoc,kind]});
         }
         this.adjustErrors()
         this.toAssig(head, CTX_FOR|CTX_PAT);
         this.currentExprIsAssig();
       }
       else if (head.declarations.length !== 1)
-        this.err('for.decl.multi');
+        this.err('for.decl.multi',{tn:head,extra:[startc,startLoc,kind]});
       else if (this.missingInit)
         this.missingInit = false;
       else if (head.declarations[0].init) {
         if (this.tight || kind === 'ForOfStatement' ||
             this.v < 7 || head.declarations[0].id.type !== 'Identifier' || head.kind !== 'var')
-          this.err('for.in.has.decl.init');
+          this.err('for.in.has.decl.init',{tn:head,extra:[startc,startLoc,kind]});
       }
 
       this.next();
@@ -95,7 +95,7 @@ this.parseFor = function() {
         this.parseExpr(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
 
       if (!this.expectType_soft(')'))
-        this.err('for.iter.no.end.paren');
+        this.err('for.iter.no.end.paren',{extra:[head,startc,startLoc,afterHead,kind]});
 
       this.scopeFlags &= CLEAR_IB;
       this.scopeFlags |= ( SCOPE_FLAG_BREAK|SCOPE_FLAG_CONTINUE );
@@ -116,7 +116,7 @@ this.parseFor = function() {
       };
 
     default:
-      this.err('for.iter.not.of.in');
+      this.err('for.iter.not.of.in',{extra:[startc,startLoc,head]});
 
     }
   }
@@ -124,18 +124,18 @@ this.parseFor = function() {
   if (headIsExpr)
     this.currentExprIsSimple();
   else if (head && this.missingInit)
-    this.err('for.decl.no.init');
+    this.err('for.decl.no.init',{extra:[startc,startLoc,head]});
 
   if (!this.expectType_soft (';'))
-    this.err('for.simple.no.init.comma');
+    this.err('for.simple.no.init.semi',{extra:[startc,startLoc,head]});
 
   afterHead = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
   if (!this.expectType_soft (';'))
-    this.err('for.simple.no.test.comma');
+    this.err('for.simple.no.test.semi',{extra:[startc,startLoc,head,afterHead]});
 
   var tail = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
   if (!this.expectType_soft (')'))
-    this.err('for.simple.no.end.paren');
+    this.err('for.simple.no.end.paren',{extra:[startc,startLoc,head,afterHead,tail]});
 
   this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= ( SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
@@ -157,18 +157,19 @@ this.parseFor = function() {
   };
 };
 
+// TODO: exsureVarsAreNotResolvingToCatchParams_soft
 this.ensureVarsAreNotResolvingToCatchParams = function() {
 // #if V
   var list = this.scope.nameList, e = 0;
   while (e < list.length) {
     if (list[e].type & DECL_MODE_CATCH_PARAMS)
-      this.err('for.of.var.overrides.catch');
+      this.err('for.of.var.overrides.catch',{tn:this.idNames[list[e].id.name+'%']});
     e++;
   }
 // #else
   for (var name in this.scope.definedNames) {
     if (this.scope.definedNames[name] & DECL_MODE_CATCH_PARAMS)
-      this.err('for.of.var.overrides.catch');
+      this.err('for.of.var.overrides.catch',{tn:this.idNames[name]});
   }
 // #end
 };

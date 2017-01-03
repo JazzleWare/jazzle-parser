@@ -236,17 +236,17 @@ this.parseDoWhileStatement = function () {
   var nbody = this.parseStatement (true) ;
   this.scopeFlags = scopeFlags;
   if ( !this.expectID_soft('while') &&
-        this.err('do.has.no.while') )
+        this.err('do.has.no.while',{extra:[startc,startLoc,nbody]}) )
     return this.errorHandlerOutput;
 
   if ( !this.expectType_soft('(') &&
-        this.err('do.has.no.opening.paren') )
+        this.err('do.has.no.opening.paren',{extra:[startc,startLoc,nbody]}) )
     return this.errorHandlerOutput;
 
   var cond = core(this.parseExpr(CTX_NONE));
   var c = this.c, li = this.li, col = this.col;
   if ( !this.expectType_soft (')') &&
-        this.err('do.has.no.closing.paren') )
+        this.err('do.has.no.closing.paren',{extra:[startc,startLoc,nbody,cond]}) )
     return this.errorHandlerOutput;
 
   if (this.lttype === ';' ) {
@@ -285,8 +285,10 @@ this.parseContinueStatement = function () {
    if ( !this.nl && this.lttype === 'Identifier' ) {
        label = this.validateID("");
        name = this.findLabel(label.name + '%');
-       if (!name) this.err('continue.no.such.label') ;
-       if (!name.loop) this.err('continue.not.a.loop.label');
+       if (!name) this.err('continue.no.such.label',{tn:label,extra:{c0:startc,loc0:startLoc}}) ;
+
+       // TODO: tell what it is labeling
+       if (!name.loop) this.err('continue.not.a.loop.label',{tn:label,extra:{c0:startc,loc0:startLoc}});
 
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();

@@ -29,7 +29,7 @@ this.parseCond = function(cond, context) {
     this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE);
 
   if (!this.expectType_soft(':'))
-    this.err('cond.colon');
+    this.err('cond.colon',{extra:[cond,seq,context]});
 
   var alt =
     this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CTX_FOR);
@@ -69,7 +69,7 @@ this.parseUnaryExpression = function(context) {
   if (this.tight &&
       isVDT === VDT_DELETE &&
       core(arg).type !== 'MemberExpression')
-    this.err('delete.arg.not.a.mem');
+    this.err('delete.arg.not.a.mem',{tn:arg,extra:{c0:startc,loc0:startLoc,context:context}});
 
   if (isVDT === VDT_AWAIT) {
     var n = {

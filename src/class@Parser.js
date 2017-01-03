@@ -15,19 +15,20 @@ this. parseClass = function(context) {
 
   var prevStrict = this.tight;
 
-  // TODO: this is highly unnecessary, and prone to many errors if missed
   this.tight = true;
+
+  // TODO: this is highly unnecessary, and prone to many errors if missed
 //this.scope.strict = true;
 
   if (isStmt) {
     if (!this.canDeclareClassInScope())
-      this.err('class.decl.not.in.block');
+      this.err('class.decl.not.in.block',{c0:startc,loc0:startLoc});
     if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
       this.declMode = DECL_MODE_CLASS_STMT;
       name = this.parsePattern();
     }
     else if (!(context & CTX_DEFAULT))
-      this.err('class.decl.has.no.name');
+      this.err('class.decl.has.no.name', {c0:startc,loc0:startLoc});
   }
   else if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
     this.enterLexicalScope(false);
@@ -48,7 +49,7 @@ this. parseClass = function(context) {
   var startcBody = this.c - 1, startLocBody = this.locOn(1);
 
   if (!this.expectType_soft('{'))
-    this.err('class.no.curly');
+    this.err('class.no.curly',{c0:startc,loc0:startLoc,extra:{n:name,s:superClass,c:context}});
 
   var elem = null;
 
@@ -81,7 +82,7 @@ this. parseClass = function(context) {
   this.tight = prevStrict;
 
   if (!this.expectType_soft('}'))
-    this.err('class.unfinished');
+    this.err('class.unfinished',{tn:n, extra:{delim:'}'}});
 
   if (isStmt)
     this.foundStatement = true;
@@ -100,19 +101,19 @@ this.parseSuper = function() {
   case '(':
     if ((this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER) !==
       SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER)
-      this.err('class.super.call');
+      this.err('class.super.call',{tn:n});
  
     break;
  
   case '.':
   case '[':
     if (!(this.scopeFlags & SCOPE_FLAG_ALLOW_SUPER))
-      this.err('class.super.mem');
+      this.err('class.super.mem',{tn:n});
  
     break ;
   
   default:
-    this.err('class.super.lone'); 
+    this.err('class.super.lone',{tn:n}); 
 
   }
  

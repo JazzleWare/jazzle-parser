@@ -37,8 +37,8 @@ this.asArrowFuncArg = function(arg) {
     return;
 
   case 'AssignmentExpression':
-    if (arg.operator !== '=')
-      this.err('complex.assig.not.arg');
+//  if (arg.operator !== '=')
+//    this.err('complex.assig.not.arg');
 
     this.asArrowFuncArg(arg.left);
     delete arg.operator ;

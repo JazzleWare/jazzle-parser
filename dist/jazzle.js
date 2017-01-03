@@ -849,8 +849,8 @@ this.asArrowFuncArg = function(arg) {
     return;
 
   case 'AssignmentExpression':
-    if (arg.operator !== '=')
-      this.err('complex.assig.not.arg');
+//  if (arg.operator !== '=')
+//    this.err('complex.assig.not.arg');
 
     this.asArrowFuncArg(arg.left);
     delete arg.operator ;
@@ -1167,19 +1167,20 @@ this. parseClass = function(context) {
 
   var prevStrict = this.tight;
 
-  // TODO: this is highly unnecessary, and prone to many errors if missed
   this.tight = true;
+
+  // TODO: this is highly unnecessary, and prone to many errors if missed
 //this.scope.strict = true;
 
   if (isStmt) {
     if (!this.canDeclareClassInScope())
-      this.err('class.decl.not.in.block');
+      this.err('class.decl.not.in.block',{c0:startc,loc0:startLoc});
     if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
       this.declMode = DECL_MODE_CLASS_STMT;
       name = this.parsePattern();
     }
     else if (!(context & CTX_DEFAULT))
-      this.err('class.decl.has.no.name');
+      this.err('class.decl.has.no.name', {c0:startc,loc0:startLoc});
   }
   else if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
     this.enterLexicalScope(false);
@@ -1200,7 +1201,7 @@ this. parseClass = function(context) {
   var startcBody = this.c - 1, startLocBody = this.locOn(1);
 
   if (!this.expectType_soft('{'))
-    this.err('class.no.curly');
+    this.err('class.no.curly',{c0:startc,loc0:startLoc,extra:{n:name,s:superClass,c:context}});
 
   var elem = null;
 
@@ -1233,7 +1234,7 @@ this. parseClass = function(context) {
   this.tight = prevStrict;
 
   if (!this.expectType_soft('}'))
-    this.err('class.unfinished');
+    this.err('class.unfinished',{tn:n, extra:{delim:'}'}});
 
   if (isStmt)
     this.foundStatement = true;
@@ -1252,19 +1253,19 @@ this.parseSuper = function() {
   case '(':
     if ((this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER) !==
       SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER)
-      this.err('class.super.call');
+      this.err('class.super.call',{tn:n});
  
     break;
  
   case '.':
   case '[':
     if (!(this.scopeFlags & SCOPE_FLAG_ALLOW_SUPER))
-      this.err('class.super.mem');
+      this.err('class.super.mem',{tn:n});
  
     break ;
   
   default:
-    this.err('class.super.lone'); 
+    this.err('class.super.lone',{tn:n}); 
 
   }
  
@@ -1276,6 +1277,8 @@ function(){
 this.readMultiComment = function () {
   var c = this.c, l = this.src, e = l.length,
       r = -1, n = true, start = c;
+
+  var c0 = c, li0 = this.li, col0 = this.col;
 
   while (c < e) {
     switch (r = l.charCodeAt(c++ ) ) {
@@ -1306,7 +1309,10 @@ this.readMultiComment = function () {
     }
   }
 
-  this.err( 'comment.multi.unfinished');
+  this.col += (c-start);
+  this.c = c;
+
+  this.err( 'comment.multi.unfinished',{extra:{c0:c0,li0:li0,col0:col0}});
 };
 
 this.readLineComment = function() {
@@ -1352,17 +1358,17 @@ this.parseExport = function() {
   switch ( this.lttype ) {
      case 'op':
         if (this.ltraw !== '*' &&
-            this.err('export.all.not.*') )
+            this.err('export.all.not.*',{extra:[startc,startLoc]}) )
           return this.errorHandlerOutput;
  
         this.next();
         if ( !this.expectID_soft('from') &&
-              this.err('export.all.no.from') )
+              this.err('export.all.no.from',{extra:[startc,startLoc]}) )
           return this.errorHandlerOutput;
 
         if (!(this.lttype === 'Literal' &&
              typeof this.ltval === STRING_TYPE ) && 
-             this.err('export.all.source.not.str') )
+             this.err('export.all.source.not.str',{extra:[startc,startLoc]}) )
           return this.errorHandlerOutput;
 
         src = this.numstr();
@@ -1398,12 +1404,12 @@ this.parseExport = function() {
            ex = local;
            if ( this.lttype === 'Identifier' ) {
              if ( this.ltval !== 'as' && 
-                  this.err('export.specifier.not.as') )
+                  this.err('export.specifier.not.as',{extra:[startc,startLoc,local,list]}) )
                return this.errorHandlerOutput ;
 
              this.next();
              if ( this.lttype !== 'Identifier' ) { 
-                if (  this.err('export.specifier.after.as.id') )
+                if (  this.err('export.specifier.after.as.id',{extra:[startc,startLoc,local,list]}) )
                return this.errorHandlerOutput;
              }
              else
@@ -1425,18 +1431,18 @@ this.parseExport = function() {
         var li = this.li, col = this.col;
   
         if ( !this.expectType_soft('}') && 
-              this.err('export.named.list.not.finished') )
+              this.err('export.named.list.not.finished',{extra:[startc,startLoc,list,endI,li,col]}) )
           return this.errorHandlerOutput  ;
 
         if ( this.lttype === 'Identifier' ) {
           if ( this.ltval !== 'from' &&
-               this.err('export.named.not.id.from') )
+               this.err('export.named.not.id.from',{extra:[startc,startLoc,list,endI,li,col]}) )
              return this.errorHandlerOutput;
 
           else this.next();
           if ( !( this.lttype === 'Literal' &&
                  typeof this.ltval ===  STRING_TYPE) &&
-               this.err('export.named.source.not.str') )
+               this.err('export.named.source.not.str', {extra:[startc,startloc,list,endI,li,col]}) )
             return this.errorHandlerOutput ;
 
           else {
@@ -1445,7 +1451,7 @@ this.parseExport = function() {
           }
         }
         else
-           if (firstReserved && this.err('export.named.has.reserved') )
+           if (firstReserved && this.err('export.named.has.reserved',{tn:firstReserved,extra:[startc,startLoc,list,endI,li,col]}) )
              return this.errorHandlerOutput ;
 
         endI = this.semiI() || endI;
@@ -1475,7 +1481,7 @@ this.parseExport = function() {
          case 'let':
          case 'const':
             if (context === CTX_DEFAULT && 
-                this.err('export.default.const.let') )
+                this.err('export.default.const.let',{extra:[startc,startLoc]}) )
               return this.errorHandlerOutput;
                 
             this.canBeStatement = true;
@@ -1513,18 +1519,18 @@ this.parseExport = function() {
            ex = this.parseAsync(context|CTX_ASYNC_NO_NEWLINE_FN);
            if (ex === null) {
              if (this.lttype === 'Identifier' && this.ltval === 'function') {
-               ASSERT.call(this, this.nl, 'no newline before the "function" and still errors? -- impossible!');
-               this.err('export.newline.before.the.function');
+               ASSERT.call(this, this.nl, 'no newline before the "function" thing and still errors? -- impossible!');
+               this.err('export.newline.before.the.function', {extra:[startc,startLoc]});
              } 
              else
-               this.err('export.async.but.no.function');
+               this.err('export.async.but.no.function',{extra:[startc,startLoc]});
            }
        }
   }
 
   if ( context !== CTX_DEFAULT ) {
 
-    if (!ex && this.err('export.named.no.exports') )
+    if (!ex && this.err('export.named.no.exports',{extra:[startc,startLoc]}) )
       return this.errorHandlerOutput ;
     
     this.foundStatement = true;
@@ -1839,6 +1845,131 @@ set('block.dependent.is.unfinished', '<unfinished>', 'try { 12');
 
 a('block.dependent.no.opening.curly', {c0:'parser.c0', li0:'parser.li', col0: 'parser.col0', m:'unexpected {parser.lttype} after {extra.name} -- expected {}'}, 'try 12');
 
+set('block.unfinished', '<unfinished>');
+
+a('break.no.such.label',{tn:'tn',m:'no such label: {tn.name}'}, 'while (false) break L;');
+
+a('break.not.in.breakable', {c0:'c0',li0:'li0',col0:'col0',m:'breaks without any targets can only appear inside an iteration statement or a switch'}, 'break;');
+
+set('call.args.is.unfinished', '<unfinished>');
+
+a('catch.has.no.end.paren',{c0:'c0',li0:'li0',col0:'col0',m:'unexpected {parser.lttype} -- a ) was expected'}, 'try {} catch (a) { 12');
+
+a('catch.has.no.opening.paren',{c0:'c0',li0:'li0',col0:'col0',m:'unexpected {parser.lttype} -- a ( was expected'}, 'try {} catch 12');
+
+a('catch.has.an.asiig.param',{c0:'c0',li0:'li0',col0:'col0',m:'the parameter for a catch clause can not be an assignment pattern'},'try{} catch(a=12){}');
+
+a('catch.has.no.param',{c0:'c0',li0:'li0',col0:'col0',m:'a catch clause must have a parameter'}, 'try{} catch(){}');
+
+a('class.constructor.is.a.dup', {tn:'tn',m:'this class has already got a constructor'}, 'class A{constructor(){} constructor(){}}');
+
+// TODO: what about this: class A { static get constructor() {} }
+a('class.constructor.is.special.mem',{tn:'tn',m:'a class member named constructor (or \'constructor\') can not be a getter, generator, setter, or async. (it can be a static member, though.)'}, 'class A{get constructor(){}}');
+
+a('class.decl.has.no.name',{c0:'c0',li0:'li0',col0:'col0',m:'this context requires that the class declaration has a name'}, 'class {}');
+
+a('class.decl.not.in.block',{c0:'c0',li0:'li0',col0:'col0',m:'this scope can not contain a class declaration -- block scope (i.e, those wrapped between {} and }), module scope, and script scope are the only ones that can.'}, 'if (false) class{}');
+
+a('class.label.not.allowed',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'can not label a class'}, 'L: class A{}');
+
+a('class.no.curly',{c0:'c0',li0:'li0',col0:'col0',m:'a {} was expected -- got {parser.lttype} instead'},'class L 12');
+
+a('class.prototype.is.static.mem',{tn:'tn',m:'class can not have a static member named prototype'},'class A{static prototype() {}}');
+
+a('class.super.call',{tn:'tn',m:'can not call super in this context'},'class A{constructor(){var a = super()}');
+
+a('class.super.lone',{tn:'tn',m:'unexpected {parser.lttype} after \'super\' -- a "(" or "." or "[" was expected'}, 'class A extends B { constructor() { (super * 12); }}');
+
+a('class.super.mem',{tn:'tn',m:'member access from super not allowed in this context -- super member access must only occur inside an object method or inside a non-static class member'}, 'class A { static b() { (super.l()); }');
+
+set('class.unfinished', '<unfinished>');
+
+a('comment.multi.unfinished', {c0:'parser.c',li0:'parser.li',col0:'parser.col',m:'reached eof before finding a matching */ for the multiline comment at {extra.li0}:{extra.col0} (offset {extra.c0})'},'/* 12');
+
+// TODO: tell what was got
+a('complex.assig.not.pattern',{c0:'c0',li0:'li0',col0:'col0',m:'a \'=\' was expected'},'(a-=12)=>12');
+
+a('cond.colon',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'a \':\' was expected; got {parser.lttype}'}, 'a ? b 5');
+
+a('const.has.no.init',{c0:'c0',li0:'li0',col0:'col0',m:'a \'=\' was expected, got {parser.lttype} -- the declarator at {extra.e.loc.start.line}:{extra.e.loc.start.column} (offset {extra.e.start}) is a const  declarator and needs an initialiser.'},'const a' );
+
+a('const.not.in.v5',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'in versions before ES2015 (current version is {parser.v}), const is a reserved word and can\'t be an actual identifier reference.'}, 'a * const');
+
+a('continue.no.such.label',{tn:'tn', m:'no such label: {tn.name}'},'while (false) continue L;');
+
+a('continue.not.a.loop.label',{tn:'tn',m:'label {tn.name} is not referring to a loop -- a continue\'s label, if any, must refer to a loop.'},'while (false)L:if(false)continue L;');
+
+a('continue.not.in.loop',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'continue is not allowed in this context -- it has to appear in loops only'},'is (false) continue;');
+
+a('decl.label', {c0:'c0',li0:'li0',col0:'col0',m:'{parser.ltval} declarations can not have labels'}, 'L: const a = 12;');
+
+a('delete.arg.not.a.mem',{tn:'tn',m:'when in strict mode code, the delete operator must take a member expression as argument; currently, its argument is a {tn.type}'},  '"use strict"; a * (delete l)');
+
+a('<closing>', {c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'a ) was expected; got {parser.lttype}'});
+
+set('do.has.no.closing.paren', '<closing>');
+
+a('<opening>', {c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'a ( was expected; got {parser.lttype}'});
+
+set('do.has.no.opening.paren', '<opening>');
+
+a('do.has.no.while',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'while expected; got {parser.lttype}'}, 'do {};');
+
+a('esc.8.or.9',{c0:'parser.c',li0:'parser.li',col0:'parser.col0',m:'escapes \\8 or \\9 are not syntactically valid escapes'},'"\\8"');
+
+a('exists.in.current',{tn:'tn',m:'\'{tn.name}\' has been actually declared at {extra.loc.start.line}:{extra.loc.start.column} (offset {extra.start})'},'let a;{var a;}');
+
+a('export.all.no.from', {c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'\'from\' expected; got {parser.ltval}'}, 'export * not \'12\'');
+
+a('export.all.not.*', {c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'unexpected {parser.ltraw}; a * was expected'}, 'export - from \'12\'');
+
+a('export.all.source.not.str',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'a string literal was expected'}, 'export * from 12');
+
+a('export.async.but.no.function',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'function expected to immediately follow async; got {parser.lttype}'},'export async\n12');
+
+a('export.default.const.let',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'const and let declarations can\'t be default exports'},'export default let r = 12;');
+
+a('export.named.has.reserved',{tn:'tn',m:'local {tn.name} is actually a reserved word'},'export {a, if as l};');
+
+a('export.named.list.not.finished',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'unfinished specifier list -- expected }, got {parser.lttype}'},'export {a 12 from \'l\'');
+
+a('export.named.no.exports',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'unexpected {parser.lttype} -- it is not something that can appear at the beginnin of an actual declaration'},'export 12');
+
+set('export.named.not.id.from','export.all.no.from');
+
+set('export.named.source.not.str','export.all.source.not.str');
+
+a('export.newline.before.the.function',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'a newline is not allowed before \'function\' in exported async declarations.'},'export async\nfunction l() {}');
+
+a('export.not.in.module', {c0:'parser.c0',li0:'parser.li0',col0:'parser.col0'});
+
+a('export.specifier.after.as.id', {c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'got {parser.lttype}; an identifier was expected'}, 'export {a as 12}');
+
+a('export.specifier.not.as', {m:'\'as\' or } was expected; got {parser.lttype}'},'export {a 12 e}');
+
+a('for.decl.multi',{tn:'tn.declarations.1',m:'head of a {extra.2} can only have one declarator'},'for (var a, b in e) break;');
+
+a('for.decl.no.init',{m:'initialiser "=" was expected; got {parser.lttype}'},'for (var [a];;) break;');
+
+a('for.in.has.decl.init',{tn:'tn.declarations.0.init',m:'{tn.kind} declarations and non-Identifier declarators can not have initialisers; also it is not allowed altogether in versions before 7; current version is {parser.v}'},'for (var a = 12 in e) break;');
+
+a('for.in.has.init.assig',{tn:'tn',m:'assignment expressions can not be a {extra.2}\'s head'},'for (a=12 in e) break;');
+
+a('for.iter.no.end.paren',{m:'a ) was expected; got {parser.lttype}'},'for (a in b 5');
+
+a('for.iter.not.of.in',{m:'an \'in\' or \'of\' expected; got {parser.ltval}'},'for (a to e) break;');
+
+a('for.of.var.overrides.catch',{tn:'tn',m:'{tn.name} overrides the surrounding catch block\'s variable of the same name'},'try {} catch (a) { for (var a of l) break;}');
+
+set('for.simple.no.end.paren', 'for.iter.no.end.paren');
+
+a('for.simple.no.init.semi',{m:'a ; was expected; got {parser.lttype}'}, 'for (a 12 b; 12) break;');
+
+set('for.simple.no.test.semi', 'for.simple.no.init.semi');
+
+set('for.with.no.opening.paren', '<opening>');
+
+
 
 },
 function(){
@@ -1870,16 +2001,29 @@ tm[ERR_YIELD_OR_SUPER] = 'param.has.yield.or.super';
 tm[ERR_UNEXPECTED_REST] = 'unexpected.rest';
 tm[ERR_EMPTY_LIST_MISSING_ARROW] = 'arrow.missing.after.empty.list';
 tm[ERR_NON_TAIL_EXPR] = 'seq.non.tail.expr';
+tm[ERR_INTERMEDIATE_ASYNC] = 'intermediate.async';
+tm[ERR_ASYNC_NEWLINE_BEFORE_PAREN] = 'async.newline.before.paren';
+tm[ERR_PIN_NOT_AN_EQ] = 'complex.assig.not.pattern';
 
 // TODO: trickyContainer
 this.throwTricky = function(source, trickyType) {
   if (!HAS.call(tm, trickyType))
     throw new Error("Unknown error value: "+trickyType);
 
-  var trickyCore = source === 'p' ? this.pe :
+  var t = null, errParams = {};
+  if (trickyType & ERR_PIN) {
+    t = source === 'p' ? this.ploc :
+        source === 'a' ? this.aloc :
+        source === 's' ? this.eloc : null;
+    errParams = { c0: t.c0, li0: t.li0, col0: t.col0 };
+  }
+  else {
+    errParams.tn = source === 'p' ? this.pe :
                    source === 'a' ? this.ae :
                    source === 's' ? this.se : null;
-  this.err(tm[trickyType], {tn:trickyCore, extra:{source:source}});
+  }
+  errParams.extra = { source: source };
+  this.err(tm[trickyType], errParams);
 }; 
 
 this.adjustErrors = function() { 
@@ -2236,7 +2380,7 @@ this.parseFor = function() {
 
   this.next () ;
   if (!this.expectType_soft ('('))
-    this.err('for.with.no.opening.paren');
+    this.err('for.with.no.opening.paren',{extra:[startc,startLoc]});
 
   var head = null, headIsExpr = false;
 
@@ -2264,7 +2408,7 @@ this.parseFor = function() {
 
     case 'const' :
       if (this.v < 5)
-        this.err('const.not.in.v5');
+        this.err('for.const.not.in.v5',{extra:[startc,startLoc,scopeFlags]});
 
       this.canBeStatement = true;
       head = this. parseVariableDeclaration(CTX_FOR);
@@ -2300,20 +2444,20 @@ this.parseFor = function() {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec
           // TODO: squash with the `else if (head.init)` below
         //if (this.tight || kind === 'ForOfStatement' || this.v < 7)
-            this.err('for.in.has.init.assig');
+            this.err('for.in.has.init.assig',{tn:head,extra:[startc,startLoc,kind]});
         }
         this.adjustErrors()
         this.toAssig(head, CTX_FOR|CTX_PAT);
         this.currentExprIsAssig();
       }
       else if (head.declarations.length !== 1)
-        this.err('for.decl.multi');
+        this.err('for.decl.multi',{tn:head,extra:[startc,startLoc,kind]});
       else if (this.missingInit)
         this.missingInit = false;
       else if (head.declarations[0].init) {
         if (this.tight || kind === 'ForOfStatement' ||
             this.v < 7 || head.declarations[0].id.type !== 'Identifier' || head.kind !== 'var')
-          this.err('for.in.has.decl.init');
+          this.err('for.in.has.decl.init',{tn:head,extra:[startc,startLoc,kind]});
       }
 
       this.next();
@@ -2322,7 +2466,7 @@ this.parseFor = function() {
         this.parseExpr(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
 
       if (!this.expectType_soft(')'))
-        this.err('for.iter.no.end.paren');
+        this.err('for.iter.no.end.paren',{extra:[head,startc,startLoc,afterHead,kind]});
 
       this.scopeFlags &= CLEAR_IB;
       this.scopeFlags |= ( SCOPE_FLAG_BREAK|SCOPE_FLAG_CONTINUE );
@@ -2343,7 +2487,7 @@ this.parseFor = function() {
       };
 
     default:
-      this.err('for.iter.not.of.in');
+      this.err('for.iter.not.of.in',{extra:[startc,startLoc,head]});
 
     }
   }
@@ -2351,18 +2495,18 @@ this.parseFor = function() {
   if (headIsExpr)
     this.currentExprIsSimple();
   else if (head && this.missingInit)
-    this.err('for.decl.no.init');
+    this.err('for.decl.no.init',{extra:[startc,startLoc,head]});
 
   if (!this.expectType_soft (';'))
-    this.err('for.simple.no.init.comma');
+    this.err('for.simple.no.init.semi',{extra:[startc,startLoc,head]});
 
   afterHead = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
   if (!this.expectType_soft (';'))
-    this.err('for.simple.no.test.comma');
+    this.err('for.simple.no.test.semi',{extra:[startc,startLoc,head,afterHead]});
 
   var tail = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
   if (!this.expectType_soft (')'))
-    this.err('for.simple.no.end.paren');
+    this.err('for.simple.no.end.paren',{extra:[startc,startLoc,head,afterHead,tail]});
 
   this.scopeFlags &= CLEAR_IB;
   this.scopeFlags |= ( SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
@@ -2384,10 +2528,11 @@ this.parseFor = function() {
   };
 };
 
+// TODO: exsureVarsAreNotResolvingToCatchParams_soft
 this.ensureVarsAreNotResolvingToCatchParams = function() {
   for (var name in this.scope.definedNames) {
     if (this.scope.definedNames[name] & DECL_MODE_CATCH_PARAMS)
-      this.err('for.of.var.overrides.catch');
+      this.err('for.of.var.overrides.catch',{tn:this.idNames[name]});
   }
 };
 
@@ -2635,16 +2780,16 @@ this.parseMeth = function(name, flags) {
     // all modifiers come at the beginning
     if (flags & MEM_STATIC) {
       if (flags & MEM_PROTOTYPE)
-        this.err('class.prototype.is.static.mem');
+        this.err('class.prototype.is.static.mem',{tn:name,extra:flags});
 
       flags &= ~(MEM_CONSTRUCTOR|MEM_SUPER);
     }
 
     if (flags & MEM_CONSTRUCTOR) {
       if (flags & MEM_SPECIAL)
-        this.err('class.constructor.is.special.mem');
+        this.err('class.constructor.is.special.mem',{tn:name, extra:{flags:flags}});
       if (flags & MEM_HAS_CONSTRUCTOR)
-        this.err('class.constructor.is.a.dup');
+        this.err('class.constructor.is.a.dup',{tn:name});
     }
 
     val = this.parseFunc(CTX_NONE, flags);
@@ -4695,7 +4840,7 @@ this.parseCond = function(cond, context) {
     this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE);
 
   if (!this.expectType_soft(':'))
-    this.err('cond.colon');
+    this.err('cond.colon',{extra:[cond,seq,context]});
 
   var alt =
     this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CTX_FOR);
@@ -4735,7 +4880,7 @@ this.parseUnaryExpression = function(context) {
   if (this.tight &&
       isVDT === VDT_DELETE &&
       core(arg).type !== 'MemberExpression')
-    this.err('delete.arg.not.a.mem');
+    this.err('delete.arg.not.a.mem',{tn:arg,extra:{c0:startc,loc0:startLoc,context:context}});
 
   if (isVDT === VDT_AWAIT) {
     var n = {
@@ -5361,7 +5506,7 @@ this.parseExprHead = function (context) {
       };
 
       if (!this.expectType_soft (')'))
-        this.err('call.args.is.unfinished');
+        this.err('call.args.is.unfinished', {tn:elem,extra:{delim:')'}});
 
       inner = head  ;
       continue;
@@ -6121,7 +6266,7 @@ this.parseBlckStatement = function () {
         loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/};
 
   if ( !this.expectType_soft ('}' ) &&
-        this.err('block.unfinished') )
+        this.err('block.unfinished',{tn:n,extra:{delim:'}'}}))
     return this.errorHandlerOutput ;
 
   this.exitScope(); 
@@ -6146,17 +6291,17 @@ this.parseDoWhileStatement = function () {
   var nbody = this.parseStatement (true) ;
   this.scopeFlags = scopeFlags;
   if ( !this.expectID_soft('while') &&
-        this.err('do.has.no.while') )
+        this.err('do.has.no.while',{extra:[startc,startLoc,nbody]}) )
     return this.errorHandlerOutput;
 
   if ( !this.expectType_soft('(') &&
-        this.err('do.has.no.opening.paren') )
+        this.err('do.has.no.opening.paren',{extra:[startc,startLoc,nbody]}) )
     return this.errorHandlerOutput;
 
   var cond = core(this.parseExpr(CTX_NONE));
   var c = this.c, li = this.li, col = this.col;
   if ( !this.expectType_soft (')') &&
-        this.err('do.has.no.closing.paren') )
+        this.err('do.has.no.closing.paren',{extra:[startc,startLoc,nbody,cond]}) )
     return this.errorHandlerOutput;
 
   if (this.lttype === ';' ) {
@@ -6195,8 +6340,10 @@ this.parseContinueStatement = function () {
    if ( !this.nl && this.lttype === 'Identifier' ) {
        label = this.validateID("");
        name = this.findLabel(label.name + '%');
-       if (!name) this.err('continue.no.such.label') ;
-       if (!name.loop) this.err('continue.not.a.loop.label');
+       if (!name) this.err('continue.no.such.label',{tn:label,extra:{c0:startc,loc0:startLoc}}) ;
+
+       // TODO: tell what it is labeling
+       if (!name.loop) this.err('continue.not.a.loop.label',{tn:label,extra:{c0:startc,loc0:startLoc}});
 
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
@@ -6237,7 +6384,7 @@ this.parseBreakStatement = function () {
    if ( !this.nl && this.lttype === 'Identifier' ) {
        label = this.validateID("");
        name = this.findLabel(label.name + '%');
-       if (!name) this.err('break.no.such.label');
+       if (!name) this.err('break.no.such.label',{tn:label});
        semi = this.semiI();
        semiLoc = this.semiLoc_soft();
        if ( !semiLoc && !this.nl &&
@@ -6249,7 +6396,7 @@ this.parseBreakStatement = function () {
            loc: { start: startLoc, end: semiLoc || label.loc.end } };
    }
    else if (!(this.scopeFlags & SCOPE_FLAG_BREAK) &&
-         this.err('break.not.in.breakable') )
+         this.err('break.not.in.breakable', {c0:startc,loc0:startLoc}) )
      return this.errorHandlerOutput ;
 
    semi = this.semiI();
@@ -6499,20 +6646,20 @@ this. parseCatchClause = function () {
 
    this.enterCatchScope();
    if ( !this.expectType_soft ('(') &&
-        this.err('catch.has.no.opening.paren') )
+        this.err('catch.has.no.opening.paren',{c0:startc,loc0:startLoc}) )
      return this.errorHandlerOutput ;
 
    this.declMode = DECL_MODE_CATCH_PARAMS;
    var catParam = this.parsePattern();
    if (this.lttype === 'op' && this.ltraw === '=')
-     this.err('catch.param.has.default.val');
+     this.err('catch.has.an.assig.param',{c0:startc,loc0:startLoc,extra:catParam});
 
    this.declMode = DECL_NONE;
    if (catParam === null)
-     this.err('catch.has.no.param');
+     this.err('catch.has.no.param',{c0:startc,loc0:startLoc});
 
    if ( !this.expectType_soft (')') &&
-         this.err('catch.has.no.end.paren')  )
+         this.err('catch.has.no.end.paren',{c0:startc,loc0:startLoc,extra:catParam})  )
      return this.errorHandlerOutput    ;
 
    var catBlock = this.parseBlockStatement_dependent('catch');
@@ -7006,7 +7153,7 @@ this.parseVariableDeclaration = function(context) {
     if (kind === 'var')
       this.fixupLabels(false);
     else
-      this.err('decl.label');
+      this.err('decl.label',{c0:startc,loc0:startLoc});
   }
 
   this.next();
@@ -7022,7 +7169,7 @@ this.parseVariableDeclaration = function(context) {
   elem = this.parseVariableDeclarator(context);
   if (elem === null) {
     if (kind !== 'let') 
-      this.err('var.has.no.declarators');
+      this.err('var.has.no.declarators',{extra:[startc,startLoc,context,elem,kind]});
 
     return null; 
   }
@@ -7032,7 +7179,7 @@ this.parseVariableDeclaration = function(context) {
   // this is no longer needed
   if (isConst && !elem.init && !this.missingInit) {
     if (!(context & CTX_FOR))
-      this.err('const.has.no.init');
+      this.err('const.has.no.init',{extra:[startc,startLoc,context,elem]});
     else this.missingInit = true;
   }
 
@@ -7040,18 +7187,18 @@ this.parseVariableDeclaration = function(context) {
   if (this.missingInit) {
     if (context & CTX_FOR)
       list = [elem];
-    else this.err('var.must.have.init');
+    else this.err('var.must.have.init',{extra:[startc,startLoc,context,elem,kind]});
   }
   else {
     list = [elem];
     while (this.lttype === ',') {
-      this.next();     
+      this.next();
       elem = this.parseVariableDeclarator(context);
       if (!elem)
-        this.err('var.has.an.empty.declarator');
+        this.err('var.has.an.empty.declarator',{extra:[startc,startLoc,context,list,kind]});
    
       if (this.missingInit || (isConst && !elem.init))
-        this.err('var.init.is.missing');
+        this.err('var.init.is.missing',{extra:[startc,startLoc,context,list,kind],elem:elem});
    
       list.push(elem);
     }
@@ -7098,11 +7245,11 @@ this.parseVariableDeclarator = function(context) {
        init = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
     }
     else 
-      this.err('var.decl.not.=');
+      this.err('var.decl.not.=',{extra:[context,head]});
   }
   else if (head.type !== 'Identifier') { // our pattern is an arr or an obj?
     if (!( context & CTX_FOR))  // bail out in case it is not a 'for' loop's init
-      this.err('var.decl.neither.of.in');
+      this.err('var.decl.neither.of.in',{extra:[context,head]});
 
     this.missingInit = true;
   }
@@ -7230,7 +7377,7 @@ this.insertDecl = function(id, decl) {
     if ((declType & DECL_MODE_VAR_LIKE) && (existingType & DECL_MODE_VAR_LIKE))
       return true; 
      
-    this.err('exists.in.current');
+    this.err('exists.in.current',{tn:id,extra:this.idNames[id.name+'%']});
   }
 
   this.insertDecl0(id, decl);
@@ -7353,4 +7500,4 @@ this.parse = function(src, isModule ) {
 
 this.Parser = Parser;  
 this.ErrorString = ErrorString; this.Template = Template;
-;}).call (this)
+;}).call (function(){try{return module.exports;}catch(e){return this;}}.call(this))

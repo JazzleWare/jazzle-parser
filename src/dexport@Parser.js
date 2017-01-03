@@ -15,17 +15,17 @@ this.parseExport = function() {
   switch ( this.lttype ) {
      case 'op':
         if (this.ltraw !== '*' &&
-            this.err('export.all.not.*') )
+            this.err('export.all.not.*',{extra:[startc,startLoc]}) )
           return this.errorHandlerOutput;
  
         this.next();
         if ( !this.expectID_soft('from') &&
-              this.err('export.all.no.from') )
+              this.err('export.all.no.from',{extra:[startc,startLoc]}) )
           return this.errorHandlerOutput;
 
         if (!(this.lttype === 'Literal' &&
              typeof this.ltval === STRING_TYPE ) && 
-             this.err('export.all.source.not.str') )
+             this.err('export.all.source.not.str',{extra:[startc,startLoc]}) )
           return this.errorHandlerOutput;
 
         src = this.numstr();
@@ -61,12 +61,12 @@ this.parseExport = function() {
            ex = local;
            if ( this.lttype === 'Identifier' ) {
              if ( this.ltval !== 'as' && 
-                  this.err('export.specifier.not.as') )
+                  this.err('export.specifier.not.as',{extra:[startc,startLoc,local,list]}) )
                return this.errorHandlerOutput ;
 
              this.next();
              if ( this.lttype !== 'Identifier' ) { 
-                if (  this.err('export.specifier.after.as.id') )
+                if (  this.err('export.specifier.after.as.id',{extra:[startc,startLoc,local,list]}) )
                return this.errorHandlerOutput;
              }
              else
@@ -88,18 +88,18 @@ this.parseExport = function() {
         var li = this.li, col = this.col;
   
         if ( !this.expectType_soft('}') && 
-              this.err('export.named.list.not.finished') )
+              this.err('export.named.list.not.finished',{extra:[startc,startLoc,list,endI,li,col]}) )
           return this.errorHandlerOutput  ;
 
         if ( this.lttype === 'Identifier' ) {
           if ( this.ltval !== 'from' &&
-               this.err('export.named.not.id.from') )
+               this.err('export.named.not.id.from',{extra:[startc,startLoc,list,endI,li,col]}) )
              return this.errorHandlerOutput;
 
           else this.next();
           if ( !( this.lttype === 'Literal' &&
                  typeof this.ltval ===  STRING_TYPE) &&
-               this.err('export.named.source.not.str') )
+               this.err('export.named.source.not.str', {extra:[startc,startloc,list,endI,li,col]}) )
             return this.errorHandlerOutput ;
 
           else {
@@ -108,7 +108,7 @@ this.parseExport = function() {
           }
         }
         else
-           if (firstReserved && this.err('export.named.has.reserved') )
+           if (firstReserved && this.err('export.named.has.reserved',{tn:firstReserved,extra:[startc,startLoc,list,endI,li,col]}) )
              return this.errorHandlerOutput ;
 
         endI = this.semiI() || endI;
@@ -138,7 +138,7 @@ this.parseExport = function() {
          case 'let':
          case 'const':
             if (context === CTX_DEFAULT && 
-                this.err('export.default.const.let') )
+                this.err('export.default.const.let',{extra:[startc,startLoc]}) )
               return this.errorHandlerOutput;
                 
             this.canBeStatement = true;
@@ -176,18 +176,18 @@ this.parseExport = function() {
            ex = this.parseAsync(context|CTX_ASYNC_NO_NEWLINE_FN);
            if (ex === null) {
              if (this.lttype === 'Identifier' && this.ltval === 'function') {
-               ASSERT.call(this, this.nl, 'no newline before the "function" and still errors? -- impossible!');
-               this.err('export.newline.before.the.function');
+               ASSERT.call(this, this.nl, 'no newline before the "function" thing and still errors? -- impossible!');
+               this.err('export.newline.before.the.function', {extra:[startc,startLoc]});
              } 
              else
-               this.err('export.async.but.no.function');
+               this.err('export.async.but.no.function',{extra:[startc,startLoc]});
            }
        }
   }
 
   if ( context !== CTX_DEFAULT ) {
 
-    if (!ex && this.err('export.named.no.exports') )
+    if (!ex && this.err('export.named.no.exports',{extra:[startc,startLoc]}) )
       return this.errorHandlerOutput ;
     
     this.foundStatement = true;

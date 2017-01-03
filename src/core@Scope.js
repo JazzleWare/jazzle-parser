@@ -132,7 +132,7 @@ this.insertDecl = function(id, decl) {
     if ((declType & DECL_MODE_VAR_LIKE) && (existingType & DECL_MODE_VAR_LIKE))
       return true; 
      
-    this.err('exists.in.current');
+    this.err('exists.in.current',{tn:id,extra:this.idNames[id.name+'%']});
   }
 
   // #if V
