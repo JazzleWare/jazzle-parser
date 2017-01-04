@@ -187,8 +187,8 @@ this.next = function () {
         if (mustBeAnID) {
           if (!isIDHead(mustBeAnID === 1 ? peek :
              ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
-            if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead');
-            else return this.err('id.multi.must.be.idhead');
+            if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead',{extra:peek});
+            else return this.err('id.multi.must.be.idhead',{extra:[peek,r]});
           }
  
           this.readAnIdentifierToken( mustBeAnID === 2 ?

@@ -25,21 +25,21 @@ this.readAnIdentifierToken = function (v) {
         v += src.slice(startSlice,c) ; // v = v + those characters
 
       this.c = ++c;
-      (CH_u !== src.charCodeAt(c) && this.err('id.slash.no.u'));
+      (CH_u !== src.charCodeAt(c) && this.err('id.u.not.after.slash'));
 
       peek = this. peekUSeq() ;
       if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
         this.c++;
         byte2 = this.peekTheSecondByte();
         if (!isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000) &&
-             this.err('id.multi.must.be.idbody') )
+             this.err('id.multi.must.be.idbody',{extra:[peek,byte2]}) )
           return this.errorHandlerOutput ;
 
         v += String.fromCharCode(peek, byte2);
       }
       else {
          if ( !isIDBody(peek) &&
-               this.err('id.esc.must.be.idbody') )
+               this.err('id.esc.must.be.idbody',{extra:peek}) )
            return this.errorHandlerOutput;
      
          v += fromcode(peek);

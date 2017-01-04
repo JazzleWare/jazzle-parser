@@ -83,6 +83,7 @@ this.buildErrorInfo = function(builder, params) {
   errInfo.c0 = cur0.c; errInfo.li0 = cur0.loc.li; errInfo.col0 = cur0.loc.col;
   errInfo.c = cur.c; errInfo.li = cur.loc.li; errInfo.col = cur.loc.col;
 
+  return errInfo;
 };
 
 var ErrorBuilders = {};
@@ -302,4 +303,22 @@ a('func.label.not.allowed', {m:'can not label this declaration'}, 'L:function* l
 a('func.strict.non.simple.param', {tn:'parser.firstNonSimpArg', m:'a function containing a Use Strict directive can not have any non-simple paramer -- all must be Identifiers'});
 
 a('hex.esc.byte.not.hex', {c0:'parser.c',li0:'parser.li',col0:'parser.col',m:'a hex byte was expected'}, '"\\xab\\xel"');
+
+a('id.esc.must.be.idbody',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier body codepoint'});
+
+
+a('id.esc.must.be.id',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier start codepoint'});
+
+a('id.multi.must.be.idhead', {cur0:'cur',m:'the unicode surrogate pair [{extra.0},{extra.1}] don\'t represent an identifier start.'});
+
+a('id.multi.must.be.idbody', {cur0:'cur',m:'the unicode surrogate pair [{extra.0},{extra.1}] don\'t represent an identifier body codepoint'});
+
+a('id.name.has.surrogate.pair',{m:'unicode escapes in identifier names can not be parts of a surrogate pair'});
+
+a('id.u.not.after.slash',{m:'a \'u\' was expected after \\'}, '\\e');
+
+set('if.has.no.closing.paren', '<closing>');
+
+set('if.has.no.opening.paren', '<opening>');
+
 
