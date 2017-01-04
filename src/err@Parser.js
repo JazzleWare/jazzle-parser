@@ -53,8 +53,8 @@ this.normalize = function(err) {
       e.extra = err.extra;
   }
 
-  e.c0 = e.cur0.c; e.li0 = e.cur0.li; e.col0 = e.cur0.col;
-  e.c = e.cur.c; e.li = e.cur.li; e.col = e.cur.col;
+  e.c0 = e.cur0.c; e.li0 = e.cur0.loc.li; e.col0 = e.cur0.loc.col;
+  e.c = e.cur.c; e.li = e.cur.loc.li; e.col = e.cur.loc.col;
 
   e.loc0 = e.cur0.loc;
   e.loc = e.cur.loc;

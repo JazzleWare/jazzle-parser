@@ -66,7 +66,7 @@ this.buildErrorInfo = function(builder, params) {
     cur0.loc.li = builder.li0.applyTo(params);
 
   if (HAS.call(builder, 'li'))
-    cur.loc.co = builder.li.applyTo(params);
+    cur.loc.li = builder.li.applyTo(params);
 
   if (HAS.call(builder, 'col0'))
     cur0.loc.col = builder.col0.applyTo(params);
@@ -75,7 +75,7 @@ this.buildErrorInfo = function(builder, params) {
     cur.loc.col = builder.col.applyTo(params);
 
   if (HAS.call(builder, 'c0'))
-    cur0.c0 = builder.c0.applyTo(params);
+    cur0.c = builder.c0.applyTo(params);
 
   if (HAS.call(builder, 'c'))
     cur.c = builder.c.applyTo(params);
