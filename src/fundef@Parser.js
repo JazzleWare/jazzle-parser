@@ -42,7 +42,7 @@ this.parseFunc = function(context, flags) {
         cfn = this.parsePattern();
       }
       else if (!(context & CTX_DEFAULT))
-        this.err('missing.name');
+        this.err('func.decl.has.no.name');
     }
     else {
       // FunctionExpression's BindingIdentifier can be yield regardless of context;

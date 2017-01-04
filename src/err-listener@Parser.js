@@ -351,4 +351,24 @@ a('label.is.a.dup', {m:'{tn.name} has been actually declared at {extra.li0}:{ext
 
 a('lexical.decl.not.in.block',{m:'a {extra.kind}-binding can not be declared in this scope'}, 'if (false) const a = 12;');
 
-a('lexical.name.is.let', {m:'let/const bindings can not have the name \'let\''}, 'let [[let=let]=let*let];');
+a('lexical.name.is.let', {m:'let/const bindings can not have the name \'let\''}, 'let [[let=let]=let*let] = 12;');
+
+a('mem.gen.has.no.name',{m:'unexpected {parser.lttype}'},'({**() {}} })');
+
+// v < 5
+a('mem.id.is.null',{m:'got {parser.ltval} -- a valid member identifier was expected'},'a.this');
+
+a('mem.name.not.id',{m:'unexpected {parser.lttype} -- a valid member identifier was expected'}, 'a.12');
+
+a('mem.unfinished',{m:'unexpected {parser.lttype} -- a ] was expected'}, 'a[e 12');
+
+a('meta.new.has.unknown.prop',{m:'\'target\' is currently the only allowed meta property of new; got {parser.ltval}'},'function l() { new.a }');
+
+a('meta.new.not.in.function',{m:'\'new.target\' must be in the body of a function'}, 'new.target');
+
+// TODO: precisely tell it was a get, set, or something other
+a('meth.paren',{m:'unexpected {parser.lttype} -- a ( was expected to start method-params'},'({get a 12})');
+
+a('func.decl.has.no.name',{m:'function declaration must have a name in this context'},'function() {}');
+
+

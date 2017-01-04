@@ -69,6 +69,7 @@ this.parseExprHead = function (context) {
       if (this.lttype !== 'Identifier')
         this.err('mem.name.not.id');
 
+      // TODO: null?
       elem  = this.memberID();
       if (elem === null)
         this.err('mem.id.is.null');
@@ -141,12 +142,13 @@ this.parseExprHead = function (context) {
   return head ;
 };
 
+// TODO: new_raw
 this.parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
   if (this.ltval !== 'target')
     this.err('meta.new.has.unknown.prop');
   
   if (!(this.scopeFlags & SCOPE_FLAG_FN))
-    this.err('meta.new.not.in.function');
+    this.err('meta.new.not.in.function',{c0:startc,loc:startLoc});
 
   var prop = this.id();
 
