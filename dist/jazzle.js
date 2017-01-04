@@ -1772,7 +1772,7 @@ this.buildErrorInfo = function(builder, params) {
     cur0.loc.li = builder.li0.applyTo(params);
 
   if (HAS.call(builder, 'li'))
-    cur.loc.co = builder.li.applyTo(params);
+    cur.loc.li = builder.li.applyTo(params);
 
   if (HAS.call(builder, 'col0'))
     cur0.loc.col = builder.col0.applyTo(params);
@@ -1781,7 +1781,7 @@ this.buildErrorInfo = function(builder, params) {
     cur.loc.col = builder.col.applyTo(params);
 
   if (HAS.call(builder, 'c0'))
-    cur0.c0 = builder.c0.applyTo(params);
+    cur0.c = builder.c0.applyTo(params);
 
   if (HAS.call(builder, 'c'))
     cur.c = builder.c.applyTo(params);
@@ -1789,6 +1789,7 @@ this.buildErrorInfo = function(builder, params) {
   errInfo.c0 = cur0.c; errInfo.li0 = cur0.loc.li; errInfo.col0 = cur0.loc.col;
   errInfo.c = cur.c; errInfo.li = cur.loc.li; errInfo.col = cur.loc.col;
 
+  return errInfo;
 };
 
 var ErrorBuilders = {};
@@ -2009,6 +2010,24 @@ a('func.strict.non.simple.param', {tn:'parser.firstNonSimpArg', m:'a function co
 
 a('hex.esc.byte.not.hex', {c0:'parser.c',li0:'parser.li',col0:'parser.col',m:'a hex byte was expected'}, '"\\xab\\xel"');
 
+a('id.esc.must.be.idbody',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier body codepoint'});
+
+
+a('id.esc.must.be.id',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier start codepoint'});
+
+a('id.multi.must.be.idhead', {cur0:'cur',m:'the unicode surrogate pair [{extra.0},{extra.1}] don\'t represent an identifier start.'});
+
+a('id.multi.must.be.idbody', {cur0:'cur',m:'the unicode surrogate pair [{extra.0},{extra.1}] don\'t represent an identifier body codepoint'});
+
+a('id.name.has.surrogate.pair',{m:'unicode escapes in identifier names can not be parts of a surrogate pair'});
+
+a('id.u.not.after.slash',{m:'a \'u\' was expected after \\'}, '\\e');
+
+set('if.has.no.closing.paren', '<closing>');
+
+set('if.has.no.opening.paren', '<opening>');
+
+
 
 },
 function(){
@@ -2130,8 +2149,8 @@ this.normalize = function(err) {
       e.extra = err.extra;
   }
 
-  e.c0 = e.cur0.c; e.li0 = e.cur0.li; e.col0 = e.cur0.col;
-  e.c = e.cur.c; e.li = e.cur.li; e.col = e.cur.col;
+  e.c0 = e.cur0.c; e.li0 = e.cur0.loc.li; e.col0 = e.cur0.loc.col;
+  e.c = e.cur.c; e.li = e.cur.loc.li; e.col = e.cur.loc.col;
 
   e.loc0 = e.cur0.loc;
   e.loc = e.cur.loc;
@@ -3187,21 +3206,21 @@ this.readAnIdentifierToken = function (v) {
         v += src.slice(startSlice,c) ; // v = v + those characters
 
       this.c = ++c;
-      (CH_u !== src.charCodeAt(c) && this.err('id.slash.no.u'));
+      (CH_u !== src.charCodeAt(c) && this.err('id.u.not.after.slash'));
 
       peek = this. peekUSeq() ;
       if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
         this.c++;
         byte2 = this.peekTheSecondByte();
         if (!isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000) &&
-             this.err('id.multi.must.be.idbody') )
+             this.err('id.multi.must.be.idbody',{extra:[peek,byte2]}) )
           return this.errorHandlerOutput ;
 
         v += String.fromCharCode(peek, byte2);
       }
       else {
          if ( !isIDBody(peek) &&
-               this.err('id.esc.must.be.idbody') )
+               this.err('id.esc.must.be.idbody',{extra:peek}) )
            return this.errorHandlerOutput;
      
          v += fromcode(peek);
@@ -4506,8 +4525,8 @@ this.next = function () {
         if (mustBeAnID) {
           if (!isIDHead(mustBeAnID === 1 ? peek :
              ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
-            if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead');
-            else return this.err('id.multi.must.be.idhead');
+            if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead',{extra:peek});
+            else return this.err('id.multi.must.be.idhead',{extra:[peek,r]});
           }
  
           this.readAnIdentifierToken( mustBeAnID === 2 ?
