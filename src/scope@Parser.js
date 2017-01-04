@@ -42,7 +42,7 @@ this.declare = function(id) {
        this.err('let.decl.not.in.block');
 
      if ( id.name === 'let' )
-       this.err('lexical.name.is.let');
+       this.err('lexical.name.is.let',{tn:id});
    }
 
    this.scope.declare(id, this.declMode);

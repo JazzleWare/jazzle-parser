@@ -101,7 +101,7 @@ this.parseUpdateExpression = function(arg, context) {
     arg = this.parseExprHead(context & CTX_FOR);
 
     if (!this.ensureSimpAssig_soft(core(arg)))
-      this.err('incdec.pre.not.simple.assig');
+      this.err('incdec.pre.not.simple.assig',{tn:core(arg)});
 
     return {
       type: 'UpdateExpression', operator: u,
@@ -112,7 +112,7 @@ this.parseUpdateExpression = function(arg, context) {
   }
 
   if (!this.ensureSimpAssig_soft(core(arg)))
-    this.err('incdec.post.not.simple.assig');
+    this.err('incdec.post.not.simple.assig',{tn:core(arg)});
 
   c  = this.c;
   loc = {

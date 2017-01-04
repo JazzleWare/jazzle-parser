@@ -89,7 +89,8 @@ this .parseLabeledStatement = function(label, allowNull) {
    this.next();
    var l = label.name;
    l += '%';
-   if ( this.findLabel(l) && this.err('label.is.a.dup') )
+   var ex = this.findLabel(l); // existing label
+   if ( ex && this.err('label.is.a.dup',{tn:label,extra:ex}) )
      return this.errorHandlerOutput ;
 
    this.labels[l] =

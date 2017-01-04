@@ -249,7 +249,7 @@ a('export.named.has.reserved',{tn:'tn',m:'local {tn.name} is actually a reserved
 
 a('export.named.list.not.finished',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'unfinished specifier list -- expected }, got {parser.lttype}'},'export {a 12 from \'l\'');
 
-a('export.named.no.exports',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'unexpected {parser.lttype} -- it is not something that can appear at the beginnin of an actual declaration'},'export 12');
+a('export.named.no.exports',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'unexpected {parser.lttype} -- it is not something that can appear at the beginning of an actual declaration'},'export 12');
 
 set('export.named.not.id.from','export.all.no.from');
 
@@ -306,7 +306,6 @@ a('hex.esc.byte.not.hex', {c0:'parser.c',li0:'parser.li',col0:'parser.col',m:'a 
 
 a('id.esc.must.be.idbody',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier body codepoint'});
 
-
 a('id.esc.must.be.id',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier start codepoint'});
 
 a('id.multi.must.be.idhead', {cur0:'cur',m:'the unicode surrogate pair [{extra.0},{extra.1}] don\'t represent an identifier start.'});
@@ -321,4 +320,35 @@ set('if.has.no.closing.paren', '<closing>');
 
 set('if.has.no.opening.paren', '<opening>');
 
+a('import.from',{m:'\'from\' expected'},'import * 12');
 
+a('import.invalid.specifier.after.comma',{m:'unexpected {parser.lttype}'},'import a, 12 from \'l\'');
+
+a('import.namespace.specifier.not.*',{m:'unexpected {parser.ltraw} -- a * was expected'},'import - as \'12\'');
+
+a('import.namespace.specifier.local.not.id', {m:'valid identifier was expected; got {parser.lttype}'},'import {a as 12} from \'12\'');
+
+a('import.namespace.specifier.no.as', {m:'\'as\' expected'}, 'import {a 12 l} from \'12\'');
+
+a('import.not.in.module', {m:'import is not allowed in script mode'});
+
+a('import.source.is.not.str', {m:'string literal was expected'},'import * as a from 12');
+
+a('import.specifier.list.unfinished', {m:'a } was expected; got {parser.lttype}'}, 'import {a as b, e as l 12');
+
+set('import.specifier.local.not.id', 'import.namespace.specifier.local.not.id');
+
+set('import.specifier.no.as', 'import.namespace.specifier.no.as');
+
+a('incdec.post.not.simple.assig',{m:'member expression or identifier expected -- got {tn.type}'},'[a]--');
+
+set('incdec.pre.not.simple.assig', 'incdec.post.not.simple.assig');
+
+a('label.is.a.dup', {m:'{tn.name} has been actually declared at {extra.li0}:{extra:col0} (offset {extra.c0})'}, 'a: a: for (;false;) break;');
+
+// TODO:
+// a('let.dcl.not.in.block',{m: 
+
+a('lexical.decl.not.in.block',{m:'a {extra.kind}-binding can not be declared in this scope'}, 'if (false) const a = 12;');
+
+a('lexical.name.is.let', {m:'let/const bindings can not have the name \'let\''}, 'let [[let=let]=let*let];');

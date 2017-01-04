@@ -1955,7 +1955,7 @@ a('export.named.has.reserved',{tn:'tn',m:'local {tn.name} is actually a reserved
 
 a('export.named.list.not.finished',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'unfinished specifier list -- expected }, got {parser.lttype}'},'export {a 12 from \'l\'');
 
-a('export.named.no.exports',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'unexpected {parser.lttype} -- it is not something that can appear at the beginnin of an actual declaration'},'export 12');
+a('export.named.no.exports',{c0:'parser.c0',li0:'parser.li0',col0:'parser.col0',m:'unexpected {parser.lttype} -- it is not something that can appear at the beginning of an actual declaration'},'export 12');
 
 set('export.named.not.id.from','export.all.no.from');
 
@@ -2012,7 +2012,6 @@ a('hex.esc.byte.not.hex', {c0:'parser.c',li0:'parser.li',col0:'parser.col',m:'a 
 
 a('id.esc.must.be.idbody',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier body codepoint'});
 
-
 a('id.esc.must.be.id',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier start codepoint'});
 
 a('id.multi.must.be.idhead', {cur0:'cur',m:'the unicode surrogate pair [{extra.0},{extra.1}] don\'t represent an identifier start.'});
@@ -2027,7 +2026,38 @@ set('if.has.no.closing.paren', '<closing>');
 
 set('if.has.no.opening.paren', '<opening>');
 
+a('import.from',{m:'\'from\' expected'},'import * 12');
 
+a('import.invalid.specifier.after.comma',{m:'unexpected {parser.lttype}'},'import a, 12 from \'l\'');
+
+a('import.namespace.specifier.not.*',{m:'unexpected {parser.ltraw} -- a * was expected'},'import - as \'12\'');
+
+a('import.namespace.specifier.local.not.id', {m:'valid identifier was expected; got {parser.lttype}'},'import {a as 12} from \'12\'');
+
+a('import.namespace.specifier.no.as', {m:'\'as\' expected'}, 'import {a 12 l} from \'12\'');
+
+a('import.not.in.module', {m:'import is not allowed in script mode'});
+
+a('import.source.is.not.str', {m:'string literal was expected'},'import * as a from 12');
+
+a('import.specifier.list.unfinished', {m:'a } was expected; got {parser.lttype}'}, 'import {a as b, e as l 12');
+
+set('import.specifier.local.not.id', 'import.namespace.specifier.local.not.id');
+
+set('import.specifier.no.as', 'import.namespace.specifier.no.as');
+
+a('incdec.post.not.simple.assig',{m:'member expression or identifier expected -- got {tn.type}'},'[a]--');
+
+set('incdec.pre.not.simple.assig', 'incdec.post.not.simple.assig');
+
+a('label.is.a.dup', {m:'{tn.name} has been actually declared at {extra.li0}:{extra:col0} (offset {extra.c0})'}, 'a: a: for (;false;) break;');
+
+// TODO:
+// a('let.dcl.not.in.block',{m: 
+
+a('lexical.decl.not.in.block',{m:'a {extra.kind}-binding can not be declared in this scope'}, 'if (false) const a = 12;');
+
+a('lexical.name.is.let', {m:'let/const bindings can not have the name \'let\''}, 'let [[let=let]=let*let];');
 
 },
 function(){
@@ -2115,6 +2145,8 @@ this.normalize = function(err) {
   if (err) {
     if (err.tn) {
       var tn = err.tn;
+      e.tn = tn;
+
       if (HAS.call(tn,'start')) e.cur0.c = tn.start;
       if (HAS.call(tn,'end')) e.cur.c = tn.end;
       if (tn.loc) {
@@ -3270,9 +3302,6 @@ this.parseLet = function(context) {
 // this function is only calld when we have a 'let' at the start of a statement,
 // or else when we have a 'let' at the start of a for's init; so, CTX_FOR means "at the start of a for's init ",
 // not 'in for'
- 
-  if ( !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK) )
-    this.err('lexical.decl.not.in.block');
 
   var startc = this.c0, startLoc = this.locBegin();
   var c = this.c, li = this.li, col = this.col;
@@ -3297,7 +3326,19 @@ this.parseLet = function(context) {
   return null ;
 };
 
+this.hasDeclarator = function() {
 
+  switch (this.lttype) {
+  case '[':
+  case '{':
+  case 'Identifier':
+    return true;
+  
+  default:
+    return false;
+
+  }
+};
 
 },
 function(){
@@ -4952,7 +4993,7 @@ this.parseUpdateExpression = function(arg, context) {
     arg = this.parseExprHead(context & CTX_FOR);
 
     if (!this.ensureSimpAssig_soft(core(arg)))
-      this.err('incdec.pre.not.simple.assig');
+      this.err('incdec.pre.not.simple.assig',{tn:core(arg)});
 
     return {
       type: 'UpdateExpression', operator: u,
@@ -4963,7 +5004,7 @@ this.parseUpdateExpression = function(arg, context) {
   }
 
   if (!this.ensureSimpAssig_soft(core(arg)))
-    this.err('incdec.post.not.simple.assig');
+    this.err('incdec.post.not.simple.assig',{tn:core(arg)});
 
   c  = this.c;
   loc = {
@@ -5970,7 +6011,7 @@ this.declare = function(id) {
        this.err('let.decl.not.in.block');
 
      if ( id.name === 'let' )
-       this.err('lexical.name.is.let');
+       this.err('lexical.name.is.let',{tn:id});
    }
 
    this.scope.declare(id, this.declMode);
@@ -6184,7 +6225,8 @@ this .parseLabeledStatement = function(label, allowNull) {
    this.next();
    var l = label.name;
    l += '%';
-   if ( this.findLabel(l) && this.err('label.is.a.dup') )
+   var ex = this.findLabel(l); // existing label
+   if ( ex && this.err('label.is.a.dup',{tn:label,extra:ex}) )
      return this.errorHandlerOutput ;
 
    this.labels[l] =
@@ -7194,6 +7236,10 @@ this.parseVariableDeclaration = function(context) {
       this.fixupLabels(false);
     else
       this.err('decl.label',{c0:startc,loc0:startLoc});
+  }
+  if (kind !== 'var' && !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK)) {
+    if (!this.hasDeclarator() )
+      this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
   }
 
   this.next();

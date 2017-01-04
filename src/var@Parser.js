@@ -15,6 +15,10 @@ this.parseVariableDeclaration = function(context) {
     else
       this.err('decl.label',{c0:startc,loc0:startLoc});
   }
+  if (kind !== 'var' && !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK)) {
+    if (!this.hasDeclarator() )
+      this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
+  }
 
   this.next();
   this.declMode = kind === 'var' ? 

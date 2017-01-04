@@ -19,6 +19,8 @@ this.normalize = function(err) {
   if (err) {
     if (err.tn) {
       var tn = err.tn;
+      e.tn = tn;
+
       if (HAS.call(tn,'start')) e.cur0.c = tn.start;
       if (HAS.call(tn,'end')) e.cur.c = tn.end;
       if (tn.loc) {
