@@ -48,11 +48,11 @@ In jazzle repository's root, run the build script, i.e., `./builder/run.js`;
 node ./builder/run.js
 ```
 
-It bundles the sources under the 'src' directory in to a single file, to be found under `dist/lube.js`.
+It bundles the sources under the 'src' directory in to a single file, to be found under `dist/jazzle.js`.
 It also runs a self-test after bundling is complete; the parser should only be used if the test stage passes without any errors.
 
 #Quick Testing
-Even though a thorough test is performed during the build process (that is, while building via `build-and-test.js`), quick tests occasionally come in handy. To run quick tests, do:
+Even though a thorough test is performed during the build process (that is, while building via `./builder/run.js`), quick tests occasionally come in handy. To run quick tests, do:
 
 ```sh
 node ./test/run.js

@@ -372,7 +372,8 @@ var CTX_NONE = 0,
     CTX_NO_SIMPLE_ERR = CTX_HAS_A_SIMPLE_ERR << 1,
     CTX_ASYNC_NO_NEWLINE_FN = CTX_NO_SIMPLE_ERR << 1,
     CTX_PARPAT = CTX_PARAM|CTX_PAT,
-    CTX_PARPAT_ERR = CTX_HAS_A_PARAM_ERR|CTX_HAS_AN_ASSIG_ERR|CTX_HAS_A_SIMPLE_ERR;
+    CTX_PARPAT_ERR = CTX_HAS_A_PARAM_ERR|CTX_HAS_AN_ASSIG_ERR|CTX_HAS_A_SIMPLE_ERR,
+    CTX_TOP = CTX_PAT|CTX_NO_SIMPLE_ERR;
 
 // TODO: order matters in the first few declarations below, mostly due to a 
 // slight performance gain in parseFunc, where MEM_CONSTRUCTOR and MEM_SUPER in `flags` are
@@ -4310,7 +4311,7 @@ this.parseNewHead = function () {
        break;
 
     case '[':
-       head = this. parseArrayExpression(CONTEXT_UNASSIGNABLE_CONTAINER);
+       head = this. parseArrayExpression(CTX_NONE);
        break ;
 
     case '(':
@@ -4318,7 +4319,7 @@ this.parseNewHead = function () {
        break ;
 
     case '{':
-       head = this. parseObjectExpression(CONTEXT_UNASSIGNABLE_CONTAINER) ;
+       head = this. parseObjectExpression(CTX_NONE) ;
        break ;
 
     case '/':
@@ -6190,7 +6191,7 @@ this.parseStatement = function ( allowNull ) {
   if (head !== null)
     this.err('must.not.have.reached');
 
-  head = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR) ;
+  head = this.parseExpr(CTX_NULLABLE|CTX_TOP) ;
   if ( !head ) {
     if ( !allowNull && this.err('stmt.null') )
       this.errorHandlerOutput;
@@ -6297,14 +6298,13 @@ this.parseIfStatement = function () {
   var startc = this.c0,
       startLoc  = this.locBegin();
   this.next () ;
-  if ( !this.expectType_soft('(') &&
-        this.err('if.has.no.opening.paren') )
-    return this.errorHanlerOutput;
+  !this.expectType_soft('(') &&
+  this.err('if.has.no.opening.paren');
 
-  var cond = core( this.parseExpr(CTX_NONE) );
-  if ( !this.expectType_soft (')' ) &&
-        this.err('if.has.no.closing.paren') )
-    return this.errorHandlerOutput ;
+  var cond = core(this.parseExpr(CTX_NONE|CTX_TOP));
+
+  !this.expectType_soft (')') &&
+  this.err('if.has.no.closing.paren');
 
   var scopeFlags = this.scopeFlags ;
   this.scopeFlags &= CLEAR_IB;
@@ -6335,14 +6335,14 @@ this.parseWhileStatement = function () {
    var startc = this.c0,
        startLoc = this.locBegin();
    this.next();
-   if ( !this.expectType_soft ('(') &&
-         this.err('while.has.no.opening.paren') )
-     return this.errorHandlerOutput;
+
+   !this.expectType_soft ('(') &&
+   this.err('while.has.no.opening.paren');
  
-   var cond = core( this.parseExpr(CTX_NONE) );
-   if ( !this.expectType_soft (')') &&
-         this.err('while.has.no.closing.paren') )
-     return this.errorHandlerOutput;
+   var cond = core( this.parseExpr(CTX_NONE|CTX_TOP) );
+
+   !this.expectType_soft (')') &&
+   this.err('while.has.no.closing.paren');
 
    var scopeFlags = this.scopeFlags;
    this.scopeFlags &= CLEAR_IB;
@@ -6402,7 +6402,7 @@ this.parseDoWhileStatement = function () {
         this.err('do.has.no.opening.paren',{extra:[startc,startLoc,nbody]}) )
     return this.errorHandlerOutput;
 
-  var cond = core(this.parseExpr(CTX_NONE));
+  var cond = core(this.parseExpr(CTX_NONE|CTX_TOP));
   var c = this.c, li = this.li, col = this.col;
   if ( !this.expectType_soft (')') &&
         this.err('do.has.no.closing.paren',{extra:[startc,startLoc,nbody,cond]}) )
@@ -6533,14 +6533,12 @@ this.parseSwitchStatement = function () {
        this.err('switch.has.no.opening.paren') )
     return this.errorHandlerOutput;
 
-  var switchExpr = core(this.parseExpr(CTX_NONE));
-  if ( !this.expectType_soft (')') &&
-        this.err('switch.has.no.closing.paren') )
-    return this.errorHandlerOutput ;
+  var switchExpr = core(this.parseExpr(CTX_NONE|CTX_TOP));
+  !this.expectType_soft (')') &&
+  this.err('switch.has.no.closing.paren');
 
-  if ( !this.expectType_soft ('{') &&
-        this.err('switch.has.no.opening.curly') )
-    return this.errorHandlerOutput ;
+  !this.expectType_soft ('{') &&
+  this.err('switch.has.no.opening.curly');
 
   this.enterLexicalScope(false); 
   this.scopeFlags |=  (SCOPE_FLAG_BREAK|SCOPE_FLAG_IN_BLOCK);
@@ -6577,7 +6575,7 @@ this.parseSwitchCase = function () {
        startc = this.c0;
        startLoc = this.locBegin();
        this.next();
-       cond = core(this.parseExpr(CTX_NONE)) ;
+       cond = core(this.parseExpr(CTX_NONE|CTX_TOP)) ;
        break;
 
      case 'default':
@@ -6625,7 +6623,7 @@ this.parseReturnStatement = function () {
   var semi = 0, semiLoc = null;
 
   if ( !this.nl )
-     retVal = this.parseExpr(CTX_NULLABLE);
+     retVal = this.parseExpr(CTX_NULLABLE|CTX_TOP);
 
   semi = this.semiI();
   semiLoc = this.semiLoc_soft();
@@ -6665,7 +6663,7 @@ this.parseThrowStatement = function () {
        this.err('throw.has.newline') )
     return this.errorHandlerOutput;
 
-  retVal = this.parseExpr(CTX_NULLABLE );
+  retVal = this.parseExpr(CTX_NULLABLE|CTX_TOP);
   if ( retVal === null &&
        this.err('throw.has.no.argument') )
      return this.errorHandlerOutput;
@@ -6793,11 +6791,10 @@ this . parseWithStatement = function() {
        startLoc = this.locBegin();
 
    this.next();
-   if (! this.expectType_soft ('(') &&
-         this.err('with.has.no.opening.paren') )
-     return this.errorHandlerOutput ;
+   ! this.expectType_soft ('(') &&
+   this.err('with.has.no.opening.paren');
 
-   var obj = this.parseExpr(CTX_NONE);
+   var obj = this.parseExpr(CTX_NONE|CTX_TOP);
    if (! this.expectType_soft (')' ) &&
          this.err('with.has.no.end.paren') )
      return this.errorHandlerOutput ;
@@ -6873,7 +6870,7 @@ this.parseDirectives = function(list) {
 
   var r = this.directive;
 
-  // TODO: maybe find a way to let the `readStringLiteral` take over this process (partially, at the very least);
+  // TODO: maybe find a way to let `numstr` take over this process (partially, at the very least);
   // that way, there will no longer be a need to check ltval's type
   while (this.lttype === 'Literal' && typeof this.ltval === STRING_TYPE) {
     this.directive = DIR_MAYBE|r;

@@ -13,7 +13,7 @@ this.parseNewHead = function () {
        break;
 
     case '[':
-       head = this. parseArrayExpression(CONTEXT_UNASSIGNABLE_CONTAINER);
+       head = this. parseArrayExpression(CTX_NONE);
        break ;
 
     case '(':
@@ -21,7 +21,7 @@ this.parseNewHead = function () {
        break ;
 
     case '{':
-       head = this. parseObjectExpression(CONTEXT_UNASSIGNABLE_CONTAINER) ;
+       head = this. parseObjectExpression(CTX_NONE) ;
        break ;
 
     case '/':

@@ -128,7 +128,8 @@ var CTX_NONE = 0,
     CTX_NO_SIMPLE_ERR = CTX_HAS_A_SIMPLE_ERR << 1,
     CTX_ASYNC_NO_NEWLINE_FN = CTX_NO_SIMPLE_ERR << 1,
     CTX_PARPAT = CTX_PARAM|CTX_PAT,
-    CTX_PARPAT_ERR = CTX_HAS_A_PARAM_ERR|CTX_HAS_AN_ASSIG_ERR|CTX_HAS_A_SIMPLE_ERR;
+    CTX_PARPAT_ERR = CTX_HAS_A_PARAM_ERR|CTX_HAS_AN_ASSIG_ERR|CTX_HAS_A_SIMPLE_ERR,
+    CTX_TOP = CTX_PAT|CTX_NO_SIMPLE_ERR;
 
 // TODO: order matters in the first few declarations below, mostly due to a 
 // slight performance gain in parseFunc, where MEM_CONSTRUCTOR and MEM_SUPER in `flags` are
