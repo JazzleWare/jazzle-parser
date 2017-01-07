@@ -40,25 +40,25 @@ this.readMultiComment = function () {
 };
 
 this.readLineComment = function() {
-    var c = this.c, l = this.src,
-        e = l.length, r = -1;
+  var c = this.c, l = this.src,
+      e = l.length, r = -1;
 
-    L:
-    while ( c < e )
-     switch (r = l.charCodeAt(c++ ) ) {
-     case CH_CARRIAGE_RETURN:
-       if (CH_LINE_FEED === l.charCodeAt(c))
-         c++;
-     case CH_LINE_FEED :
-     case 0x2028:
-     case 0x2029 :
-       this.col = 0 ;
-       this.li++;
-       break L;
+  L:
+  while ( c < e )
+    switch (r = l.charCodeAt(c++ ) ) {
+    case CH_CARRIAGE_RETURN:
+      if (CH_LINE_FEED === l.charCodeAt(c))
+        c++;
+    case CH_LINE_FEED :
+    case 0x2028:
+    case 0x2029 :
+      this.col = 0 ;
+      this.li++;
+      break L;
+    
+//  default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
+    }
 
-//     default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
-     }
-
-     this.c=c;
-     return;
+   this.c=c;
+   return;
 };

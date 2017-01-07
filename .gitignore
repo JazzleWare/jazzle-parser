@@ -11,6 +11,7 @@ bench-all.sh
 cat-ignore.js
 err.pl
 *-
+*.bench
 .s*
 cond
 pfodder.js

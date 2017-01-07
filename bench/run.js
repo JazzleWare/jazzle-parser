@@ -75,7 +75,7 @@ var Benchmark = require( 'benchmark' ).Benchmark ;
 var parserName, sourceName;
 
 function parseLater( parserName, sourceName ) {
-  return function() { return parsers[parserName](sources[sourceName], !false ); };
+  return function() { return parsers[parserName](sources[sourceName], true); };
 
 }
  

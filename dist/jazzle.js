@@ -1330,27 +1330,27 @@ this.readMultiComment = function () {
 };
 
 this.readLineComment = function() {
-    var c = this.c, l = this.src,
-        e = l.length, r = -1;
+  var c = this.c, l = this.src,
+      e = l.length, r = -1;
 
-    L:
-    while ( c < e )
-     switch (r = l.charCodeAt(c++ ) ) {
-     case CH_CARRIAGE_RETURN:
-       if (CH_LINE_FEED === l.charCodeAt(c))
-         c++;
-     case CH_LINE_FEED :
-     case 0x2028:
-     case 0x2029 :
-       this.col = 0 ;
-       this.li++;
-       break L;
+  L:
+  while ( c < e )
+    switch (r = l.charCodeAt(c++ ) ) {
+    case CH_CARRIAGE_RETURN:
+      if (CH_LINE_FEED === l.charCodeAt(c))
+        c++;
+    case CH_LINE_FEED :
+    case 0x2028:
+    case 0x2029 :
+      this.col = 0 ;
+      this.li++;
+      break L;
+    
+//  default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
+    }
 
-//     default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
-     }
-
-     this.c=c;
-     return;
+   this.c=c;
+   return;
 };
 
 },
@@ -1372,118 +1372,118 @@ this.parseExport = function() {
 
   var semiLoc = null;
   switch ( this.lttype ) {
-     case 'op':
-        if (this.ltraw !== '*' &&
-            this.err('export.all.not.*',{extra:[startc,startLoc]}) )
-          return this.errorHandlerOutput;
+  case 'op':
+    if (this.ltraw !== '*' &&
+        this.err('export.all.not.*',{extra:[startc,startLoc]}) )
+      return this.errorHandlerOutput;
  
-        this.next();
-        if ( !this.expectID_soft('from') &&
-              this.err('export.all.no.from',{extra:[startc,startLoc]}) )
-          return this.errorHandlerOutput;
+    this.next();
+    if ( !this.expectID_soft('from') &&
+          this.err('export.all.no.from',{extra:[startc,startLoc]}) )
+      return this.errorHandlerOutput;
 
-        if (!(this.lttype === 'Literal' &&
-             typeof this.ltval === STRING_TYPE ) && 
-             this.err('export.all.source.not.str',{extra:[startc,startLoc]}) )
-          return this.errorHandlerOutput;
+    if (!(this.lttype === 'Literal' &&
+         typeof this.ltval === STRING_TYPE ) && 
+         this.err('export.all.source.not.str',{extra:[startc,startLoc]}) )
+      return this.errorHandlerOutput;
 
-        src = this.numstr();
-        
-        endI = this.semiI();
-        semiLoc = this.semiLoc_soft();
-        if ( !semiLoc && !this.newlineBeforeLookAhead &&
-             this.err('no.semi') )
-          return this.errorHandlerOutput;
+    src = this.numstr();
+    
+    endI = this.semiI();
+    semiLoc = this.semiLoc_soft();
+    if ( !semiLoc && !this.newlineBeforeLookAhead &&
+         this.err('no.semi') )
+      return this.errorHandlerOutput;
 
-        this.foundStatement = true;
-        
-        return  { type: 'ExportAllDeclaration',
-                   start: startc,
-                   loc: { start: startLoc, end: semiLoc || src.loc.end },
-                    end: endI || src.end,
-                   source: src };
+    this.foundStatement = true;
+    
+    return  { type: 'ExportAllDeclaration',
+               start: startc,
+               loc: { start: startLoc, end: semiLoc || src.loc.end },
+                end: endI || src.end,
+               source: src };
 
-      case '{':
-        this.next();
-        var firstReserved = null;
+   case '{':
+     this.next();
+     var firstReserved = null;
 
-        while ( this.lttype === 'Identifier' ) {
-           local = this.id();
-           if ( !firstReserved ) {
-             this.throwReserved = false;
-             this.validateID(local.name);
-             if ( this.throwReserved )
-               firstReserved = local;
-             else
-               this.throwReserved = true;
-           }
-           ex = local;
-           if ( this.lttype === 'Identifier' ) {
-             if ( this.ltval !== 'as' && 
-                  this.err('export.specifier.not.as',{extra:[startc,startLoc,local,list]}) )
-               return this.errorHandlerOutput ;
+     while ( this.lttype === 'Identifier' ) {
+       local = this.id();
+       if ( !firstReserved ) {
+         this.throwReserved = false;
+         this.validateID(local.name);
+         if ( this.throwReserved )
+           firstReserved = local;
+         else
+           this.throwReserved = true;
+       }
+       ex = local;
+       if ( this.lttype === 'Identifier' ) {
+         if ( this.ltval !== 'as' && 
+              this.err('export.specifier.not.as',{extra:[startc,startLoc,local,list]}) )
+           return this.errorHandlerOutput ;
 
-             this.next();
-             if ( this.lttype !== 'Identifier' ) { 
-                if (  this.err('export.specifier.after.as.id',{extra:[startc,startLoc,local,list]}) )
-               return this.errorHandlerOutput;
-             }
-             else
-                ex = this.id();
-           }
-           list.push({ type: 'ExportSpecifier',
-                      start: local.start,
-                      loc: { start: local.loc.start, end: ex.loc.end }, 
-                       end: ex.end, exported: ex,
-                      local: local }) ;
+         this.next();
+         if ( this.lttype !== 'Identifier' ) { 
+            if (  this.err('export.specifier.after.as.id',{extra:[startc,startLoc,local,list]}) )
+           return this.errorHandlerOutput;
+         }
+         else
+            ex = this.id();
+       }
+       list.push({ type: 'ExportSpecifier',
+                  start: local.start,
+                  loc: { start: local.loc.start, end: ex.loc.end }, 
+                   end: ex.end, exported: ex,
+                  local: local }) ;
 
-           if ( this.lttype === ',' )
-             this.next();
-           else
-             break;
-        }
+       if ( this.lttype === ',' )
+         this.next();
+       else
+         break;
+     }
 
-        endI = this.c;
-        var li = this.li, col = this.col;
+     endI = this.c;
+     var li = this.li, col = this.col;
   
-        if ( !this.expectType_soft('}') && 
-              this.err('export.named.list.not.finished',{extra:[startc,startLoc,list,endI,li,col]}) )
-          return this.errorHandlerOutput  ;
+     if ( !this.expectType_soft('}') && 
+           this.err('export.named.list.not.finished',{extra:[startc,startLoc,list,endI,li,col]}) )
+       return this.errorHandlerOutput  ;
 
-        if ( this.lttype === 'Identifier' ) {
-          if ( this.ltval !== 'from' &&
-               this.err('export.named.not.id.from',{extra:[startc,startLoc,list,endI,li,col]}) )
-             return this.errorHandlerOutput;
+     if ( this.lttype === 'Identifier' ) {
+       if ( this.ltval !== 'from' &&
+            this.err('export.named.not.id.from',{extra:[startc,startLoc,list,endI,li,col]}) )
+          return this.errorHandlerOutput;
 
-          else this.next();
-          if ( !( this.lttype === 'Literal' &&
-                 typeof this.ltval ===  STRING_TYPE) &&
-               this.err('export.named.source.not.str', {extra:[startc,startloc,list,endI,li,col]}) )
-            return this.errorHandlerOutput ;
+       else this.next();
+       if ( !( this.lttype === 'Literal' &&
+              typeof this.ltval ===  STRING_TYPE) &&
+            this.err('export.named.source.not.str', {extra:[startc,startloc,list,endI,li,col]}) )
+         return this.errorHandlerOutput ;
 
-          else {
-             src = this.numstr();
-             endI = src.end;
-          }
-        }
-        else
-           if (firstReserved && this.err('export.named.has.reserved',{tn:firstReserved,extra:[startc,startLoc,list,endI,li,col]}) )
-             return this.errorHandlerOutput ;
+       else {
+          src = this.numstr();
+          endI = src.end;
+       }
+     }
+     else
+        if (firstReserved && this.err('export.named.has.reserved',{tn:firstReserved,extra:[startc,startLoc,list,endI,li,col]}) )
+          return this.errorHandlerOutput ;
 
-        endI = this.semiI() || endI;
-        semiLoc = this.semiLoc_soft();
-        if ( !semiLoc && !this.nl &&
-             this.err('no.semi'))
-          return this.errorHandlerOutput; 
+     endI = this.semiI() || endI;
+     semiLoc = this.semiLoc_soft();
+     if ( !semiLoc && !this.nl &&
+          this.err('no.semi'))
+       return this.errorHandlerOutput; 
 
-        this.foundStatement = true;
-        return { type: 'ExportNamedDeclaration',
-                start: startc,
-                loc: { start: startLoc, end: semiLoc || ( src && src.loc.end ) ||
-                                             { line: li, column: col } },
-                 end: endI, declaration: null,
-                  specifiers: list,
-                 source: src };
+     this.foundStatement = true;
+     return { type: 'ExportNamedDeclaration',
+             start: startc,
+             loc: { start: startLoc, end: semiLoc || ( src && src.loc.end ) ||
+                                          { line: li, column: col } },
+              end: endI, declaration: null,
+               specifiers: list,
+              source: src };
 
   }
 
