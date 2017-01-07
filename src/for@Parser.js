@@ -92,7 +92,7 @@ this.parseFor = function() {
       this.next();
       afterHead = kind === 'ForOfStatement' ? 
         this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR) :
-        this.parseExpr(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+        this.parseExpr(CTX_NONE|CTX_TOP);
 
       if (!this.expectType_soft(')'))
         this.err('for.iter.no.end.paren',{extra:[head,startc,startLoc,afterHead,kind]});

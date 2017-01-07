@@ -1,14 +1,15 @@
 this .ensureSimpAssig_soft = function(head) {
   switch(head.type) {
-    case 'Identifier':
-       if ( this.tight && arguments_or_eval(head.name) )
-         this.err('assig.to.arguments.or.eval');
+  case 'Identifier':
+    if ( this.tight && arguments_or_eval(head.name) )
+      this.err('assig.to.arguments.or.eval');
 
-    case 'MemberExpression':
-       return true ;
+  case 'MemberExpression':
+    return true ;
 
-    default:
-       return false ;
+  default:
+    return false ;
+
   }
 };
 

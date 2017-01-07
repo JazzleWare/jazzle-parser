@@ -13,10 +13,10 @@ this.readNumberLiteral = function (peek) {
     switch (b) { // check out what the next is
       case CH_X: case CH_x:
          c++;
-         if (c >= len && this.err('num.with.no.digits') )
+         if (c >= len && this.err('num.with.no.digits',{extra:'hex'}) )
            return this.errorHandlerOutput;
          b = src.charCodeAt(c);
-         if ( ! isHex(b) && this.err('num.with.first.not.valid')  )
+         if ( ! isHex(b) && this.err('num.with.first.not.valid',{extra:'hex'})  )
            return this.errorHandlerOutput ;
          c++;
          while ( c < len && isHex( b = src.charCodeAt(c) ) )
@@ -27,10 +27,10 @@ this.readNumberLiteral = function (peek) {
 
       case CH_B: case CH_b:
         ++c;
-        if (c >= len && this.err('num.with.no.digits') )
+        if (c >= len && this.err('num.with.no.digits',{extra:'binary'}) )
           return this.errorHandlerOutput ;
         b = src.charCodeAt(c);
-        if ( b !== CH_0 && b !== CH_1 && this.err('num.with.first.not.valid') )
+        if ( b !== CH_0 && b !== CH_1 && this.err('num.with.first.not.valid',{extra:'binary'}) )
           return this.errorHandlerOutput ;
         val = b - CH_0; 
         ++c;
@@ -47,10 +47,10 @@ this.readNumberLiteral = function (peek) {
 
       case CH_O: case CH_o:
         ++c;
-        if (c >= len && this.err('num.with.no.digits') )
+        if (c >= len && this.err('num.with.no.digits',{extra:'octal'}) )
           return this.errorHandlerOutput ; 
         b = src.charCodeAt(c);
-        if ( (b < CH_0 || b >= CH_8) && this.err('num.with.first.not.valid')  )
+        if ( (b < CH_0 || b >= CH_8) && this.err('num.with.first.not.valid',{extra:'octal'})  )
           return this.errorHandlerOutput ;
 
         val = b - CH_0 ;

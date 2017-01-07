@@ -173,7 +173,7 @@ this.parseObjElem = function(name, context) {
   switch (this.lttype) {
   case ':':
     if (hasProto && firstProto)
-      this.err('obj.proto.has.dup');
+      this.err('obj.proto.has.dup',{tn:name});
 
     this.next();
     val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
@@ -209,7 +209,7 @@ this.parseObjElem = function(name, context) {
  
   case 'op':
     if (name.type !== 'Identifier')
-      this.err('obj.prop.assig.not.id');
+      this.err('obj.prop.assig.not.id',{tn:name});
     if (this.ltraw !== '=')
       this.err('obj.prop.assig.not.assigop');
     if (!(context & CTX_PAT))
@@ -225,7 +225,7 @@ this.parseObjElem = function(name, context) {
 
   default:
     if (name.type !== 'Identifier')
-      this.err('obj.prop.assig.not.id');
+      this.err('obj.prop.assig.not.id',{tn:name});
     this.validateID(name.name);
     val = name;
     break;

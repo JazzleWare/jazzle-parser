@@ -127,7 +127,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   case 'CallExpression':
     if (arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
-      this.err('not.a.valid.arg.list');
+      this.err('not.a.valid.arg.list',{tn:arg});
     if (this.parenAsync !== null && arg.callee === this.parenAsync.expr)
       this.err('arrow.has.a.paren.async');
 
@@ -150,7 +150,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   this.currentExprIsParams();
 
   if (this.nl)
-    this.err('new.line.before.arrow');
+    this.err('arrow.newline');
 
   this.next();
 

@@ -940,7 +940,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   case 'CallExpression':
     if (arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
-      this.err('not.a.valid.arg.list');
+      this.err('not.a.valid.arg.list',{tn:arg});
     if (this.parenAsync !== null && arg.callee === this.parenAsync.expr)
       this.err('arrow.has.a.paren.async');
 
@@ -963,7 +963,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   this.currentExprIsParams();
 
   if (this.nl)
-    this.err('new.line.before.arrow');
+    this.err('arrow.newline');
 
   this.next();
 
@@ -1016,15 +1016,16 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 function(){
 this .ensureSimpAssig_soft = function(head) {
   switch(head.type) {
-    case 'Identifier':
-       if ( this.tight && arguments_or_eval(head.name) )
-         this.err('assig.to.arguments.or.eval');
+  case 'Identifier':
+    if ( this.tight && arguments_or_eval(head.name) )
+      this.err('assig.to.arguments.or.eval');
 
-    case 'MemberExpression':
-       return true ;
+  case 'MemberExpression':
+    return true ;
 
-    default:
-       return false ;
+  default:
+    return false ;
+
   }
 };
 
@@ -2078,6 +2079,51 @@ a('meth.paren',{m:'unexpected {parser.lttype} -- a ( was expected to start metho
 
 a('func.decl.has.no.name',{m:'function declaration must have a name in this context'},'function() {}');
 
+a('new.args.is.unfinished',{m:'unexpected {parser.lttype} -- a ) was expected'}, 'new L(12');
+
+a('new.head.is.not.valid',{m:'unexpected {parser.lttype}'}, 'new ?');
+
+a('arrow.newline', {m:'\'=>\' can not have a newline before it'}, 'a \n=>12');
+
+a('nexpr.null.head',{m:'unexpected {parser.lttype} -- something that can start an actual expression was expected'},'a-- * ?');
+
+a('non.tail.rest',{m:'a rest element can not be followed by a comma (a fact that also implies it must be the very last element)'}, '[...a,]=12');
+
+// TODO: this.noSemiAfter(nodeType)
+a('no.semi',{m:'a semicolon was expected (or a \'}\' if appropriate), but got a {parser.lttype}'},'a e'); 
+
+a('not.assignable',{m:'{tn.type} is not a valid assignment left hand side'},'a[0]-- = 12');
+
+a('not.bindable',{m:'{tn.type} can not be treated as an actual binding pattern'});
+
+// TODO: for now it would suffice
+a('not.stmt',{m:'unexpected {parser.lttype} -- it can\'t be used in an expression'},'a * while (false) { break; }');
+
+a('null.stmt',{m:'unexpected {parser.lttype} -- expected something that would start a statement'}, '{ for (a=0;a>=0 && false;a--) }');
+
+a('num.has.no.mantissa',{m:'a mantissa was expected'},'12e?');
+
+a('num.idhead.tail',{m:'a number literal can not immediately precede an identifier head'},'120l');
+
+a('num.legacy.oct',{m:'legacy octals not allowed in strict mode'},'01');
+
+a('num.with.first.not.valid',{m:'{extra} digit not valid'},'0xG','0b5');
+
+a('num.with.no.digits',{m:'{extra} digits were expected to follow -- none found'},'0x','0b');
+
+a('obj.pattern.no.:',{m:'a : was expected -- got {parser.lttype}'},  '({a 12 e, e: a})');
+
+a('obj.prop.assig.not.allowed',{m:'shorthand assignment not allowed in this context, because the containing object can not be an assignment left-hand side'},'-{a=12} = 12');
+
+a('obj.prop.assig.not.assigop',{m:'a \'=\' was expected'},'({a -= 12 } = 12)');
+
+a('obj.prop.assig.not.id',{m:'a shorthand assignment\'s left hand side must be a plain (non-computed) identifier'},'({[a]=12})');
+
+a('obj.prop.is.null',{m:'unexpected {parser.lttype} -- a [, {}, or an Identifier (anything starting a pattern) was expected'},'var {a:-12} = 12');
+
+a('obj.proto.has.dup',{m:'can not have more than a  single property in the form __proto__: <value> or  \'__proto_\': <value>; currently the is already one at {parser.first__proto__.loc.start.line}:{parser.first__proto__.loc.start.column} (offset {parser.first__proto__.start})'}, '({__proto__:12, a, e, \'__proto__\': 12})');
+
+a('obj.unfinished',{m:'unfinished object literal: a } was expected; got {parser.lttype}'},'({e: a 12)');
 
 
 },
@@ -2556,7 +2602,7 @@ this.parseFor = function() {
       this.next();
       afterHead = kind === 'ForOfStatement' ? 
         this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR) :
-        this.parseExpr(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+        this.parseExpr(CTX_NONE|CTX_TOP);
 
       if (!this.expectType_soft(')'))
         this.err('for.iter.no.end.paren',{extra:[head,startc,startLoc,afterHead,kind]});
@@ -3546,7 +3592,7 @@ this.parseObjElem = function(name, context) {
   switch (this.lttype) {
   case ':':
     if (hasProto && firstProto)
-      this.err('obj.proto.has.dup');
+      this.err('obj.proto.has.dup',{tn:name});
 
     this.next();
     val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
@@ -3582,7 +3628,7 @@ this.parseObjElem = function(name, context) {
  
   case 'op':
     if (name.type !== 'Identifier')
-      this.err('obj.prop.assig.not.id');
+      this.err('obj.prop.assig.not.id',{tn:name});
     if (this.ltraw !== '=')
       this.err('obj.prop.assig.not.assigop');
     if (!(context & CTX_PAT))
@@ -3598,7 +3644,7 @@ this.parseObjElem = function(name, context) {
 
   default:
     if (name.type !== 'Identifier')
-      this.err('obj.prop.assig.not.id');
+      this.err('obj.prop.assig.not.id',{tn:name});
     this.validateID(name.name);
     val = name;
     break;
@@ -3875,7 +3921,7 @@ this.toAssig = function(head, context) {
     return;
 
   default:
-    this.err('not.assignable');
+    this.err('not.assignable',{tn:core(head)});
  
   }
 };
@@ -4297,101 +4343,106 @@ this.parseSpreadElement = function(context) {
 },
 function(){
 this.parseNewHead = function () {
-  var startc = this.c0, end = this.c, startLoc = this.locBegin(), li = this.li, col = this.col, raw = this.ltraw ;
-  this.next () ;
-  if ( this.lttype === '.' ) {
-     this.next();
-     return this.parseMeta(startc ,end,startLoc,{line:li,column:col},raw );
+  var startc = this.c0, end = this.c,
+      startLoc = this.locBegin(), li = this.li,
+      col = this.col, raw = this.ltraw ;
+
+  this.next();
+  if (this.lttype === '.') {
+    this.next();
+    return this.parseMeta(startc, end, startLoc, {line:li,column:col}, raw);
   }
 
   var head, elem, inner;
   switch (this  .lttype) {
-    case 'Identifier':
-       head = this.parseIdStatementOrId (CTX_NONE);
-       break;
+  case 'Identifier':
+    head = this.parseIdStatementOrId (CTX_NONE);
+    break;
 
-    case '[':
-       head = this. parseArrayExpression(CTX_NONE);
-       break ;
+  case '[':
+    head = this. parseArrayExpression(CTX_NONE);
+    break;
 
-    case '(':
-       head = this. parseParen() ;
-       break ;
+  case '(':
+    head = this. parseParen();
+    break;
 
-    case '{':
-       head = this. parseObjectExpression(CTX_NONE) ;
-       break ;
+  case '{':
+    head = this. parseObjectExpression(CTX_NONE) ;
+    break;
 
-    case '/':
-       head = this. parseRegExpLiteral () ;
-       break ;
+  case '/':
+    head = this. parseRegExpLiteral () ;
+    break;
 
-    case '`':
-       head = this. parseTemplateLiteral () ;
-       break ;
+  case '`':
+    head = this. parseTemplateLiteral () ;
+    break;
 
-    case 'Literal':
-       head = this.numstr ();
-       break ;
+  case 'Literal':
+    head = this.numstr ();
+    break;
 
-    default:
-       this.err('new.head.is.not.valid');
+  default:
+    this.err('new.head.is.not.valid');
+
   }
 
 
   var inner = core( head ) ;
   while ( true ) {
     switch (this. lttype) {
-       case '.':
-          this.next();
-          if (this.lttype !== 'Identifier')
-            this.err('mem.name.not.id');
+    case '.':
+      this.next();
+      if (this.lttype !== 'Identifier')
+        this.err('mem.name.not.id');
 
-          elem = this.memberID();
-          head =   {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false/* ,y:-1*/ };
-          inner = head;
-          continue;
+      elem = this.memberID();
+      head = { type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
+        loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false/* ,y:-1*/ };
+      inner = head;
+      continue;
 
-       case '[':
-          this.next() ;
-          elem = this.parseExpr(CTX_NONE) ;
-          head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: true/* ,y:-1*/ };
-          inner = head ;
-          if ( !this.expectType_soft (']') ) {
-            this.err('mem.unfinished')  ;
-          }
+    case '[':
+      this.next() ;
+      elem = this.parseExpr(CTX_NONE) ;
+      head = { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
+        loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: true/* ,y:-1*/ };
+      inner = head ;
+      if ( !this.expectType_soft (']') ) {
+        this.err('mem.unfinished')  ;
+      }
  
-          continue;
+      continue;
 
-       case '(':
-          elem = this. parseArgList();
-          inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
-                    loc: { start: startLoc, end: this.loc() }, arguments: elem /* ,y:-1*/};
-          if ( !this. expectType_soft (')') ) {
-            this.err('new.args.is.unfinished') ;
-          }
+    case '(':
+      elem = this. parseArgList();
+      inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
+        loc: { start: startLoc, end: this.loc() }, arguments: elem /* ,y:-1*/};
+      if ( !this. expectType_soft (')') ) {
+        this.err('new.args.is.unfinished') ;
+      }
 
-          return inner;
+      return inner;
 
-       case '`' :
-           elem = this.parseTemplateLiteral () ;
-           head = {
-                type : 'TaggedTemplateExpression' ,
-                quasi :elem ,
-                start: head.start,
-                 end: elem.end,
-                loc : { start: head.loc.start, end: elem.loc.end },
-                tag : inner /* ,y:-1*/
-            };
-            inner = head;
-            continue ;
+    case '`' :
+      elem = this.parseTemplateLiteral () ;
+      head = {
+        type : 'TaggedTemplateExpression' ,
+        quasi :elem ,
+        start: head.start,
+         end: elem.end,
+        loc : { start: head.loc.start, end: elem.loc.end },
+        tag : inner /* ,y:-1*/
+      };
 
-        default: return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
-                 loc: { start: startLoc, end: head.loc.end }, arguments : [] /* ,y:-1*/};
+      inner = head;
+      continue ;
 
-     }
+    default: return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
+      loc: { start: startLoc, end: head.loc.end }, arguments : [] /* ,y:-1*/};
+
+    }
   }
 };
 
@@ -5195,10 +5246,10 @@ this.readNumberLiteral = function (peek) {
     switch (b) { // check out what the next is
       case CH_X: case CH_x:
          c++;
-         if (c >= len && this.err('num.with.no.digits') )
+         if (c >= len && this.err('num.with.no.digits',{extra:'hex'}) )
            return this.errorHandlerOutput;
          b = src.charCodeAt(c);
-         if ( ! isHex(b) && this.err('num.with.first.not.valid')  )
+         if ( ! isHex(b) && this.err('num.with.first.not.valid',{extra:'hex'})  )
            return this.errorHandlerOutput ;
          c++;
          while ( c < len && isHex( b = src.charCodeAt(c) ) )
@@ -5209,10 +5260,10 @@ this.readNumberLiteral = function (peek) {
 
       case CH_B: case CH_b:
         ++c;
-        if (c >= len && this.err('num.with.no.digits') )
+        if (c >= len && this.err('num.with.no.digits',{extra:'binary'}) )
           return this.errorHandlerOutput ;
         b = src.charCodeAt(c);
-        if ( b !== CH_0 && b !== CH_1 && this.err('num.with.first.not.valid') )
+        if ( b !== CH_0 && b !== CH_1 && this.err('num.with.first.not.valid',{extra:'binary'}) )
           return this.errorHandlerOutput ;
         val = b - CH_0; 
         ++c;
@@ -5229,10 +5280,10 @@ this.readNumberLiteral = function (peek) {
 
       case CH_O: case CH_o:
         ++c;
-        if (c >= len && this.err('num.with.no.digits') )
+        if (c >= len && this.err('num.with.no.digits',{extra:'octal'}) )
           return this.errorHandlerOutput ; 
         b = src.charCodeAt(c);
-        if ( (b < CH_0 || b >= CH_8) && this.err('num.with.first.not.valid')  )
+        if ( (b < CH_0 || b >= CH_8) && this.err('num.with.first.not.valid',{extra:'octal'})  )
           return this.errorHandlerOutput ;
 
         val = b - CH_0 ;
