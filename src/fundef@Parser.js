@@ -25,6 +25,11 @@ this.parseFunc = function(context, flags) {
     if (this.lttype === 'op' && this.ltraw === '*') {
       if (flags & MEM_ASYNC)
         this.err('async.gen.not.yet.supported');
+      if (this.unsatisfiedLabel)
+        this.err('gen.label.not.allowed');
+      if (!this.canDeclareFunctionsInScope(true))
+        this.err('gen.decl.not.allowed');
+
       isGen = true;
       this.next();
     }

@@ -1078,6 +1078,11 @@ this.parseAsync = function(context) {
       // TODO: eliminate
       if (stmt) {
         this.canBeStatement = stmt;
+        if (this.unsatisfiedLabel)
+          this.err('async.label.not.allowed',{c0:c0,li0:li0,col0:col0});
+        if (!this.canDeclareFunctionsInScope(true))
+          this.err('async.is.not.allowed',{c0:c0,li0:li0,col0:col0});
+
         stmt = false;
       }
 
@@ -2815,6 +2820,11 @@ this.parseFunc = function(context, flags) {
     if (this.lttype === 'op' && this.ltraw === '*') {
       if (flags & MEM_ASYNC)
         this.err('async.gen.not.yet.supported');
+      if (this.unsatisfiedLabel)
+        this.err('gen.label.not.allowed');
+      if (!this.canDeclareFunctionsInScope(true))
+        this.err('gen.decl.not.allowed');
+
       isGen = true;
       this.next();
     }

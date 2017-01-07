@@ -39,6 +39,11 @@ this.parseAsync = function(context) {
       // TODO: eliminate
       if (stmt) {
         this.canBeStatement = stmt;
+        if (this.unsatisfiedLabel)
+          this.err('async.label.not.allowed',{c0:c0,li0:li0,col0:col0});
+        if (!this.canDeclareFunctionsInScope(true))
+          this.err('async.is.not.allowed',{c0:c0,li0:li0,col0:col0});
+
         stmt = false;
       }
 

@@ -68,3 +68,5 @@ test/test-esprima/fixtures/es2017/async/methods/async-method-literal ## Identifi
 test/test-esprima/fixtures/es2017/async/methods/async-method-number ## Identifier rather than Literal
 test/test-esprima/fixtures/es2017/async/methods/async-method ## 'f' location
 test/test-esprima/fixtures/es2017/async/methods/class-async-method-computed ## computed is false 
+test/test-esprima/fixtures/es2017/async/functions/async-if-await
+test/test-esprima/fixtures/es2017/async/functions/async-if
