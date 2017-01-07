@@ -448,9 +448,11 @@ this.parseReturnStatement = function () {
 
   this.fixupLabels(false ) ;
 
-  if ( !( this.scopeFlags & SCOPE_FLAG_FN ) &&
-          this.err('return.not.in.a.function') )
-    return this.errorHandlerOutput ;
+  if (!(this.scopeFlags & SCOPE_FLAG_FN )) {
+    if (!this.misc.allowReturnOutsideFunction &&
+      this.err('return.not.in.a.function'))
+    return this.errorHandlerOutput;
+  }
 
   var startc = this.c0,
       startLoc = this.locBegin(),

@@ -1,4 +1,4 @@
-var Parser = function (src, isModule) {
+var Parser = function (src, o) {
 
   this.src = src;
 
@@ -25,11 +25,11 @@ var Parser = function (src, isModule) {
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
-  this.tight = !!isModule ;
+  this.tight = false;
 
   this.firstNonSimpArg = null;
 
-  this.isScript = !isModule;
+  this.isScript = false;
   this.v = 7;
 
   this.throwReserved = true;
@@ -74,5 +74,18 @@ var Parser = function (src, isModule) {
 
   this.errorListener = this; // any object with an `onErr(errType "string", errParams {*})` will do
 
+  this.onToken_ = null;
+  this.onComment_ = null;
+//this.core = MAIN_CORE;
+  this.misc = {
+    alloHashBang: false,
+    allowImportExportEverywhere: false,
+    allowReturnOutsideFunction: false,
+    directSourceFile: "",
+    sourceFile: ""
+  };
+  this.program = null;
+
+  this.setOptions(o);
 };
 

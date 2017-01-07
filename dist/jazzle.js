@@ -47,7 +47,7 @@ ErrorString.from = function(str) {
   return error;
 };
 ;
-var Parser = function (src, isModule) {
+var Parser = function (src, o) {
 
   this.src = src;
 
@@ -74,11 +74,11 @@ var Parser = function (src, isModule) {
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
-  this.tight = !!isModule ;
+  this.tight = false;
 
   this.firstNonSimpArg = null;
 
-  this.isScript = !isModule;
+  this.isScript = false;
   this.v = 7;
 
   this.throwReserved = true;
@@ -123,6 +123,19 @@ var Parser = function (src, isModule) {
 
   this.errorListener = this; // any object with an `onErr(errType "string", errParams {*})` will do
 
+  this.onToken_ = null;
+  this.onComment_ = null;
+//this.core = MAIN_CORE;
+  this.misc = {
+    alloHashBang: false,
+    allowImportExportEverywhere: false,
+    allowReturnOutsideFunction: false,
+    directSourceFile: "",
+    sourceFile: ""
+  };
+  this.program = null;
+
+  this.setOptions(o);
 };
 
 ;
@@ -333,8 +346,19 @@ var PAREN_NODE = PAREN;
 
 var INTERMEDIATE_ASYNC = 'intermediate-async';
 
+var FUNCTION_TYPE = typeof function() {};
 var STRING_TYPE = typeof "string";
 var NUMBER_TYPE = typeof 0;
+var BOOL_TYPE = typeof false;
+
+var OPTIONS =
+[
+  'ecmaVersion','sourceType','onToken','program',
+  'onComment','allowReturnOutsideFunction','allowImportExportEverywhere',
+  'sourceFile','directSourceFile',
+//'preserveParens',
+  'allowHashBang' ];
+
 var HAS = {}.hasOwnProperty;
 
 function ASSERT(cond, message) { if (!cond) throw new Error(message); }
@@ -457,6 +481,15 @@ var DIR_MODULE = 1,
     DIR_MAYBE = DIR_LAST << 1,
     DIR_HANDLED_BY_NEWLINE = DIR_MAYBE << 1,
     DIR_HAS_OCTAL_ERROR = DIR_HANDLED_BY_NEWLINE << 1;
+
+function MAIN_CORE(n) {
+  return n.expression;
+}
+
+function KEEPER_CORE(n) {
+  n.type = 'ParenthesizedExpression';
+  return n;
+}
 ;
 function num(c) {
   return (c >= CH_0 && c <= CH_9);
@@ -762,25 +795,6 @@ function toNum (n) {
          (n <= CH_f && n >= CH_a) ? 10 + n - CH_a :
          (n >= CH_A && n <= CH_F) ? 10 + n - CH_A : -1;
 };
-
-function createObj(fromPrototype) {
-  function Obj() {}
-  Obj.prototype = fromPrototype;
-  return new Obj();
-}
-
-function getOwnN(obj, name, notHave) {
-  return HAS.call(obj, name) ? obj[name] : notHave;
-}
-
-function getOwn(obj, name) {
-  return getOwnN(obj, name, null);
-}
-
-function hasOwn(obj, name) {
-  return HAS.call(obj, name);
-}
-
 ;
  (function(){
        var i = 0;
@@ -1352,6 +1366,27 @@ this.readLineComment = function() {
    this.c=c;
    return;
 };
+
+},
+function(){
+/*
+this.onToken = function() {
+  var ntype = "", nval, nraw = "";
+  switch (this.lttype) {
+    case 'Literal':
+      ntype = typeof this.ltval === NUMBER_TYPE ?
+        'Numeric' : 'StringLiteral';
+      nval = this.ltval;
+      nraw = this.ltraw;
+      break;
+    case 'op':
+    case '--':
+    case '-':
+    case '/':
+      ntype = 'Punctuator';
+    
+}
+*/
 
 },
 function(){
@@ -3387,6 +3422,89 @@ this.readAnIdentifierToken = function (v) {
 
 },
 function(){
+function get(obj, name, value) {
+  if (obj === null || obj === void 0)
+    return value;
+
+  if (!HAS.call(obj, name))
+    return value;
+  var t = typeof value;
+  switch (t) {
+    case NUMBER_TYPE:
+    case BOOL_TYPE:
+    case STRING_TYPE:
+      if (typeof obj[name] !== t) 
+        return value;
+    default:
+      return obj[name];
+  }
+}
+
+this.setOptions = function(o) {
+  var list = OPTIONS, e = 0;
+  while (e < list.length) {
+    var cur = list[e++];
+    switch (cur) {
+    case 'ecmaVersion':
+      this.v = get(o, cur, 7);
+      break;
+
+    case 'sourceType':
+      var sourceType = get(o, cur, 'script');
+      switch (sourceType) {
+      case 'script': this.isScript = true; break;
+      case 'module': this.isScript = false; this.tight = true; break;
+      default:
+        ASSERT.call(this, false,
+          'Unknown option for sourceType: '+sourceType);
+      }
+      break;
+
+    case 'onToken':
+      this.onToken_ = get(o, cur, null);
+      break;
+
+    case 'program':
+      this.program = get(o, cur, null);
+      break;
+
+    case 'onComment':
+      this.onComment_ = get(o, cur, null);
+
+    case 'allowReturnOutsideFunction':
+      this.misc.allowReturnOutsideFunction =
+        get(o, cur, false);
+      break;
+
+    case 'allowImportExportEverywhere':
+      this.misc.allowImportExportEverywhere =
+        get(o, cur, false);
+      break;
+
+    case 'sourceFile':
+      this.misc.sourceFile = 
+        get(o, cur, "");
+      break;
+
+    case 'directSourceFile':
+      this.misc.directSourceFile =
+        get(o, cur, "");
+      break;
+
+//  case 'preserveParens':
+//    if (get(o, cur, false))
+//      this.core = KEEPER_CORE;
+//    break;
+
+    case 'allowHashBang':
+      this.misc.allowHashBang = get(o, cur, false);
+
+    }
+  }
+};
+
+},
+function(){
 
 this.parseLet = function(context) {
 
@@ -4491,6 +4609,10 @@ this.parseNewHead = function () {
 },
 function(){
 this.next = function () {
+  if (this.onToken_ !== null) {
+    if (this.lttype !== "")
+      this.onToken();
+  }
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
       this. lttype =  'eof' ;
@@ -6714,9 +6836,11 @@ this.parseReturnStatement = function () {
 
   this.fixupLabels(false ) ;
 
-  if ( !( this.scopeFlags & SCOPE_FLAG_FN ) &&
-          this.err('return.not.in.a.function') )
-    return this.errorHandlerOutput ;
+  if (!(this.scopeFlags & SCOPE_FLAG_FN )) {
+    if (!this.misc.allowReturnOutsideFunction &&
+      this.err('return.not.in.a.function'))
+    return this.errorHandlerOutput;
+  }
 
   var startc = this.c0,
       startLoc = this.locBegin(),

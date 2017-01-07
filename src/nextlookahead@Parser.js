@@ -1,4 +1,8 @@
 this.next = function () {
+  if (this.onToken_ !== null) {
+    if (this.lttype !== "")
+      this.onToken();
+  }
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
       this. lttype =  'eof' ;

@@ -38,7 +38,7 @@ TestSuite.prototype.init = function(test) {
     throw new Error("test suite can not run a test that does not even have a uri!");
 
   this.loadTest(test);
-  test.parser = new this.parserFactory(test.source.value, test.isModule());
+  test.parser = new this.parserFactory(test.source.value, {sourceType:test.isModule()?'module':'script'});
 };
 
 TestSuite.prototype.runTest = function(test) {
