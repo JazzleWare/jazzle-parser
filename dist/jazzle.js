@@ -6162,7 +6162,7 @@ this.canDeclareFunctionsInScope = function(isGen) {
 };
 
 this.canDeclareClassInScope = function() {
-  return this.scopeFlag & SCOPE_FLAG_IN_BLOCK ||
+  return this.scopeFlags & SCOPE_FLAG_IN_BLOCK ||
     this.scope.isConcrete();
 };
 
