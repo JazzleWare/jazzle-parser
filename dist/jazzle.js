@@ -3910,6 +3910,7 @@ this.toAssig = function(head, context) {
     return;
 
   case 'ObjectExpression':
+    if (this.v <= 5) this.err('ver.pat.obj',{tn:head});
     i = 0; list = head.properties;
     while (i < list.length)
       this.toAssig(list[i++], context);
@@ -3917,6 +3918,7 @@ this.toAssig = function(head, context) {
     return;
 
   case 'ArrayExpression':
+    if (this.v <= 5) this.err('ver.pat.arr',{tn:head});
     i = 0; list = head.elements;
     while (i < list.length) {
       list[i] && this.toAssig(list[i], context);
