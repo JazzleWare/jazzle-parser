@@ -1,5 +1,8 @@
 this .memberID = function() { return this.v > 5 ? this.id() : this.validateID("") ; };
 this .memberExpr = function() {
+  if (this.v <= 5)
+    this.err('ver.mem.comp');
+
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next() ;

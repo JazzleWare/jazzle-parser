@@ -23,6 +23,8 @@ this.parseFunc = function(context, flags) {
   if (isWhole) { 
     this.next();
     if (this.lttype === 'op' && this.ltraw === '*') {
+      if (this.v <= 5)
+        this.err('ver.gen');
       if (flags & MEM_ASYNC)
         this.err('async.gen.not.yet.supported');
       if (this.unsatisfiedLabel)

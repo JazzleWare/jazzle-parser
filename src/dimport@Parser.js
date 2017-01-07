@@ -1,5 +1,8 @@
 // TODO: needs a thorough simplification
 this.parseImport = function() {
+  if (this.v <= 5)
+    this.err('ver.exim');
+
   if (!this.canBeStatement)
     this.err('not.stmt');
 

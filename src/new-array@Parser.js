@@ -52,7 +52,11 @@ this.parseArrayExpression = function(context) {
     if (this.lttype === ',') {
       if (hasRest)
         hasNonTailRest = true; 
-      list.push(elem && core(elem));
+      if (elem === null) {
+        if (this.v <= 5) this.err('ver.elision');
+        list.push(null);
+      }
+      else list.push(core(elem));
       this.next();
     }
     else {

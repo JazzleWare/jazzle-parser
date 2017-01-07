@@ -94,7 +94,8 @@ this.asArrowFuncArg = function(arg) {
 
 
 this.parseArrowFunctionExpression = function(arg, context)   {
-
+  if (this.v <= 5)
+    this.err('ver.arrow');
   var tight = this.tight, async = false;
 
   this.enterFuncScope(false);
@@ -126,10 +127,13 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     break;
 
   case 'CallExpression':
-    if (arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
+    if (this.v >= 7 && arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
       this.err('not.a.valid.arg.list',{tn:arg});
     if (this.parenAsync !== null && arg.callee === this.parenAsync.expr)
       this.err('arrow.has.a.paren.async');
+
+//  if (this.v < 7)
+//    this.err('ver.async');
 
     async = true;
     this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;

@@ -26,6 +26,8 @@ this.readNumberLiteral = function (peek) {
          break;
 
       case CH_B: case CH_b:
+        if (this.v <= 5)
+          this.err('ver.bin');
         ++c;
         if (c >= len && this.err('num.with.no.digits',{extra:'binary'}) )
           return this.errorHandlerOutput ;
@@ -46,6 +48,8 @@ this.readNumberLiteral = function (peek) {
         break;
 
       case CH_O: case CH_o:
+        if (this.v <= 5)
+          this.err('ver.oct');
         ++c;
         if (c >= len && this.err('num.with.no.digits',{extra:'octal'}) )
           return this.errorHandlerOutput ; 

@@ -57,6 +57,7 @@ function runTests(parserFactory, testRoot) {
     var test = new Test();
     test.uri = itemPath;
 
+    console.error('<start>', test.uri);
     testSuite.loadTest(test);
     testSuite.init(test);
     testSuite.runTest(test);

@@ -1,4 +1,7 @@
 this . parseTemplateLiteral = function() {
+  if (this.v <= 5)
+    this.err('ver.temp');
+
   var li = this.li, col = this.col;
   var startc = this.c - 1, startLoc = this.locOn(1);
   var c = this.c, src = this.src, len = src.length;

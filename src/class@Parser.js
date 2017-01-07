@@ -1,5 +1,6 @@
 this. parseClass = function(context) {
-
+  if (this.v <= 5)
+    this.err('ver.class');
   if (this.unsatisfiedLabel)
     this.err('class.label.not.allowed');
 
@@ -91,6 +92,8 @@ this. parseClass = function(context) {
 };
 
 this.parseSuper = function() {
+  if (this.v <=5 ) this.err('ver.super');
+
   var n = {
     type: 'Super', loc: { start: this.locBegin(), end: this.loc() },
     start: this.c0, end: this.c

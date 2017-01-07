@@ -20,6 +20,9 @@ this.parsePattern = function() {
 };
 
 this. parseArrayPattern = function() {
+  if (this.v <= 5)
+    this.err('ver.patarr');
+
   var startc = this.c - 1,
       startLoc = this.locOn(1),
       elem = null,
@@ -62,6 +65,8 @@ this. parseArrayPattern = function() {
 };
 
 this.parseObjectPattern  = function() {
+    if (this.v <= 5)
+      this.err('ver.patobj');
 
     var sh = false;
     var startc = this.c-1;
@@ -139,14 +144,18 @@ this.parseObjectPattern  = function() {
 };
 
 this .parseAssig = function (head) {
-    this.next() ;
-    var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CTX_NONE );
-    return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
-           right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
+  if (this.v <= 5)
+    this.err('ver.assig');
+  this.next() ;
+  var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CTX_NONE );
+  return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
+         right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
 };
 
 // TODO: needs reconsideration,
 this.parseRestElement = function() {
+   if (this.v <= 5)
+     this.err('ver.spread.rest');
    var startc = this.c0,
        startLoc = this.locBegin();
 

@@ -907,7 +907,8 @@ this.asArrowFuncArg = function(arg) {
 
 
 this.parseArrowFunctionExpression = function(arg, context)   {
-
+  if (this.v <= 5)
+    this.err('ver.arrow');
   var tight = this.tight, async = false;
 
   this.enterFuncScope(false);
@@ -939,10 +940,13 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     break;
 
   case 'CallExpression':
-    if (arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
+    if (this.v >= 7 && arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
       this.err('not.a.valid.arg.list',{tn:arg});
     if (this.parenAsync !== null && arg.callee === this.parenAsync.expr)
       this.err('arrow.has.a.paren.async');
+
+//  if (this.v < 7)
+//    this.err('ver.async');
 
     async = true;
     this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
@@ -1158,7 +1162,8 @@ this.parseAsync_intermediate = function(c0, li0, col0) {
 },
 function(){
 this. parseClass = function(context) {
-
+  if (this.v <= 5)
+    this.err('ver.class');
   if (this.unsatisfiedLabel)
     this.err('class.label.not.allowed');
 
@@ -1250,6 +1255,8 @@ this. parseClass = function(context) {
 };
 
 this.parseSuper = function() {
+  if (this.v <=5 ) this.err('ver.super');
+
   var n = {
     type: 'Super', loc: { start: this.locBegin(), end: this.loc() },
     start: this.c0, end: this.c
@@ -1349,6 +1356,8 @@ this.readLineComment = function() {
 },
 function(){
 this.parseExport = function() {
+  if (this.v <= 5) this.err('ver.exim');
+
   if ( !this.canBeStatement && this.err('not.stmt') )
     return this.errorHandlerOutput ;
 
@@ -1576,6 +1585,9 @@ this.parseExport = function() {
 function(){
 // TODO: needs a thorough simplification
 this.parseImport = function() {
+  if (this.v <= 5)
+    this.err('ver.exim');
+
   if (!this.canBeStatement)
     this.err('not.stmt');
 
@@ -2818,6 +2830,8 @@ this.parseFunc = function(context, flags) {
   if (isWhole) { 
     this.next();
     if (this.lttype === 'op' && this.ltraw === '*') {
+      if (this.v <= 5)
+        this.err('ver.gen');
       if (flags & MEM_ASYNC)
         this.err('async.gen.not.yet.supported');
       if (this.unsatisfiedLabel)
@@ -3449,7 +3463,7 @@ this.parseMem = function(context, flags) {
       nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "", latestFlag = 0;
 
   var asyncNewLine = false;
-  if (this.lttype === 'Identifier') {
+  if (this.v > 5 && this.lttype === 'Identifier') {
     LOOP:  
     // TODO: check version number when parsing get/set
     do {
@@ -3511,6 +3525,8 @@ this.parseMem = function(context, flags) {
   }
   
   if (this.lttype === 'op' && this.ltraw === '*') {
+    if (this.v <= 5)
+      this.err('ver.mem.gen');
     if (flags & MEM_ASYNC)
       this.err('async.gen.not.yet.supported');
 
@@ -3544,7 +3560,7 @@ this.parseMem = function(context, flags) {
       if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
       if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
     }
-    else if (this.ltval === '__proto__')
+    else if (this.v > 5 && this.ltval === '__proto__')
       flags |= MEM_PROTO;
 
     nmem = this.numstr();
@@ -3570,7 +3586,7 @@ this.parseMem = function(context, flags) {
   } 
 
   if (this.lttype === '(') {
-
+    if (this.v <= 5) this.err('ver.mem.meth');
     var mem = this.parseMeth(nmem, flags);
     if (c0 && c0 !== mem.start) {
       mem.start = c0;
@@ -3637,6 +3653,8 @@ this.parseObjElem = function(name, context) {
     return val;
  
   case 'op':
+    if (this.v <= 5)
+      this.err('mem.short.assig');
     if (name.type !== 'Identifier')
       this.err('obj.prop.assig.not.id',{tn:name});
     if (this.ltraw !== '=')
@@ -3653,6 +3671,8 @@ this.parseObjElem = function(name, context) {
     break;
 
   default:
+    if (this.v <= 5)
+      this.err('mem.short');
     if (name.type !== 'Identifier')
       this.err('obj.prop.assig.not.id',{tn:name});
     this.validateID(name.name);
@@ -3675,6 +3695,9 @@ this.parseObjElem = function(name, context) {
 function(){
 this .memberID = function() { return this.v > 5 ? this.id() : this.validateID("") ; };
 this .memberExpr = function() {
+  if (this.v <= 5)
+    this.err('ver.mem.comp');
+
   var startc = this.c - 1,
       startLoc = this.locOn(1);
   this.next() ;
@@ -3757,7 +3780,11 @@ this.parseArrayExpression = function(context) {
     if (this.lttype === ',') {
       if (hasRest)
         hasNonTailRest = true; 
-      list.push(elem && core(elem));
+      if (elem === null) {
+        if (this.v <= 5) this.err('ver.elision');
+        list.push(null);
+      }
+      else list.push(core(elem));
       this.next();
     }
     else {
@@ -4322,6 +4349,8 @@ this.parseParen = function(context) {
 },
 function(){
 this.parseSpreadElement = function(context) {
+  if (this.v <= 5) this.err('ver.spread.rest');
+
   var startc = this.c0;
   var startLoc = this.locBegin();
 
@@ -5269,6 +5298,8 @@ this.readNumberLiteral = function (peek) {
          break;
 
       case CH_B: case CH_b:
+        if (this.v <= 5)
+          this.err('ver.bin');
         ++c;
         if (c >= len && this.err('num.with.no.digits',{extra:'binary'}) )
           return this.errorHandlerOutput ;
@@ -5289,6 +5320,8 @@ this.readNumberLiteral = function (peek) {
         break;
 
       case CH_O: case CH_o:
+        if (this.v <= 5)
+          this.err('ver.oct');
         ++c;
         if (c >= len && this.err('num.with.no.digits',{extra:'octal'}) )
           return this.errorHandlerOutput ; 
@@ -5406,6 +5439,9 @@ this.parsePattern = function() {
 };
 
 this. parseArrayPattern = function() {
+  if (this.v <= 5)
+    this.err('ver.patarr');
+
   var startc = this.c - 1,
       startLoc = this.locOn(1),
       elem = null,
@@ -5448,6 +5484,8 @@ this. parseArrayPattern = function() {
 };
 
 this.parseObjectPattern  = function() {
+    if (this.v <= 5)
+      this.err('ver.patobj');
 
     var sh = false;
     var startc = this.c-1;
@@ -5525,14 +5563,18 @@ this.parseObjectPattern  = function() {
 };
 
 this .parseAssig = function (head) {
-    this.next() ;
-    var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CTX_NONE );
-    return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
-           right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
+  if (this.v <= 5)
+    this.err('ver.assig');
+  this.next() ;
+  var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CTX_NONE );
+  return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
+         right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
 };
 
 // TODO: needs reconsideration,
 this.parseRestElement = function() {
+   if (this.v <= 5)
+     this.err('ver.spread.rest');
    var startc = this.c0,
        startLoc = this.locBegin();
 
@@ -5921,6 +5963,8 @@ function verifyRegex_soft (regex, flags) {
 }
 
 this.parseRegExpLiteral = function() {
+  if (this.v < 2)
+    this.err('ver.regex');
      var startc = this.c - 1, startLoc = this.locOn(1),
          c = this.c, src = this.src, len = src.length;
 
@@ -7030,6 +7074,9 @@ this.readStrLiteral = function (start) {
 },
 function(){
 this . parseTemplateLiteral = function() {
+  if (this.v <= 5)
+    this.err('ver.temp');
+
   var li = this.li, col = this.col;
   var startc = this.c - 1, startLoc = this.locOn(1);
   var c = this.c, src = this.src, len = src.length;

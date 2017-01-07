@@ -20,7 +20,7 @@ this.parseMem = function(context, flags) {
       nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "", latestFlag = 0;
 
   var asyncNewLine = false;
-  if (this.lttype === 'Identifier') {
+  if (this.v > 5 && this.lttype === 'Identifier') {
     LOOP:  
     // TODO: check version number when parsing get/set
     do {
@@ -82,6 +82,8 @@ this.parseMem = function(context, flags) {
   }
   
   if (this.lttype === 'op' && this.ltraw === '*') {
+    if (this.v <= 5)
+      this.err('ver.mem.gen');
     if (flags & MEM_ASYNC)
       this.err('async.gen.not.yet.supported');
 
@@ -115,7 +117,7 @@ this.parseMem = function(context, flags) {
       if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
       if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
     }
-    else if (this.ltval === '__proto__')
+    else if (this.v > 5 && this.ltval === '__proto__')
       flags |= MEM_PROTO;
 
     nmem = this.numstr();
@@ -141,7 +143,7 @@ this.parseMem = function(context, flags) {
   } 
 
   if (this.lttype === '(') {
-
+    if (this.v <= 5) this.err('ver.mem.meth');
     var mem = this.parseMeth(nmem, flags);
     if (c0 && c0 !== mem.start) {
       mem.start = c0;
@@ -208,6 +210,8 @@ this.parseObjElem = function(name, context) {
     return val;
  
   case 'op':
+    if (this.v <= 5)
+      this.err('mem.short.assig');
     if (name.type !== 'Identifier')
       this.err('obj.prop.assig.not.id',{tn:name});
     if (this.ltraw !== '=')
@@ -224,6 +228,8 @@ this.parseObjElem = function(name, context) {
     break;
 
   default:
+    if (this.v <= 5)
+      this.err('mem.short');
     if (name.type !== 'Identifier')
       this.err('obj.prop.assig.not.id',{tn:name});
     this.validateID(name.name);
