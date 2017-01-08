@@ -189,7 +189,8 @@ this.parseObjElem = function(name, context) {
         }
         if ((context & CTX_PAT) &&
            !(context & CTX_HAS_A_PARAM_ERR) &&
-           this.at === ERR_NONE_YET) {
+           this.at === ERR_NONE_YET &&
+           !this.ensureSimpAssig_soft(val.expr)) {
           this.at = ERR_PAREN_UNBINDABLE; this.pe = val;
         }
       }
