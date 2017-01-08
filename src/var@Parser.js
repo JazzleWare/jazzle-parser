@@ -16,8 +16,12 @@ this.parseVariableDeclaration = function(context) {
       this.err('decl.label',{c0:startc,loc0:startLoc});
   }
 
-  if (kind === 'let' && this.onToken_ !== null)
-    this.lttype = ""; // turn off the automatic tokeniser
+  if (this.onToken_ !== null) {
+    if (kind === 'let')
+      this.lttype = ""; // turn off the automatic tokeniser
+    else
+      this.lttype = 'Keyword';
+  }
 
   this.next();
   if (kind !== 'var') {

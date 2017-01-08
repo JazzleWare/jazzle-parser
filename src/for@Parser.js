@@ -67,7 +67,7 @@ this.parseFor = function() {
 
     case 'in':
       if (this.ltval === 'in')
-        this.resvchk();
+        this.kw(), this.resvchk();
 
       if (headIsExpr) {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec

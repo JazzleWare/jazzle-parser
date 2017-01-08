@@ -174,7 +174,8 @@ mex.compare_ea = function(expected, actual, name, adjust) {
 mex.compareArray_ea = function(expected, actual, name, adjust) {
   var comp = null, i=0;
   while (i < expected.length) {
-    var l = i < actual.length ?
+    var l = expected[i].type === 'BlockComment' ? null :
+      i < actual.length ?
       mex.compare_ea(expected[i], actual[i], i, adjust):
       { type: 'not-in-the-actual', val: expected[i] };
 
@@ -199,8 +200,9 @@ mex.compareArray_ea = function(expected, actual, name, adjust) {
 };
 
 mex.ej_adjust = function(e, j, name) {
-  delete e.tokens; delete e.comments;
-  delete e.raw; delete e. directive;
+  delete e. directive;
+  delete e.comments;
+  delete e.raw;
   delete e.errors; 
 
   delete j.y; delete j.scope;
@@ -278,13 +280,17 @@ mex.ej_adjust = function(e, j, name) {
 };
 
 mex.compareObj_ea = function(expected, actual, name, adjust) {
+  if (expected.type === 'BlockComment')
+    return null;
+
   adjust && adjust(expected, actual, name);
   var comp = null, item = null;
   for (item in expected) {
     if (!mex.has(expected, item))
       continue;
 
-    var l = mex.has(actual, item) ?
+    var l = expected[item] && expected[item].type === 'BlockComment' ? null :
+      mex.has(actual, item) ?
       mex.compare_ea(expected[item], actual[item], item, adjust ) :
       { type: 'not-in-the-actual', val: expected[item] };
  

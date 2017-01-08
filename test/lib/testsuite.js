@@ -38,7 +38,13 @@ TestSuite.prototype.init = function(test) {
     throw new Error("test suite can not run a test that does not even have a uri!");
 
   this.loadTest(test);
-  test.parser = new this.parserFactory(test.source.value, {sourceType:test.isModule()?'module':'script'});
+  test.parserOptions.sourceType = test.isModule() ? 'module' : 'script';
+
+  if (test.json.tokens || test.jsonMode === "token") {
+    test.parserOptions.onToken = [];
+  }
+
+  test.parser = new this.parserFactory(test.source.value, test.parserOptions);
 };
 
 TestSuite.prototype.runTest = function(test) {
@@ -55,7 +61,14 @@ TestSuite.prototype.runTest = function(test) {
   var result = null, comp = null;
   try {
     result = test.parser.parseProgram();
+    if (test.jsonMode === 'token') {
+//    console.error('result', util.obj2str(result));
+//    console.error('options', util.obj2str(test.parserOptions));
+
+      result = result.tokens;
+    }
   }
+
   catch (err) {
     test.setResult(err, 'err');
     if (!test.isFail())

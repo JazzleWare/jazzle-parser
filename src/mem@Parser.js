@@ -39,7 +39,23 @@ this.parseMem = function(context, flags) {
 
         flags |= latestFlag = MEM_STATIC;
         nmod++;
-        this.next();
+
+        if (this.onToken_ !== null) {
+          this.lttype = "";
+          this.next();
+          if (this.lttype !== '(')
+            this.onToken_kw(nc0,{line:nli0,column:ncol0},nraw);
+          else
+            this.onToken({ type: 'Identifier', value: nraw, start: nc0, end: nc0+nraw.length,
+              loc: {
+                start: { line: nli0, column: ncol0 },
+                end: { line: nli0, column: ncol0+nraw.length }
+              }
+            });
+        }
+        else
+          this.next();
+
         break;
 
       case 'get':

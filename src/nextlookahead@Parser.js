@@ -411,6 +411,9 @@ this.skipS = function() {
                    continue ;
 
                  default:
+                     this.c0 = c;
+                     this.col0 = this.col + (c-start);
+                     this.li0 = this.li;
                      c++ ;
                      this.nl = ! noNewLine ;
                      this.col += (c-start ) ;

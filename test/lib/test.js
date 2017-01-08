@@ -8,6 +8,7 @@ function Test() {
   this.json = null;
   this.result = null;
   this.resultType = "";
+  this.parserOptions = {};
 }
 
 Test.prototype.isFail = function() {

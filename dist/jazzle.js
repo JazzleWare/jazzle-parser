@@ -1218,6 +1218,7 @@ this. parseClass = function(context) {
   var memParseFlags = MEM_CLASS;
   var superClass = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
+     this.kw();
      this.next();
      superClass = this.parseExprHead(CTX_NONE);
      memParseFlags |= MEM_SUPER;
@@ -1386,6 +1387,11 @@ this.onToken = function(token) {
       tval = this.ltval;
       break;
 
+    case 'u':
+      ttype = 'Punctuator';
+      tval = this.ltraw;
+      break;
+
     case 'Literal':
       ttype = typeof this.ltval === NUMBER_TYPE ?
         'Numeric' : 'String';
@@ -1395,6 +1401,12 @@ this.onToken = function(token) {
     case 'Identifier':
       ttype = 'Identifier';
       tval = this.ltraw;
+      break;
+
+    case 'Boolean':
+    case 'Null':
+      ttype = this.lttype;
+      tval = this.ltval;
       break;
 
     default:
@@ -2673,7 +2685,7 @@ this.parseFor = function() {
 
     case 'in':
       if (this.ltval === 'in')
-        this.resvchk();
+        this.kw(), this.resvchk();
 
       if (headIsExpr) {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec
@@ -3120,7 +3132,7 @@ this. parseIdStatementOrId = function ( context ) {
       break SWITCH;
 
     case 'var':
-      this.resvchk(); this.kw();
+      this.resvchk();
       return this.parseVariableDeclaration( context & CTX_FOR );
     case 'int':
       if (this.v <= 5) {
@@ -3133,7 +3145,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 4:
     switch (id) {
     case 'null':
-      this.resvchk(); this.kw();
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Null';
       pendingExprHead = this.parseNull();
       break SWITCH;
     case 'void':
@@ -3148,7 +3160,7 @@ this. parseIdStatementOrId = function ( context ) {
       pendingExprHead = this. parseThis();
       break SWITCH;
     case 'true':
-      this.resvchk(); this.kw();
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
       pendingExprHead = this.parseTrue();
       break SWITCH;
     case 'case':
@@ -3188,7 +3200,7 @@ this. parseIdStatementOrId = function ( context ) {
       this.resvchk(); this.kw();
       return this.parseClass(CTX_NONE ) ;
     case 'const':
-      this.resvchk(); this.kw();
+      this.resvchk();
       if (this.v<5) this.err('const.not.in.v5') ;
       return this.parseVariableDeclaration(CTX_NONE);
 
@@ -3216,7 +3228,7 @@ this. parseIdStatementOrId = function ( context ) {
       break SWITCH;
           
     case 'false':
-      this.resvchk(); this.kw();
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
       pendingExprHead = this.parseFalse();
       break SWITCH;
 
@@ -3647,7 +3659,23 @@ this.parseMem = function(context, flags) {
 
         flags |= latestFlag = MEM_STATIC;
         nmod++;
-        this.next();
+
+        if (this.onToken_ !== null) {
+          this.lttype = "";
+          this.next();
+          if (this.lttype !== '(')
+            this.onToken_kw(nc0,{line:nli0,column:ncol0},nraw);
+          else
+            this.onToken({ type: 'Identifier', value: nraw, start: nc0, end: nc0+nraw.length,
+              loc: {
+                start: { line: nli0, column: ncol0 },
+                end: { line: nli0, column: ncol0+nraw.length }
+              }
+            });
+        }
+        else
+          this.next();
+
         break;
 
       case 'get':
@@ -5069,6 +5097,9 @@ this.skipS = function() {
                    continue ;
 
                  default:
+                     this.c0 = c;
+                     this.col0 = this.col + (c-start);
+                     this.li0 = this.li;
                      c++ ;
                      this.nl = ! noNewLine ;
                      this.col += (c-start ) ;
@@ -5237,6 +5268,7 @@ this.parseUnaryExpression = function(context) {
       isVDT = this.isVDT;
 
   if (isVDT) {
+    this.kw();
     this.isVDT = VDT_NONE;
     u = this.ltval;
     startLoc = this.locBegin();
@@ -5334,6 +5366,7 @@ this .parseO = function(context ) {
   case 'Identifier':
     switch ( this. ltval ) {
     case 'in':
+      this.kw();
       this.resvchk();
     case 'of':
       if (context & CTX_FOR) break ;
@@ -6077,6 +6110,11 @@ this.parseProgram = function () {
   var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
            loc: { start: startLoc, end: endLoc } };
 
+  if (this.onToken_ !== null) {
+    if (typeof this.onToken_ !== FUNCTION_TYPE)
+      n.tokens = this.onToken_;
+  }
+
   if ( !this.expectType_soft ('eof') &&
         this.err('program.unfinished') )
     return this.errorHandlerOutput ;
@@ -6607,7 +6645,7 @@ this.parseIfStatement = function () {
   var nbody = this. parseStatement (false);
   var alt = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'else') {
-     this.next() ;
+     this.kw(), this.next() ;
      alt = this.parseStatement(false);
   }
   this.scopeFlags = scopeFlags ;
@@ -6689,9 +6727,11 @@ this.parseDoWhileStatement = function () {
   this.scopeFlags |= (SCOPE_FLAG_BREAK| SCOPE_FLAG_CONTINUE);
   var nbody = this.parseStatement (true) ;
   this.scopeFlags = scopeFlags;
-  if ( !this.expectID_soft('while') &&
-        this.err('do.has.no.while',{extra:[startc,startLoc,nbody]}) )
-    return this.errorHandlerOutput;
+  if (this.lttype === 'Identifier' && this.ltval === 'while') {
+    this.kw(); this.next();
+  }
+  else
+    this.err('do.has.no.while',{extra:[startc,startLoc,nbody]});
 
   if ( !this.expectType_soft('(') &&
         this.err('do.has.no.opening.paren',{extra:[startc,startLoc,nbody]}) )
@@ -6869,6 +6909,7 @@ this.parseSwitchCase = function () {
      case 'case':
        startc = this.c0;
        startLoc = this.locBegin();
+       this.kw();
        this.next();
        cond = core(this.parseExpr(CTX_NONE|CTX_TOP)) ;
        break;
@@ -6876,6 +6917,7 @@ this.parseSwitchCase = function () {
      case 'default':
        startc = this.c0;
        startLoc = this.locBegin();
+       this.kw();
        this.next();
        break ;
 
@@ -7016,6 +7058,7 @@ this.parseTryStatement = function () {
     catBlock = this.parseCatchClause();
 
   if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
+     this.kw();
      this.next();
 
      this.enterLexicalScope(false); 
@@ -7041,6 +7084,7 @@ this. parseCatchClause = function () {
    var startc = this.c0,
        startLoc = this.locBegin();
 
+   this.kw();
    this.next();
 
    this.enterCatchScope();
@@ -7557,8 +7601,12 @@ this.parseVariableDeclaration = function(context) {
       this.err('decl.label',{c0:startc,loc0:startLoc});
   }
 
-  if (kind === 'let' && this.onToken_ !== null)
-    this.lttype = ""; // turn off the automatic tokeniser
+  if (this.onToken_ !== null) {
+    if (kind === 'let')
+      this.lttype = ""; // turn off the automatic tokeniser
+    else
+      this.lttype = 'Keyword';
+  }
 
   this.next();
   if (kind !== 'var') {

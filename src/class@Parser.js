@@ -41,6 +41,7 @@ this. parseClass = function(context) {
   var memParseFlags = MEM_CLASS;
   var superClass = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
+     this.kw();
      this.next();
      superClass = this.parseExprHead(CTX_NONE);
      memParseFlags |= MEM_SUPER;

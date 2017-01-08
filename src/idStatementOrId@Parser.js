@@ -53,7 +53,7 @@ this. parseIdStatementOrId = function ( context ) {
       break SWITCH;
 
     case 'var':
-      this.resvchk(); this.kw();
+      this.resvchk();
       return this.parseVariableDeclaration( context & CTX_FOR );
     case 'int':
       if (this.v <= 5) {
@@ -66,7 +66,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 4:
     switch (id) {
     case 'null':
-      this.resvchk(); this.kw();
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Null';
       pendingExprHead = this.parseNull();
       break SWITCH;
     case 'void':
@@ -81,7 +81,7 @@ this. parseIdStatementOrId = function ( context ) {
       pendingExprHead = this. parseThis();
       break SWITCH;
     case 'true':
-      this.resvchk(); this.kw();
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
       pendingExprHead = this.parseTrue();
       break SWITCH;
     case 'case':
@@ -121,7 +121,7 @@ this. parseIdStatementOrId = function ( context ) {
       this.resvchk(); this.kw();
       return this.parseClass(CTX_NONE ) ;
     case 'const':
-      this.resvchk(); this.kw();
+      this.resvchk();
       if (this.v<5) this.err('const.not.in.v5') ;
       return this.parseVariableDeclaration(CTX_NONE);
 
@@ -149,7 +149,7 @@ this. parseIdStatementOrId = function ( context ) {
       break SWITCH;
           
     case 'false':
-      this.resvchk(); this.kw();
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
       pendingExprHead = this.parseFalse();
       break SWITCH;
 

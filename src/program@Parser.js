@@ -35,6 +35,11 @@ this.parseProgram = function () {
   var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
            loc: { start: startLoc, end: endLoc } };
 
+  if (this.onToken_ !== null) {
+    if (typeof this.onToken_ !== FUNCTION_TYPE)
+      n.tokens = this.onToken_;
+  }
+
   if ( !this.expectType_soft ('eof') &&
         this.err('program.unfinished') )
     return this.errorHandlerOutput ;

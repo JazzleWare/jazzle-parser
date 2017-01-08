@@ -2,9 +2,16 @@ var TestSuite = require('./lib/testsuite.js').TestSuite;
 var Test = require('./lib/test.js').Test;
 var fs = require('fs');
 var path = require('path');
+var util = require('../common/util.js');
+
 var listener = {
   on: function(mode, submode, test) {
     console.error(mode, submode, test.uri);
+    if (mode === 'pass' && submode === 'incompatible') {
+      console.error('<result>', util.obj2str(test.result), '\n');
+      console.error('<comp>', util.obj2str(test.comp), '\n');
+      throw new Error(test);
+    }
 
     this.stats[mode].count++;
     this.stats[mode][submode]++;
@@ -25,7 +32,7 @@ function runTests(parserFactory, testRoot) {
   testSuite.ignore('.comments', function(test) { return test.json.comments });
   testSuite.ignore('.lineNumber', function(test) { return false && test.json.hasOwnProperty('lineNumber') });
   testSuite.ignore('.js.xml', function(test) { return test.uri.indexOf('JSX') !== -1 });
-  testSuite.ignore('.tokens',function(test) { return test.jsonMode === 'token' });
+//testSuite.ignore('.tokens',function(test) { return test.jsonMode === 'token' });
 
   fs.readFileSync('.ignore').toString().split('\n')
     .forEach(function(line) {

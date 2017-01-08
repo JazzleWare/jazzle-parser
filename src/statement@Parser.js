@@ -153,7 +153,7 @@ this.parseIfStatement = function () {
   var nbody = this. parseStatement (false);
   var alt = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'else') {
-     this.next() ;
+     this.kw(), this.next() ;
      alt = this.parseStatement(false);
   }
   this.scopeFlags = scopeFlags ;
@@ -235,9 +235,11 @@ this.parseDoWhileStatement = function () {
   this.scopeFlags |= (SCOPE_FLAG_BREAK| SCOPE_FLAG_CONTINUE);
   var nbody = this.parseStatement (true) ;
   this.scopeFlags = scopeFlags;
-  if ( !this.expectID_soft('while') &&
-        this.err('do.has.no.while',{extra:[startc,startLoc,nbody]}) )
-    return this.errorHandlerOutput;
+  if (this.lttype === 'Identifier' && this.ltval === 'while') {
+    this.kw(); this.next();
+  }
+  else
+    this.err('do.has.no.while',{extra:[startc,startLoc,nbody]});
 
   if ( !this.expectType_soft('(') &&
         this.err('do.has.no.opening.paren',{extra:[startc,startLoc,nbody]}) )
@@ -415,6 +417,7 @@ this.parseSwitchCase = function () {
      case 'case':
        startc = this.c0;
        startLoc = this.locBegin();
+       this.kw();
        this.next();
        cond = core(this.parseExpr(CTX_NONE|CTX_TOP)) ;
        break;
@@ -422,6 +425,7 @@ this.parseSwitchCase = function () {
      case 'default':
        startc = this.c0;
        startLoc = this.locBegin();
+       this.kw();
        this.next();
        break ;
 
@@ -562,6 +566,7 @@ this.parseTryStatement = function () {
     catBlock = this.parseCatchClause();
 
   if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
+     this.kw();
      this.next();
 
      this.enterLexicalScope(false); 
@@ -587,6 +592,7 @@ this. parseCatchClause = function () {
    var startc = this.c0,
        startLoc = this.locBegin();
 
+   this.kw();
    this.next();
 
    this.enterCatchScope();
