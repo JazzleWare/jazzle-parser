@@ -15,12 +15,20 @@ this.parseVariableDeclaration = function(context) {
     else
       this.err('decl.label',{c0:startc,loc0:startLoc});
   }
-  if (kind !== 'var' && !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK)) {
-    if (!this.hasDeclarator() )
-      this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
-  }
+
+  if (kind === 'let' && this.onToken_ !== null)
+    this.lttype = ""; // turn off the automatic tokeniser
 
   this.next();
+  if (kind !== 'var') {
+    if (this.hasDeclarator()) {
+      if (!(this.scopeFlags & SCOPE_FLAG_IN_BLOCK))
+        this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
+      if (kind === 'let' && this.onToken_ !== null)
+        this.onToken_kw(startc,startLoc,'let');
+    }
+  }
+
   this.declMode = kind === 'var' ? 
     DECL_MODE_VAR : DECL_MODE_LET;
   

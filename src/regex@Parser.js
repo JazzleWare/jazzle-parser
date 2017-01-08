@@ -176,6 +176,14 @@ this.parseRegExpLiteral = function() {
                    start: startc, end: c,
                    value: val, loc: { start: startLoc, end: this.loc() } };
      this.c = c;
+
+     if (this.onToken_ !== null) {
+       this.onToken({
+         type: 'RegularExpression', value: this.src.substring(startc,c), start: startc,
+         end: c, regex: regex.regex, loc: regex.loc });
+       this.lttype = "";
+     }
+
      this.next () ;
 
      return regex ;

@@ -1369,24 +1369,68 @@ this.readLineComment = function() {
 
 },
 function(){
-/*
-this.onToken = function() {
-  var ntype = "", nval, nraw = "";
-  switch (this.lttype) {
-    case 'Literal':
-      ntype = typeof this.ltval === NUMBER_TYPE ?
-        'Numeric' : 'StringLiteral';
-      nval = this.ltval;
-      nraw = this.ltraw;
-      break;
+this.onToken = function(token) {
+  if (token === null) {
+    var ttype = "", tval = "";
+    switch (this.lttype) {
     case 'op':
     case '--':
     case '-':
     case '/':
-      ntype = 'Punctuator';
-    
-}
-*/
+      ttype = 'Punctuator';
+      tval = this.ltraw;
+      break;
+
+    case 'Keyword':
+      ttype = 'Keyword';
+      tval = this.ltval;
+      break;
+
+    case 'Literal':
+      ttype = typeof this.ltval === NUMBER_TYPE ?
+        'Numeric' : 'String';
+      tval = this.ltraw;
+      break;
+
+    case 'Identifier':
+      ttype = 'Identifier';
+      tval = this.ltraw;
+      break;
+
+    default:
+      ttype = 'Punctuator';
+      tval = this.lttype;
+      break;
+    }
+
+    token = { type: ttype, value: tval, start: this.c0, end: this.c,
+      loc: {
+        start: { line: this.li0, column: this.col0 },
+        end: { line: this.li, column: this.col } } };
+  }
+
+  var onToken_ = this.onToken_;
+  if (typeof onToken_ === FUNCTION_TYPE) {
+    onToken_(token);
+  }
+  else
+    onToken_.push(token);
+
+};
+
+this.onToken_kw = function(c0,loc0,val) {
+  // TODO: val must=== raw
+  this.onToken({
+    type: 'Keyword',
+    value: val,
+    start: c0,
+    end: c0+val.length,
+    loc: {
+      start: loc0,
+      end: { line: loc0.line, column: loc0.column + val.length }
+    }
+  });
+};
 
 },
 function(){
@@ -3034,13 +3078,13 @@ this. parseIdStatementOrId = function ( context ) {
   case 2:
     switch (id) {
     case 'do':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseDoWhileStatement();
     case 'if':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseIfStatement();
     case 'in':
-      this.resvchk();
+      this.resvchk(); this.kw();
       // TODO: is it actually needed anymore?
       if ( context & CTX_FOR )
         return null;
@@ -3052,7 +3096,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 3:
     switch (id) {
     case 'new':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.canBeStatement ) {
         this.canBeStatement = false ;
         this.pendingExprHead = this.parseNewHead();
@@ -3061,10 +3105,10 @@ this. parseIdStatementOrId = function ( context ) {
       return this.parseNewHead();
 
     case 'for':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseFor();
     case 'try':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseTryStatement();
     case 'let':
       if ( this.canBeStatement && this.v >= 5 )
@@ -3076,7 +3120,7 @@ this. parseIdStatementOrId = function ( context ) {
       break SWITCH;
 
     case 'var':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseVariableDeclaration( context & CTX_FOR );
     case 'int':
       if (this.v <= 5) {
@@ -3089,26 +3133,26 @@ this. parseIdStatementOrId = function ( context ) {
   case 4:
     switch (id) {
     case 'null':
-      this.resvchk();
+      this.resvchk(); this.kw();
       pendingExprHead = this.parseNull();
       break SWITCH;
     case 'void':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.canBeStatement )
          this.canBeStatement = false;
       this.lttype = 'u'; 
       this.isVDT = VDT_VOID;
       return null;
     case 'this':
-      this.resvchk();
+      this.resvchk(); this.kw();
       pendingExprHead = this. parseThis();
       break SWITCH;
     case 'true':
-      this.resvchk();
+      this.resvchk(); this.kw();
       pendingExprHead = this.parseTrue();
       break SWITCH;
     case 'case':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.canBeStatement ) {
         this.foundStatement = true;
         this.canBeStatement = false ;
@@ -3116,10 +3160,10 @@ this. parseIdStatementOrId = function ( context ) {
       }
 
     case 'else':
-      this.resvchk();
+      this.resvchk(); this.kw();
       this.notId();
     case 'with':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseWithStatement();
     case 'enum': case 'byte': case 'char':
     case 'goto': case 'long':
@@ -3131,32 +3175,32 @@ this. parseIdStatementOrId = function ( context ) {
   case 5:
     switch (id) {
     case 'super':
-      this.resvchk();
+      this.resvchk(); this.kw();
       pendingExprHead = this.parseSuper();
       break SWITCH;
     case 'break':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseBreakStatement();
     case 'catch':
-      this.resvchk();
+      this.resvchk(); this.kw();
       this.notId();
     case 'class':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseClass(CTX_NONE ) ;
     case 'const':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if (this.v<5) this.err('const.not.in.v5') ;
       return this.parseVariableDeclaration(CTX_NONE);
 
     case 'throw':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseThrowStatement();
     case 'while':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseWhileStatement();
     case 'yield': 
       if ( this.scopeFlags & SCOPE_FLAG_GEN ) {
-        this.resvchk();
+        this.resvchk(); this.kw();
         if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
           this.err('yield.args');
 
@@ -3172,13 +3216,13 @@ this. parseIdStatementOrId = function ( context ) {
       break SWITCH;
           
     case 'false':
-      this.resvchk();
+      this.resvchk(); this.kw();
       pendingExprHead = this.parseFalse();
       break SWITCH;
 
     case 'await':
       if (this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) {
-        this.resvchk();
+        this.resvchk(); this.kw();
         if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
           this.err('await.args');
         if (this.canBeStatement)
@@ -3188,7 +3232,7 @@ this. parseIdStatementOrId = function ( context ) {
         return null;
       }
       if (!this.isScript) {
-        this.resvchk();
+        this.resvchk(); this.kw();
         this.err('await.in.strict');
       }
 
@@ -3213,7 +3257,7 @@ this. parseIdStatementOrId = function ( context ) {
 
     case 'delete':
     case 'typeof':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.canBeStatement )
         this.canBeStatement = false ;
       this.lttype = 'u'; 
@@ -3221,24 +3265,24 @@ this. parseIdStatementOrId = function ( context ) {
       return null;
 
     case 'export': 
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.isScript && this.err('export.not.in.module') )
         return this.errorHandlerOutput;
 
       return this.parseExport() ;
 
     case 'import':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.isScript && this.err('import.not.in.module') )
         return this.errorHandlerOutput;
 
       return this.parseImport();
 
     case 'return':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseReturnStatement();
     case 'switch':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseSwitchStatement();
     case 'public':
       if (this.tight) this.errorReservedID();
@@ -3251,12 +3295,12 @@ this. parseIdStatementOrId = function ( context ) {
   case 7:
     switch (id) {
     case 'default':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.canBeStatement ) this.canBeStatement = false ;
       return null;
 
     case 'extends': case 'finally':
-      this.resvchk();
+      this.resvchk(); this.kw();
       this.notId();
 
     case 'package': case 'private':
@@ -3273,13 +3317,13 @@ this. parseIdStatementOrId = function ( context ) {
   case 8:
     switch (id) {
     case 'function':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseFunc(context&CTX_FOR, 0 );
     case 'debugger':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.prseDbg();
     case 'continue':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseContinueStatement();
     case 'abstract': case 'volatile':
       if ( this. v <= 5 ) this.errorReservedID();
@@ -3301,7 +3345,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 10:
     switch ( id ) {
     case 'instanceof':
-       this.resvchk();
+       this.resvchk(); this.kw();
        this.notId();
     case 'implements':
       if ( this.v <= 5 || this.tight )
@@ -3513,7 +3557,7 @@ this.parseLet = function(context) {
 // not 'in for'
 
   var startc = this.c0, startLoc = this.locBegin();
-  var c = this.c, li = this.li, col = this.col;
+  var c = this.c, li = this.li, col = this.col, raw = this.ltraw;
 
   var letDecl = this.parseVariableDeclaration(context);
 
@@ -3529,8 +3573,11 @@ this.parseLet = function(context) {
      name: 'let',
      start: startc,
      end: c,
-     loc: { start: startLoc, end: { line: li, column: col } }
+     loc: { start: startLoc, end: { line: li, column: col }, raw: raw }
   };
+
+  if (this.onToken_ !== null)
+    this.onToken({type: 'Identifier', value: raw, start: startc, end: c, loc:this.pendingExpreHead.loc });
 
   return null ;
 };
@@ -4611,9 +4658,15 @@ this.parseNewHead = function () {
 function(){
 this.next = function () {
   if (this.onToken_ !== null) {
-    if (this.lttype !== "")
-      this.onToken();
+    switch (this.lttype) {
+    case "eof":
+    case "":
+      break;
+    default:
+      this.onToken(null);
+    }
   }
+
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
       this. lttype =  'eof' ;
@@ -5123,6 +5176,10 @@ this.expectID_soft = function (n) {
   return false;
 };
 
+this.kw = function() {
+  if (this.onToken_)
+    this.lttype = 'Keyword';
+};
 
 },
 function(){
@@ -6211,6 +6268,14 @@ this.parseRegExpLiteral = function() {
                    start: startc, end: c,
                    value: val, loc: { start: startLoc, end: this.loc() } };
      this.c = c;
+
+     if (this.onToken_ !== null) {
+       this.onToken({
+         type: 'RegularExpression', value: this.src.substring(startc,c), start: startc,
+         end: c, regex: regex.regex, loc: regex.loc });
+       this.lttype = "";
+     }
+
      this.next () ;
 
      return regex ;
@@ -7491,12 +7556,20 @@ this.parseVariableDeclaration = function(context) {
     else
       this.err('decl.label',{c0:startc,loc0:startLoc});
   }
-  if (kind !== 'var' && !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK)) {
-    if (!this.hasDeclarator() )
-      this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
-  }
+
+  if (kind === 'let' && this.onToken_ !== null)
+    this.lttype = ""; // turn off the automatic tokeniser
 
   this.next();
+  if (kind !== 'var') {
+    if (this.hasDeclarator()) {
+      if (!(this.scopeFlags & SCOPE_FLAG_IN_BLOCK))
+        this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
+      if (kind === 'let' && this.onToken_ !== null)
+        this.onToken_kw(startc,startLoc,'let');
+    }
+  }
+
   this.declMode = kind === 'var' ? 
     DECL_MODE_VAR : DECL_MODE_LET;
   

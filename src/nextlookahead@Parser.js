@@ -1,8 +1,14 @@
 this.next = function () {
   if (this.onToken_ !== null) {
-    if (this.lttype !== "")
-      this.onToken();
+    switch (this.lttype) {
+    case "eof":
+    case "":
+      break;
+    default:
+      this.onToken(null);
+    }
   }
+
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
       this. lttype =  'eof' ;
@@ -512,3 +518,7 @@ this.expectID_soft = function (n) {
   return false;
 };
 
+this.kw = function() {
+  if (this.onToken_)
+    this.lttype = 'Keyword';
+};
