@@ -369,7 +369,7 @@ a('meta.new.has.unknown.prop',{m:'\'target\' is currently the only allowed meta 
 
 a('meta.new.not.in.function',{m:'\'new.target\' must be in the body of a function'}, 'new.target');
 
-// TODO: precisely tell it was a get, set, or something other
+// TODO: precision
 a('meth.paren',{m:'unexpected {parser.lttype} -- a ( was expected to start method-params'},'({get a 12})');
 
 a('func.decl.has.no.name',{m:'function declaration must have a name in this context'},'function() {}');
