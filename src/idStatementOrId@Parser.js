@@ -85,7 +85,7 @@ this. parseIdStatementOrId = function ( context ) {
       pendingExprHead = this.parseTrue();
       break SWITCH;
     case 'case':
-      this.resvchk(); this.kw();
+      this.resvchk();
       if ( this.canBeStatement ) {
         this.foundStatement = true;
         this.canBeStatement = false ;
@@ -228,7 +228,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 7:
     switch (id) {
     case 'default':
-      this.resvchk(); this.kw();
+      this.resvchk();
       if ( this.canBeStatement ) this.canBeStatement = false ;
       return null;
 

@@ -1899,6 +1899,9 @@ this.buildErrorInfo = function(builder, params) {
   errInfo.c0 = cur0.c; errInfo.li0 = cur0.loc.li; errInfo.col0 = cur0.loc.col;
   errInfo.c = cur.c; errInfo.li = cur.loc.li; errInfo.col = cur.loc.col;
 
+  if (HAS.call(builder, 'preprocessor'))
+    builder.preprocessor.call(errInfo);
+
   return errInfo;
 };
 
@@ -2232,6 +2235,51 @@ a('obj.prop.is.null',{m:'unexpected {parser.lttype} -- a [, {}, or an Identifier
 a('obj.proto.has.dup',{m:'can not have more than a  single property in the form __proto__: <value> or  \'__proto_\': <value>; currently the is already one at {parser.first__proto__.loc.start.line}:{parser.first__proto__.loc.start.column} (offset {parser.first__proto__.start})'}, '({__proto__:12, a, e, \'__proto__\': 12})');
 
 a('obj.unfinished',{m:'unfinished object literal: a } was expected; got {parser.lttype}'},'({e: a 12)');
+
+a('param.has.yield.or.super',{m:'{tn.type} isn\'t allowed to appear in this context'},'function* l() { ([a]=[yield])=>12; }');
+
+a('paren.unbindable',{m:'unexpected ) -- bindings should not have parentheses around them, neither should non-simple assignment-patterns'},'([(a)])=>12', '[a,b,e,([l])]=12');
+
+set('pat.array.is.unfinished', 'array.unfinished');
+
+a('pat.obj.is.unfinished',{m:'unexpected {parser.lttype} -- a } was expected'},'var {a=12 l} = 12)');
+
+a('program.unfinished',{m:'unexpected {parser.lttype} -- an EOF was expected'},'a, b, e, l; ?');
+
+a('prop.dyna.is.unfinished',{m:'unexpected {parser.lttype}'},'({[a 12]: e})');
+
+set('prop.dyna.no.expr', 'prop.dyna.is.unfinished');
+
+function regp() {
+  this.col0 = this.parser.col + (this.parser.c-this.c0);
+  if (this.extra === null)
+    this.extra = {};
+
+  this.extra.ch = this.parser.src.charAt(this.c0);
+}
+
+// TODO: precision
+a('regex.flag.is.dup',{p: regp, m:'regex flag is duplicate'},'/a/guymu');
+
+a('regex.newline',{p:regp, m:'regular expressions can not contain a newline'},'/a\n/');
+
+a('regex.newline.esc',{p:regp, m:'regular expressions can not contain escaped newlines'},'/a\\\n/');
+
+a('regex.unfinished',{cur0:'cur',m:'unfinished regex -- a / was expected'},'/a');
+
+// TODO: precision
+a('regex.val.not.in.range',{m:'regex contains an out-of-range value'});
+
+a('reserved.id',{m:'{tn.name} is actually a reserved word in this context'},'"use strict"; var implements = 12;');
+
+a('rest.binding.arg.peek.is.not.id',{m:'unexpected {parser.lttype} -- in versions before 7, a rest\'s argument must be an id'},'var [...[a]] = 12');
+
+a('rest.arg.not.valid',{tn:'tn.argument',m:'a rest\'s argument is not allowed to have a type of {tn.arguments.type}'},'[...a=12]=12');
+
+a('resv.unicode',{cur:'parser.eloc',m:'{parser.ltraw} is actually a reserved word ({parser.ltval}); as such, it can not contain any unicode escapes'},'whil\\u0065 (false) break;');
+
+a('return.not.in.a.function',{m:'return statements are only allowed inside a function'},'return 12');
+
 
 
 },
@@ -3164,7 +3212,7 @@ this. parseIdStatementOrId = function ( context ) {
       pendingExprHead = this.parseTrue();
       break SWITCH;
     case 'case':
-      this.resvchk(); this.kw();
+      this.resvchk();
       if ( this.canBeStatement ) {
         this.foundStatement = true;
         this.canBeStatement = false ;
@@ -3307,7 +3355,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 7:
     switch (id) {
     case 'default':
-      this.resvchk(); this.kw();
+      this.resvchk();
       if ( this.canBeStatement ) this.canBeStatement = false ;
       return null;
 
@@ -3589,7 +3637,7 @@ this.parseLet = function(context) {
   };
 
   if (this.onToken_ !== null)
-    this.onToken({type: 'Identifier', value: raw, start: startc, end: c, loc:this.pendingExpreHead.loc });
+    this.onToken({type: 'Identifier', value: raw, start: startc, end: c, loc:this.pendingExprHead.loc });
 
   return null ;
 };
@@ -4144,7 +4192,7 @@ this.toAssig = function(head, context) {
 
   case 'SpreadElement':
     if (head.argument.type === 'AssignmentExpression')
-      this.err('rest.arg.not.valid');
+      this.err('rest.arg.not.valid',{tn:head});
     this.toAssig(head.argument, context);
     head.type = 'RestElement';
     return;
@@ -5366,10 +5414,13 @@ this .parseO = function(context ) {
   case 'Identifier':
     switch ( this. ltval ) {
     case 'in':
-      this.kw();
       this.resvchk();
     case 'of':
-      if (context & CTX_FOR) break ;
+      if (context & CTX_FOR)
+        break ;
+      if (this.ltval === 'in')
+        this.kw();
+
       this.prec = PREC_COMP ;
       this.ltraw = this.ltval;
       return true;
@@ -5793,17 +5844,16 @@ this.parseRestElement = function() {
    var startc = this.c0,
        startLoc = this.locBegin();
 
+   if ( this.v < 7 && this.lttype !== 'Identifier' ) {
+      this.err('rest.binding.arg.peek.is.not.id');
+   }
+
    this.next ();
    var e = this.parsePattern();
 
    if (!e) {
       if (this.err('rest.has.no.arg'))
        return this.errorHandlerOutput ;
-   }
-   // TODO (cont.): this one in particular -- it need not parse a whole pattern to know
-   // whether it is an identifier
-   else if ( this.v < 7 && e.type !== 'Identifier' ) {
-      this.err('rest.arg.not.id');
    }
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
@@ -6206,7 +6256,7 @@ this.parseRegExpLiteral = function() {
                case CH_LINE_FEED :
                case 0x2028 :
                case 0x2029 :
-                  if ( this.err('regex.newline.esc') )
+                  if ( this.err('regex.newline.esc',{c0:c}) )
                     return this.errorHandlerOutput ;
             }
 
@@ -6228,7 +6278,7 @@ this.parseRegExpLiteral = function() {
          case CH_LINE_FEED :
          case 0x2028 :
          case 0x2029 :
-           if ( this.err('regex.newline') )
+           if ( this.err('regex.newline',{c0:c}) )
              return this.errorHandlerOutput ;
 
 //       default:if ( o >= 0x0D800 && o <= 0x0DBFF ) { this.col-- ; }
@@ -6248,23 +6298,23 @@ this.parseRegExpLiteral = function() {
         switch ( src.charCodeAt ( ++c ) ) {
             case CH_g:
                 if (flags & gRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= gRegexFlag; break;
             case CH_u:
                 if (flags & uRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= uRegexFlag; break;
             case CH_y:
                 if (flags & yRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= yRegexFlag; break;
             case CH_m:
                 if (flags & mRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= mRegexFlag; break;
             case CH_i:
                 if (flags & iRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= iRegexFlag; break;
 
             default : break WHILE;
@@ -7576,7 +7626,7 @@ this.errorReservedID = function(id) {
      this.throwReserved = true;
      return null;
   }
-  if ( this.err('reserved.id') ) return this.errorHandlerOutput;
+  if ( this.err('reserved.id',{tn:id}) ) return this.errorHandlerOutput;
 }
 
 

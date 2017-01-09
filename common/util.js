@@ -200,12 +200,13 @@ mex.compareArray_ea = function(expected, actual, name, adjust) {
 };
 
 mex.ej_adjust = function(e, j, name) {
-  delete e. directive;
+  delete e.tokens; delete e. directive;
   delete e.comments;
   delete e.raw;
   delete e.errors; 
 
   delete j.y; delete j.scope;
+  delete j.tokens;
 
   if (j.regex) {
     mex.assert(

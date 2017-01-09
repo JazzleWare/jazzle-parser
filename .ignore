@@ -70,5 +70,5 @@ test/test-esprima/fixtures/es2017/async/methods/async-method ## 'f' location
 test/test-esprima/fixtures/es2017/async/methods/class-async-method-computed ## computed is false 
 test/test-esprima/fixtures/es2017/async/functions/async-if-await
 test/test-esprima/fixtures/es2017/async/functions/async-if
-test/test-esprima/fixtures/ES6/binding-pattern/array-pattern/var_let_array #let is an actual id
-test/test-esprima/fixtures/ES6/class/migrated_0009 # static
+#test/test-esprima/fixtures/ES6/binding-pattern/array-pattern/var_let_array #let is an actual id
+#test/test-esprima/fixtures/ES6/class/migrated_0009 # static

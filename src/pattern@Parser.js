@@ -159,17 +159,16 @@ this.parseRestElement = function() {
    var startc = this.c0,
        startLoc = this.locBegin();
 
+   if ( this.v < 7 && this.lttype !== 'Identifier' ) {
+      this.err('rest.binding.arg.peek.is.not.id');
+   }
+
    this.next ();
    var e = this.parsePattern();
 
    if (!e) {
       if (this.err('rest.has.no.arg'))
        return this.errorHandlerOutput ;
-   }
-   // TODO (cont.): this one in particular -- it need not parse a whole pattern to know
-   // whether it is an identifier
-   else if ( this.v < 7 && e.type !== 'Identifier' ) {
-      this.err('rest.arg.not.id');
    }
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };

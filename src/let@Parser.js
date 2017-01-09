@@ -26,7 +26,7 @@ this.parseLet = function(context) {
   };
 
   if (this.onToken_ !== null)
-    this.onToken({type: 'Identifier', value: raw, start: startc, end: c, loc:this.pendingExpreHead.loc });
+    this.onToken({type: 'Identifier', value: raw, start: startc, end: c, loc:this.pendingExprHead.loc });
 
   return null ;
 };

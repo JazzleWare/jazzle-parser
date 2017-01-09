@@ -32,7 +32,7 @@ function runTests(parserFactory, testRoot) {
   testSuite.ignore('.comments', function(test) { return test.json.comments });
   testSuite.ignore('.lineNumber', function(test) { return false && test.json.hasOwnProperty('lineNumber') });
   testSuite.ignore('.js.xml', function(test) { return test.uri.indexOf('JSX') !== -1 });
-//testSuite.ignore('.tokens',function(test) { return test.jsonMode === 'token' });
+  testSuite.ignore('.tokens',function(test) { return test.jsonMode === 'token' });
 
   fs.readFileSync('.ignore').toString().split('\n')
     .forEach(function(line) {
