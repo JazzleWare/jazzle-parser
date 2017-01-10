@@ -90,8 +90,6 @@ this . parseTemplateLiteral = function() {
 
     c++ ;
   }
-
-  if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished') ;
   
   if ( startElem < c ) {
      this.col += ( c - startColIndex );
@@ -110,11 +108,14 @@ this . parseTemplateLiteral = function() {
               cooked: currentElemContents }
   }); 
 
+
   c++; // backtick  
   this.col ++ ;
 
   var n = { type: 'TemplateLiteral', start: startc, quasis: templStr, end: c,
        expressions: templExpressions , loc: { start: startLoc, end : this.loc() } /* ,y:-1*/};
+
+  if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished',{extra:n}) ;
 
   this.c = c;
   this.next(); // prepare the next token  

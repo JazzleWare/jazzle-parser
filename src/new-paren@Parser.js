@@ -38,7 +38,7 @@ this.parseParen = function(context) {
       }
       else if (list) {
         if (this.v < 7)
-          this.err('unexpected.lookahead');
+          this.err('seq.non.tail.expr');
         else 
           hasTailElem = true;
       } 
@@ -101,7 +101,7 @@ this.parseParen = function(context) {
     if (list) list.push(core(elem));
     if (this.lttype === ',') {
       if (hasRest)
-        this.err('unexpected.lookahead');
+        this.err('rest.arg.has.trailing.comma');
       if (list === null)
         list = [core(elem)];
       this.next();
@@ -127,7 +127,7 @@ this.parseParen = function(context) {
   };
 
   if (!this.expectType_soft(')'))
-    this.err('unfinished.paren');
+    this.err('unfinished.paren',{tn:n});
 
   if (elem === null && list === null) {
     if (context & CTX_PARPAT) {

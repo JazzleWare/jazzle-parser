@@ -169,10 +169,10 @@ this.parseMem = function(context, flags) {
   }
 
   if (flags & MEM_CLASS)
-    this.err('unexpected.lookahead');
+    this.err('meth.paren');
 
   if (nmod)
-    this.err('unexpected.lookahead');
+    this.err('obj.meth.no.paren');
 
   // TODO: it is not strictly needed -- this.parseObjElem itself can verify if the name passed to it is
   // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad

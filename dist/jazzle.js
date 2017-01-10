@@ -1845,7 +1845,9 @@ this.buildErrorInfo = function(builder, params) {
   var errInfo = {
     messageTemplate: builder.messageTemplate,
     c: -1, li: -1, col: -1,
-    c0: -1, li0: -1, col0: -1
+    c0: -1, li0: -1, col0: -1,
+    parser: params['parser'],
+    extra: params.extra
   };
 
   var cur0 = params.cur0, cur = params.cur;
@@ -2125,7 +2127,7 @@ a('hex.esc.byte.not.hex', {c0:'parser.c',li0:'parser.li',col0:'parser.col',m:'a 
 
 a('id.esc.must.be.idbody',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier body codepoint'});
 
-a('id.esc.must.be.id',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier start codepoint'});
+a('id.esc.must.be.id.head',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier start codepoint'});
 
 a('id.multi.must.be.idhead', {cur0:'cur',m:'the unicode surrogate pair [{extra.0},{extra.1}] don\'t represent an identifier start.'});
 
@@ -2185,7 +2187,7 @@ a('meta.new.has.unknown.prop',{m:'\'target\' is currently the only allowed meta 
 
 a('meta.new.not.in.function',{m:'\'new.target\' must be in the body of a function'}, 'new.target');
 
-// TODO: precisely tell it was a get, set, or something other
+// TODO: precision
 a('meth.paren',{m:'unexpected {parser.lttype} -- a ( was expected to start method-params'},'({get a 12})');
 
 a('func.decl.has.no.name',{m:'function declaration must have a name in this context'},'function() {}');
@@ -2251,7 +2253,7 @@ a('prop.dyna.is.unfinished',{m:'unexpected {parser.lttype}'},'({[a 12]: e})');
 set('prop.dyna.no.expr', 'prop.dyna.is.unfinished');
 
 function regp() {
-  this.col0 = this.parser.col + (this.parser.c-this.c0);
+  this.col0 = this.col + (this.c0-this.c);
   if (this.extra === null)
     this.extra = {};
 
@@ -2280,6 +2282,71 @@ a('resv.unicode',{cur:'parser.eloc',m:'{parser.ltraw} is actually a reserved wor
 
 a('return.not.in.a.function',{m:'return statements are only allowed inside a function'},'return 12');
 
+a('seq.non.tail.expr',{m:'trailing comma was not expected'},'(a,)');
+
+a('shorthand.unassigned',{m:'shorthand assignments are not allowed somewhere other than am assignment\'s left hand side'},'a = [{b=12},]');
+
+a('stmt.null',{m:'unexpected {parser.lttype} because it can not start a statement'},'while (false) ?');
+
+a('strict.err.esc.not.valid',{cur0:'parser.eloc',m:'legacy octals are not allowed in strict mode'},'"\\12"; "use strict"');
+
+a('strict.let.is.id',{m:'let can\'t be used as an id in strict mode'},'"use strict"; a * b * e * l * let');
+
+a('strict.oct.str.esc',{m:'legacy octals not allowed in strict mode'},'"use strict"; "\\12"');
+
+a('strict.oct.str.esc.templ',{m:'legacy octals not allowed inside templates'},'`\\12`');
+
+a('str.newline',{li0: 'parser.li', m:'a string literal may not contain line breaks'},'"a\n"');
+
+a('str.unfinished',{li0: 'parser.li', m:'the string starting at {parser.li0}:{parser.col0} (offset {parser.c0}) not finished'},'"abel');
+
+a('switch.case.has.no.colon',{m:'unexpected {parser.lttype} -- a \':\' was expected'},'switch (a) { case 12 a break; }');
+
+a('switch.has.a.dup.default',{m:'this switch has already got a default'},'swicth (a) { case a: break; case b: break; case e: break; default: break; default: 12; }');
+
+a('switch.has.no.opening.curly',{m:'unexpected {parser.lttype} -- a {} was expected'},'switch (a) 12');
+
+a('switch.has.no.closing.paren',{m:'unexpected {parser.lttype} -- a ) was expected'},'switch (a 12');
+
+a('switch.has.no.opening.paren',{m:'unexpected {parser.lttype} -- a ( was expected'},'switch ?');
+
+a('switch.unfinished',{m:'unexpected {parser.lttype} -- a } was expected'},'switch (a) { case 12: break; ?');
+
+a('templ.expr.is.unfinished',{m:'unexpected {parser.lttype} -- a } was expected at the end of the current interpolated expression'},'`abel${e 12}`');
+
+a('templ.lit.is.unfinished',{m:'the template literal at {extra.loc.start.line}:{extra.loc.start.column} (offset {extra.start}) is unfinished'},'`abel');
+
+a('throw.has.newline',{m:'throw can not have a line-break after it'},'throw \n12');
+
+a('throw.has.no.argument',{m:'unexpected {parser.lttype}'},'throw ?');
+
+a('try.has.no.tain',{m:'unexpected {parser.lttype} -- try must have a \'catch\' or \'finally\' block coming after it'},'try {}\nif (false);');
+
+a('u.curly.is.unfinished',{p: regp, m:'a } was expected'},'\\u{12;');
+
+a('u.curly.not.in.range',{p: regp, m:'unicode codepoints must have a max decimal value of 1114111 (0x10FFFF)'}, '\\u{125400}');
+
+a('u.esc.hex',{p: regp, m:'invalid hex'},'\\u00el');
+
+a('unary.before.an.exponentiation',{m:'left operand for an exponentiation operator is not allowed to be an unparenthesized unary expression'},'-a**e');
+
+a('unexpected.id',{m:'got {parser.ltval} rather than {extra}'},'export * as a from \'12\'');
+
+a('an.id.was.expected',{m:'unexpected {parser.lttype} -- identifier \'{extra}\' was expected'},'export * as a 12 \'l\'');
+
+a('meth.parent',{m:'a ) was expected'},'class A { e: 12 }');
+
+a('obj.meth.no.paren',{m:'a ) was expected'},'({get a: 12})');
+
+a('rest.arg.has.trailing.comma',{m:'trailing comma not expected after rest'},'(...a,)');
+
+a('unexpected.rest',{m:'unexpected rest element'},'(...a)');
+
+a('unfinished.paren',{c0:'tn.end',li0:'tn.loc.end.line',col0:'tn.loc.end.column',m:'the parenthesis at {tn.loc.start.line}:{tn.loc.start.column} (offset {tn.start}) is unfinished'}, '(a,b 12');
+
+a('u.second.esc.not.u',{p:function(){this.col0++;}, cur0:'cur', m:'a \'u\' was expected after the slash', col0:'col'},'\\ee');
+
+a('u.second.not.in.range',{p:function(){this.col0+=(this.c-this.extra);},cur0:'cur',col0:'col',m:'the second surrogate must be in range [0x0dc00, 0x0dfff]'});
 
 
 },
@@ -2561,11 +2628,11 @@ this.readStrictEsc = function ()  {
             if ( b0 < CH_0 || b0 >= CH_8 )
               return '\0';
        }
-       if ( this.err('strict.oct.str.esc') )
+       if ( this.err('strict.oct.str.esc.templ') )
          return this.errorHandlerOutput
 
     case CH_4: case CH_5: case CH_6: case CH_7:
-       if (this.err('strict.oct.str.esc') )
+       if (this.err('strict.oct.str.esc.templ') )
          return this.errorHandlerOutput  ;
 
    case CH_8:
@@ -2593,7 +2660,7 @@ this.readStrictEsc = function ()  {
 function(){
 
 this.peekTheSecondByte = function () {
-  var e = this.src.charCodeAt(this.c);
+  var e = this.src.charCodeAt(this.c), start = this.c;
   if (CH_BACK_SLASH === e) {
     if (CH_u !== this.src.charCodeAt(++this.c) &&
         this.err('u.second.esc.not.u') )
@@ -2602,7 +2669,7 @@ this.peekTheSecondByte = function () {
     e = (this.peekUSeq());
   }
 //  else this.col--;
-  if ( (e < 0x0DC00 || e > 0x0DFFF) && this.err('u.second.not.in.range') )
+  if ( (e < 0x0DC00 || e > 0x0DFFF) && this.err('u.second.not.in.range',{extra:start}) )
     return this.errorHandlerOutput;
 
   return e;
@@ -2617,18 +2684,18 @@ this.peekUSeq = function () {
     n = l.charCodeAt(c);
     do {
       n = toNum(n);
-      if ( n === - 1 && this.err('u.esc.hex') )
+      if ( n === - 1 && this.err('u.esc.hex',{c0:c}) )
         return this.errorHandlerOutput ;
 
       byteVal <<= 4;
       byteVal += n;
-      if (byteVal > 0x010FFFF && this.err('u.curly.not.in.range') )
+      if (byteVal > 0x010FFFF && this.err('u.curly.not.in.range',{c0:c}) )
         return this.errorHandler ;
 
       n = l.charCodeAt( ++ c);
     } while (c < e && n !== CH_RCURLY);
 
-    if ( n !== CH_RCURLY && this.err('u.curly.is.unfinished') ) 
+    if ( n !== CH_RCURLY && this.err('u.curly.is.unfinished',{c0:c}) ) 
       return this.errorHandlerOutput ;
 
     this.c = c;
@@ -2636,22 +2703,22 @@ this.peekUSeq = function () {
   }
  
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex') )
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
     return this.errorHandlerOutput;
   byteVal = n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex') )
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
     return this.errorHandlerOutput;
   byteVal <<= 4; byteVal += n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex') )
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
     return this.errorHandlerOutput;
   byteVal <<= 4; byteVal += n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex') )
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
     return this.errorHandlerOutput;
   byteVal <<= 4; byteVal += n;
 
@@ -3624,7 +3691,7 @@ this.parseLet = function(context) {
   if ( letDecl )
     return letDecl;
 
-  if (this.tight && this.err('strict.let.is.id') )
+  if (this.tight && this.err('strict.let.is.id',{c0:startc,loc:startLoc}) )
     return this.errorHandlerOutput ;
 
   this.canBeStatement = false;
@@ -3837,10 +3904,10 @@ this.parseMem = function(context, flags) {
   }
 
   if (flags & MEM_CLASS)
-    this.err('unexpected.lookahead');
+    this.err('meth.paren');
 
   if (nmod)
-    this.err('unexpected.lookahead');
+    this.err('obj.meth.no.paren');
 
   // TODO: it is not strictly needed -- this.parseObjElem itself can verify if the name passed to it is
   // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad
@@ -4463,7 +4530,7 @@ this.parseParen = function(context) {
       }
       else if (list) {
         if (this.v < 7)
-          this.err('unexpected.lookahead');
+          this.err('seq.non.tail.expr');
         else 
           hasTailElem = true;
       } 
@@ -4526,7 +4593,7 @@ this.parseParen = function(context) {
     if (list) list.push(core(elem));
     if (this.lttype === ',') {
       if (hasRest)
-        this.err('unexpected.lookahead');
+        this.err('rest.arg.has.trailing.comma');
       if (list === null)
         list = [core(elem)];
       this.next();
@@ -4552,7 +4619,7 @@ this.parseParen = function(context) {
   };
 
   if (!this.expectType_soft(')'))
-    this.err('unfinished.paren');
+    this.err('unfinished.paren',{tn:n});
 
   if (elem === null && list === null) {
     if (context & CTX_PARPAT) {
@@ -5232,9 +5299,13 @@ this.readDot = function() {
 this.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
 
 this.expectID = function (n) {
-  if (!(this.lttype === 'Identifier' && this.ltval === n)) 
-    this.err('unexpected.id');
-  this.next();
+  if (this.lttype === 'Identifier' && this.ltval === n)
+    return this.next();
+  
+  if (this.lttype !== 'Identifier')
+    this.err('an.id.was.expected',{extra:n});
+ 
+  this.err('unexpected.id',{extra:n});
 };
 
 this.expectType_soft = function (n)  {
@@ -7338,7 +7409,7 @@ this.readStrLiteral = function (start) {
      case CH_LINE_FEED :
      case 0x2028 :
      case 0x2029 :
-           if ( this.err('str.newline') )
+           if ( this.err('str.newline',{c0:c,col0:this.col+(c-startC)}) )
              return this.errorHandlerOutput ;
     }
     c++;
@@ -7346,7 +7417,7 @@ this.readStrLiteral = function (start) {
 
   if ( v_start !== c ) { v += l.slice(v_start,c ) ; }
   if (!(c < e && (l.charCodeAt(c)) === start) &&
-       this.err('str.unfinished') ) return this.errorHandlerOutput;
+       this.err('str.unfinished',{c0:c,col0:this.col+(c-startC)}) ) return this.errorHandlerOutput;
 
   this.c = c + 1 ;
   this.col += (this. c - startC   )  ;
@@ -7451,8 +7522,6 @@ this . parseTemplateLiteral = function() {
 
     c++ ;
   }
-
-  if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished') ;
   
   if ( startElem < c ) {
      this.col += ( c - startColIndex );
@@ -7471,11 +7540,14 @@ this . parseTemplateLiteral = function() {
               cooked: currentElemContents }
   }); 
 
+
   c++; // backtick  
   this.col ++ ;
 
   var n = { type: 'TemplateLiteral', start: startc, quasis: templStr, end: c,
        expressions: templExpressions , loc: { start: startLoc, end : this.loc() } /* ,y:-1*/};
+
+  if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished',{extra:n}) ;
 
   this.c = c;
   this.next(); // prepare the next token  

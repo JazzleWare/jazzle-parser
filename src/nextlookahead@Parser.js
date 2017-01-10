@@ -498,9 +498,13 @@ this.readDot = function() {
 this.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
 
 this.expectID = function (n) {
-  if (!(this.lttype === 'Identifier' && this.ltval === n)) 
-    this.err('unexpected.id');
-  this.next();
+  if (this.lttype === 'Identifier' && this.ltval === n)
+    return this.next();
+  
+  if (this.lttype !== 'Identifier')
+    this.err('an.id.was.expected',{extra:n});
+ 
+  this.err('unexpected.id',{extra:n});
 };
 
 this.expectType_soft = function (n)  {

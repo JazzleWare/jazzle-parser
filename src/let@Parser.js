@@ -13,7 +13,7 @@ this.parseLet = function(context) {
   if ( letDecl )
     return letDecl;
 
-  if (this.tight && this.err('strict.let.is.id') )
+  if (this.tight && this.err('strict.let.is.id',{c0:startc,loc:startLoc}) )
     return this.errorHandlerOutput ;
 
   this.canBeStatement = false;
