@@ -74,7 +74,7 @@ this.parseVariableDeclaration = function(context) {
         this.err('var.has.an.empty.declarator',{extra:[startc,startLoc,context,list,kind]});
    
       if (this.missingInit || (isConst && !elem.init))
-        this.err('var.init.is.missing',{extra:[startc,startLoc,context,list,kind],elem:elem});
+        this.err('var.must.have.init',{extra:[startc,startLoc,context,list,kind],elem:elem});
    
       list.push(elem);
     }
