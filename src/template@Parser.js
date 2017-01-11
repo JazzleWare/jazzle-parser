@@ -10,7 +10,7 @@ this . parseTemplateLiteral = function() {
       startElem = c,
       currentElemContents = "",
       startColIndex = c ,
-      ch = 0;
+      ch = 0, elem = null;
  
   while ( c < len ) {
     ch = src.charCodeAt(c);
@@ -20,12 +20,18 @@ this . parseTemplateLiteral = function() {
           if ( src.charCodeAt(c+1) === CH_LCURLY ) {
               currentElemContents += src.slice(startElemFragment, c) ;
               this.col += ( c - startColIndex );
-              templStr.push(
+              elem =
                 { type: 'TemplateElement', 
                  start: startElem, end: c, tail: false,
                  loc: { start: { line: li, column: col }, end: { line: this.li, column: this.col } },        
                  value: { raw : src.slice(startElem, c ).replace(/\r\n|\r/g,'\n'), 
-                        cooked: currentElemContents   } } );
+                        cooked: currentElemContents   } };
+              
+              templStr.push(elem);
+
+              if (this.onToken_ !== null)
+                this.onToken({type:'Template', value:elem.value.raw, start: elem.start, end: elem.end,
+                  loc: elem.loc });
 
               this.c = c + 2; // ${
               this.col += 2; // ${
@@ -98,7 +104,7 @@ this . parseTemplateLiteral = function() {
   }
   else currentElemContents = "";
 
-  templStr.push({
+  elem ={
      type: 'TemplateElement',
      start: startElem,
      loc: { start : { line: li, column: col }, end: { line: this.li, column: this.col } },
@@ -106,8 +112,13 @@ this . parseTemplateLiteral = function() {
      tail: true,
      value: { raw: src.slice(startElem,c).replace(/\r\n|\r/g,'\n'), 
               cooked: currentElemContents }
-  }); 
+  };
 
+  templStr.push(elem);
+
+  if (this.onToken_ !== null)
+    this.onToken({type:'Template', value: elem.value.raw, start: elem.start, end: elem.end,
+      loc: elem.loc});
 
   c++; // backtick  
   this.col ++ ;
