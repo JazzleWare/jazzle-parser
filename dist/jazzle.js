@@ -1901,7 +1901,7 @@ this.buildErrorInfo = function(builder, params) {
   errInfo.c0 = cur0.c; errInfo.li0 = cur0.loc.li; errInfo.col0 = cur0.loc.col;
   errInfo.c = cur.c; errInfo.li = cur.loc.li; errInfo.col = cur.loc.col;
 
-  if (HAS.call(builder, 'preprocessor'))
+  if (builder.preprocessor !== null)
     builder.preprocessor.call(errInfo);
 
   return errInfo;
