@@ -11,6 +11,10 @@ this.readMultiComment = function () {
         c++;
         this.col += (c-start);
         this.c = c;
+        if (this.onComment_ !== null)
+          this.onComment(true,c0,{line:li0,column:col0},
+            this.c-2,{line:this.li,column:this.col-2});
+
         return n;
       }
       continue ;
@@ -43,6 +47,8 @@ this.readLineComment = function() {
   var c = this.c, l = this.src,
       e = l.length, r = -1;
 
+  var c0 = c+1, li0 = this.li, col0 = this.col;
+
   L:
   while ( c < e )
     switch (r = l.charCodeAt(c++ ) ) {
@@ -60,5 +66,9 @@ this.readLineComment = function() {
     }
 
    this.c=c;
+
+   if (this.onComment_ !== null)
+     this.onComment(false,c0,{line:li0,column:col0},
+       this.c,{line:this.li,column:this.col-1});
    return;
 };

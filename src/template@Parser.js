@@ -12,6 +12,9 @@ this . parseTemplateLiteral = function() {
       startColIndex = c ,
       ch = 0, elem = null;
  
+  if (this.onToken_ !== null)
+    this.onToken({type:'Punctuator',value:'`',start:startc,end:this.c,loc:startLoc});
+
   while ( c < len ) {
     ch = src.charCodeAt(c);
     if ( ch === CH_BACKTICK ) break; 
@@ -29,9 +32,11 @@ this . parseTemplateLiteral = function() {
               
               templStr.push(elem);
 
-              if (this.onToken_ !== null)
+              if (this.onToken_ !== null) {
                 this.onToken({type:'Template', value:elem.value.raw, start: elem.start, end: elem.end,
                   loc: elem.loc });
+                this.lttype = "";
+              }
 
               this.c = c + 2; // ${
               this.col += 2; // ${
@@ -116,9 +121,11 @@ this . parseTemplateLiteral = function() {
 
   templStr.push(elem);
 
-  if (this.onToken_ !== null)
+  if (this.onToken_ !== null) {
     this.onToken({type:'Template', value: elem.value.raw, start: elem.start, end: elem.end,
       loc: elem.loc});
+    this.lttype = "";
+  }
 
   c++; // backtick  
   this.col ++ ;
@@ -127,6 +134,10 @@ this . parseTemplateLiteral = function() {
        expressions: templExpressions , loc: { start: startLoc, end : this.loc() } /* ,y:-1*/};
 
   if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished',{extra:n}) ;
+
+  if (this.onToken_) 
+    this.onToken({type:'Punctuator',value:'`',start:c-1,end:n.end,
+      loc: {start: {line:this.li, column: this.col}, end: n.loc.end}});
 
   this.c = c;
   this.next(); // prepare the next token  

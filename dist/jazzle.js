@@ -1316,6 +1316,10 @@ this.readMultiComment = function () {
         c++;
         this.col += (c-start);
         this.c = c;
+        if (this.onComment_ !== null)
+          this.onComment(true,c0,{line:li0,column:col0},
+            this.c-2,{line:this.li,column:this.col-2});
+
         return n;
       }
       continue ;
@@ -1348,6 +1352,8 @@ this.readLineComment = function() {
   var c = this.c, l = this.src,
       e = l.length, r = -1;
 
+  var c0 = c+1, li0 = this.li, col0 = this.col;
+
   L:
   while ( c < e )
     switch (r = l.charCodeAt(c++ ) ) {
@@ -1365,11 +1371,33 @@ this.readLineComment = function() {
     }
 
    this.c=c;
+
+   if (this.onComment_ !== null)
+     this.onComment(false,c0,{line:li0,column:col0},
+       this.c,{line:this.li,column:this.col-1});
    return;
 };
 
 },
 function(){
+this.onComment = function(isBlock,c0,loc0,c,loc) {
+  var comment = this.onComment_,
+      value = this.src.substring(c0,c);
+
+  if (typeof comment === FUNCTION_TYPE) {
+    comment(isBlock,value,c0,c,loc0,loc);
+  }
+  else {
+    comment.push({
+      type: isBlock ? 'BlockComment' : 'LineComment',
+      value: value,
+      start: c0,
+      end: c,
+      loc: { start: loc0, end: loc }
+    });
+  }
+};
+
 this.onToken = function(token) {
   if (token === null) {
     var ttype = "", tval = "";
@@ -2348,7 +2376,7 @@ a('u.second.esc.not.u',{p:function(){this.col0++;}, cur0:'cur', m:'a \'u\' was e
 
 a('u.second.not.in.range',{p:function(){this.col0+=(this.c-this.extra);},cur0:'cur',col0:'col',m:'the second surrogate must be in range [0x0dc00, 0x0dfff]'});
 
-a('var.decl.neither.of.in',{m:'unexpected {parser.lttyp} -- but \'in\' or \'of\' would have been allowed'},'for (var [a] -= 12) break;');
+a('var.decl.neither.of.in',{m:'unexpected {parser.lttype}'},'var [a] -= 12');
 
 a('var.decl.not.=', {m:'Unexpected {parser.lttype} -- (maybe you mean \'=\'?)'},'var a -= l');
 
@@ -6262,6 +6290,11 @@ this.parseProgram = function () {
       n.tokens = this.onToken_;
   }
 
+  if (this.onComment_ !== null) {
+    if (typeof this.onComment_ !== FUNCTION_TYPE)
+      n.comments = this.onComment_;
+  }
+
   if ( !this.expectType_soft ('eof') &&
         this.err('program.unfinished') )
     return this.errorHandlerOutput ;
@@ -7470,6 +7503,9 @@ this . parseTemplateLiteral = function() {
       startColIndex = c ,
       ch = 0, elem = null;
  
+  if (this.onToken_ !== null)
+    this.onToken({type:'Punctuator',value:'`',start:startc,end:this.c,loc:startLoc});
+
   while ( c < len ) {
     ch = src.charCodeAt(c);
     if ( ch === CH_BACKTICK ) break; 
@@ -7487,9 +7523,11 @@ this . parseTemplateLiteral = function() {
               
               templStr.push(elem);
 
-              if (this.onToken_ !== null)
+              if (this.onToken_ !== null) {
                 this.onToken({type:'Template', value:elem.value.raw, start: elem.start, end: elem.end,
                   loc: elem.loc });
+                this.lttype = "";
+              }
 
               this.c = c + 2; // ${
               this.col += 2; // ${
@@ -7574,9 +7612,11 @@ this . parseTemplateLiteral = function() {
 
   templStr.push(elem);
 
-  if (this.onToken_ !== null)
+  if (this.onToken_ !== null) {
     this.onToken({type:'Template', value: elem.value.raw, start: elem.start, end: elem.end,
       loc: elem.loc});
+    this.lttype = "";
+  }
 
   c++; // backtick  
   this.col ++ ;
@@ -7585,6 +7625,10 @@ this . parseTemplateLiteral = function() {
        expressions: templExpressions , loc: { start: startLoc, end : this.loc() } /* ,y:-1*/};
 
   if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished',{extra:n}) ;
+
+  if (this.onToken_) 
+    this.onToken({type:'Punctuator',value:'`',start:c-1,end:n.end,
+      loc: {start: {line:this.li, column: this.col}, end: n.loc.end}});
 
   this.c = c;
   this.next(); // prepare the next token  

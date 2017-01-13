@@ -40,6 +40,11 @@ this.parseProgram = function () {
       n.tokens = this.onToken_;
   }
 
+  if (this.onComment_ !== null) {
+    if (typeof this.onComment_ !== FUNCTION_TYPE)
+      n.comments = this.onComment_;
+  }
+
   if ( !this.expectType_soft ('eof') &&
         this.err('program.unfinished') )
     return this.errorHandlerOutput ;

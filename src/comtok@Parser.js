@@ -1,3 +1,21 @@
+this.onComment = function(isBlock,c0,loc0,c,loc) {
+  var comment = this.onComment_,
+      value = this.src.substring(c0,c);
+
+  if (typeof comment === FUNCTION_TYPE) {
+    comment(isBlock,value,c0,c,loc0,loc);
+  }
+  else {
+    comment.push({
+      type: isBlock ? 'BlockComment' : 'LineComment',
+      value: value,
+      start: c0,
+      end: c,
+      loc: { start: loc0, end: loc }
+    });
+  }
+};
+
 this.onToken = function(token) {
   if (token === null) {
     var ttype = "", tval = "";

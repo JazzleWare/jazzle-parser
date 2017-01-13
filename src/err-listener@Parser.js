@@ -532,7 +532,7 @@ a('u.second.esc.not.u',{p:function(){this.col0++;}, cur0:'cur', m:'a \'u\' was e
 
 a('u.second.not.in.range',{p:function(){this.col0+=(this.c-this.extra);},cur0:'cur',col0:'col',m:'the second surrogate must be in range [0x0dc00, 0x0dfff]'});
 
-a('var.decl.neither.of.in',{m:'unexpected {parser.lttyp} -- but \'in\' or \'of\' would have been allowed'},'for (var [a] -= 12) break;');
+a('var.decl.neither.of.in',{m:'unexpected {parser.lttype}'},'var [a] -= 12');
 
 a('var.decl.not.=', {m:'Unexpected {parser.lttype} -- (maybe you mean \'=\'?)'},'var a -= l');
 
