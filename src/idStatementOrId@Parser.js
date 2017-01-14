@@ -169,7 +169,7 @@ this. parseIdStatementOrId = function ( context ) {
         this.err('await.in.strict');
       }
 
-      pendingExprHead = this.id();
+      pendingExprHead = this.suspys = this.id(); // async(e=await)=>l ;
       break SWITCH;
 
     case 'async':

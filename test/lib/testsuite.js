@@ -44,6 +44,9 @@ TestSuite.prototype.init = function(test) {
     test.parserOptions.onToken = [];
   }
 
+  if (test.json.comments)
+    test.parserOptions.onComment = [];
+
   test.parser = new this.parserFactory(test.source.value, test.parserOptions);
 };
 

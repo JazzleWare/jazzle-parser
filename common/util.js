@@ -201,7 +201,8 @@ mex.compareArray_ea = function(expected, actual, name, adjust) {
 
 mex.ej_adjust = function(e, j, name) {
   delete e.tokens; delete e. directive;
-  delete e.comments;
+  delete e.trailingComments;
+//delete e.comments;
   delete e.raw;
   delete e.errors; 
 

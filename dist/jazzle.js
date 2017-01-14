@@ -1389,7 +1389,7 @@ this.onComment = function(isBlock,c0,loc0,c,loc) {
   }
   else {
     comment.push({
-      type: isBlock ? 'BlockComment' : 'LineComment',
+      type: isBlock ? 'Block' : 'Line',
       value: value,
       start: c0,
       end: c,
@@ -1870,6 +1870,9 @@ this.onErr = function(errorType, errParams) {
   
 // TODO: find a way to squash it with normalize
 this.buildErrorInfo = function(builder, params) {
+  if (builder.preprocessor !== null)
+    builder.preprocessor.call(params);
+
   var errInfo = {
     messageTemplate: builder.messageTemplate,
     c: -1, li: -1, col: -1,
@@ -1928,9 +1931,6 @@ this.buildErrorInfo = function(builder, params) {
 
   errInfo.c0 = cur0.c; errInfo.li0 = cur0.loc.li; errInfo.col0 = cur0.loc.col;
   errInfo.c = cur.c; errInfo.li = cur.loc.li; errInfo.col = cur.loc.col;
-
-  if (builder.preprocessor !== null)
-    builder.preprocessor.call(errInfo);
 
   return errInfo;
 };
@@ -2266,7 +2266,7 @@ a('obj.proto.has.dup',{m:'can not have more than a  single property in the form 
 
 a('obj.unfinished',{m:'unfinished object literal: a } was expected; got {parser.lttype}'},'({e: a 12)');
 
-a('param.has.yield.or.super',{m:'{tn.type} isn\'t allowed to appear in this context'},'function* l() { ([a]=[yield])=>12; }');
+a('param.has.yield.or.super',{p:function(){if(this.tn !== null && this.tn.type === 'Identifier') this.tn = {type:'AwaitExpression',start:this.tn.start,loc:this.tn.loc,end:this.tn.end,argument:null};},m:'{tn.type} isn\'t allowed to appear in this context'},'function* l() { ([a]=[yield])=>12; }');
 
 a('paren.unbindable',{m:'unexpected ) -- bindings should not have parentheses around them, neither should non-simple assignment-patterns'},'([(a)])=>12', '[a,b,e,([l])]=12');
 
@@ -3417,7 +3417,7 @@ this. parseIdStatementOrId = function ( context ) {
         this.err('await.in.strict');
       }
 
-      pendingExprHead = this.id();
+      pendingExprHead = this.suspys = this.id(); // async(e=await)=>l ;
       break SWITCH;
 
     case 'async':

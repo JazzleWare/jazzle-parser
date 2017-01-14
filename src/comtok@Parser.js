@@ -7,7 +7,7 @@ this.onComment = function(isBlock,c0,loc0,c,loc) {
   }
   else {
     comment.push({
-      type: isBlock ? 'BlockComment' : 'LineComment',
+      type: isBlock ? 'Block' : 'Line',
       value: value,
       start: c0,
       end: c,
