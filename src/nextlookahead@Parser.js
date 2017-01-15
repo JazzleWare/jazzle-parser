@@ -53,6 +53,9 @@ this.next = function () {
          this.ltraw = '*';
          c++ ;
          if ( l.charCodeAt(c) === peek) {
+           if (this.v <= 5)
+             this.err('ver.**');
+
            this.ltraw = '**';
            this.prec = PREC_EX;
            c++ ;
@@ -439,7 +442,7 @@ this.skipS = function() {
             continue;
 
          case CH_LESS_THAN:
-            if ( this.isScript &&
+            if ( this.v > 5 && this.isScript &&
                  l.charCodeAt(c+1) === CH_EXCLAMATION &&
                  l.charCodeAt(c+2) === CH_MIN &&
                  l.charCodeAt(c+ 1 + 2) === CH_MIN ) {
@@ -454,7 +457,7 @@ this.skipS = function() {
             return ;
  
          case CH_MIN:
-            if ( (!noNewLine || startOffset === 0) &&
+            if (this.v > 5 && (!noNewLine || startOffset === 0) &&
                  this.isScript &&
                  l.charCodeAt(c+1) === CH_MIN && l.charCodeAt(c+2) === CH_GREATER_THAN ) {
                this.c = c + 1 + 2;
