@@ -2818,7 +2818,7 @@ this.parseFor = function() {
       break;
 
     case 'let':
-      if ( this.v >= 5 ) {
+      if ( this.v > 5 ) {
         this.canBeStatement = true;
         head = this.parseLet(CTX_FOR);
       }
@@ -3294,7 +3294,7 @@ this. parseIdStatementOrId = function ( context ) {
       this.resvchk(); this.kw();
       return this.parseTryStatement();
     case 'let':
-      if ( this.canBeStatement && this.v >= 5 )
+      if ( this.canBeStatement && this.v > 5 )
         return this.parseLet(CTX_NONE);
 
       if (this.tight) this.err('strict.let.is.id');

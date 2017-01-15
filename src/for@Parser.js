@@ -29,7 +29,7 @@ this.parseFor = function() {
       break;
 
     case 'let':
-      if ( this.v >= 5 ) {
+      if ( this.v > 5 ) {
         this.canBeStatement = true;
         head = this.parseLet(CTX_FOR);
       }
