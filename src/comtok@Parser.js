@@ -1,6 +1,8 @@
 this.onComment = function(isBlock,c0,loc0,c,loc) {
   var comment = this.onComment_,
-      value = this.src.substring(c0,c);
+      value = isBlock ?
+        this.src.substring(c0+2,c-2) :
+        this.src.substring(c0,c);
 
   if (typeof comment === FUNCTION_TYPE) {
     comment(isBlock,value,c0,c,loc0,loc);

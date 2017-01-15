@@ -1317,8 +1317,8 @@ this.readMultiComment = function () {
         this.col += (c-start);
         this.c = c;
         if (this.onComment_ !== null)
-          this.onComment(true,c0,{line:li0,column:col0},
-            this.c-2,{line:this.li,column:this.col-2});
+          this.onComment(true,c0-2,{line:li0,column:col0-2},
+            this.c,{line:this.li,column:this.col});
 
         return n;
       }
@@ -1373,7 +1373,7 @@ this.readLineComment = function() {
    this.c=c;
 
    if (this.onComment_ !== null)
-     this.onComment(false,c0,{line:li0,column:col0},
+     this.onComment(false,c0-2,{line:li0,column:col0},
        this.c,{line:this.li,column:this.col-1});
    return;
 };
@@ -1382,7 +1382,9 @@ this.readLineComment = function() {
 function(){
 this.onComment = function(isBlock,c0,loc0,c,loc) {
   var comment = this.onComment_,
-      value = this.src.substring(c0,c);
+      value = isBlock ?
+        this.src.substring(c0+2,c-2) :
+        this.src.substring(c0,c);
 
   if (typeof comment === FUNCTION_TYPE) {
     comment(isBlock,value,c0,c,loc0,loc);
@@ -5969,11 +5971,11 @@ this.parseRestElement = function() {
    var startc = this.c0,
        startLoc = this.locBegin();
 
+   this.next ();
    if ( this.v < 7 && this.lttype !== 'Identifier' ) {
       this.err('rest.binding.arg.peek.is.not.id');
    }
 
-   this.next ();
    var e = this.parsePattern();
 
    if (!e) {

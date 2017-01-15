@@ -159,11 +159,11 @@ this.parseRestElement = function() {
    var startc = this.c0,
        startLoc = this.locBegin();
 
+   this.next ();
    if ( this.v < 7 && this.lttype !== 'Identifier' ) {
       this.err('rest.binding.arg.peek.is.not.id');
    }
 
-   this.next ();
    var e = this.parsePattern();
 
    if (!e) {
