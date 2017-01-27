@@ -2142,6 +2142,8 @@ a('obj.proto.has.dup',{m:'can not have more than a  single property in the form 
 
 a('obj.unfinished',{m:'unfinished object literal: a } was expected; got {parser.lttype}'},'({e: a 12)');
 
+a('unexpected.lookahead',{m:'unexpected {parser.lttype}'},'-- -a');
+
 
 },
 function(){
@@ -5104,6 +5106,8 @@ this.parseUpdateExpression = function(arg, context) {
     loc = this.locOn(2);
     this.next() ;
     arg = this.parseExprHead(context & CTX_FOR);
+    if (arg === null)
+      this.err('unexpected.lookahead');
 
     if (!this.ensureSimpAssig_soft(core(arg)))
       this.err('incdec.pre.not.simple.assig',{tn:core(arg)});

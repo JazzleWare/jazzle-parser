@@ -417,3 +417,5 @@ a('obj.proto.has.dup',{m:'can not have more than a  single property in the form 
 
 a('obj.unfinished',{m:'unfinished object literal: a } was expected; got {parser.lttype}'},'({e: a 12)');
 
+a('unexpected.lookahead',{m:'unexpected {parser.lttype}'},'-- -a');
+

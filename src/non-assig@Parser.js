@@ -99,6 +99,8 @@ this.parseUpdateExpression = function(arg, context) {
     loc = this.locOn(2);
     this.next() ;
     arg = this.parseExprHead(context & CTX_FOR);
+    if (arg === null)
+      this.err('unexpected.lookahead');
 
     if (!this.ensureSimpAssig_soft(core(arg)))
       this.err('incdec.pre.not.simple.assig',{tn:core(arg)});
