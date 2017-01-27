@@ -28,5 +28,19 @@ Test.prototype.setResult = function(result, rtype) {
   this.resultType = rtype;
 };
 
+Test.prototype.getSettings = function() {
+  var str = "";
+  if (this.isModule()) str += 'module';
+
+  if (this.json.tokens) str += ':tokens.sub';
+  else if (this.jsonMode === 'token') str += ':token.main';
+
+  if (this.json.comments) str += ':comments';
+
+  if (this.isFail()) str += ':fail';
+
+  return str;
+};
+
 {module.exports.Test = Test;}
 

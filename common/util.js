@@ -327,4 +327,21 @@ mex.toBytes = function(str) {
   return bytes;
 };
 
+mex.prog_adjust = function(e, parser) {
+  if (e.type !== 'Program') {
+    return;
+  }
+  if (e.range) {
+    e.range[0] = 0;
+    e.range[1] = parser.src.length;
+  }
+  if (e.loc) {
+    e.loc.start.line = 1;
+    e.loc.end.line = parser.li;
+    e.loc.start.column = 0;
+    e.loc.end.column = parser.col;
+  }
+
+};
+
 })(module.exports);

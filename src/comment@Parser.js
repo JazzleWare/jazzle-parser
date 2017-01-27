@@ -47,7 +47,7 @@ this.readLineComment = function() {
   var c = this.c, l = this.src,
       e = l.length, r = -1;
 
-  var c0 = c+1, li0 = this.li, col0 = this.col;
+  var c0 = c+1, li0 = this.li, col0 = this.col, li = -1, col = -1;
 
   L:
   while ( c < e )
@@ -58,6 +58,8 @@ this.readLineComment = function() {
     case CH_LINE_FEED :
     case 0x2028:
     case 0x2029 :
+      col = this.col;
+      li = this.li;
       this.col = 0 ;
       this.li++;
       break L;
@@ -67,8 +69,11 @@ this.readLineComment = function() {
 
    this.c=c;
 
-   if (this.onComment_ !== null)
+   if (this.onComment_ !== null) {
+     if (li === -1) { li = this.li; col = this.col; }
      this.onComment(false,c0-2,{line:li0,column:col0},
-       this.c,{line:this.li,column:this.col-1});
+       this.c,{line:li,column:col+(c-c0)+2});
+   }
+
    return;
 };

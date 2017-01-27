@@ -91,6 +91,7 @@ TestSuite.prototype.runTest = function(test) {
   if (test.isFail())
     return this.notify('pass', 'contrary', test);
 
+  util.prog_adjust(test.json, test.parser);
   comp = util.compare_ea(test.json, test.result, null, util.ej_adjust);
   test.comp = comp;
 

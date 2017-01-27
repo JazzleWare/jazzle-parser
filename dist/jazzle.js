@@ -1352,7 +1352,7 @@ this.readLineComment = function() {
   var c = this.c, l = this.src,
       e = l.length, r = -1;
 
-  var c0 = c+1, li0 = this.li, col0 = this.col;
+  var c0 = c+1, li0 = this.li, col0 = this.col, li = -1, col = -1;
 
   L:
   while ( c < e )
@@ -1363,6 +1363,8 @@ this.readLineComment = function() {
     case CH_LINE_FEED :
     case 0x2028:
     case 0x2029 :
+      col = this.col;
+      li = this.li;
       this.col = 0 ;
       this.li++;
       break L;
@@ -1372,9 +1374,12 @@ this.readLineComment = function() {
 
    this.c=c;
 
-   if (this.onComment_ !== null)
+   if (this.onComment_ !== null) {
+     if (li === -1) { li = this.li; col = this.col; }
      this.onComment(false,c0-2,{line:li0,column:col0},
-       this.c,{line:this.li,column:this.col-1});
+       this.c,{line:li,column:col+(c-c0)+2});
+   }
+
    return;
 };
 
@@ -1384,7 +1389,7 @@ this.onComment = function(isBlock,c0,loc0,c,loc) {
   var comment = this.onComment_,
       value = isBlock ?
         this.src.substring(c0+2,c-2) :
-        this.src.substring(c0,c);
+        this.src.substring(c0+2,c);
 
   if (typeof comment === FUNCTION_TYPE) {
     comment(isBlock,value,c0,c,loc0,loc);
@@ -6271,24 +6276,19 @@ this.parseProgram = function () {
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
   var list = this.blck(); 
- 
-  var endLoc = null;
-  if (list.length) {
-    var firstStatement = list[0];
-    startc = firstStatement.start;
-    startLoc = firstStatement.loc.start;    
-
-    var lastStatement = list[ list.length - 1 ];
-    endI = lastStatement.end;
-    endLoc = lastStatement.loc.end;
-  }
-  else {
-    endLoc = startLoc = { line: 0, column: 0 };
-  }
         
   alwaysResolveInTheParentScope(this.scope);
-  var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
-           loc: { start: startLoc, end: endLoc } };
+  var n = {
+    type: 'Program',
+    body: list,
+    start: 0,
+    end: this.src.length,
+    sourceType: !this.isScript ? "module" : "script" ,
+    loc: {
+      start: {line: li, column: col},
+      end: {line: this.li, column: this.col}
+    }
+  };
 
   if (this.onToken_ !== null) {
     if (typeof this.onToken_ !== FUNCTION_TYPE)
