@@ -1317,7 +1317,7 @@ this.readMultiComment = function () {
         this.col += (c-start);
         this.c = c;
         if (this.onComment_ !== null)
-          this.onComment(true,c0-2,{line:li0,column:col0-2},
+          this.onComment(true,c0,{line:li0,column:col0},
             this.c,{line:this.li,column:this.col});
 
         return n;
@@ -1352,7 +1352,7 @@ this.readLineComment = function() {
   var c = this.c, l = this.src,
       e = l.length, r = -1;
 
-  var c0 = c+1, li0 = this.li, col0 = this.col, li = -1, col = -1;
+  var c0 = c, li0 = this.li, col0 = this.col, li = -1, col = -1;
 
   L:
   while ( c < e )
@@ -1376,8 +1376,8 @@ this.readLineComment = function() {
 
    if (this.onComment_ !== null) {
      if (li === -1) { li = this.li; col = this.col; }
-     this.onComment(false,c0-2,{line:li0,column:col0},
-       this.c,{line:li,column:col+(c-c0)+2});
+     this.onComment(false,c0,{line:li0,column:col0},
+       this.c,{line:li,column:col+(c-c0)});
    }
 
    return;
@@ -1386,10 +1386,37 @@ this.readLineComment = function() {
 },
 function(){
 this.onComment = function(isBlock,c0,loc0,c,loc) {
+  var start_comment = -1, end_comment = -1;
+  var start_val = -1, end_val = -1;
+  if (isBlock) {
+    start_comment = c0 - 2; end_comment = c;
+    start_val = c0; end_val = c - 2;
+    loc0.column -= 2;
+  }
+  else {
+    var stepBack = -1;
+    switch (this.src.charCodeAt(c0-1)) {
+    case CH_DIV: // i.e, // comment
+      stepBack = 2;
+      break;
+    case CH_GREATER_THAN: // i.e, --> comment
+      stepBack = 1 + 2;
+      break;
+    case CH_MIN: // i.e, <!-- comment
+      stepBack = 2 + 2;
+      break;
+    }
+
+    start_comment = c0 - stepBack;
+    end_comment = c;
+    start_val = c0;
+    end_val = c;
+    loc0.column -= stepBack;
+  
+  }
+
   var comment = this.onComment_,
-      value = isBlock ?
-        this.src.substring(c0+2,c-2) :
-        this.src.substring(c0+2,c);
+      value = this.src.substring(start_val,end_val);
 
   if (typeof comment === FUNCTION_TYPE) {
     comment(isBlock,value,c0,c,loc0,loc);
@@ -1398,8 +1425,8 @@ this.onComment = function(isBlock,c0,loc0,c,loc) {
     comment.push({
       type: isBlock ? 'Block' : 'Line',
       value: value,
-      start: c0,
-      end: c,
+      start: start_comment,
+      end: end_comment,
       loc: { start: loc0, end: loc }
     });
   }
@@ -5233,109 +5260,112 @@ this . opGrea = function()   {
 };
 
 this.skipS = function() {
-     var noNewLine = true,
-         startOffset = this.c,
-         c = this.c,
-         l = this.src,
-         e = l.length,
-         start = c;
+  var noNewLine = true,
+      startOffset = this.c,
+      c = this.c,
+      l = this.src,
+      e = l.length,
+      start = c;
 
-     while ( c < e ) {
-       switch ( l.charCodeAt ( c ) ) {
-         case CH_WHITESPACE :
-             while ( ++c < e &&  l.charCodeAt(c) === CH_WHITESPACE );
-             continue ;
-         case CH_CARRIAGE_RETURN : if ( CH_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
-         case CH_LINE_FEED :
-            if ( noNewLine ) noNewLine = false ;
-            start = ++ c ;
-            this.li ++ ;
-            this.col = ( 0)
-            continue ;
+  while ( c < e ) {
+    switch ( l.charCodeAt ( c ) ) {
+    case CH_WHITESPACE :
+      while ( ++c < e &&  l.charCodeAt(c) === CH_WHITESPACE );
+      continue ;
+    case CH_CARRIAGE_RETURN : if ( CH_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
+    case CH_LINE_FEED :
+      if ( noNewLine ) noNewLine = false ;
+      start = ++ c ;
+      this.li ++ ;
+      this.col = ( 0)
+      continue ;
 
-         case CH_VTAB:
-         case CH_TAB:
-         case CH_FORM_FEED: c++ ; continue ;  
+    case CH_VTAB:
+    case CH_TAB:
+    case CH_FORM_FEED: c++ ; continue ;  
 
-         case CH_DIV:
-             switch ( l.charCodeAt ( c + ( 1) ) ) {
-                 case CH_DIV:
-                     c ++ ;
-                     this.c=c;
-                     this.readLineComment () ;
-                     if ( noNewLine ) noNewLine = false ;
-                     start = c = this.c ;
-                     continue ;
+    case CH_DIV:
+      switch ( l.charCodeAt ( c + ( 1) ) ) {
+      case CH_DIV:
+        c += 2;
+        this.col += (c-start) ;
+        this.c=c;
+        this.readLineComment () ;
+        if (noNewLine) noNewLine = false ;
+        start = c = this.c ;
+        continue ;
 
-                 case CH_MUL:
-                   c +=  2 ;
-                   this.col += (c-start ) ;
-                   this.c = c ;
-                   noNewLine = this. readMultiComment () && noNewLine ;
-                   start = c = this.c ;
-                   continue ;
+      case CH_MUL:
+        c += 2;
+        this.col += (c-start) ;
+        this.c = c ;
+        noNewLine = this. readMultiComment () && noNewLine ;
+        start = c = this.c ;
+        continue ;
 
-                 default:
-                     this.c0 = c;
-                     this.col0 = this.col + (c-start);
-                     this.li0 = this.li;
-                     c++ ;
-                     this.nl = ! noNewLine ;
-                     this.col += (c-start ) ;
-                     this.c=c ;
-                     this.prec  = 0xAD ;
-                     this.lttype =  '/';
-                     this.ltraw = '/' ;
-                     return true;
-             }
+      default:
+        this.c0 = c;
+        this.col0 = this.col + (c-start);
+        this.li0 = this.li;
+        c++ ;
+        this.nl = ! noNewLine ;
+        this.col += (c-start) ;
+        this.c=c ;
+        this.prec  = 0xAD ;
+        this.lttype =  '/';
+        this.ltraw = '/' ;
+        return true;
+      }
 
-         case 0x0020:case 0x00A0:case 0x1680:case 0x2000:
-         case 0x2001:case 0x2002:case 0x2003:case 0x2004:
-         case 0x2005:case 0x2006:case 0x2007:case 0x2008:
-         case 0x2009:case 0x200A:case 0x202F:case 0x205F:
-         case 0x3000:case 0xFEFF: c ++ ; continue ;
+    case 0x0020:case 0x00A0:case 0x1680:case 0x2000:
+    case 0x2001:case 0x2002:case 0x2003:case 0x2004:
+    case 0x2005:case 0x2006:case 0x2007:case 0x2008:
+    case 0x2009:case 0x200A:case 0x202F:case 0x205F:
+    case 0x3000:case 0xFEFF: c ++ ; continue ;
 
-         case 0x2028:
-         case 0x2029:
-            if ( noNewLine ) noNewLine = false ;
-            start = ++c ;
-            this.col = 0 ;
-            this.li ++ ;
-            continue;
+    case 0x2028:
+    case 0x2029:
+      if ( noNewLine ) noNewLine = false ;
+      start = ++c ;
+      this.col = 0 ;
+      this.li ++ ;
+      continue;
 
-         case CH_LESS_THAN:
-            if ( this.v > 5 && this.isScript &&
-                 l.charCodeAt(c+1) === CH_EXCLAMATION &&
-                 l.charCodeAt(c+2) === CH_MIN &&
-                 l.charCodeAt(c+ 1 + 2) === CH_MIN ) {
-               this.c = c + 4;
-               this.readLineComment();
-               c = this.c;
-               continue;
-            }
-            this.col += (c-start ) ;
-            this.c=c;
-            this.nl = !noNewLine ;
-            return ;
+    case CH_LESS_THAN:
+      if ( this.v > 5 && this.isScript &&
+        l.charCodeAt(c+1) === CH_EXCLAMATION &&
+        l.charCodeAt(c+2) === CH_MIN &&
+        l.charCodeAt(c+1+2) === CH_MIN
+      ) {
+        this.c = c + 4;
+        this.col += (this.c-start) ;
+        this.readLineComment();
+        c = this.c;
+        continue;
+      }
+      this.col += (c-start ) ;
+      this.c=c;
+      this.nl = !noNewLine ;
+      return ;
  
-         case CH_MIN:
-            if (this.v > 5 && (!noNewLine || startOffset === 0) &&
-                 this.isScript &&
-                 l.charCodeAt(c+1) === CH_MIN && l.charCodeAt(c+2) === CH_GREATER_THAN ) {
-               this.c = c + 1 + 2;
-               this.readLineComment();
-               c = this.c;
-               continue;
-            }
+    case CH_MIN:
+      if (this.v > 5 && (!noNewLine || startOffset === 0) &&
+           this.isScript &&
+           l.charCodeAt(c+1) === CH_MIN && l.charCodeAt(c+2) === CH_GREATER_THAN ) {
+        this.c = c + 1 + 2;
+        this.col += (this.c-start) ;
+        this.readLineComment();
+        c = this.c;
+        continue;
+      }
   
-         default :
-   
-            this.col += (c-start ) ;
-            this.c=c;
-            this.nl = !noNewLine ;
-            return ;
-       }
-     }
+    default :
+      this.col += (c-start ) ;
+      this.c=c;
+      this.nl = !noNewLine ;
+      return ;
+    }
+  }
 
   this.col += (c-start ) ;
   this.c = c ;

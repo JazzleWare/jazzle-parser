@@ -203,11 +203,19 @@ mex.ej_adjust = function(e, j, name) {
   delete e.tokens; delete e. directive;
   delete e.trailingComments; delete e.leadingComments;
 //delete e.comments;
+  delete e.innerComments;
   delete e.raw;
   delete e.errors; 
 
   delete j.y; delete j.scope;
   delete j.tokens;
+
+  if (j.type === 'Line') {
+    if (j.value[j.value.length-1]==='\n') {
+      j.value = j.value.substring(0, j.value.length-1);
+      j.end -= 1;
+    }
+  }
 
   if (j.regex) {
     mex.assert(

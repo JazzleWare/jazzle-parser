@@ -12,7 +12,7 @@ this.readMultiComment = function () {
         this.col += (c-start);
         this.c = c;
         if (this.onComment_ !== null)
-          this.onComment(true,c0-2,{line:li0,column:col0-2},
+          this.onComment(true,c0,{line:li0,column:col0},
             this.c,{line:this.li,column:this.col});
 
         return n;
@@ -47,7 +47,7 @@ this.readLineComment = function() {
   var c = this.c, l = this.src,
       e = l.length, r = -1;
 
-  var c0 = c+1, li0 = this.li, col0 = this.col, li = -1, col = -1;
+  var c0 = c, li0 = this.li, col0 = this.col, li = -1, col = -1;
 
   L:
   while ( c < e )
@@ -71,8 +71,8 @@ this.readLineComment = function() {
 
    if (this.onComment_ !== null) {
      if (li === -1) { li = this.li; col = this.col; }
-     this.onComment(false,c0-2,{line:li0,column:col0},
-       this.c,{line:li,column:col+(c-c0)+2});
+     this.onComment(false,c0,{line:li0,column:col0},
+       this.c,{line:li,column:col+(c-c0)});
    }
 
    return;

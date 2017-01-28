@@ -1,8 +1,35 @@
 this.onComment = function(isBlock,c0,loc0,c,loc) {
+  var start_comment = -1, end_comment = -1;
+  var start_val = -1, end_val = -1;
+  if (isBlock) {
+    start_comment = c0 - 2; end_comment = c;
+    start_val = c0; end_val = c - 2;
+    loc0.column -= 2;
+  }
+  else {
+    var stepBack = -1;
+    switch (this.src.charCodeAt(c0-1)) {
+    case CH_DIV: // i.e, // comment
+      stepBack = 2;
+      break;
+    case CH_GREATER_THAN: // i.e, --> comment
+      stepBack = 1 + 2;
+      break;
+    case CH_MIN: // i.e, <!-- comment
+      stepBack = 2 + 2;
+      break;
+    }
+
+    start_comment = c0 - stepBack;
+    end_comment = c;
+    start_val = c0;
+    end_val = c;
+    loc0.column -= stepBack;
+  
+  }
+
   var comment = this.onComment_,
-      value = isBlock ?
-        this.src.substring(c0+2,c-2) :
-        this.src.substring(c0+2,c);
+      value = this.src.substring(start_val,end_val);
 
   if (typeof comment === FUNCTION_TYPE) {
     comment(isBlock,value,c0,c,loc0,loc);
@@ -11,8 +38,8 @@ this.onComment = function(isBlock,c0,loc0,c,loc) {
     comment.push({
       type: isBlock ? 'Block' : 'Line',
       value: value,
-      start: c0,
-      end: c,
+      start: start_comment,
+      end: end_comment,
       loc: { start: loc0, end: loc }
     });
   }

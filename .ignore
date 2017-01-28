@@ -72,3 +72,11 @@ test/test-esprima/fixtures/es2017/async/functions/async-if-await
 test/test-esprima/fixtures/es2017/async/functions/async-if
 #test/test-esprima/fixtures/ES6/binding-pattern/array-pattern/var_let_array #let is an actual id
 #test/test-esprima/fixtures/ES6/class/migrated_0009 # static
+test/test-esprima/fixtures/comment/migrated_0017
+test/test-esprima/fixtures/comment/migrated_0018
+test/test-esprima/fixtures/comment/migrated_0019
+test/test-esprima/fixtures/comment/migrated_0020
+test/test-esprima/fixtures/comment/migrated_0021
+test/test-esprima/fixtures/comment/migrated_0026
+test/test-esprima/fixtures/comment/migrated_0027
+test/test-esprima/fixtures/comment/migrated_0028

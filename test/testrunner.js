@@ -29,7 +29,7 @@ function runTests(parserFactory, testRoot) {
   testSuite.listener = listener;
 
   testSuite.ignore('.tolerant', function(test) { return test.uri.indexOf('tolerant') !== -1 });
-  testSuite.ignore('.comments', function(test) { return test.json.comments });
+//testSuite.ignore('.comments', function(test) { return test.json.comments });
   testSuite.ignore('.lineNumber', function(test) { return false && test.json.hasOwnProperty('lineNumber') });
   testSuite.ignore('.js.xml', function(test) { return test.uri.indexOf('JSX') !== -1 });
   testSuite.ignore('.tokens',function(test) { return test.jsonMode === 'token' });
