@@ -144,6 +144,9 @@ TestSuite.prototype.loadTestJSON = function(test) {
 
   test.json = JSON.parse(jsonContents);
   test.jsonMode = jsonMode;
+
+  if (jsonMode === 'token')
+    test.json = util.clearComments(test.json);
 };
 
 TestSuite.prototype.findIgnorer = function(test) {

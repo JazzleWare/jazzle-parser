@@ -28,7 +28,8 @@ this.parseVariableDeclaration = function(context) {
     if (this.hasDeclarator()) {
       if (!(this.scopeFlags & SCOPE_FLAG_IN_BLOCK))
         this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
-      if (kind === 'let' && this.onToken_ !== null)
+      if (kind === 'let' && this.onToken_ !== null &&
+         (this.lttype !== 'Identifier' || this.ltval !== 'in'))
         this.onToken_kw(startc,startLoc,'let');
     }
   }

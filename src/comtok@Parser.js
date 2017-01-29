@@ -57,6 +57,7 @@ this.onToken = function(token) {
       tval = this.ltraw;
       break;
 
+    case 'yield':
     case 'Keyword':
       ttype = 'Keyword';
       tval = this.ltval;

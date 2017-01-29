@@ -1189,6 +1189,10 @@ this. parseClass = function(context) {
     isStmt = true;
     this.canBeStatement = false;
   }
+
+  if (this.onToken_ !== null)
+    this.lttype = 'Keyword';
+
   this.next(); // 'class'
 
   var prevStrict = this.tight;
@@ -1444,6 +1448,7 @@ this.onToken = function(token) {
       tval = this.ltraw;
       break;
 
+    case 'yield':
     case 'Keyword':
       ttype = 'Keyword';
       tval = this.ltval;
@@ -1643,7 +1648,12 @@ this.parseExport = function() {
   var context = CTX_NONE;
 
   if ( this.lttype === 'Identifier' && 
-       this.ltval === 'default' ) { context = CTX_DEFAULT; this.next(); }
+       this.ltval === 'default' ) {
+    context = CTX_DEFAULT;
+    if (this.onToken_ !== null)
+      this.lttype = 'Keyword';
+    this.next();
+  }
   
   if ( this.lttype === 'Identifier' ) {
       switch ( this.ltval ) {
@@ -3122,6 +3132,7 @@ this.parseFunc = function(context, flags) {
   var cfn = null;
 
   if (isWhole) { 
+    this.kw();
     this.next();
     if (this.lttype === 'op' && this.ltraw === '*') {
       if (this.v <= 5)
@@ -7532,15 +7543,16 @@ this . parseTemplateLiteral = function() {
   var startc = this.c - 1, startLoc = this.locOn(1);
   var c = this.c, src = this.src, len = src.length;
   var templStr = [], templExpressions = [];
-  var startElemFragment = c, // an element's content might get fragmented by an esc appearing in it, e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
-      startElem = c,
+  
+  // an element's content might get fragmented by an esc appearing in it,
+  // e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
+  var startElemFragment = c; 
+
+  var startElem = c,
       currentElemContents = "",
       startColIndex = c ,
       ch = 0, elem = null;
  
-  if (this.onToken_ !== null)
-    this.onToken({type:'Punctuator',value:'`',start:startc,end:this.c,loc:startLoc});
-
   while ( c < len ) {
     ch = src.charCodeAt(c);
     if ( ch === CH_BACKTICK ) break; 
@@ -7559,8 +7571,15 @@ this . parseTemplateLiteral = function() {
               templStr.push(elem);
 
               if (this.onToken_ !== null) {
-                this.onToken({type:'Template', value:elem.value.raw, start: elem.start, end: elem.end,
-                  loc: elem.loc });
+                var loc = elem.loc;
+                this.onToken({
+                  type:'Template', value: (templStr.length !== 1 ? '}' : '`') + elem.value.raw + '${',
+                  start: elem.start - 1, end: elem.end + 2,
+                  loc: {
+                    start: { line: loc.start.line, column: loc.start.column - 1 },
+                    end: { line: loc.end.line, column: loc.end.column + 2 }
+                  }
+                });
                 this.lttype = "";
               }
 
@@ -7648,8 +7667,14 @@ this . parseTemplateLiteral = function() {
   templStr.push(elem);
 
   if (this.onToken_ !== null) {
-    this.onToken({type:'Template', value: elem.value.raw, start: elem.start, end: elem.end,
-      loc: elem.loc});
+    this.onToken({
+      type:'Template', value: (templStr.length !== 1 ? '}' : '`')+elem.value.raw+'`',
+      start: elem.start-1, end: elem.end+1,
+      loc: {
+        start: { line: elem.loc.start.line, column: elem.loc.start.column-1 },
+        end: { line: elem.loc.end.line, column: elem.loc.end.column+1 }
+      }    
+    });
     this.lttype = "";
   }
 
@@ -7660,10 +7685,6 @@ this . parseTemplateLiteral = function() {
        expressions: templExpressions , loc: { start: startLoc, end : this.loc() } /* ,y:-1*/};
 
   if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished',{extra:n}) ;
-
-  if (this.onToken_) 
-    this.onToken({type:'Punctuator',value:'`',start:c-1,end:n.end,
-      loc: {start: {line:this.li, column: this.col}, end: n.loc.end}});
 
   this.c = c;
   this.next(); // prepare the next token  
@@ -7851,7 +7872,8 @@ this.parseVariableDeclaration = function(context) {
     if (this.hasDeclarator()) {
       if (!(this.scopeFlags & SCOPE_FLAG_IN_BLOCK))
         this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
-      if (kind === 'let' && this.onToken_ !== null)
+      if (kind === 'let' && this.onToken_ !== null &&
+         (this.lttype !== 'Identifier' || this.ltval !== 'in'))
         this.onToken_kw(startc,startLoc,'let');
     }
   }

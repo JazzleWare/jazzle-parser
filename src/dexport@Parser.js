@@ -133,7 +133,12 @@ this.parseExport = function() {
   var context = CTX_NONE;
 
   if ( this.lttype === 'Identifier' && 
-       this.ltval === 'default' ) { context = CTX_DEFAULT; this.next(); }
+       this.ltval === 'default' ) {
+    context = CTX_DEFAULT;
+    if (this.onToken_ !== null)
+      this.lttype = 'Keyword';
+    this.next();
+  }
   
   if ( this.lttype === 'Identifier' ) {
       switch ( this.ltval ) {

@@ -12,6 +12,10 @@ this. parseClass = function(context) {
     isStmt = true;
     this.canBeStatement = false;
   }
+
+  if (this.onToken_ !== null)
+    this.lttype = 'Keyword';
+
   this.next(); // 'class'
 
   var prevStrict = this.tight;
