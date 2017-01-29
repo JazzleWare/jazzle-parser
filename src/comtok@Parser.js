@@ -77,6 +77,8 @@ this.onToken = function(token) {
     case 'Identifier':
       ttype = 'Identifier';
       tval = this.ltraw;
+      if (this.tight && tval === 'static')
+        ttype = 'Keyword' ;
       break;
 
     case 'Boolean':
@@ -95,6 +97,11 @@ this.onToken = function(token) {
       loc: {
         start: { line: this.li0, column: this.col0 },
         end: { line: this.li, column: this.col } } };
+  }
+  else {
+    if (token.type === 'Identifier' &&
+       token.value === 'static')
+      token.type = 'Keyword';
   }
 
   var onToken_ = this.onToken_;

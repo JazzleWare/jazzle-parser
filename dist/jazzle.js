@@ -1468,6 +1468,8 @@ this.onToken = function(token) {
     case 'Identifier':
       ttype = 'Identifier';
       tval = this.ltraw;
+      if (this.tight && tval === 'static')
+        ttype = 'Keyword' ;
       break;
 
     case 'Boolean':
@@ -1486,6 +1488,11 @@ this.onToken = function(token) {
       loc: {
         start: { line: this.li0, column: this.col0 },
         end: { line: this.li, column: this.col } } };
+  }
+  else {
+    if (token.type === 'Identifier' &&
+       token.value === 'static')
+      token.type = 'Keyword';
   }
 
   var onToken_ = this.onToken_;
@@ -6530,7 +6537,8 @@ this.parseRegExpLiteral = function() {
      this.col += (c-this.c);
      var regex = { type: 'Literal', regex: { pattern: patternString, flags: flagsString },
                    start: startc, end: c,
-                   value: val, loc: { start: startLoc, end: this.loc() } };
+                   value: val, loc: { start: startLoc, end: this.loc() }, 
+                   raw: this.src.substring(startc, c) };
      this.c = c;
 
      if (this.onToken_ !== null) {

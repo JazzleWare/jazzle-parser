@@ -199,41 +199,6 @@ mex.compareArray_ea = function(expected, actual, name, adjust) {
   return comp;
 };
 
-function readTemplate(from, i, to) {
-  i++;
-  var templStr = null, first = i;
-  while (i < from.length) {
-    var elem = from[i];
-    if (elem.type === 'Template') {
-      templStr = newTemplateStr();
-      templStr.value = i !== first ? '}' : '`';
-      templStr.value += elem.value;
-      templStr.start = elem.start - 1;
-      templStr.loc.start.column = elem.loc.start.column - 1;
-      ++i;
-      elem = from[i];
-      if (elem.type === 'Punctuator' && elem.value === '`') {
-        if (from.length <= i+1 && from[i+1].type !== 'Template') {
-          templStr.value += '`';
-          to.push(templStr);
-          return i+1;
-        }
-      }
-    }
-
-    templStr.value += '${';
-    templStr.end += 2;
-    templStr.loc.end.column += 2;
-    to.push(templStr);
-    if (elem.type === 'Punctuator' && elem.value === '`')
-      i = mex.readTemplate(from, i, to);
-    else {
-      to.push(elem);
-      i++;
-    }
-  }
-};
-
 mex.clearComments = function(tokens) {
   var tok = [], i = 0;
   while (i < tokens.length) {
@@ -246,21 +211,11 @@ mex.clearComments = function(tokens) {
   return tok;
 };
 
-function newTemplateStr() {
-  return { type: 'Template', value: '',
-    start: -1, end: -1, 
-    loc: {
-      start: { column: -1, line: -1 },
-      end: { column: -1, line: -1 }
-    }
-  };
-}
-
 mex.adjustTokens = function(tokens) {
   var e = 0;
   while (e < tokens.length) {
     var elem = tokens[e++];
-    if (elem.type === 'Identifier') {
+    if (elem.type === 'Identifier' || elem.type === 'Keyword') {
       switch (elem.value) {
          case 'null':
            elem.type = 'Null';
@@ -271,31 +226,34 @@ mex.adjustTokens = function(tokens) {
            elem.type = 'Boolean';
            break;
     
+         case 'await':
+           elem.type = 'Identifier';
+           break;
+
          case 'do': case 'if': case 'in': case 'int' :
          case 'let' : case 'for' : case 'try' : case 'var' :
          case 'new' : case 'byte': case 'char': case 'goto':
          case 'long': case 'case': case 'else': case 'this':
          case 'void': case 'true': case 'with': case 'enum':
-//       case 'await':
          case 'final': case 'float':
          case 'short': case 'yield': 
          case 'break': case 'catch': case 'class': case 'const': case 'false':
          case 'super': case 'throw': case 'while': 
          case 'double': case 'native': case 'throws':
-         case 'public':
-         case 'static':
+//       case 'public':
+//       case 'static':
          case 'delete': case 'export': case 'import': case 'return':
          case 'switch': case 'typeof':
-         case 'package':
-         case 'private':
+//         case 'package':
+//       case 'private':
          case 'boolean':
          case 'default': case 'extends': case 'finally':
          case 'abstract': case 'volatile':
          case 'continue': case 'debugger': case 'function':
-         case 'protected':
-         case 'interface':
+//       case 'protected':
+//         case 'interface':
          case 'transient':
-         case 'implements':
+//         case 'implements':
          case 'instanceof':
          case 'synchronized':
            elem.type = 'Keyword';
@@ -303,17 +261,7 @@ mex.adjustTokens = function(tokens) {
     }
   }
 
-  e = 0;
-  var tok = [];
-  while (e < tokens.length) {
-    var elem = tokens[e];
-    if (elem.type === 'Punctuator' && elem.value === '`')
-      e = readTemplate(tokens, e, tok);
-    else
-      e++;
-  }
-
-  return tok;
+  return tokens;
 };
 
 mex.ej_adjust = function(e, j, name) {
@@ -322,7 +270,15 @@ mex.ej_adjust = function(e, j, name) {
   delete e.trailingComments; delete e.leadingComments;
 // delete e.comments;
   delete e.innerComments;
-  delete e.raw;
+  if (!e.hasOwnProperty('raw')) {
+//  console.error('raw in name: <'+name+'>');
+    delete j.raw;
+  }
+
+  if (e.value && e.value.hasOwnProperty('raw')) {
+    e.value.raw = e.value.raw.replace(/\r\n|\r/g,'\n');
+  }
+
   delete e.errors; 
 
   delete j.y; delete j.scope;
@@ -334,6 +290,8 @@ mex.ej_adjust = function(e, j, name) {
   if (j.tokens) {
     j.tokens = mex.adjustTokens(j.tokens);
   }
+  if (e.type === 'Template')
+    e.value = e.value.replace(/\r\n|\r/g,'\n');
 
   if (j.type === 'Line') {
     if (j.value[j.value.length-1]==='\n') {
@@ -359,8 +317,6 @@ mex.ej_adjust = function(e, j, name) {
     }
     delete j.start; delete j.end;
   }
-
-  delete j.raw;
 
   if (j.type === 'AssignmentProperty')
     j.type = 'Property';
