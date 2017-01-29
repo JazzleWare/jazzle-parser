@@ -154,8 +154,6 @@ this .parseO = function(context ) {
     case 'of':
       if (context & CTX_FOR)
         break ;
-      if (this.ltval === 'in')
-        this.kw();
 
       this.prec = PREC_COMP ;
       this.ltraw = this.ltval;

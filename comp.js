@@ -21,7 +21,10 @@ var jo = {};
 jo.sourceType = isModule ? 'module' : 'script';
 jo.onToken = [];
 
+console.error("<JAZZLE>")
 var ast_jazzle = jazzle.parse(contents, jo);
+
+console.log("</JAZZLE>");
 
 var comp = util.compare_ea(ast_esprima, ast_jazzle, null, util.ej_adjust);
 if (comp === null)

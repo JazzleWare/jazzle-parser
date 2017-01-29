@@ -77,8 +77,14 @@ this.onToken = function(token) {
     case 'Identifier':
       ttype = 'Identifier';
       tval = this.ltraw;
-      if (this.tight && tval === 'static')
-        ttype = 'Keyword' ;
+      switch (tval) {
+      case 'static':
+        if (!this.tight) 
+          break;
+      case 'in':
+      case 'instanceof':
+        ttype = 'Keyword';
+      }
       break;
 
     case 'Boolean':

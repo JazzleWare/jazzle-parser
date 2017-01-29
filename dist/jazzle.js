@@ -1468,8 +1468,14 @@ this.onToken = function(token) {
     case 'Identifier':
       ttype = 'Identifier';
       tval = this.ltraw;
-      if (this.tight && tval === 'static')
-        ttype = 'Keyword' ;
+      switch (tval) {
+      case 'static':
+        if (!this.tight) 
+          break;
+      case 'in':
+      case 'instanceof':
+        ttype = 'Keyword';
+      }
       break;
 
     case 'Boolean':
@@ -5601,8 +5607,6 @@ this .parseO = function(context ) {
     case 'of':
       if (context & CTX_FOR)
         break ;
-      if (this.ltval === 'in')
-        this.kw();
 
       this.prec = PREC_COMP ;
       this.ltraw = this.ltval;

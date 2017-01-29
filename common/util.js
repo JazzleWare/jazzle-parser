@@ -230,23 +230,24 @@ mex.adjustTokens = function(tokens) {
            elem.type = 'Identifier';
            break;
 
-         case 'do': case 'if': case 'in': case 'int' :
+         case 'do': case 'if': case 'in':
+//       case 'int' :
          case 'let' : case 'for' : case 'try' : case 'var' :
-         case 'new' : case 'byte': case 'char': case 'goto':
-         case 'long': case 'case': case 'else': case 'this':
+         case 'new' : /* case 'byte': case 'char': case 'goto':
+         case 'long': */ case 'case': case 'else': case 'this':
          case 'void': case 'true': case 'with': case 'enum':
-         case 'final': case 'float':
-         case 'short': case 'yield': 
+         case 'final': /* case 'float':
+         case 'short': */ case 'yield': 
          case 'break': case 'catch': case 'class': case 'const': case 'false':
          case 'super': case 'throw': case 'while': 
-         case 'double': case 'native': case 'throws':
-//       case 'public':
-//       case 'static':
+         case 'double':/* case 'native': case 'throws':
+         case 'public':
+         case 'static': */
          case 'delete': case 'export': case 'import': case 'return':
          case 'switch': case 'typeof':
-//         case 'package':
-//       case 'private':
-         case 'boolean':
+/*       case 'package':
+         case 'private':
+         case 'boolean': */
          case 'default': case 'extends': case 'finally':
          case 'abstract': case 'volatile':
          case 'continue': case 'debugger': case 'function':
@@ -416,19 +417,19 @@ mex.toBytes = function(str) {
   return bytes;
 };
 
-mex.prog_adjust = function(e, parser) {
+mex.prog_adjust = function(e, j, parser) {
   if (e.type !== 'Program') {
     return;
   }
   if (e.range) {
-    e.range[0] = 0;
-    e.range[1] = parser.src.length;
+    e.range[0] = j.start;
+    e.range[1] = j.end;
   }
   if (e.loc) {
-    e.loc.start.line = 1;
-    e.loc.end.line = parser.li;
-    e.loc.start.column = 0;
-    e.loc.end.column = parser.col;
+    e.loc.start.line = j.loc.start.line;
+    e.loc.end.line = j.loc.end.line;
+    e.loc.start.column = j.loc.start.column;
+    e.loc.end.column = j.loc.end.column;
   }
 
 };
