@@ -61,7 +61,7 @@ this.toAssig = function(head, context) {
 
   case 'SpreadElement':
     if (head.argument.type === 'AssignmentExpression')
-      this.err('rest.arg.not.valid');
+      this.err('rest.arg.not.valid',{tn:head});
     this.toAssig(head.argument, context);
     head.type = 'RestElement';
     return;

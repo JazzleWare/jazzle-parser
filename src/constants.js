@@ -89,8 +89,19 @@ var PAREN_NODE = PAREN;
 
 var INTERMEDIATE_ASYNC = 'intermediate-async';
 
+var FUNCTION_TYPE = typeof function() {};
 var STRING_TYPE = typeof "string";
 var NUMBER_TYPE = typeof 0;
+var BOOL_TYPE = typeof false;
+
+var OPTIONS =
+[
+  'ecmaVersion','sourceType','onToken','program',
+  'onComment','allowReturnOutsideFunction','allowImportExportEverywhere',
+  'sourceFile','directSourceFile',
+//'preserveParens',
+  'allowHashBang' ];
+
 var HAS = {}.hasOwnProperty;
 
 function ASSERT(cond, message) { if (!cond) throw new Error(message); }
@@ -217,3 +228,12 @@ var DIR_MODULE = 1,
     DIR_MAYBE = DIR_LAST << 1,
     DIR_HANDLED_BY_NEWLINE = DIR_MAYBE << 1,
     DIR_HAS_OCTAL_ERROR = DIR_HANDLED_BY_NEWLINE << 1;
+
+function MAIN_CORE(n) {
+  return n.expression;
+}
+
+function KEEPER_CORE(n) {
+  n.type = 'ParenthesizedExpression';
+  return n;
+}

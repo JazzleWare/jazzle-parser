@@ -38,7 +38,16 @@ TestSuite.prototype.init = function(test) {
     throw new Error("test suite can not run a test that does not even have a uri!");
 
   this.loadTest(test);
-  test.parser = new this.parserFactory(test.source.value, test.isModule());
+  test.parserOptions.sourceType = test.isModule() ? 'module' : 'script';
+
+  if (test.json.tokens || test.jsonMode === "token") {
+    test.parserOptions.onToken = [];
+  }
+
+  if (test.json.comments)
+    test.parserOptions.onComment = [];
+
+  test.parser = new this.parserFactory(test.source.value, test.parserOptions);
 };
 
 TestSuite.prototype.runTest = function(test) {
@@ -55,7 +64,14 @@ TestSuite.prototype.runTest = function(test) {
   var result = null, comp = null;
   try {
     result = test.parser.parseProgram();
+    if (test.jsonMode === 'token') {
+//    console.error('result', util.obj2str(result));
+//    console.error('options', util.obj2str(test.parserOptions));
+
+      result = result.tokens;
+    }
   }
+
   catch (err) {
     test.setResult(err, 'err');
     if (!test.isFail())
@@ -75,6 +91,7 @@ TestSuite.prototype.runTest = function(test) {
   if (test.isFail())
     return this.notify('pass', 'contrary', test);
 
+  util.prog_adjust(test.json, test.result, test.parser);
   comp = util.compare_ea(test.json, test.result, null, util.ej_adjust);
   test.comp = comp;
 
@@ -127,6 +144,9 @@ TestSuite.prototype.loadTestJSON = function(test) {
 
   test.json = JSON.parse(jsonContents);
   test.jsonMode = jsonMode;
+
+  if (jsonMode === 'token')
+    test.json = util.clearComments(test.json);
 };
 
 TestSuite.prototype.findIgnorer = function(test) {

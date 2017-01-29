@@ -12,6 +12,10 @@ this. parseClass = function(context) {
     isStmt = true;
     this.canBeStatement = false;
   }
+
+  if (this.onToken_ !== null)
+    this.lttype = 'Keyword';
+
   this.next(); // 'class'
 
   var prevStrict = this.tight;
@@ -41,6 +45,7 @@ this. parseClass = function(context) {
   var memParseFlags = MEM_CLASS;
   var superClass = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
+     this.kw();
      this.next();
      superClass = this.parseExprHead(CTX_NONE);
      memParseFlags |= MEM_SUPER;

@@ -47,7 +47,7 @@ ErrorString.from = function(str) {
   return error;
 };
 ;
-var Parser = function (src, isModule) {
+var Parser = function (src, o) {
 
   this.src = src;
 
@@ -74,11 +74,11 @@ var Parser = function (src, isModule) {
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
-  this.tight = !!isModule ;
+  this.tight = false;
 
   this.firstNonSimpArg = null;
 
-  this.isScript = !isModule;
+  this.isScript = false;
   this.v = 7;
 
   this.throwReserved = true;
@@ -123,6 +123,19 @@ var Parser = function (src, isModule) {
 
   this.errorListener = this; // any object with an `onErr(errType "string", errParams {*})` will do
 
+  this.onToken_ = null;
+  this.onComment_ = null;
+//this.core = MAIN_CORE;
+  this.misc = {
+    alloHashBang: false,
+    allowImportExportEverywhere: false,
+    allowReturnOutsideFunction: false,
+    directSourceFile: "",
+    sourceFile: ""
+  };
+  this.program = null;
+
+  this.setOptions(o);
 };
 
 ;
@@ -333,8 +346,19 @@ var PAREN_NODE = PAREN;
 
 var INTERMEDIATE_ASYNC = 'intermediate-async';
 
+var FUNCTION_TYPE = typeof function() {};
 var STRING_TYPE = typeof "string";
 var NUMBER_TYPE = typeof 0;
+var BOOL_TYPE = typeof false;
+
+var OPTIONS =
+[
+  'ecmaVersion','sourceType','onToken','program',
+  'onComment','allowReturnOutsideFunction','allowImportExportEverywhere',
+  'sourceFile','directSourceFile',
+//'preserveParens',
+  'allowHashBang' ];
+
 var HAS = {}.hasOwnProperty;
 
 function ASSERT(cond, message) { if (!cond) throw new Error(message); }
@@ -457,6 +481,15 @@ var DIR_MODULE = 1,
     DIR_MAYBE = DIR_LAST << 1,
     DIR_HANDLED_BY_NEWLINE = DIR_MAYBE << 1,
     DIR_HAS_OCTAL_ERROR = DIR_HANDLED_BY_NEWLINE << 1;
+
+function MAIN_CORE(n) {
+  return n.expression;
+}
+
+function KEEPER_CORE(n) {
+  n.type = 'ParenthesizedExpression';
+  return n;
+}
 ;
 function num(c) {
   return (c >= CH_0 && c <= CH_9);
@@ -762,25 +795,6 @@ function toNum (n) {
          (n <= CH_f && n >= CH_a) ? 10 + n - CH_a :
          (n >= CH_A && n <= CH_F) ? 10 + n - CH_A : -1;
 };
-
-function createObj(fromPrototype) {
-  function Obj() {}
-  Obj.prototype = fromPrototype;
-  return new Obj();
-}
-
-function getOwnN(obj, name, notHave) {
-  return HAS.call(obj, name) ? obj[name] : notHave;
-}
-
-function getOwn(obj, name) {
-  return getOwnN(obj, name, null);
-}
-
-function hasOwn(obj, name) {
-  return HAS.call(obj, name);
-}
-
 ;
  (function(){
        var i = 0;
@@ -1175,6 +1189,10 @@ this. parseClass = function(context) {
     isStmt = true;
     this.canBeStatement = false;
   }
+
+  if (this.onToken_ !== null)
+    this.lttype = 'Keyword';
+
   this.next(); // 'class'
 
   var prevStrict = this.tight;
@@ -1204,6 +1222,7 @@ this. parseClass = function(context) {
   var memParseFlags = MEM_CLASS;
   var superClass = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
+     this.kw();
      this.next();
      superClass = this.parseExprHead(CTX_NONE);
      memParseFlags |= MEM_SUPER;
@@ -1301,6 +1320,10 @@ this.readMultiComment = function () {
         c++;
         this.col += (c-start);
         this.c = c;
+        if (this.onComment_ !== null)
+          this.onComment(true,c0,{line:li0,column:col0},
+            this.c,{line:this.li,column:this.col});
+
         return n;
       }
       continue ;
@@ -1333,6 +1356,8 @@ this.readLineComment = function() {
   var c = this.c, l = this.src,
       e = l.length, r = -1;
 
+  var c0 = c, li0 = this.li, col0 = this.col, li = -1, col = -1;
+
   L:
   while ( c < e )
     switch (r = l.charCodeAt(c++ ) ) {
@@ -1342,6 +1367,8 @@ this.readLineComment = function() {
     case CH_LINE_FEED :
     case 0x2028:
     case 0x2029 :
+      col = this.col;
+      li = this.li;
       this.col = 0 ;
       this.li++;
       break L;
@@ -1350,7 +1377,151 @@ this.readLineComment = function() {
     }
 
    this.c=c;
+
+   if (this.onComment_ !== null) {
+     if (li === -1) { li = this.li; col = this.col; }
+     this.onComment(false,c0,{line:li0,column:col0},
+       this.c,{line:li,column:col+(c-c0)});
+   }
+
    return;
+};
+
+},
+function(){
+this.onComment = function(isBlock,c0,loc0,c,loc) {
+  var start_comment = -1, end_comment = -1;
+  var start_val = -1, end_val = -1;
+  if (isBlock) {
+    start_comment = c0 - 2; end_comment = c;
+    start_val = c0; end_val = c - 2;
+    loc0.column -= 2;
+  }
+  else {
+    var stepBack = -1;
+    switch (this.src.charCodeAt(c0-1)) {
+    case CH_DIV: // i.e, // comment
+      stepBack = 2;
+      break;
+    case CH_GREATER_THAN: // i.e, --> comment
+      stepBack = 1 + 2;
+      break;
+    case CH_MIN: // i.e, <!-- comment
+      stepBack = 2 + 2;
+      break;
+    }
+
+    start_comment = c0 - stepBack;
+    end_comment = c;
+    start_val = c0;
+    end_val = c;
+    loc0.column -= stepBack;
+  
+  }
+
+  var comment = this.onComment_,
+      value = this.src.substring(start_val,end_val);
+
+  if (typeof comment === FUNCTION_TYPE) {
+    comment(isBlock,value,c0,c,loc0,loc);
+  }
+  else {
+    comment.push({
+      type: isBlock ? 'Block' : 'Line',
+      value: value,
+      start: start_comment,
+      end: end_comment,
+      loc: { start: loc0, end: loc }
+    });
+  }
+};
+
+this.onToken = function(token) {
+  if (token === null) {
+    var ttype = "", tval = "";
+    switch (this.lttype) {
+    case 'op':
+    case '--':
+    case '-':
+    case '/':
+      ttype = 'Punctuator';
+      tval = this.ltraw;
+      break;
+
+    case 'yield':
+    case 'Keyword':
+      ttype = 'Keyword';
+      tval = this.ltval;
+      break;
+
+    case 'u':
+      ttype = 'Punctuator';
+      tval = this.ltraw;
+      break;
+
+    case 'Literal':
+      ttype = typeof this.ltval === NUMBER_TYPE ?
+        'Numeric' : 'String';
+      tval = this.ltraw;
+      break;
+
+    case 'Identifier':
+      ttype = 'Identifier';
+      tval = this.ltraw;
+      switch (tval) {
+      case 'static':
+        if (!this.tight) 
+          break;
+      case 'in':
+      case 'instanceof':
+        ttype = 'Keyword';
+      }
+      break;
+
+    case 'Boolean':
+    case 'Null':
+      ttype = this.lttype;
+      tval = this.ltval;
+      break;
+
+    default:
+      ttype = 'Punctuator';
+      tval = this.lttype;
+      break;
+    }
+
+    token = { type: ttype, value: tval, start: this.c0, end: this.c,
+      loc: {
+        start: { line: this.li0, column: this.col0 },
+        end: { line: this.li, column: this.col } } };
+  }
+  else {
+    if (token.type === 'Identifier' &&
+       token.value === 'static')
+      token.type = 'Keyword';
+  }
+
+  var onToken_ = this.onToken_;
+  if (typeof onToken_ === FUNCTION_TYPE) {
+    onToken_(token);
+  }
+  else
+    onToken_.push(token);
+
+};
+
+this.onToken_kw = function(c0,loc0,val) {
+  // TODO: val must=== raw
+  this.onToken({
+    type: 'Keyword',
+    value: val,
+    start: c0,
+    end: c0+val.length,
+    loc: {
+      start: loc0,
+      end: { line: loc0.line, column: loc0.column + val.length }
+    }
+  });
 };
 
 },
@@ -1490,7 +1661,12 @@ this.parseExport = function() {
   var context = CTX_NONE;
 
   if ( this.lttype === 'Identifier' && 
-       this.ltval === 'default' ) { context = CTX_DEFAULT; this.next(); }
+       this.ltval === 'default' ) {
+    context = CTX_DEFAULT;
+    if (this.onToken_ !== null)
+      this.lttype = 'Keyword';
+    this.next();
+  }
   
   if ( this.lttype === 'Identifier' ) {
       switch ( this.ltval ) {
@@ -1751,10 +1927,15 @@ this.onErr = function(errorType, errParams) {
   
 // TODO: find a way to squash it with normalize
 this.buildErrorInfo = function(builder, params) {
+  if (builder.preprocessor !== null)
+    builder.preprocessor.call(params);
+
   var errInfo = {
     messageTemplate: builder.messageTemplate,
     c: -1, li: -1, col: -1,
-    c0: -1, li0: -1, col0: -1
+    c0: -1, li0: -1, col0: -1,
+    parser: params['parser'],
+    extra: params.extra
   };
 
   var cur0 = params.cur0, cur = params.cur;
@@ -2031,7 +2212,7 @@ a('hex.esc.byte.not.hex', {c0:'parser.c',li0:'parser.li',col0:'parser.col',m:'a 
 
 a('id.esc.must.be.idbody',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier body codepoint'});
 
-a('id.esc.must.be.id',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier start codepoint'});
+a('id.esc.must.be.id.head',{cur0:'cur',m:'unicode codepoint with value {extra} is not a valid identifier start codepoint'});
 
 a('id.multi.must.be.idhead', {cur0:'cur',m:'the unicode surrogate pair [{extra.0},{extra.1}] don\'t represent an identifier start.'});
 
@@ -2091,7 +2272,7 @@ a('meta.new.has.unknown.prop',{m:'\'target\' is currently the only allowed meta 
 
 a('meta.new.not.in.function',{m:'\'new.target\' must be in the body of a function'}, 'new.target');
 
-// TODO: precisely tell it was a get, set, or something other
+// TODO: precision
 a('meth.paren',{m:'unexpected {parser.lttype} -- a ( was expected to start method-params'},'({get a 12})');
 
 a('func.decl.has.no.name',{m:'function declaration must have a name in this context'},'function() {}');
@@ -2143,6 +2324,141 @@ a('obj.proto.has.dup',{m:'can not have more than a  single property in the form 
 a('obj.unfinished',{m:'unfinished object literal: a } was expected; got {parser.lttype}'},'({e: a 12)');
 
 a('unexpected.lookahead',{m:'unexpected {parser.lttype}'},'-- -a');
+a('param.has.yield.or.super',{p:function(){if(this.tn !== null && this.tn.type === 'Identifier') this.tn = {type:'AwaitExpression',start:this.tn.start,loc:this.tn.loc,end:this.tn.end,argument:null};},m:'{tn.type} isn\'t allowed to appear in this context'},'function* l() { ([a]=[yield])=>12; }');
+
+a('paren.unbindable',{m:'unexpected ) -- bindings should not have parentheses around them, neither should non-simple assignment-patterns'},'([(a)])=>12', '[a,b,e,([l])]=12');
+
+set('pat.array.is.unfinished', 'array.unfinished');
+
+a('pat.obj.is.unfinished',{m:'unexpected {parser.lttype} -- a } was expected'},'var {a=12 l} = 12)');
+
+a('program.unfinished',{m:'unexpected {parser.lttype} -- an EOF was expected'},'a, b, e, l; ?');
+
+a('prop.dyna.is.unfinished',{m:'unexpected {parser.lttype}'},'({[a 12]: e})');
+
+set('prop.dyna.no.expr', 'prop.dyna.is.unfinished');
+
+function regp() {
+  this.col0 = this.col + (this.c0-this.c);
+  if (this.extra === null)
+    this.extra = {};
+
+  this.extra.ch = this.parser.src.charAt(this.c0);
+}
+
+// TODO: precision
+a('regex.flag.is.dup',{p: regp, m:'regex flag is duplicate'},'/a/guymu');
+
+a('regex.newline',{p:regp, m:'regular expressions can not contain a newline'},'/a\n/');
+
+a('regex.newline.esc',{p:regp, m:'regular expressions can not contain escaped newlines'},'/a\\\n/');
+
+a('regex.unfinished',{cur0:'cur',m:'unfinished regex -- a / was expected'},'/a');
+
+// TODO: precision
+a('regex.val.not.in.range',{m:'regex contains an out-of-range value'});
+
+a('reserved.id',{m:'{tn.name} is actually a reserved word in this context'},'"use strict"; var implements = 12;');
+
+a('rest.binding.arg.peek.is.not.id',{m:'unexpected {parser.lttype} -- in versions before 7, a rest\'s argument must be an id'},'var [...[a]] = 12');
+
+a('rest.arg.not.valid',{tn:'tn.argument',m:'a rest\'s argument is not allowed to have a type of {tn.arguments.type}'},'[...a=12]=12');
+
+a('resv.unicode',{cur:'parser.eloc',m:'{parser.ltraw} is actually a reserved word ({parser.ltval}); as such, it can not contain any unicode escapes'},'whil\\u0065 (false) break;');
+
+a('return.not.in.a.function',{m:'return statements are only allowed inside a function'},'return 12');
+
+a('seq.non.tail.expr',{m:'trailing comma was not expected'},'(a,)');
+
+a('shorthand.unassigned',{m:'shorthand assignments are not allowed somewhere other than am assignment\'s left hand side'},'a = [{b=12},]');
+
+a('stmt.null',{m:'unexpected {parser.lttype} because it can not start a statement'},'while (false) ?');
+
+a('strict.err.esc.not.valid',{cur0:'parser.eloc',m:'legacy octals are not allowed in strict mode'},'"\\12"; "use strict"');
+
+a('strict.let.is.id',{m:'let can\'t be used as an id in strict mode'},'"use strict"; a * b * e * l * let');
+
+a('strict.oct.str.esc',{m:'legacy octals not allowed in strict mode'},'"use strict"; "\\12"');
+
+a('strict.oct.str.esc.templ',{m:'legacy octals not allowed inside templates'},'`\\12`');
+
+a('str.newline',{li0: 'parser.li', m:'a string literal may not contain line breaks'},'"a\n"');
+
+a('str.unfinished',{li0: 'parser.li', m:'the string starting at {parser.li0}:{parser.col0} (offset {parser.c0}) not finished'},'"abel');
+
+a('switch.case.has.no.colon',{m:'unexpected {parser.lttype} -- a \':\' was expected'},'switch (a) { case 12 a break; }');
+
+a('switch.has.a.dup.default',{m:'this switch has already got a default'},'swicth (a) { case a: break; case b: break; case e: break; default: break; default: 12; }');
+
+a('switch.has.no.opening.curly',{m:'unexpected {parser.lttype} -- a {} was expected'},'switch (a) 12');
+
+a('switch.has.no.closing.paren',{m:'unexpected {parser.lttype} -- a ) was expected'},'switch (a 12');
+
+a('switch.has.no.opening.paren',{m:'unexpected {parser.lttype} -- a ( was expected'},'switch ?');
+
+a('switch.unfinished',{m:'unexpected {parser.lttype} -- a } was expected'},'switch (a) { case 12: break; ?');
+
+a('templ.expr.is.unfinished',{m:'unexpected {parser.lttype} -- a } was expected at the end of the current interpolated expression'},'`abel${e 12}`');
+
+a('templ.lit.is.unfinished',{m:'the template literal at {extra.loc.start.line}:{extra.loc.start.column} (offset {extra.start}) is unfinished'},'`abel');
+
+a('throw.has.newline',{m:'throw can not have a line-break after it'},'throw \n12');
+
+a('throw.has.no.argument',{m:'unexpected {parser.lttype}'},'throw ?');
+
+a('try.has.no.tain',{m:'unexpected {parser.lttype} -- try must have a \'catch\' or \'finally\' block coming after it'},'try {}\nif (false);');
+
+a('u.curly.is.unfinished',{p: regp, m:'a } was expected'},'\\u{12;');
+
+a('u.curly.not.in.range',{p: regp, m:'unicode codepoints must have a max decimal value of 1114111 (0x10FFFF)'}, '\\u{125400}');
+
+a('u.esc.hex',{p: regp, m:'invalid hex'},'\\u00el');
+
+a('unary.before.an.exponentiation',{m:'left operand for an exponentiation operator is not allowed to be an unparenthesized unary expression'},'-a**e');
+
+a('unexpected.id',{m:'got {parser.ltval} rather than {extra}'},'export * as a from \'12\'');
+
+a('an.id.was.expected',{m:'unexpected {parser.lttype} -- identifier \'{extra}\' was expected'},'export * as a 12 \'l\'');
+
+a('meth.parent',{m:'a ) was expected'},'class A { e: 12 }');
+
+a('obj.meth.no.paren',{m:'a ) was expected'},'({get a: 12})');
+
+a('rest.arg.has.trailing.comma',{m:'trailing comma not expected after rest'},'(...a,)');
+
+a('unexpected.rest',{m:'unexpected rest element'},'(...a)');
+
+a('unfinished.paren',{c0:'tn.end',li0:'tn.loc.end.line',col0:'tn.loc.end.column',m:'the parenthesis at {tn.loc.start.line}:{tn.loc.start.column} (offset {tn.start}) is unfinished'}, '(a,b 12');
+
+a('u.second.esc.not.u',{p:function(){this.col0++;}, cur0:'cur', m:'a \'u\' was expected after the slash', col0:'col'},'\\ee');
+
+a('u.second.not.in.range',{p:function(){this.col0+=(this.c-this.extra);},cur0:'cur',col0:'col',m:'the second surrogate must be in range [0x0dc00, 0x0dfff]'});
+
+a('var.decl.neither.of.in',{m:'unexpected {parser.lttype}'},'var [a] -= 12');
+
+a('var.decl.not.=', {m:'Unexpected {parser.lttype} -- (maybe you mean \'=\'?)'},'var a -= l');
+
+a('var.must.have.init', {m:'a \'=\' was expected -- current declarator needs an initialiser'},'var a, [e]');
+
+a('var.has.no.declarators',{m:'unexpected {parser.lttype}'}, 'var -a = l');
+
+a('var.has.an.empty.declarator',{m:'unexpected {parser.lttype}'}, 'var a, -');
+
+a('while.has.no.closing.paren',{m:'unexpected {parser.lttype} -- a ) was expected'},'while (a 12');
+
+a('while.has.no.opening.paren',{m:'unexpected {parser.lttype} -- a ( was expected'},'while 12) break;');
+
+a('with.has.no.opening.paren',{m:'unexpected {parser.lttype} -- a ( was expected'},'with 12) {}');
+
+a('with.has.no.end.paren',{m:'unexpected {parser.lttype} -- a ) was expected'},'with (a 12 {}');
+
+a('with.strict',{m:'with statements not allowed in strict mode'},'"use strict"; with (l) {}');
+
+a('yield.args',{m:'yield expression not allowed in generator\'s argument list'},'function* l(e=yield 12) {}');
+
+a('yield.as.an.id',{m:'yield is not allowed as an identifier in this context'},'function* l() { var yield = 12 }');
+
+a('yield.has.no.expr.deleg',{m:'unexpected {parser.lttype} -- it can not star an expression'},'function* l() { yield* ?}');
 
 
 },
@@ -2424,11 +2740,11 @@ this.readStrictEsc = function ()  {
             if ( b0 < CH_0 || b0 >= CH_8 )
               return '\0';
        }
-       if ( this.err('strict.oct.str.esc') )
+       if ( this.err('strict.oct.str.esc.templ') )
          return this.errorHandlerOutput
 
     case CH_4: case CH_5: case CH_6: case CH_7:
-       if (this.err('strict.oct.str.esc') )
+       if (this.err('strict.oct.str.esc.templ') )
          return this.errorHandlerOutput  ;
 
    case CH_8:
@@ -2456,7 +2772,7 @@ this.readStrictEsc = function ()  {
 function(){
 
 this.peekTheSecondByte = function () {
-  var e = this.src.charCodeAt(this.c);
+  var e = this.src.charCodeAt(this.c), start = this.c;
   if (CH_BACK_SLASH === e) {
     if (CH_u !== this.src.charCodeAt(++this.c) &&
         this.err('u.second.esc.not.u') )
@@ -2465,7 +2781,7 @@ this.peekTheSecondByte = function () {
     e = (this.peekUSeq());
   }
 //  else this.col--;
-  if ( (e < 0x0DC00 || e > 0x0DFFF) && this.err('u.second.not.in.range') )
+  if ( (e < 0x0DC00 || e > 0x0DFFF) && this.err('u.second.not.in.range',{extra:start}) )
     return this.errorHandlerOutput;
 
   return e;
@@ -2480,18 +2796,18 @@ this.peekUSeq = function () {
     n = l.charCodeAt(c);
     do {
       n = toNum(n);
-      if ( n === - 1 && this.err('u.esc.hex') )
+      if ( n === - 1 && this.err('u.esc.hex',{c0:c}) )
         return this.errorHandlerOutput ;
 
       byteVal <<= 4;
       byteVal += n;
-      if (byteVal > 0x010FFFF && this.err('u.curly.not.in.range') )
+      if (byteVal > 0x010FFFF && this.err('u.curly.not.in.range',{c0:c}) )
         return this.errorHandler ;
 
       n = l.charCodeAt( ++ c);
     } while (c < e && n !== CH_RCURLY);
 
-    if ( n !== CH_RCURLY && this.err('u.curly.is.unfinished') ) 
+    if ( n !== CH_RCURLY && this.err('u.curly.is.unfinished',{c0:c}) ) 
       return this.errorHandlerOutput ;
 
     this.c = c;
@@ -2499,22 +2815,22 @@ this.peekUSeq = function () {
   }
  
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex') )
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
     return this.errorHandlerOutput;
   byteVal = n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex') )
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
     return this.errorHandlerOutput;
   byteVal <<= 4; byteVal += n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex') )
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
     return this.errorHandlerOutput;
   byteVal <<= 4; byteVal += n;
   c++ ;
   n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex') )
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
     return this.errorHandlerOutput;
   byteVal <<= 4; byteVal += n;
 
@@ -2558,7 +2874,7 @@ this.parseFor = function() {
       break;
 
     case 'let':
-      if ( this.v >= 5 ) {
+      if ( this.v > 5 ) {
         this.canBeStatement = true;
         head = this.parseLet(CTX_FOR);
       }
@@ -2596,7 +2912,7 @@ this.parseFor = function() {
 
     case 'in':
       if (this.ltval === 'in')
-        this.resvchk();
+        this.kw(), this.resvchk();
 
       if (headIsExpr) {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec
@@ -2830,6 +3146,7 @@ this.parseFunc = function(context, flags) {
   var cfn = null;
 
   if (isWhole) { 
+    this.kw();
     this.next();
     if (this.lttype === 'op' && this.ltraw === '*') {
       if (this.v <= 5)
@@ -3001,13 +3318,13 @@ this. parseIdStatementOrId = function ( context ) {
   case 2:
     switch (id) {
     case 'do':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseDoWhileStatement();
     case 'if':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseIfStatement();
     case 'in':
-      this.resvchk();
+      this.resvchk(); this.kw();
       // TODO: is it actually needed anymore?
       if ( context & CTX_FOR )
         return null;
@@ -3019,7 +3336,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 3:
     switch (id) {
     case 'new':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.canBeStatement ) {
         this.canBeStatement = false ;
         this.pendingExprHead = this.parseNewHead();
@@ -3028,13 +3345,13 @@ this. parseIdStatementOrId = function ( context ) {
       return this.parseNewHead();
 
     case 'for':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseFor();
     case 'try':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseTryStatement();
     case 'let':
-      if ( this.canBeStatement && this.v >= 5 )
+      if ( this.canBeStatement && this.v > 5 )
         return this.parseLet(CTX_NONE);
 
       if (this.tight) this.err('strict.let.is.id');
@@ -3056,22 +3373,22 @@ this. parseIdStatementOrId = function ( context ) {
   case 4:
     switch (id) {
     case 'null':
-      this.resvchk();
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Null';
       pendingExprHead = this.parseNull();
       break SWITCH;
     case 'void':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.canBeStatement )
          this.canBeStatement = false;
       this.lttype = 'u'; 
       this.isVDT = VDT_VOID;
       return null;
     case 'this':
-      this.resvchk();
+      this.resvchk(); this.kw();
       pendingExprHead = this. parseThis();
       break SWITCH;
     case 'true':
-      this.resvchk();
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
       pendingExprHead = this.parseTrue();
       break SWITCH;
     case 'case':
@@ -3083,10 +3400,10 @@ this. parseIdStatementOrId = function ( context ) {
       }
 
     case 'else':
-      this.resvchk();
+      this.resvchk(); this.kw();
       this.notId();
     case 'with':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseWithStatement();
     case 'enum': case 'byte': case 'char':
     case 'goto': case 'long':
@@ -3098,17 +3415,17 @@ this. parseIdStatementOrId = function ( context ) {
   case 5:
     switch (id) {
     case 'super':
-      this.resvchk();
+      this.resvchk(); this.kw();
       pendingExprHead = this.parseSuper();
       break SWITCH;
     case 'break':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseBreakStatement();
     case 'catch':
-      this.resvchk();
+      this.resvchk(); this.kw();
       this.notId();
     case 'class':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseClass(CTX_NONE ) ;
     case 'const':
       this.resvchk();
@@ -3116,14 +3433,14 @@ this. parseIdStatementOrId = function ( context ) {
       return this.parseVariableDeclaration(CTX_NONE);
 
     case 'throw':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseThrowStatement();
     case 'while':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseWhileStatement();
     case 'yield': 
       if ( this.scopeFlags & SCOPE_FLAG_GEN ) {
-        this.resvchk();
+        this.resvchk(); this.kw();
         if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
           this.err('yield.args');
 
@@ -3139,13 +3456,13 @@ this. parseIdStatementOrId = function ( context ) {
       break SWITCH;
           
     case 'false':
-      this.resvchk();
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
       pendingExprHead = this.parseFalse();
       break SWITCH;
 
     case 'await':
       if (this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) {
-        this.resvchk();
+        this.resvchk(); this.kw();
         if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
           this.err('await.args');
         if (this.canBeStatement)
@@ -3155,11 +3472,11 @@ this. parseIdStatementOrId = function ( context ) {
         return null;
       }
       if (!this.isScript) {
-        this.resvchk();
+        this.resvchk(); this.kw();
         this.err('await.in.strict');
       }
 
-      pendingExprHead = this.id();
+      pendingExprHead = this.suspys = this.id(); // async(e=await)=>l ;
       break SWITCH;
 
     case 'async':
@@ -3180,7 +3497,7 @@ this. parseIdStatementOrId = function ( context ) {
 
     case 'delete':
     case 'typeof':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.canBeStatement )
         this.canBeStatement = false ;
       this.lttype = 'u'; 
@@ -3188,24 +3505,24 @@ this. parseIdStatementOrId = function ( context ) {
       return null;
 
     case 'export': 
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.isScript && this.err('export.not.in.module') )
         return this.errorHandlerOutput;
 
       return this.parseExport() ;
 
     case 'import':
-      this.resvchk();
+      this.resvchk(); this.kw();
       if ( this.isScript && this.err('import.not.in.module') )
         return this.errorHandlerOutput;
 
       return this.parseImport();
 
     case 'return':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseReturnStatement();
     case 'switch':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseSwitchStatement();
     case 'public':
       if (this.tight) this.errorReservedID();
@@ -3223,7 +3540,7 @@ this. parseIdStatementOrId = function ( context ) {
       return null;
 
     case 'extends': case 'finally':
-      this.resvchk();
+      this.resvchk(); this.kw();
       this.notId();
 
     case 'package': case 'private':
@@ -3240,13 +3557,13 @@ this. parseIdStatementOrId = function ( context ) {
   case 8:
     switch (id) {
     case 'function':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseFunc(context&CTX_FOR, 0 );
     case 'debugger':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.prseDbg();
     case 'continue':
-      this.resvchk();
+      this.resvchk(); this.kw();
       return this.parseContinueStatement();
     case 'abstract': case 'volatile':
       if ( this. v <= 5 ) this.errorReservedID();
@@ -3268,7 +3585,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 10:
     switch ( id ) {
     case 'instanceof':
-       this.resvchk();
+       this.resvchk(); this.kw();
        this.notId();
     case 'implements':
       if ( this.v <= 5 || this.tight )
@@ -3389,6 +3706,89 @@ this.readAnIdentifierToken = function (v) {
 
 },
 function(){
+function get(obj, name, value) {
+  if (obj === null || obj === void 0)
+    return value;
+
+  if (!HAS.call(obj, name))
+    return value;
+  var t = typeof value;
+  switch (t) {
+    case NUMBER_TYPE:
+    case BOOL_TYPE:
+    case STRING_TYPE:
+      if (typeof obj[name] !== t) 
+        return value;
+    default:
+      return obj[name];
+  }
+}
+
+this.setOptions = function(o) {
+  var list = OPTIONS, e = 0;
+  while (e < list.length) {
+    var cur = list[e++];
+    switch (cur) {
+    case 'ecmaVersion':
+      this.v = get(o, cur, 7);
+      break;
+
+    case 'sourceType':
+      var sourceType = get(o, cur, 'script');
+      switch (sourceType) {
+      case 'script': this.isScript = true; break;
+      case 'module': this.isScript = false; this.tight = true; break;
+      default:
+        ASSERT.call(this, false,
+          'Unknown option for sourceType: '+sourceType);
+      }
+      break;
+
+    case 'onToken':
+      this.onToken_ = get(o, cur, null);
+      break;
+
+    case 'program':
+      this.program = get(o, cur, null);
+      break;
+
+    case 'onComment':
+      this.onComment_ = get(o, cur, null);
+
+    case 'allowReturnOutsideFunction':
+      this.misc.allowReturnOutsideFunction =
+        get(o, cur, false);
+      break;
+
+    case 'allowImportExportEverywhere':
+      this.misc.allowImportExportEverywhere =
+        get(o, cur, false);
+      break;
+
+    case 'sourceFile':
+      this.misc.sourceFile = 
+        get(o, cur, "");
+      break;
+
+    case 'directSourceFile':
+      this.misc.directSourceFile =
+        get(o, cur, "");
+      break;
+
+//  case 'preserveParens':
+//    if (get(o, cur, false))
+//      this.core = KEEPER_CORE;
+//    break;
+
+    case 'allowHashBang':
+      this.misc.allowHashBang = get(o, cur, false);
+
+    }
+  }
+};
+
+},
+function(){
 
 this.parseLet = function(context) {
 
@@ -3397,14 +3797,14 @@ this.parseLet = function(context) {
 // not 'in for'
 
   var startc = this.c0, startLoc = this.locBegin();
-  var c = this.c, li = this.li, col = this.col;
+  var c = this.c, li = this.li, col = this.col, raw = this.ltraw;
 
   var letDecl = this.parseVariableDeclaration(context);
 
   if ( letDecl )
     return letDecl;
 
-  if (this.tight && this.err('strict.let.is.id') )
+  if (this.tight && this.err('strict.let.is.id',{c0:startc,loc:startLoc}) )
     return this.errorHandlerOutput ;
 
   this.canBeStatement = false;
@@ -3413,8 +3813,11 @@ this.parseLet = function(context) {
      name: 'let',
      start: startc,
      end: c,
-     loc: { start: startLoc, end: { line: li, column: col } }
+     loc: { start: startLoc, end: { line: li, column: col }, raw: raw }
   };
+
+  if (this.onToken_ !== null)
+    this.onToken({type: 'Identifier', value: raw, start: startc, end: c, loc:this.pendingExprHead.loc });
 
   return null ;
 };
@@ -3484,7 +3887,23 @@ this.parseMem = function(context, flags) {
 
         flags |= latestFlag = MEM_STATIC;
         nmod++;
-        this.next();
+
+        if (this.onToken_ !== null) {
+          this.lttype = "";
+          this.next();
+          if (this.lttype !== '(')
+            this.onToken_kw(nc0,{line:nli0,column:ncol0},nraw);
+          else
+            this.onToken({ type: 'Identifier', value: nraw, start: nc0, end: nc0+nraw.length,
+              loc: {
+                start: { line: nli0, column: ncol0 },
+                end: { line: nli0, column: ncol0+nraw.length }
+              }
+            });
+        }
+        else
+          this.next();
+
         break;
 
       case 'get':
@@ -3598,10 +4017,10 @@ this.parseMem = function(context, flags) {
   }
 
   if (flags & MEM_CLASS)
-    this.err('unexpected.lookahead');
+    this.err('meth.paren');
 
   if (nmod)
-    this.err('unexpected.lookahead');
+    this.err('obj.meth.no.paren');
 
   // TODO: it is not strictly needed -- this.parseObjElem itself can verify if the name passed to it is
   // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad
@@ -3634,7 +4053,8 @@ this.parseObjElem = function(name, context) {
         }
         if ((context & CTX_PAT) &&
            !(context & CTX_HAS_A_PARAM_ERR) &&
-           this.at === ERR_NONE_YET) {
+           this.at === ERR_NONE_YET &&
+           !this.ensureSimpAssig_soft(val.expr)) {
           this.at = ERR_PAREN_UNBINDABLE; this.pe = val;
         }
       }
@@ -3952,7 +4372,7 @@ this.toAssig = function(head, context) {
 
   case 'SpreadElement':
     if (head.argument.type === 'AssignmentExpression')
-      this.err('rest.arg.not.valid');
+      this.err('rest.arg.not.valid',{tn:head});
     this.toAssig(head.argument, context);
     head.type = 'RestElement';
     return;
@@ -4223,7 +4643,7 @@ this.parseParen = function(context) {
       }
       else if (list) {
         if (this.v < 7)
-          this.err('unexpected.lookahead');
+          this.err('seq.non.tail.expr');
         else 
           hasTailElem = true;
       } 
@@ -4286,7 +4706,7 @@ this.parseParen = function(context) {
     if (list) list.push(core(elem));
     if (this.lttype === ',') {
       if (hasRest)
-        this.err('unexpected.lookahead');
+        this.err('rest.arg.has.trailing.comma');
       if (list === null)
         list = [core(elem)];
       this.next();
@@ -4312,7 +4732,7 @@ this.parseParen = function(context) {
   };
 
   if (!this.expectType_soft(')'))
-    this.err('unfinished.paren');
+    this.err('unfinished.paren',{tn:n});
 
   if (elem === null && list === null) {
     if (context & CTX_PARPAT) {
@@ -4493,6 +4913,16 @@ this.parseNewHead = function () {
 },
 function(){
 this.next = function () {
+  if (this.onToken_ !== null) {
+    switch (this.lttype) {
+    case "eof":
+    case "":
+      break;
+    default:
+      this.onToken(null);
+    }
+  }
+
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
       this. lttype =  'eof' ;
@@ -4537,6 +4967,9 @@ this.next = function () {
          this.ltraw = '*';
          c++ ;
          if ( l.charCodeAt(c) === peek) {
+           if (this.v <= 5)
+             this.err('ver.**');
+
            this.ltraw = '**';
            this.prec = PREC_EX;
            c++ ;
@@ -4852,106 +5285,112 @@ this . opGrea = function()   {
 };
 
 this.skipS = function() {
-     var noNewLine = true,
-         startOffset = this.c,
-         c = this.c,
-         l = this.src,
-         e = l.length,
-         start = c;
+  var noNewLine = true,
+      startOffset = this.c,
+      c = this.c,
+      l = this.src,
+      e = l.length,
+      start = c;
 
-     while ( c < e ) {
-       switch ( l.charCodeAt ( c ) ) {
-         case CH_WHITESPACE :
-             while ( ++c < e &&  l.charCodeAt(c) === CH_WHITESPACE );
-             continue ;
-         case CH_CARRIAGE_RETURN : if ( CH_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
-         case CH_LINE_FEED :
-            if ( noNewLine ) noNewLine = false ;
-            start = ++ c ;
-            this.li ++ ;
-            this.col = ( 0)
-            continue ;
+  while ( c < e ) {
+    switch ( l.charCodeAt ( c ) ) {
+    case CH_WHITESPACE :
+      while ( ++c < e &&  l.charCodeAt(c) === CH_WHITESPACE );
+      continue ;
+    case CH_CARRIAGE_RETURN : if ( CH_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
+    case CH_LINE_FEED :
+      if ( noNewLine ) noNewLine = false ;
+      start = ++ c ;
+      this.li ++ ;
+      this.col = ( 0)
+      continue ;
 
-         case CH_VTAB:
-         case CH_TAB:
-         case CH_FORM_FEED: c++ ; continue ;  
+    case CH_VTAB:
+    case CH_TAB:
+    case CH_FORM_FEED: c++ ; continue ;  
 
-         case CH_DIV:
-             switch ( l.charCodeAt ( c + ( 1) ) ) {
-                 case CH_DIV:
-                     c ++ ;
-                     this.c=c;
-                     this.readLineComment () ;
-                     if ( noNewLine ) noNewLine = false ;
-                     start = c = this.c ;
-                     continue ;
+    case CH_DIV:
+      switch ( l.charCodeAt ( c + ( 1) ) ) {
+      case CH_DIV:
+        c += 2;
+        this.col += (c-start) ;
+        this.c=c;
+        this.readLineComment () ;
+        if (noNewLine) noNewLine = false ;
+        start = c = this.c ;
+        continue ;
 
-                 case CH_MUL:
-                   c +=  2 ;
-                   this.col += (c-start ) ;
-                   this.c = c ;
-                   noNewLine = this. readMultiComment () && noNewLine ;
-                   start = c = this.c ;
-                   continue ;
+      case CH_MUL:
+        c += 2;
+        this.col += (c-start) ;
+        this.c = c ;
+        noNewLine = this. readMultiComment () && noNewLine ;
+        start = c = this.c ;
+        continue ;
 
-                 default:
-                     c++ ;
-                     this.nl = ! noNewLine ;
-                     this.col += (c-start ) ;
-                     this.c=c ;
-                     this.prec  = 0xAD ;
-                     this.lttype =  '/';
-                     this.ltraw = '/' ;
-                     return true;
-             }
+      default:
+        this.c0 = c;
+        this.col0 = this.col + (c-start);
+        this.li0 = this.li;
+        c++ ;
+        this.nl = ! noNewLine ;
+        this.col += (c-start) ;
+        this.c=c ;
+        this.prec  = 0xAD ;
+        this.lttype =  '/';
+        this.ltraw = '/' ;
+        return true;
+      }
 
-         case 0x0020:case 0x00A0:case 0x1680:case 0x2000:
-         case 0x2001:case 0x2002:case 0x2003:case 0x2004:
-         case 0x2005:case 0x2006:case 0x2007:case 0x2008:
-         case 0x2009:case 0x200A:case 0x202F:case 0x205F:
-         case 0x3000:case 0xFEFF: c ++ ; continue ;
+    case 0x0020:case 0x00A0:case 0x1680:case 0x2000:
+    case 0x2001:case 0x2002:case 0x2003:case 0x2004:
+    case 0x2005:case 0x2006:case 0x2007:case 0x2008:
+    case 0x2009:case 0x200A:case 0x202F:case 0x205F:
+    case 0x3000:case 0xFEFF: c ++ ; continue ;
 
-         case 0x2028:
-         case 0x2029:
-            if ( noNewLine ) noNewLine = false ;
-            start = ++c ;
-            this.col = 0 ;
-            this.li ++ ;
-            continue;
+    case 0x2028:
+    case 0x2029:
+      if ( noNewLine ) noNewLine = false ;
+      start = ++c ;
+      this.col = 0 ;
+      this.li ++ ;
+      continue;
 
-         case CH_LESS_THAN:
-            if ( this.isScript &&
-                 l.charCodeAt(c+1) === CH_EXCLAMATION &&
-                 l.charCodeAt(c+2) === CH_MIN &&
-                 l.charCodeAt(c+ 1 + 2) === CH_MIN ) {
-               this.c = c + 4;
-               this.readLineComment();
-               c = this.c;
-               continue;
-            }
-            this.col += (c-start ) ;
-            this.c=c;
-            this.nl = !noNewLine ;
-            return ;
+    case CH_LESS_THAN:
+      if ( this.v > 5 && this.isScript &&
+        l.charCodeAt(c+1) === CH_EXCLAMATION &&
+        l.charCodeAt(c+2) === CH_MIN &&
+        l.charCodeAt(c+1+2) === CH_MIN
+      ) {
+        this.c = c + 4;
+        this.col += (this.c-start) ;
+        this.readLineComment();
+        c = this.c;
+        continue;
+      }
+      this.col += (c-start ) ;
+      this.c=c;
+      this.nl = !noNewLine ;
+      return ;
  
-         case CH_MIN:
-            if ( (!noNewLine || startOffset === 0) &&
-                 this.isScript &&
-                 l.charCodeAt(c+1) === CH_MIN && l.charCodeAt(c+2) === CH_GREATER_THAN ) {
-               this.c = c + 1 + 2;
-               this.readLineComment();
-               c = this.c;
-               continue;
-            }
+    case CH_MIN:
+      if (this.v > 5 && (!noNewLine || startOffset === 0) &&
+           this.isScript &&
+           l.charCodeAt(c+1) === CH_MIN && l.charCodeAt(c+2) === CH_GREATER_THAN ) {
+        this.c = c + 1 + 2;
+        this.col += (this.c-start) ;
+        this.readLineComment();
+        c = this.c;
+        continue;
+      }
   
-         default :
-   
-            this.col += (c-start ) ;
-            this.c=c;
-            this.nl = !noNewLine ;
-            return ;
-       }
-     }
+    default :
+      this.col += (c-start ) ;
+      this.c=c;
+      this.nl = !noNewLine ;
+      return ;
+    }
+  }
 
   this.col += (c-start ) ;
   this.c = c ;
@@ -4979,9 +5418,13 @@ this.readDot = function() {
 this.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
 
 this.expectID = function (n) {
-  if (!(this.lttype === 'Identifier' && this.ltval === n)) 
-    this.err('unexpected.id');
-  this.next();
+  if (this.lttype === 'Identifier' && this.ltval === n)
+    return this.next();
+  
+  if (this.lttype !== 'Identifier')
+    this.err('an.id.was.expected',{extra:n});
+ 
+  this.err('unexpected.id',{extra:n});
 };
 
 this.expectType_soft = function (n)  {
@@ -5002,6 +5445,10 @@ this.expectID_soft = function (n) {
   return false;
 };
 
+this.kw = function() {
+  if (this.onToken_)
+    this.lttype = 'Keyword';
+};
 
 },
 function(){
@@ -5059,6 +5506,7 @@ this.parseUnaryExpression = function(context) {
       isVDT = this.isVDT;
 
   if (isVDT) {
+    this.kw();
     this.isVDT = VDT_NONE;
     u = this.ltval;
     startLoc = this.locBegin();
@@ -5160,7 +5608,9 @@ this .parseO = function(context ) {
     case 'in':
       this.resvchk();
     case 'of':
-      if (context & CTX_FOR) break ;
+      if (context & CTX_FOR)
+        break ;
+
       this.prec = PREC_COMP ;
       this.ltraw = this.ltval;
       return true;
@@ -5585,16 +6035,15 @@ this.parseRestElement = function() {
        startLoc = this.locBegin();
 
    this.next ();
+   if ( this.v < 7 && this.lttype !== 'Identifier' ) {
+      this.err('rest.binding.arg.peek.is.not.id');
+   }
+
    var e = this.parsePattern();
 
    if (!e) {
       if (this.err('rest.has.no.arg'))
        return this.errorHandlerOutput ;
-   }
-   // TODO (cont.): this one in particular -- it need not parse a whole pattern to know
-   // whether it is an identifier
-   else if ( this.v < 7 && e.type !== 'Identifier' ) {
-      this.err('rest.arg.not.id');
    }
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };
@@ -5882,24 +6331,29 @@ this.parseProgram = function () {
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
   var list = this.blck(); 
- 
-  var endLoc = null;
-  if (list.length) {
-    var firstStatement = list[0];
-    startc = firstStatement.start;
-    startLoc = firstStatement.loc.start;    
-
-    var lastStatement = list[ list.length - 1 ];
-    endI = lastStatement.end;
-    endLoc = lastStatement.loc.end;
-  }
-  else {
-    endLoc = startLoc = { line: 0, column: 0 };
-  }
         
   alwaysResolveInTheParentScope(this.scope);
-  var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
-           loc: { start: startLoc, end: endLoc } };
+  var n = {
+    type: 'Program',
+    body: list,
+    start: 0,
+    end: this.src.length,
+    sourceType: !this.isScript ? "module" : "script" ,
+    loc: {
+      start: {line: li, column: col},
+      end: {line: this.li, column: this.col}
+    }
+  };
+
+  if (this.onToken_ !== null) {
+    if (typeof this.onToken_ !== FUNCTION_TYPE)
+      n.tokens = this.onToken_;
+  }
+
+  if (this.onComment_ !== null) {
+    if (typeof this.onComment_ !== FUNCTION_TYPE)
+      n.comments = this.onComment_;
+  }
 
   if ( !this.expectType_soft ('eof') &&
         this.err('program.unfinished') )
@@ -5992,7 +6446,7 @@ this.parseRegExpLiteral = function() {
                case CH_LINE_FEED :
                case 0x2028 :
                case 0x2029 :
-                  if ( this.err('regex.newline.esc') )
+                  if ( this.err('regex.newline.esc',{c0:c}) )
                     return this.errorHandlerOutput ;
             }
 
@@ -6014,7 +6468,7 @@ this.parseRegExpLiteral = function() {
          case CH_LINE_FEED :
          case 0x2028 :
          case 0x2029 :
-           if ( this.err('regex.newline') )
+           if ( this.err('regex.newline',{c0:c}) )
              return this.errorHandlerOutput ;
 
 //       default:if ( o >= 0x0D800 && o <= 0x0DBFF ) { this.col-- ; }
@@ -6034,23 +6488,23 @@ this.parseRegExpLiteral = function() {
         switch ( src.charCodeAt ( ++c ) ) {
             case CH_g:
                 if (flags & gRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= gRegexFlag; break;
             case CH_u:
                 if (flags & uRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= uRegexFlag; break;
             case CH_y:
                 if (flags & yRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= yRegexFlag; break;
             case CH_m:
                 if (flags & mRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= mRegexFlag; break;
             case CH_i:
                 if (flags & iRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= iRegexFlag; break;
 
             default : break WHILE;
@@ -6090,8 +6544,17 @@ this.parseRegExpLiteral = function() {
      this.col += (c-this.c);
      var regex = { type: 'Literal', regex: { pattern: patternString, flags: flagsString },
                    start: startc, end: c,
-                   value: val, loc: { start: startLoc, end: this.loc() } };
+                   value: val, loc: { start: startLoc, end: this.loc() }, 
+                   raw: this.src.substring(startc, c) };
      this.c = c;
+
+     if (this.onToken_ !== null) {
+       this.onToken({
+         type: 'RegularExpression', value: this.src.substring(startc,c), start: startc,
+         end: c, regex: regex.regex, loc: regex.loc });
+       this.lttype = "";
+     }
+
      this.next () ;
 
      return regex ;
@@ -6423,7 +6886,7 @@ this.parseIfStatement = function () {
   var nbody = this. parseStatement (false);
   var alt = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'else') {
-     this.next() ;
+     this.kw(), this.next() ;
      alt = this.parseStatement(false);
   }
   this.scopeFlags = scopeFlags ;
@@ -6505,9 +6968,11 @@ this.parseDoWhileStatement = function () {
   this.scopeFlags |= (SCOPE_FLAG_BREAK| SCOPE_FLAG_CONTINUE);
   var nbody = this.parseStatement (true) ;
   this.scopeFlags = scopeFlags;
-  if ( !this.expectID_soft('while') &&
-        this.err('do.has.no.while',{extra:[startc,startLoc,nbody]}) )
-    return this.errorHandlerOutput;
+  if (this.lttype === 'Identifier' && this.ltval === 'while') {
+    this.kw(); this.next();
+  }
+  else
+    this.err('do.has.no.while',{extra:[startc,startLoc,nbody]});
 
   if ( !this.expectType_soft('(') &&
         this.err('do.has.no.opening.paren',{extra:[startc,startLoc,nbody]}) )
@@ -6685,6 +7150,7 @@ this.parseSwitchCase = function () {
      case 'case':
        startc = this.c0;
        startLoc = this.locBegin();
+       this.kw();
        this.next();
        cond = core(this.parseExpr(CTX_NONE|CTX_TOP)) ;
        break;
@@ -6692,6 +7158,7 @@ this.parseSwitchCase = function () {
      case 'default':
        startc = this.c0;
        startLoc = this.locBegin();
+       this.kw();
        this.next();
        break ;
 
@@ -6718,9 +7185,11 @@ this.parseReturnStatement = function () {
 
   this.fixupLabels(false ) ;
 
-  if ( !( this.scopeFlags & SCOPE_FLAG_FN ) &&
-          this.err('return.not.in.a.function') )
-    return this.errorHandlerOutput ;
+  if (!(this.scopeFlags & SCOPE_FLAG_FN )) {
+    if (!this.misc.allowReturnOutsideFunction &&
+      this.err('return.not.in.a.function'))
+    return this.errorHandlerOutput;
+  }
 
   var startc = this.c0,
       startLoc = this.locBegin(),
@@ -6830,6 +7299,7 @@ this.parseTryStatement = function () {
     catBlock = this.parseCatchClause();
 
   if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
+     this.kw();
      this.next();
 
      this.enterLexicalScope(false); 
@@ -6855,6 +7325,7 @@ this. parseCatchClause = function () {
    var startc = this.c0,
        startLoc = this.locBegin();
 
+   this.kw();
    this.next();
 
    this.enterCatchScope();
@@ -7058,7 +7529,7 @@ this.readStrLiteral = function (start) {
      case CH_LINE_FEED :
      case 0x2028 :
      case 0x2029 :
-           if ( this.err('str.newline') )
+           if ( this.err('str.newline',{c0:c,col0:this.col+(c-startC)}) )
              return this.errorHandlerOutput ;
     }
     c++;
@@ -7066,7 +7537,7 @@ this.readStrLiteral = function (start) {
 
   if ( v_start !== c ) { v += l.slice(v_start,c ) ; }
   if (!(c < e && (l.charCodeAt(c)) === start) &&
-       this.err('str.unfinished') ) return this.errorHandlerOutput;
+       this.err('str.unfinished',{c0:c,col0:this.col+(c-startC)}) ) return this.errorHandlerOutput;
 
   this.c = c + 1 ;
   this.col += (this. c - startC   )  ;
@@ -7087,11 +7558,15 @@ this . parseTemplateLiteral = function() {
   var startc = this.c - 1, startLoc = this.locOn(1);
   var c = this.c, src = this.src, len = src.length;
   var templStr = [], templExpressions = [];
-  var startElemFragment = c, // an element's content might get fragmented by an esc appearing in it, e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
-      startElem = c,
+  
+  // an element's content might get fragmented by an esc appearing in it,
+  // e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
+  var startElemFragment = c; 
+
+  var startElem = c,
       currentElemContents = "",
       startColIndex = c ,
-      ch = 0;
+      ch = 0, elem = null;
  
   while ( c < len ) {
     ch = src.charCodeAt(c);
@@ -7101,12 +7576,27 @@ this . parseTemplateLiteral = function() {
           if ( src.charCodeAt(c+1) === CH_LCURLY ) {
               currentElemContents += src.slice(startElemFragment, c) ;
               this.col += ( c - startColIndex );
-              templStr.push(
+              elem =
                 { type: 'TemplateElement', 
                  start: startElem, end: c, tail: false,
                  loc: { start: { line: li, column: col }, end: { line: this.li, column: this.col } },        
                  value: { raw : src.slice(startElem, c ).replace(/\r\n|\r/g,'\n'), 
-                        cooked: currentElemContents   } } );
+                        cooked: currentElemContents   } };
+              
+              templStr.push(elem);
+
+              if (this.onToken_ !== null) {
+                var loc = elem.loc;
+                this.onToken({
+                  type:'Template', value: (templStr.length !== 1 ? '}' : '`') + elem.value.raw + '${',
+                  start: elem.start - 1, end: elem.end + 2,
+                  loc: {
+                    start: { line: loc.start.line, column: loc.start.column - 1 },
+                    end: { line: loc.end.line, column: loc.end.column + 2 }
+                  }
+                });
+                this.lttype = "";
+              }
 
               this.c = c + 2; // ${
               this.col += 2; // ${
@@ -7171,8 +7661,6 @@ this . parseTemplateLiteral = function() {
 
     c++ ;
   }
-
-  if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished') ;
   
   if ( startElem < c ) {
      this.col += ( c - startColIndex );
@@ -7181,7 +7669,7 @@ this . parseTemplateLiteral = function() {
   }
   else currentElemContents = "";
 
-  templStr.push({
+  elem ={
      type: 'TemplateElement',
      start: startElem,
      loc: { start : { line: li, column: col }, end: { line: this.li, column: this.col } },
@@ -7189,13 +7677,29 @@ this . parseTemplateLiteral = function() {
      tail: true,
      value: { raw: src.slice(startElem,c).replace(/\r\n|\r/g,'\n'), 
               cooked: currentElemContents }
-  }); 
+  };
+
+  templStr.push(elem);
+
+  if (this.onToken_ !== null) {
+    this.onToken({
+      type:'Template', value: (templStr.length !== 1 ? '}' : '`')+elem.value.raw+'`',
+      start: elem.start-1, end: elem.end+1,
+      loc: {
+        start: { line: elem.loc.start.line, column: elem.loc.start.column-1 },
+        end: { line: elem.loc.end.line, column: elem.loc.end.column+1 }
+      }    
+    });
+    this.lttype = "";
+  }
 
   c++; // backtick  
   this.col ++ ;
 
   var n = { type: 'TemplateLiteral', start: startc, quasis: templStr, end: c,
        expressions: templExpressions , loc: { start: startLoc, end : this.loc() } /* ,y:-1*/};
+
+  if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished',{extra:n}) ;
 
   this.c = c;
   this.next(); // prepare the next token  
@@ -7346,7 +7850,7 @@ this.errorReservedID = function(id) {
      this.throwReserved = true;
      return null;
   }
-  if ( this.err('reserved.id') ) return this.errorHandlerOutput;
+  if ( this.err('reserved.id',{tn:id}) ) return this.errorHandlerOutput;
 }
 
 
@@ -7370,12 +7874,25 @@ this.parseVariableDeclaration = function(context) {
     else
       this.err('decl.label',{c0:startc,loc0:startLoc});
   }
-  if (kind !== 'var' && !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK)) {
-    if (!this.hasDeclarator() )
-      this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
+
+  if (this.onToken_ !== null) {
+    if (kind === 'let')
+      this.lttype = ""; // turn off the automatic tokeniser
+    else
+      this.lttype = 'Keyword';
   }
 
   this.next();
+  if (kind !== 'var') {
+    if (this.hasDeclarator()) {
+      if (!(this.scopeFlags & SCOPE_FLAG_IN_BLOCK))
+        this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
+      if (kind === 'let' && this.onToken_ !== null &&
+         (this.lttype !== 'Identifier' || this.ltval !== 'in'))
+        this.onToken_kw(startc,startLoc,'let');
+    }
+  }
+
   this.declMode = kind === 'var' ? 
     DECL_MODE_VAR : DECL_MODE_LET;
   
@@ -7417,7 +7934,7 @@ this.parseVariableDeclaration = function(context) {
         this.err('var.has.an.empty.declarator',{extra:[startc,startLoc,context,list,kind]});
    
       if (this.missingInit || (isConst && !elem.init))
-        this.err('var.init.is.missing',{extra:[startc,startLoc,context,list,kind],elem:elem});
+        this.err('var.must.have.init',{extra:[startc,startLoc,context,list,kind],elem:elem});
    
       list.push(elem);
     }

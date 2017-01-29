@@ -8,6 +8,7 @@ function Test() {
   this.json = null;
   this.result = null;
   this.resultType = "";
+  this.parserOptions = {};
 }
 
 Test.prototype.isFail = function() {
@@ -25,6 +26,20 @@ Test.prototype.isModule = function() {
 Test.prototype.setResult = function(result, rtype) {
   this.result = result;
   this.resultType = rtype;
+};
+
+Test.prototype.getSettings = function() {
+  var str = "";
+  if (this.isModule()) str += 'module';
+
+  if (this.json.tokens) str += ':tokens.sub';
+  else if (this.jsonMode === 'token') str += ':token.main';
+
+  if (this.json.comments) str += ':comments';
+
+  if (this.isFail()) str += ':fail';
+
+  return str;
 };
 
 {module.exports.Test = Test;}

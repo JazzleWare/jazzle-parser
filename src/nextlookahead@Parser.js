@@ -1,4 +1,14 @@
 this.next = function () {
+  if (this.onToken_ !== null) {
+    switch (this.lttype) {
+    case "eof":
+    case "":
+      break;
+    default:
+      this.onToken(null);
+    }
+  }
+
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
       this. lttype =  'eof' ;
@@ -43,6 +53,9 @@ this.next = function () {
          this.ltraw = '*';
          c++ ;
          if ( l.charCodeAt(c) === peek) {
+           if (this.v <= 5)
+             this.err('ver.**');
+
            this.ltraw = '**';
            this.prec = PREC_EX;
            c++ ;
@@ -358,106 +371,112 @@ this . opGrea = function()   {
 };
 
 this.skipS = function() {
-     var noNewLine = true,
-         startOffset = this.c,
-         c = this.c,
-         l = this.src,
-         e = l.length,
-         start = c;
+  var noNewLine = true,
+      startOffset = this.c,
+      c = this.c,
+      l = this.src,
+      e = l.length,
+      start = c;
 
-     while ( c < e ) {
-       switch ( l.charCodeAt ( c ) ) {
-         case CH_WHITESPACE :
-             while ( ++c < e &&  l.charCodeAt(c) === CH_WHITESPACE );
-             continue ;
-         case CH_CARRIAGE_RETURN : if ( CH_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
-         case CH_LINE_FEED :
-            if ( noNewLine ) noNewLine = false ;
-            start = ++ c ;
-            this.li ++ ;
-            this.col = ( 0)
-            continue ;
+  while ( c < e ) {
+    switch ( l.charCodeAt ( c ) ) {
+    case CH_WHITESPACE :
+      while ( ++c < e &&  l.charCodeAt(c) === CH_WHITESPACE );
+      continue ;
+    case CH_CARRIAGE_RETURN : if ( CH_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
+    case CH_LINE_FEED :
+      if ( noNewLine ) noNewLine = false ;
+      start = ++ c ;
+      this.li ++ ;
+      this.col = ( 0)
+      continue ;
 
-         case CH_VTAB:
-         case CH_TAB:
-         case CH_FORM_FEED: c++ ; continue ;  
+    case CH_VTAB:
+    case CH_TAB:
+    case CH_FORM_FEED: c++ ; continue ;  
 
-         case CH_DIV:
-             switch ( l.charCodeAt ( c + ( 1) ) ) {
-                 case CH_DIV:
-                     c ++ ;
-                     this.c=c;
-                     this.readLineComment () ;
-                     if ( noNewLine ) noNewLine = false ;
-                     start = c = this.c ;
-                     continue ;
+    case CH_DIV:
+      switch ( l.charCodeAt ( c + ( 1) ) ) {
+      case CH_DIV:
+        c += 2;
+        this.col += (c-start) ;
+        this.c=c;
+        this.readLineComment () ;
+        if (noNewLine) noNewLine = false ;
+        start = c = this.c ;
+        continue ;
 
-                 case CH_MUL:
-                   c +=  2 ;
-                   this.col += (c-start ) ;
-                   this.c = c ;
-                   noNewLine = this. readMultiComment () && noNewLine ;
-                   start = c = this.c ;
-                   continue ;
+      case CH_MUL:
+        c += 2;
+        this.col += (c-start) ;
+        this.c = c ;
+        noNewLine = this. readMultiComment () && noNewLine ;
+        start = c = this.c ;
+        continue ;
 
-                 default:
-                     c++ ;
-                     this.nl = ! noNewLine ;
-                     this.col += (c-start ) ;
-                     this.c=c ;
-                     this.prec  = 0xAD ;
-                     this.lttype =  '/';
-                     this.ltraw = '/' ;
-                     return true;
-             }
+      default:
+        this.c0 = c;
+        this.col0 = this.col + (c-start);
+        this.li0 = this.li;
+        c++ ;
+        this.nl = ! noNewLine ;
+        this.col += (c-start) ;
+        this.c=c ;
+        this.prec  = 0xAD ;
+        this.lttype =  '/';
+        this.ltraw = '/' ;
+        return true;
+      }
 
-         case 0x0020:case 0x00A0:case 0x1680:case 0x2000:
-         case 0x2001:case 0x2002:case 0x2003:case 0x2004:
-         case 0x2005:case 0x2006:case 0x2007:case 0x2008:
-         case 0x2009:case 0x200A:case 0x202F:case 0x205F:
-         case 0x3000:case 0xFEFF: c ++ ; continue ;
+    case 0x0020:case 0x00A0:case 0x1680:case 0x2000:
+    case 0x2001:case 0x2002:case 0x2003:case 0x2004:
+    case 0x2005:case 0x2006:case 0x2007:case 0x2008:
+    case 0x2009:case 0x200A:case 0x202F:case 0x205F:
+    case 0x3000:case 0xFEFF: c ++ ; continue ;
 
-         case 0x2028:
-         case 0x2029:
-            if ( noNewLine ) noNewLine = false ;
-            start = ++c ;
-            this.col = 0 ;
-            this.li ++ ;
-            continue;
+    case 0x2028:
+    case 0x2029:
+      if ( noNewLine ) noNewLine = false ;
+      start = ++c ;
+      this.col = 0 ;
+      this.li ++ ;
+      continue;
 
-         case CH_LESS_THAN:
-            if ( this.isScript &&
-                 l.charCodeAt(c+1) === CH_EXCLAMATION &&
-                 l.charCodeAt(c+2) === CH_MIN &&
-                 l.charCodeAt(c+ 1 + 2) === CH_MIN ) {
-               this.c = c + 4;
-               this.readLineComment();
-               c = this.c;
-               continue;
-            }
-            this.col += (c-start ) ;
-            this.c=c;
-            this.nl = !noNewLine ;
-            return ;
+    case CH_LESS_THAN:
+      if ( this.v > 5 && this.isScript &&
+        l.charCodeAt(c+1) === CH_EXCLAMATION &&
+        l.charCodeAt(c+2) === CH_MIN &&
+        l.charCodeAt(c+1+2) === CH_MIN
+      ) {
+        this.c = c + 4;
+        this.col += (this.c-start) ;
+        this.readLineComment();
+        c = this.c;
+        continue;
+      }
+      this.col += (c-start ) ;
+      this.c=c;
+      this.nl = !noNewLine ;
+      return ;
  
-         case CH_MIN:
-            if ( (!noNewLine || startOffset === 0) &&
-                 this.isScript &&
-                 l.charCodeAt(c+1) === CH_MIN && l.charCodeAt(c+2) === CH_GREATER_THAN ) {
-               this.c = c + 1 + 2;
-               this.readLineComment();
-               c = this.c;
-               continue;
-            }
+    case CH_MIN:
+      if (this.v > 5 && (!noNewLine || startOffset === 0) &&
+           this.isScript &&
+           l.charCodeAt(c+1) === CH_MIN && l.charCodeAt(c+2) === CH_GREATER_THAN ) {
+        this.c = c + 1 + 2;
+        this.col += (this.c-start) ;
+        this.readLineComment();
+        c = this.c;
+        continue;
+      }
   
-         default :
-   
-            this.col += (c-start ) ;
-            this.c=c;
-            this.nl = !noNewLine ;
-            return ;
-       }
-     }
+    default :
+      this.col += (c-start ) ;
+      this.c=c;
+      this.nl = !noNewLine ;
+      return ;
+    }
+  }
 
   this.col += (c-start ) ;
   this.c = c ;
@@ -485,9 +504,13 @@ this.readDot = function() {
 this.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
 
 this.expectID = function (n) {
-  if (!(this.lttype === 'Identifier' && this.ltval === n)) 
-    this.err('unexpected.id');
-  this.next();
+  if (this.lttype === 'Identifier' && this.ltval === n)
+    return this.next();
+  
+  if (this.lttype !== 'Identifier')
+    this.err('an.id.was.expected',{extra:n});
+ 
+  this.err('unexpected.id',{extra:n});
 };
 
 this.expectType_soft = function (n)  {
@@ -508,3 +531,7 @@ this.expectID_soft = function (n) {
   return false;
 };
 
+this.kw = function() {
+  if (this.onToken_)
+    this.lttype = 'Keyword';
+};

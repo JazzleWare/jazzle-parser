@@ -102,10 +102,10 @@ for ( sourceName in sources ) {
  var l = 1;
  while ( l-- ) {
      if ( parsers.esprima && parsers.jazzle ) {
-          var comp =  util.compare_ea(
-            parsers.esprima(sources[sourceName],!false),
-            parsers.jazzle(sources[sourceName],!false),
-            "", util.ej_adjust);
+          var e = parsers.esprima(sources[sourceName],!false),
+              j = parsers.jazzle(sources[sourceName],!false);
+          util.prog_adjust(e, j, null);
+          var comp =  util.compare_ea(e, j, "", util.ej_adjust);
 
           if ( comp ) {
             console.log( util.obj2str(comp) );

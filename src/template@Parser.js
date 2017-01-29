@@ -6,11 +6,15 @@ this . parseTemplateLiteral = function() {
   var startc = this.c - 1, startLoc = this.locOn(1);
   var c = this.c, src = this.src, len = src.length;
   var templStr = [], templExpressions = [];
-  var startElemFragment = c, // an element's content might get fragmented by an esc appearing in it, e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
-      startElem = c,
+  
+  // an element's content might get fragmented by an esc appearing in it,
+  // e.g., 'eeeee\nee' has two fragments, 'eeeee' and 'ee'
+  var startElemFragment = c; 
+
+  var startElem = c,
       currentElemContents = "",
       startColIndex = c ,
-      ch = 0;
+      ch = 0, elem = null;
  
   while ( c < len ) {
     ch = src.charCodeAt(c);
@@ -20,12 +24,27 @@ this . parseTemplateLiteral = function() {
           if ( src.charCodeAt(c+1) === CH_LCURLY ) {
               currentElemContents += src.slice(startElemFragment, c) ;
               this.col += ( c - startColIndex );
-              templStr.push(
+              elem =
                 { type: 'TemplateElement', 
                  start: startElem, end: c, tail: false,
                  loc: { start: { line: li, column: col }, end: { line: this.li, column: this.col } },        
                  value: { raw : src.slice(startElem, c ).replace(/\r\n|\r/g,'\n'), 
-                        cooked: currentElemContents   } } );
+                        cooked: currentElemContents   } };
+              
+              templStr.push(elem);
+
+              if (this.onToken_ !== null) {
+                var loc = elem.loc;
+                this.onToken({
+                  type:'Template', value: (templStr.length !== 1 ? '}' : '`') + elem.value.raw + '${',
+                  start: elem.start - 1, end: elem.end + 2,
+                  loc: {
+                    start: { line: loc.start.line, column: loc.start.column - 1 },
+                    end: { line: loc.end.line, column: loc.end.column + 2 }
+                  }
+                });
+                this.lttype = "";
+              }
 
               this.c = c + 2; // ${
               this.col += 2; // ${
@@ -90,8 +109,6 @@ this . parseTemplateLiteral = function() {
 
     c++ ;
   }
-
-  if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished') ;
   
   if ( startElem < c ) {
      this.col += ( c - startColIndex );
@@ -100,7 +117,7 @@ this . parseTemplateLiteral = function() {
   }
   else currentElemContents = "";
 
-  templStr.push({
+  elem ={
      type: 'TemplateElement',
      start: startElem,
      loc: { start : { line: li, column: col }, end: { line: this.li, column: this.col } },
@@ -108,13 +125,29 @@ this . parseTemplateLiteral = function() {
      tail: true,
      value: { raw: src.slice(startElem,c).replace(/\r\n|\r/g,'\n'), 
               cooked: currentElemContents }
-  }); 
+  };
+
+  templStr.push(elem);
+
+  if (this.onToken_ !== null) {
+    this.onToken({
+      type:'Template', value: (templStr.length !== 1 ? '}' : '`')+elem.value.raw+'`',
+      start: elem.start-1, end: elem.end+1,
+      loc: {
+        start: { line: elem.loc.start.line, column: elem.loc.start.column-1 },
+        end: { line: elem.loc.end.line, column: elem.loc.end.column+1 }
+      }    
+    });
+    this.lttype = "";
+  }
 
   c++; // backtick  
   this.col ++ ;
 
   var n = { type: 'TemplateLiteral', start: startc, quasis: templStr, end: c,
        expressions: templExpressions , loc: { start: startLoc, end : this.loc() } /* ,y:-1*/};
+
+  if ( ch !== CH_BACKTICK ) this.err('templ.lit.is.unfinished',{extra:n}) ;
 
   this.c = c;
   this.next(); // prepare the next token  

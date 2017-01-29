@@ -16,24 +16,29 @@ this.parseProgram = function () {
   this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
   var list = this.blck(); 
- 
-  var endLoc = null;
-  if (list.length) {
-    var firstStatement = list[0];
-    startc = firstStatement.start;
-    startLoc = firstStatement.loc.start;    
-
-    var lastStatement = list[ list.length - 1 ];
-    endI = lastStatement.end;
-    endLoc = lastStatement.loc.end;
-  }
-  else {
-    endLoc = startLoc = { line: 0, column: 0 };
-  }
         
   alwaysResolveInTheParentScope(this.scope);
-  var n = { type: 'Program', body: list, start: startc, end: endI, sourceType: !this.isScript ? "module" : "script" ,
-           loc: { start: startLoc, end: endLoc } };
+  var n = {
+    type: 'Program',
+    body: list,
+    start: 0,
+    end: this.src.length,
+    sourceType: !this.isScript ? "module" : "script" ,
+    loc: {
+      start: {line: li, column: col},
+      end: {line: this.li, column: this.col}
+    }
+  };
+
+  if (this.onToken_ !== null) {
+    if (typeof this.onToken_ !== FUNCTION_TYPE)
+      n.tokens = this.onToken_;
+  }
+
+  if (this.onComment_ !== null) {
+    if (typeof this.onComment_ !== FUNCTION_TYPE)
+      n.comments = this.onComment_;
+  }
 
   if ( !this.expectType_soft ('eof') &&
         this.err('program.unfinished') )

@@ -76,7 +76,7 @@ this.parseRegExpLiteral = function() {
                case CH_LINE_FEED :
                case 0x2028 :
                case 0x2029 :
-                  if ( this.err('regex.newline.esc') )
+                  if ( this.err('regex.newline.esc',{c0:c}) )
                     return this.errorHandlerOutput ;
             }
 
@@ -98,7 +98,7 @@ this.parseRegExpLiteral = function() {
          case CH_LINE_FEED :
          case 0x2028 :
          case 0x2029 :
-           if ( this.err('regex.newline') )
+           if ( this.err('regex.newline',{c0:c}) )
              return this.errorHandlerOutput ;
 
 //       default:if ( o >= 0x0D800 && o <= 0x0DBFF ) { this.col-- ; }
@@ -118,23 +118,23 @@ this.parseRegExpLiteral = function() {
         switch ( src.charCodeAt ( ++c ) ) {
             case CH_g:
                 if (flags & gRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= gRegexFlag; break;
             case CH_u:
                 if (flags & uRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= uRegexFlag; break;
             case CH_y:
                 if (flags & yRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= yRegexFlag; break;
             case CH_m:
                 if (flags & mRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= mRegexFlag; break;
             case CH_i:
                 if (flags & iRegexFlag)
-                  this.err('regex.flag.is.dup');
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= iRegexFlag; break;
 
             default : break WHILE;
@@ -174,8 +174,17 @@ this.parseRegExpLiteral = function() {
      this.col += (c-this.c);
      var regex = { type: 'Literal', regex: { pattern: patternString, flags: flagsString },
                    start: startc, end: c,
-                   value: val, loc: { start: startLoc, end: this.loc() } };
+                   value: val, loc: { start: startLoc, end: this.loc() }, 
+                   raw: this.src.substring(startc, c) };
      this.c = c;
+
+     if (this.onToken_ !== null) {
+       this.onToken({
+         type: 'RegularExpression', value: this.src.substring(startc,c), start: startc,
+         end: c, regex: regex.regex, loc: regex.loc });
+       this.lttype = "";
+     }
+
      this.next () ;
 
      return regex ;

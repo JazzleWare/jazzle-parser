@@ -39,7 +39,23 @@ this.parseMem = function(context, flags) {
 
         flags |= latestFlag = MEM_STATIC;
         nmod++;
-        this.next();
+
+        if (this.onToken_ !== null) {
+          this.lttype = "";
+          this.next();
+          if (this.lttype !== '(')
+            this.onToken_kw(nc0,{line:nli0,column:ncol0},nraw);
+          else
+            this.onToken({ type: 'Identifier', value: nraw, start: nc0, end: nc0+nraw.length,
+              loc: {
+                start: { line: nli0, column: ncol0 },
+                end: { line: nli0, column: ncol0+nraw.length }
+              }
+            });
+        }
+        else
+          this.next();
+
         break;
 
       case 'get':
@@ -153,10 +169,10 @@ this.parseMem = function(context, flags) {
   }
 
   if (flags & MEM_CLASS)
-    this.err('unexpected.lookahead');
+    this.err('meth.paren');
 
   if (nmod)
-    this.err('unexpected.lookahead');
+    this.err('obj.meth.no.paren');
 
   // TODO: it is not strictly needed -- this.parseObjElem itself can verify if the name passed to it is
   // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad
@@ -189,7 +205,8 @@ this.parseObjElem = function(name, context) {
         }
         if ((context & CTX_PAT) &&
            !(context & CTX_HAS_A_PARAM_ERR) &&
-           this.at === ERR_NONE_YET) {
+           this.at === ERR_NONE_YET &&
+           !this.ensureSimpAssig_soft(val.expr)) {
           this.at = ERR_PAREN_UNBINDABLE; this.pe = val;
         }
       }

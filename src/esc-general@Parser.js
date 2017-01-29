@@ -143,11 +143,11 @@ this.readStrictEsc = function ()  {
             if ( b0 < CH_0 || b0 >= CH_8 )
               return '\0';
        }
-       if ( this.err('strict.oct.str.esc') )
+       if ( this.err('strict.oct.str.esc.templ') )
          return this.errorHandlerOutput
 
     case CH_4: case CH_5: case CH_6: case CH_7:
-       if (this.err('strict.oct.str.esc') )
+       if (this.err('strict.oct.str.esc.templ') )
          return this.errorHandlerOutput  ;
 
    case CH_8:

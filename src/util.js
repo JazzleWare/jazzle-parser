@@ -68,22 +68,3 @@ function toNum (n) {
          (n <= CH_f && n >= CH_a) ? 10 + n - CH_a :
          (n >= CH_A && n <= CH_F) ? 10 + n - CH_A : -1;
 };
-
-function createObj(fromPrototype) {
-  function Obj() {}
-  Obj.prototype = fromPrototype;
-  return new Obj();
-}
-
-function getOwnN(obj, name, notHave) {
-  return HAS.call(obj, name) ? obj[name] : notHave;
-}
-
-function getOwn(obj, name) {
-  return getOwnN(obj, name, null);
-}
-
-function hasOwn(obj, name) {
-  return HAS.call(obj, name);
-}
-

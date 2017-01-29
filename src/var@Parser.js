@@ -15,12 +15,25 @@ this.parseVariableDeclaration = function(context) {
     else
       this.err('decl.label',{c0:startc,loc0:startLoc});
   }
-  if (kind !== 'var' && !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK)) {
-    if (!this.hasDeclarator() )
-      this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
+
+  if (this.onToken_ !== null) {
+    if (kind === 'let')
+      this.lttype = ""; // turn off the automatic tokeniser
+    else
+      this.lttype = 'Keyword';
   }
 
   this.next();
+  if (kind !== 'var') {
+    if (this.hasDeclarator()) {
+      if (!(this.scopeFlags & SCOPE_FLAG_IN_BLOCK))
+        this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
+      if (kind === 'let' && this.onToken_ !== null &&
+         (this.lttype !== 'Identifier' || this.ltval !== 'in'))
+        this.onToken_kw(startc,startLoc,'let');
+    }
+  }
+
   this.declMode = kind === 'var' ? 
     DECL_MODE_VAR : DECL_MODE_LET;
   
@@ -62,7 +75,7 @@ this.parseVariableDeclaration = function(context) {
         this.err('var.has.an.empty.declarator',{extra:[startc,startLoc,context,list,kind]});
    
       if (this.missingInit || (isConst && !elem.init))
-        this.err('var.init.is.missing',{extra:[startc,startLoc,context,list,kind],elem:elem});
+        this.err('var.must.have.init',{extra:[startc,startLoc,context,list,kind],elem:elem});
    
       list.push(elem);
     }

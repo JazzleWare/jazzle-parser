@@ -174,7 +174,8 @@ mex.compare_ea = function(expected, actual, name, adjust) {
 mex.compareArray_ea = function(expected, actual, name, adjust) {
   var comp = null, i=0;
   while (i < expected.length) {
-    var l = i < actual.length ?
+    var l = expected[i].type === 'BlockComment' ? null :
+      i < actual.length ?
       mex.compare_ea(expected[i], actual[i], i, adjust):
       { type: 'not-in-the-actual', val: expected[i] };
 
@@ -198,12 +199,107 @@ mex.compareArray_ea = function(expected, actual, name, adjust) {
   return comp;
 };
 
+mex.clearComments = function(tokens) {
+  var tok = [], i = 0;
+  while (i < tokens.length) {
+    var elem = tokens[i];
+    if (elem.type !== 'BlockComment' &&
+        elem.type !== 'LineComment')
+      tok.push(elem);
+    i++;
+  }
+  return tok;
+};
+
+mex.adjustTokens = function(tokens) {
+  var e = 0;
+  while (e < tokens.length) {
+    var elem = tokens[e++];
+    if (elem.type === 'Identifier' || elem.type === 'Keyword') {
+      switch (elem.value) {
+         case 'null':
+           elem.type = 'Null';
+           break;
+
+         case 'true':
+         case 'false':
+           elem.type = 'Boolean';
+           break;
+    
+         case 'await':
+           elem.type = 'Identifier';
+           break;
+
+         case 'do': case 'if': case 'in':
+//       case 'int' :
+         case 'let' : case 'for' : case 'try' : case 'var' :
+         case 'new' : /* case 'byte': case 'char': case 'goto':
+         case 'long': */ case 'case': case 'else': case 'this':
+         case 'void': case 'true': case 'with': case 'enum':
+         case 'final': /* case 'float':
+         case 'short': */ case 'yield': 
+         case 'break': case 'catch': case 'class': case 'const': case 'false':
+         case 'super': case 'throw': case 'while': 
+         case 'double':/* case 'native': case 'throws':
+         case 'public':
+         case 'static': */
+         case 'delete': case 'export': case 'import': case 'return':
+         case 'switch': case 'typeof':
+/*       case 'package':
+         case 'private':
+         case 'boolean': */
+         case 'default': case 'extends': case 'finally':
+         case 'abstract': case 'volatile':
+         case 'continue': case 'debugger': case 'function':
+//       case 'protected':
+//         case 'interface':
+         case 'transient':
+//         case 'implements':
+         case 'instanceof':
+         case 'synchronized':
+           elem.type = 'Keyword';
+      }
+    }
+  }
+
+  return tokens;
+};
+
 mex.ej_adjust = function(e, j, name) {
-  delete e.tokens; delete e.comments;
-  delete e.raw; delete e. directive;
+// delete e.tokens;
+  delete e. directive;
+  delete e.trailingComments; delete e.leadingComments;
+// delete e.comments;
+  delete e.innerComments;
+  if (!e.hasOwnProperty('raw')) {
+//  console.error('raw in name: <'+name+'>');
+    delete j.raw;
+  }
+
+  if (e.value && e.value.hasOwnProperty('raw')) {
+    e.value.raw = e.value.raw.replace(/\r\n|\r/g,'\n');
+  }
+
   delete e.errors; 
 
   delete j.y; delete j.scope;
+// delete j.tokens;
+
+  if (e.tokens) {
+    e.tokens = mex.clearComments(e.tokens);
+  }
+  if (j.tokens) {
+    j.tokens = mex.adjustTokens(j.tokens);
+  }
+  if (e.type === 'Template')
+    e.value = e.value.replace(/\r\n|\r/g,'\n');
+
+  if (j.type === 'Line') {
+    if (j.value[j.value.length-1]==='\n') {
+      j.value = j.value.substring(0, j.value.length-1);
+      j.end -= 1;
+    }
+  }
 
   if (j.regex) {
     mex.assert(
@@ -222,8 +318,6 @@ mex.ej_adjust = function(e, j, name) {
     }
     delete j.start; delete j.end;
   }
-
-  delete j.raw;
 
   if (j.type === 'AssignmentProperty')
     j.type = 'Property';
@@ -278,13 +372,17 @@ mex.ej_adjust = function(e, j, name) {
 };
 
 mex.compareObj_ea = function(expected, actual, name, adjust) {
+  if (expected.type === 'BlockComment')
+    return null;
+
   adjust && adjust(expected, actual, name);
   var comp = null, item = null;
   for (item in expected) {
     if (!mex.has(expected, item))
       continue;
 
-    var l = mex.has(actual, item) ?
+    var l = expected[item] && expected[item].type === 'BlockComment' ? null :
+      mex.has(actual, item) ?
       mex.compare_ea(expected[item], actual[item], item, adjust ) :
       { type: 'not-in-the-actual', val: expected[item] };
  
@@ -317,6 +415,23 @@ mex.toBytes = function(str) {
     bytes += str.charCodeAt(i++).toString(0x010);
   }
   return bytes;
+};
+
+mex.prog_adjust = function(e, j, parser) {
+  if (e.type !== 'Program') {
+    return;
+  }
+  if (e.range) {
+    e.range[0] = j.start;
+    e.range[1] = j.end;
+  }
+  if (e.loc) {
+    e.loc.start.line = j.loc.start.line;
+    e.loc.end.line = j.loc.end.line;
+    e.loc.start.column = j.loc.start.column;
+    e.loc.end.column = j.loc.end.column;
+  }
+
 };
 
 })(module.exports);

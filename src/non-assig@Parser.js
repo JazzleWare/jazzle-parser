@@ -52,6 +52,7 @@ this.parseUnaryExpression = function(context) {
       isVDT = this.isVDT;
 
   if (isVDT) {
+    this.kw();
     this.isVDT = VDT_NONE;
     u = this.ltval;
     startLoc = this.locBegin();
@@ -153,7 +154,9 @@ this .parseO = function(context ) {
     case 'in':
       this.resvchk();
     case 'of':
-      if (context & CTX_FOR) break ;
+      if (context & CTX_FOR)
+        break ;
+
       this.prec = PREC_COMP ;
       this.ltraw = this.ltval;
       return true;

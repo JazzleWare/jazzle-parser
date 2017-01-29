@@ -21,6 +21,7 @@ this.parseFunc = function(context, flags) {
   var cfn = null;
 
   if (isWhole) { 
+    this.kw();
     this.next();
     if (this.lttype === 'op' && this.ltraw === '*') {
       if (this.v <= 5)

@@ -29,7 +29,7 @@ this.parseFor = function() {
       break;
 
     case 'let':
-      if ( this.v >= 5 ) {
+      if ( this.v > 5 ) {
         this.canBeStatement = true;
         head = this.parseLet(CTX_FOR);
       }
@@ -67,7 +67,7 @@ this.parseFor = function() {
 
     case 'in':
       if (this.ltval === 'in')
-        this.resvchk();
+        this.kw(), this.resvchk();
 
       if (headIsExpr) {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec

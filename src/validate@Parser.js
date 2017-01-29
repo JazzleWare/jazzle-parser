@@ -138,7 +138,7 @@ this.errorReservedID = function(id) {
      this.throwReserved = true;
      return null;
   }
-  if ( this.err('reserved.id') ) return this.errorHandlerOutput;
+  if ( this.err('reserved.id',{tn:id}) ) return this.errorHandlerOutput;
 }
 
 

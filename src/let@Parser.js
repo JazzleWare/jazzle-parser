@@ -6,14 +6,14 @@ this.parseLet = function(context) {
 // not 'in for'
 
   var startc = this.c0, startLoc = this.locBegin();
-  var c = this.c, li = this.li, col = this.col;
+  var c = this.c, li = this.li, col = this.col, raw = this.ltraw;
 
   var letDecl = this.parseVariableDeclaration(context);
 
   if ( letDecl )
     return letDecl;
 
-  if (this.tight && this.err('strict.let.is.id') )
+  if (this.tight && this.err('strict.let.is.id',{c0:startc,loc:startLoc}) )
     return this.errorHandlerOutput ;
 
   this.canBeStatement = false;
@@ -22,8 +22,11 @@ this.parseLet = function(context) {
      name: 'let',
      start: startc,
      end: c,
-     loc: { start: startLoc, end: { line: li, column: col } }
+     loc: { start: startLoc, end: { line: li, column: col }, raw: raw }
   };
+
+  if (this.onToken_ !== null)
+    this.onToken({type: 'Identifier', value: raw, start: startc, end: c, loc:this.pendingExprHead.loc });
 
   return null ;
 };
