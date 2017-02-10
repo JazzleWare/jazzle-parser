@@ -222,11 +222,34 @@ this.newSynthName = function(baseName) {
          i++;
        }
      }
+     if ((this.type & SCOPE_TYPE_CATCH) &&
+        this.catchVarName !== "" &&
+        name === this.catchVarName)
+       continue;
 
      break;
   }
   return name;
 };
+
+this.synthesizeCatchVar = function(baseName) {
+  ASSERT.call(this.type & SCOPE_TYPE_CATCH, 'only a catch scope can have a synthCatch');
+  ASSERT.call(this.catchVarIsSynth, 'catch var is not synthable');
+  ASSERT.call(this.catchVarName === "", 'catch var is not non-existent');
+  
+  baseName = baseName || 'err';
+  var name = baseName, num = 0;
+
+  for (;;num++, name = baseName+""+num) {
+    if (this.findDeclByEmitNameInScope(name))
+      continue;
+    if (this.findRefByEmitNameInScope(name))
+      continue;
+    break;
+  }
+
+  return this.catchVarName = name;
+};    
 
 this.makeScopeObj = function() {
   if (this.scopeObjVar !== null) return;
@@ -411,6 +434,9 @@ this.synthesizeNames = function() {
     while (e < list.length)
       list[e++].synthesizeNames();
   }
+
+  if (this.type & SCOPE_TYPE_CATCH)
+    this.catchVarIsSynth && this.synthesizeCatchVar();
 };
 
 this.createMappingForUnresolvedNames = function() {
@@ -439,7 +465,13 @@ this.findRefByEmitNameInScope = function(name) {
 
 this.synthesizeDecl = function(decl) {
   ASSERT.call(this, this === decl.scope, 'a scope can only synthesize its own declarations');
-  var synthName = this.newSynthName(decl.name);
+  var synthName = "";
+
+  if (decl.type & DECL_MODE_LET)
+    synthName = this.newSynthName(decl.name);
+  else
+    synthName = decl.name;
+
   decl.synthName = synthName;
   this.funcScope.insertEmitName(synthName, decl);
   this.updateLiquidNamesWith(synthName);
