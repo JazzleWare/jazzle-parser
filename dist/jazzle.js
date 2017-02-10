@@ -9515,16 +9515,26 @@ this.insertRef = function(name, ref) {
 };
 
 this.newSynthName = function(baseName) {
-  var num = 0, targetScope = this.funcScope;
+  var num = 0;
   var name = baseName;
+  var ref = this.findDeclInScope(baseName).refMode;
+  var targetScope = this.funcScope; 
+
+  RENAME:
   for (;;num++, name = baseName + "" + num) {
      if (targetScope.findDeclByEmitNameInScope(name))
        continue; // must not be in the surrounding func scope's defined names, 
-
      if (targetScope.findRefByEmitNameInScope(name)) continue; // must not be in the surrounding func scope's referenced names;
-     if (this.isLexical()) { // furthermore, if we're not allocating in a func scope,
-       if (this.findRefByEmitNameInScope(name)) continue; // it must not have been referenced in the current scope
+     if (ref) {
+       var list = ref.lors, i = 0;
+       while (i < list.length) {
+         var rs = list[i];
+         if (rs.findDeclInScope(name))
+           continue RENAME;
+         i++;
+       }
      }
+
      break;
   }
   return name;
