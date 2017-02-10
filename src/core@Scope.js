@@ -7,6 +7,9 @@ this.reference = function(name, fromScope) {
     ref = decl.refMode;
     if (this !== fromScope) {
       ref.updateExistingRefWith(name, fromScope);
+      ref.lors = ref.lors.concat(fromScope.findRefInScope(name).lors);
+      if (fromScope.isConcrete()) ref.lors.push(fromScope);
+
       // a catch name is never forward-accessed, even when referenced from within a function declaration 
       if (decl.type & DECL_MODE_CATCH_PARAMS) 
         if (ref.indirect) ref.indirect = ACCESS_EXISTING;
@@ -19,8 +22,11 @@ this.reference = function(name, fromScope) {
       ref = new RefMode();
       this.insertRef(name, ref);
     }
-    if (this !== fromScope)
+    if (this !== fromScope) {
       ref.updateForwardRefWith(name, fromScope);
+      ref.lors = ref.lors.concat(fromScope.findRefInScope(name).lors);
+      if (fromScope.isConcrete()) ref.lors.push(fromScope);
+    }
     else
       ref.direct |= ACCESS_FORWARD;
   }

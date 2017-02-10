@@ -264,7 +264,7 @@ function Partitioner(owner, details) { // TODO: break it up into smaller and mor
 ;
 function RefMode() {
    this.direct = 0;
-   this.indirect = 0;
+   this.indirect = 0; this.lors = [];
 }
 
 ;
@@ -278,7 +278,39 @@ function Scope(parent, type) {
   this.funcScope = 
      this.isConcrete() ? this : this.parent.funcScope;
 
-  this.definedNames = {};
+
+  this.definedNames = this.parent ? createObj(this.parent.definedNames) : {};
+  this.unresolvedNames = {};
+
+  // serves the same purpose as the definedNames above, except that it only contains the names in the current scope;
+  // iterating over the definedNames object means iterating over _all_ names available to the current scope;
+  // this is the reason nameList exists -- to keep the track of the names local to this scope
+  this.nameList = []; 
+
+  this.wrappedDeclList = null;
+  this.wrappedDeclNames = null;
+  this.scopeObjVar = null;
+
+  this.tempStack = this.isConcrete() ? [] : null;
+
+  if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
+    this.type |= SCOPE_TYPE_LEXICAL_LOOP;    
+
+  this.catchVarIsSynth = false;
+  this.catchVarName = ""; 
+
+  this.globalLiquidNames = this.parent ? this.parent.globalLiquidNames : new LiquidNames();
+  this.localLiquidNames = null;
+
+  this.children = [];
+  if (this.parent) this.parent.children.push(this);
+
+  // TODO: replace both with something like 'cachedEmitNames', along with some associated methods like 'cacheEmitNames'
+  //
+  // used when name synthesizing starts
+  this.referencedEmitNames = null; // <k, v>: (emitName, actualName) -- for the names referenced in the current scope
+  // <k, v>: (emitName, actualName) -- for the name defined in the current scope; only functions are supposed to have one of these 
+  this.definedEmitNames = {}; 
 
 }
 
@@ -294,6 +326,11 @@ Scope.createLexical = function(parent, loop) {
         SCOPE_TYPE_LEXICAL_SIMPLE :
         SCOPE_TYPE_LEXICAL_LOOP);
 };
+;
+function SortedObj() {
+  this.keys = [];
+  this.obj = {};
+}
 ;
 // were it not needed by the AssignmentExpression transform, using a transformer would have been
 // limited to the generator bodies; the only reason a transformer is needed as for now
@@ -472,7 +509,7 @@ var DECL_MODE_VAR = 1,
     DECL_MODE_FUNC_NAME = 32|DECL_MODE_VAR;
 
 var DECL_NOT_FOUND = 
-  DECL_MODE_NONE;
+  null;
 
 var DECL_BASE = DECL_MODE_VAR|DECL_MODE_LET;
 
@@ -702,6 +739,7 @@ Errors['err.prop.init'] = "Illegal property initializer";
 // > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
 
 
+var binPrec = {};
 
 var PREC_WITH_NO_OP = 0;
 var PREC_SIMP_ASSIG = PREC_WITH_NO_OP + 1  ;
@@ -709,16 +747,29 @@ var PREC_OP_ASSIG = PREC_SIMP_ASSIG + 40 ;
 var PREC_COND = PREC_OP_ASSIG + 1;
 var PREC_OO = -12 ;
 
-var PREC_BOOL_OR = PREC_COND + 2;
-var PREC_BOOL_AND  = PREC_BOOL_OR + 2 ;
-var PREC_BIT_OR = PREC_BOOL_AND + 2 ;
-var PREC_XOR = PREC_BIT_OR + 2;
-var PREC_BIT_AND = PREC_XOR + 2;
-var PREC_EQUAL = PREC_BIT_AND + 2;
-var PREC_COMP = PREC_EQUAL + 2;
-var PREC_SH = PREC_COMP + 2;
-var PREC_ADD_MIN = PREC_SH + 2;
-var PREC_MUL = PREC_ADD_MIN + 2;
+var PREC_BOOL_OR = binPrec['||'] = PREC_COND + 2;
+var PREC_BOOL_AND  = binPrec['&&'] = PREC_BOOL_OR + 2 ;
+var PREC_BIT_OR = binPrec['|'] = PREC_BOOL_AND + 2 ;
+var PREC_XOR = binPrec['^'] =  PREC_BIT_OR + 2;
+var PREC_BIT_AND = binPrec['&'] = PREC_XOR + 2;
+var PREC_EQUAL = binPrec['==='] =
+                 binPrec['!=='] =
+                 binPrec['=='] =
+                 binPrec['!='] = PREC_BIT_AND + 2;
+var PREC_COMP = binPrec['>'] = 
+                binPrec['<='] =
+                binPrec['<'] =
+                binPrec['>='] =
+                binPrec['instanceof'] =
+                binPrec['in'] = PREC_EQUAL + 2;
+var PREC_SH = binPrec['>>'] =
+              binPrec['<<'] = PREC_COMP + 2;
+var PREC_ADD_MIN = binPrec['+'] =
+                   binPrec['-'] = PREC_SH + 2;
+var PREC_MUL = binPrec['%'] =
+               binPrec['**'] =
+               binPrec['*'] =
+               binPrec['/'] = PREC_ADD_MIN + 2;
 var PREC_U = PREC_MUL + 1;
 
 function isAssignment(prec) { return prec === PREC_SIMP_ASSIG || prec === PREC_OP_ASSIG ;  }
@@ -3283,7 +3334,7 @@ this.parseArrayExpression = function (context ) {
   this.firstNonTailRest = firstNonTailRest;
 
   elem = { type: 'ArrayExpression', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list /* ,y:-1*/};
+           start: startc, end: this.c, elements : list  ,y:-1};
 
   this. expectType ( ']' ) ;
 
@@ -3708,7 +3759,7 @@ this .parseAssignment = function(head, context ) {
     var right = this. parseNonSeqExpr(PREC_WITH_NO_OP, context & CONTEXT_FOR ) ;
     this.firstEA = firstEA;
     var n = { type: 'AssignmentExpression', operator: o, start: head.start, end: right.end,
-             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end }/* ,y:-1*/};
+             left: core(head), right: core(right), loc: { start: head.loc.start, end: right.loc.end } ,y:-1};
 
     if ( this.firstYS ) { // if there was a YS in the right hand side; for example [ e = yield ] = -->yield 12<--is yield!
        if ( context & CONTEXT_PARAM ) { 
@@ -3873,7 +3924,7 @@ this. parseClass = function(context) {
                    loc: { start: nbodyStartLoc, end: endLoc },
                    start: nbodyStartc,
                     end: this.c,
-                    body: list/* ,y:-1*/ }/* ,y:-1*/ };
+                    body: list ,y:-1 } ,y:-1 };
 
   this.expectType('}');
   if ( canBeStatement ) { this.foundStatement = !false; }
@@ -4679,7 +4730,7 @@ this . parseFor = function() {
           this.foundStatement = !false;
           this.exitScope();
           return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
-            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody/* ,y:-1*/ };
+            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody ,y:-1 };
 
        default:
           return this.err('for.iter.not.of.in',startc, startLoc,head);
@@ -4727,7 +4778,7 @@ this . parseFor = function() {
          test: afterHead && core(afterHead),
          loc: { start: startLoc, end: nbody.loc.end },
           update: tail && core(tail),
-         body: nbody/* ,y:-1*/ };
+         body: nbody ,y:-1 };
 };
 
 
@@ -4924,7 +4975,7 @@ this.parseFuncBody = function(context) {
   var list = this.blck();
 
   var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
-           loc: { start: startLoc, end: this.loc() }, scope: this.scope/* ,y:-1*/ };
+           loc: { start: startLoc, end: this.loc() }, scope: this.scope ,y:-1 };
 
   if ( ! this.expectType_soft ( '}' ) &&
          this.err('func.body.is.unfinished',n) )
@@ -4941,17 +4992,18 @@ this . makeStrict  = function() {
 
    this.tight = !false;
 
-   var a = null, argNames = this.scope.definedNames;
-   for (a in argNames) {
-     var declType = argNames[a];
-     a = a.substring(0,a.length-1);
-     if (declType&DECL_DUPE)
-       this.err('func.args.has.dup',a);
+   var a = 0, argNames = this.scope.nameList;
+   while (a < argNames.length) {
+     var decl = argNames[a];
+     if (decl.type&DECL_DUPE)
+       this.err('func.args.has.dup',decl.name);
+     ASSERT.call(this, !arguments_or_eval(decl.name));
+     this.validateID(decl.name);
 
-     ASSERT.call(this, !arguments_or_eval(a));
-     this.validateID(a);
+     a++;
    }
 };
+
 
 
 },
@@ -5382,6 +5434,8 @@ this.parseNewHead = function () {
        return head.val;
   }
 
+  if (head.type === 'Identifier')
+    this.scope.reference(head.name);
 
   var inner = core( head ) ;
   while ( !false ) {
@@ -5393,7 +5447,7 @@ this.parseNewHead = function () {
 
           elem = this.memberID();
           head =   {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false/* ,y:-1*/ };
+                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false ,y:-1 };
           inner = head;
           continue;
 
@@ -5401,7 +5455,7 @@ this.parseNewHead = function () {
           this.next() ;
           elem = this.parseExpr(CONTEXT_NONE) ;
           head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false/* ,y:-1*/ };
+                    loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: !false ,y:-1 };
           inner = head ;
           if ( !this.expectType_soft (']') ) {
             head = this.err('mem.unfinished',startc,startLoc,head)  ;
@@ -5417,7 +5471,7 @@ this.parseNewHead = function () {
        case '(':
           elem = this. parseArgList();
           inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
-                    loc: { start: startLoc, end: this.loc() }, arguments: elem /* ,y:-1*/};
+                    loc: { start: startLoc, end: this.loc() }, arguments: elem  ,y:-1};
           if ( !this. expectType_soft (')') ) {
             inner = this.err('new.args.is.unfinished',startc,startLoc,inner) ;
             if ( inner.type === ERR_RESUME )
@@ -5436,13 +5490,13 @@ this.parseNewHead = function () {
                 start: head.start,
                  end: elem.end,
                 loc : { start: head.loc.start, end: elem.loc.end },
-                tag : inner /* ,y:-1*/
+                tag : inner  ,y:-1
             };
             inner = head;
             continue ;
 
         default: return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
-                 loc: { start: startLoc, end: head.loc.end }, arguments : [] /* ,y:-1*/};
+                 loc: { start: startLoc, end: head.loc.end }, arguments : []  ,y:-1};
 
      }
   }
@@ -5966,7 +6020,7 @@ this.parseExpr = function (context) {
     } while (this.lttype === ',' ) ;
 
     return  { type: 'SequenceExpression', expressions: e, start: head.start, end: lastExpr.end,
-              loc: { start : head.loc.start, end : lastExpr.loc.end}/* ,y:-1*/ };
+              loc: { start : head.loc.start, end : lastExpr.loc.end} ,y:-1 };
   }
 
   return head ;
@@ -5980,7 +6034,7 @@ this .parseCond = function(cond,context ) {
 
     var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
     return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
-             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt) /* ,y:-1*/};
+             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt)  ,y:-1};
 };
 
 this .parseUnaryExpression = function(context ) {
@@ -6176,7 +6230,7 @@ this.parseNonSeqExpr = function (prec, context  ) {
                    end: right.loc.end
                 },
                 left: core(head),
-                right: core(right)/* ,y:-1*/
+                right: core(right) ,y:-1
               };
     }
   
@@ -6342,7 +6396,7 @@ this .parseMeth = function(name, isClass) {
      return { type: 'Property', key: core(name), start: name.start, end: val.end,
               kind: 'init', computed: name.type === PAREN,
               loc: { start: name.loc.start, end : val.loc.end },
-              method: !false, shorthand: false, value : val/* ,y:-1*/ };
+              method: !false, shorthand: false, value : val ,y:-1 };
    }
 
    var kind = 'method' ;
@@ -6363,7 +6417,7 @@ this .parseMeth = function(name, isClass) {
    return { type: 'MethodDefinition', key: core(name), start: name.start, end: val.end,
             kind: kind, computed: name.type === PAREN,
             loc: { start: name.loc.start, end: val.loc.end },
-            value: val,    'static': false/* ,y:-1*/ };
+            value: val,    'static': false ,y:-1 };
 };
 
 this .parseGen = function(isClass ) {
@@ -6404,13 +6458,13 @@ this .parseGen = function(isClass ) {
      return { type: 'Property', key: core(name), start: startc, end: val.end,
               kind: 'init', computed: name.type === PAREN,
               loc: { start: startLoc , end : val.loc.end },
-              method: !false, shorthand: false, value : val/* ,y:-1*/ };
+              method: !false, shorthand: false, value : val ,y:-1 };
   }
 
   val = this.parseFunc(  CONTEXT_NONE , ARGLIST_AND_BODY_GEN|METH_FUNCTION, ANY_ARG_LEN )
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: 'method', computed: name.type === PAREN,
-           loc : { start: startLoc, end: val.loc.end },    'static': false, value: val/* ,y:-1*/ };
+           loc : { start: startLoc, end: val.loc.end },    'static': false, value: val ,y:-1 };
 };
 
 this . parseSetGet= function(isClass) {
@@ -6450,7 +6504,7 @@ this . parseSetGet= function(isClass) {
        return { type: 'Property', key: core(name), start: startc, end: val.end,
              kind: kind, computed: name.type === PAREN,
              loc: { start: startLoc, end: val.loc.end }, method: false,
-             shorthand: false, value : val/* ,y:-1*/ };
+             shorthand: false, value : val ,y:-1 };
   }
   
   if ( strName === 'constructor' &&
@@ -6461,7 +6515,7 @@ this . parseSetGet= function(isClass) {
 
   return { type: 'MethodDefinition', key: core(name), start: startc, end: val.end,
            kind: kind, computed: name.type === PAREN,
-           loc : { start: startLoc, end: val.loc.end }, 'static': false, value: val/* ,y:-1*/ };
+           loc : { start: startLoc, end: val.loc.end }, 'static': false, value: val ,y:-1 };
 };
 
 
@@ -6537,7 +6591,7 @@ this.parseObjectExpression = function (context) {
   } while ( this.lttype === ',' );
 
   elem = { properties: list, type: 'ObjectExpression', start: startc,
-     end: this.c , loc: { start: startLoc, end: this.loc() }/* ,y:-1*/};
+     end: this.c , loc: { start: startLoc, end: this.loc() } ,y:-1};
 
   if ( ! this.expectType_soft ('}') && this.err('obj.unfinished',{
     obj: elem, asig: firstUnassignable, ea: firstEA,
@@ -6609,7 +6663,7 @@ this.parseProperty = function (name, context) {
          val = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context )  ;
          val = { type: 'Property', start: name.start, key: core(name), end: val.end,
                   kind: 'init', loc: { start: name.loc.start, end: val.loc.end }, computed: name.type === PAREN ,
-                  method: false, shorthand: false, value: core(val)/* ,y:-1*/ };
+                  method: false, shorthand: false, value: core(val) ,y:-1 };
          if ( __proto__ )
             this.first__proto__ = val;
 
@@ -6640,7 +6694,7 @@ this.parseProperty = function (name, context) {
 
           return { type: 'Property', key: name, start: val.start, end: val.end,
                     loc: val.loc, kind: 'init',  shorthand: !false, method: false,
-                   value: val, computed: false/* ,y:-1*/ };
+                   value: val, computed: false ,y:-1 };
   }
 
        return n   ;
@@ -6701,7 +6755,7 @@ this. parseArrayPattern = function() {
   } 
 
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
-           start: startc, end: this.c, elements : list/* ,y:-1*/};
+           start: startc, end: this.c, elements : list ,y:-1};
 
   if ( !this. expectType_soft ( ']' ) &&
         this.err('pat.array.is.unfinished',elem) )
@@ -6756,7 +6810,7 @@ this.parseObjectPattern  = function() {
       list.push({ type: 'Property', start: name.start, key: core(name), end: val.end,
                   loc: { start: name.loc.start, end: val.loc.end },
                  kind: 'init', computed: name.type === PAREN, value: val,
-               method: false, shorthand: sh/* ,y:-1*/ });
+               method: false, shorthand: sh ,y:-1 });
 
     } while ( this.lttype === ',' );
 
@@ -6764,7 +6818,7 @@ this.parseObjectPattern  = function() {
              loc: { start: startLoc, end: this.loc() },
              start: startc,
               end: this.c,
-              properties: list/* ,y:-1*/ };
+              properties: list ,y:-1 };
 
     if ( ! this.expectType_soft ('}') && this.err('pat.obj.is.unfinished',n) )
       return this.errorHandlerOutput ;
@@ -6776,7 +6830,7 @@ this .parseAssig = function (head) {
     this.next() ;
     var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
     return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
-           right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
+           right: core(e), loc: { start: head.loc.start, end: e.loc.end }  ,y:-1};
 };
 
 
@@ -6883,6 +6937,8 @@ this.parseExprHead = function (context) {
         return this.errorHandlerOutput ;
   }
      
+  if (head.type === 'Identifier')
+    this.scope.reference(head.name);
 
   inner = core( head ) ;
 
@@ -6897,7 +6953,7 @@ this.parseExprHead = function (context) {
             elem  = this.memberID();
             this.assert(elem);
             head = {  type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false /* ,y:-1*/};
+                      loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false  ,y:-1};
             inner =  head ;
             continue;
 
@@ -6905,7 +6961,7 @@ this.parseExprHead = function (context) {
             this.next() ;
             elem   = this. parseExpr(PREC_WITH_NO_OP,CONTEXT_NONE ) ;
             head =  { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-                      loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false /* ,y:-1*/};
+                      loc : { start: head.loc.start, end: this.loc()  }, object: inner, computed: !false  ,y:-1};
             inner  = head ;
             if ( !this.expectType_soft (']') &&
                   this.err('mem.unfinished',head,firstParen,firstUnassignable) )
@@ -6916,7 +6972,7 @@ this.parseExprHead = function (context) {
          case '(':
             elem  = this. parseArgList() ;
             head =  { type: 'CallExpression', callee: inner , start: head.start, end: this.c,
-                      arguments: elem, loc: { start: head.loc.start, end: this.loc() } /* ,y:-1*/};
+                      arguments: elem, loc: { start: head.loc.start, end: this.loc() }  ,y:-1};
             if ( !this.expectType_soft (')'   ) &&
                   this.err('call.args.is.unfinished',head,firstParen,firstUnassignable) )
               return this.errorHandlerOutput  ;
@@ -6932,7 +6988,7 @@ this.parseExprHead = function (context) {
                   start: head.start,
                    end: elem.end,
                   loc : { start: head.loc.start, end: elem.loc.end },
-                  tag : inner/* ,y:-1*/
+                  tag : inner ,y:-1
              };
  
              inner = head;
@@ -7099,7 +7155,7 @@ this.parseParen = function () {
   // if we have a list, the expression in parens is a seq
   if ( list )
        elem = { type: 'SequenceExpression', expressions: list, start: firstElem .start , end: elem.end,
-               loc: { start:  firstElem .loc.start , end: elem.loc.end } /* ,y:-1*/};
+               loc: { start:  firstElem .loc.start , end: elem.loc.end }  ,y:-1};
   // otherwise update the expression's paren depth if it's needed
   if ( elem ) {
     elem = core(elem); 
@@ -7180,6 +7236,7 @@ this.parseProgram = function () {
   var endI = this.c , startLoc = null;
   var globalScope = null;
 
+  globalScope = new Scope(null, SCOPE_TYPE_GLOBAL);
  
   this.scope = new ParserScope(this, globalScope, SCOPE_TYPE_SCRIPT);
   this.next();
@@ -7214,6 +7271,18 @@ this.parseProgram = function () {
 };
 
 function alwaysResolveInTheParentScope(scope) {
+  var decl = null, ref = null, name = "", refName = "";
+  for ( refName in scope.unresolvedNames) {
+    if (!HAS.call(scope.unresolvedNames, refName))
+      continue;
+    ref = scope.unresolvedNames[refName];
+    if (!ref)
+      continue;
+    name = refName.substring(0, refName.length - 1) ;
+    decl = new Decl(DECL_MODE_VAR, name, scope.parent, name);
+    scope.parent.insertDecl0(true, name, decl);
+    decl.refMode.updateExistingRefWith(name, scope);
+  }
 }
 
 
@@ -7720,7 +7789,7 @@ this.parseDoWhileStatement = function () {
 
  this.exitScope(); 
  return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
-          body: nbody, loc: { start: startLoc, end: { line: li, column: col } } /* ,y:-1*/} ;
+          body: nbody, loc: { start: startLoc, end: { line: li, column: col } }  ,y:-1} ;
 };
 
 this.parseContinueStatement = function () {
@@ -7898,7 +7967,7 @@ this.parseSwitchCase = function () {
   nbody = this.blck();
   var last = nbody.length ? nbody[nbody.length-1] : null;
   return { type: 'SwitchCase', test: cond, start: startc, end: last ? last.end : c,
-     loc: { start: startLoc, end: last ? last.loc.end : { line: li, column: col } }, consequent: nbody/* ,y:-1*/ };
+     loc: { start: startLoc, end: last ? last.loc.end : { line: li, column: col } }, consequent: nbody ,y:-1 };
 };
 
 this.parseReturnStatement = function () {
@@ -8033,7 +8102,7 @@ this.parseTryStatement = function () {
 
   this.foundStatement = !false;
   return  { type: 'TryStatement', block: tryBlock, start: startc, end: finOrCat.end,
-            handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end } /* ,y:-1*/};
+            handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end }  ,y:-1};
 };
 
 this.enterCatchScope = function() {
@@ -8073,7 +8142,7 @@ this. parseCatchClause = function () {
        start: startc,
        end: catBlock.end,
        param: catParam ,
-       body: catBlock/* ,y:-1*/
+       body: catBlock ,y:-1
    };
 };
 
@@ -8322,7 +8391,7 @@ this . parseTemplateLiteral = function() {
   this.col ++ ;
 
   var n = { type: 'TemplateLiteral', start: startc, quasis: templStr, end: c,
-       expressions: templExpressions , loc: { start: startLoc, end : this.loc() } /* ,y:-1*/};
+       expressions: templExpressions , loc: { start: startLoc, end : this.loc() }  ,y:-1};
 
   this.c = c;
   this.next(); // prepare the next token  
@@ -8538,7 +8607,7 @@ this . parseVariableDeclaration = function(context) {
      this.foundStatement  = !false ;
 
      return { declarations: list, type: 'VariableDeclaration', start: startc, end: endI,
-              loc: { start: startLoc, end: endLoc }, kind: kind /* ,y:-1*/};
+              loc: { start: startLoc, end: endLoc }, kind: kind  ,y:-1};
 };
 
 this . parseVariableDeclarator = function(context) {
@@ -8564,7 +8633,7 @@ this . parseVariableDeclarator = function(context) {
 
   var initOrHead = init || head;
   return { type: 'VariableDeclarator', id: head, start: head.start, end: initOrHead.end,
-           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init)/* ,y:-1*/ };
+           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init) ,y:-1 };
 };
 
 
@@ -8598,7 +8667,7 @@ this.parseYield = function(context) {
   else { endI = c; endLoc = { line: li, column: col }; }  
 
   var n = { type: 'YieldExpression', argument: arg && core(arg), start: startc, delegate: deleg,
-           end: endI, loc: { start : startLoc, end: endLoc }/* ,y:-1*/ }
+           end: endI, loc: { start : startLoc, end: endLoc } ,y:-1 }
 
   if ( !this.firstYS )
         this.firstYS = n;
@@ -8653,7 +8722,7 @@ ParserScope.prototype.makeComplex = function() {
   if (this.mustNotHaveAnyDupeParams()) return;
   for (var a in this.definedNames) {
      if (!HAS.call(this.definedNames, a)) continue;
-     if (this.definedNames[a] & DECL_DUPE) this.parser.err('func.args.has.dup', a);
+     if (this.definedNames[a].type & DECL_DUPE) this.parser.err('func.args.has.dup', a);
   }
   this.isInComplexArgs = true;
 };
@@ -8679,11 +8748,6 @@ ParserScope.prototype.mustNotHaveAnyDupeParams = function() {
   return this.strict || this.isInComplexArgs;
 };
 
-ParserScope.prototype.insertDecl0 = function(id) {
-  var name = id.name + '%';
-  this.insertID(id);
-  this.definedNames[name] = this.declMode;
-};
 
 ParserScope.prototype.err = function(errType, errParams) {
   return this.parser.err(errType, errParams);
@@ -8702,9 +8766,9 @@ ParserScope.prototype.addParam = function(id) {
 
     // TODO: this can be avoided with a dedicated 'dupes' dictionary,
     // but then again, that might be too much.
-    if (!(this.definedNames[name] & DECL_DUPE)) {
+    if (!(this.definedNames[name].type & DECL_DUPE)) {
       this.insertID(id);
-      this.definedNames[name] |= DECL_DUPE ;
+      this.definedNames[name].type |= DECL_DUPE ;
     }
 
     return false;
@@ -9273,11 +9337,48 @@ this.updateForwardRefWith = function(name, fromScope) {
 }]  ],
 [Scope.prototype, [function(){
 
+this.reference = function(name, fromScope) {
+  if (!fromScope) fromScope = this;
+
+  var decl = this.findDeclInScope(name), ref = null;
+  if (decl) {
+    ref = decl.refMode;
+    if (this !== fromScope) {
+      ref.updateExistingRefWith(name, fromScope);
+      ref.lors = ref.lors.concat(fromScope.findRefInScope(name).lors);
+      if (fromScope.isConcrete()) ref.lors.push(fromScope);
+
+      // a catch name is never forward-accessed, even when referenced from within a function declaration 
+      if (decl.type & DECL_MODE_CATCH_PARAMS) 
+        if (ref.indirect) ref.indirect = ACCESS_EXISTING;
+    }
+    else ref.direct |= ACCESS_EXISTING;
+  }
+  else {
+    ref = this.findRefInScope(name);
+    if (!ref) {
+      ref = new RefMode();
+      this.insertRef(name, ref);
+    }
+    if (this !== fromScope) {
+      ref.updateForwardRefWith(name, fromScope);
+      ref.lors = ref.lors.concat(fromScope.findRefInScope(name).lors);
+      if (fromScope.isConcrete()) ref.lors.push(fromScope);
+    }
+    else
+      ref.direct |= ACCESS_FORWARD;
+  }
+};
 
 this.declare = function(name, declType) {
   return declare[declType].call(this, name, declType);
 };
 
+this.findRefInScope = function(name) {
+  name += '%';
+  return HAS.call(this.unresolvedNames, name) ?
+            this.unresolvedNames[name] : null;
+};
 
 this.err = function(errType, errParams) {
    if (errType === 'exists.in.current') {
@@ -9293,12 +9394,12 @@ this.err = function(errType, errParams) {
      ASSERT.call(this, false, errType + '; PARAMS='+errParams);
 };
 
-this.hoistIdToScope = function(id, targetScope  ) { 
+this.hoistIdToScope = function(id, targetScope , decl  ) { 
    var scope = this;
-   
+    var isFresh = targetScope.findDeclInScope(id.name) === null; 
    while (true) {
      ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
-     if ( !scope.insertDecl(id  ) )
+     if ( !scope.insertDecl(id , decl  ) )
        break;
 
      if (scope === targetScope)
@@ -9306,6 +9407,7 @@ this.hoistIdToScope = function(id, targetScope  ) {
 
      scope = scope.parent;
    }
+   if (isFresh) targetScope.nameList.push(decl);
 };
    
 var declare = {};
@@ -9313,33 +9415,46 @@ var declare = {};
 declare[DECL_MODE_FUNCTION_PARAMS] = declare[DECL_MODE_FUNC_NAME] =
 declare[DECL_MODE_VAR] = function(id, declType) {
    var func = this.funcScope;
+   var decl = new Decl(declType, id.name, func, id.name);
 
-   this.hoistIdToScope(id, func  );
+   this.hoistIdToScope(id, func  , decl  );
 
+   return decl;
 };
 
 declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] =
 declare[DECL_MODE_LET] = function(id, declType) {
-   this.insertDecl(id);
+   if (declType & DECL_MODE_CATCH_PARAMS)
+     this.catchVarIsSynth = true;
+
+   var decl = new Decl(declType, id.name, this, id.name);
+   this.insertDecl(id, decl);
+   this.nameList.push(decl);
+   return decl;
 };
 
 declare[DECL_MODE_CATCH_PARAMS] = function(id, declType) {
   var name = id.name + '%';
-  this.insertDecl(id);
+  this.catchVarIsSynth = false; 
+  var catchVar = new Decl( DECL_MODE_CATCH_PARAMS, id.name, this, id.name);
+  this.catchVarName = id.name;
+
+  this.insertDecl(id, catchVar); 
+  this.nameList.push(catchVar);
 };
  
 // returns false if the variable was not inserted
 // in the current scope because of having
 // the same name as a catch var in the scope
 // (this implies the scope must be a catch scope for this to happen)
-this.insertDecl = function(id ) {
+this.insertDecl = function(id , decl ) {
 
-  var declType =  this.declMode; 
+  var declType =  decl.type; 
   var existingDecl = this.findDeclInScope(id.name);
   var func = this.funcScope;
 
   if (existingDecl !== DECL_NOT_FOUND) {
-    var existingType = existingDecl;
+    var existingType = existingDecl.type;
 
     // if a var name in a catch scope has the same name as a catch var,
     // it will not get hoisted any further
@@ -9354,7 +9469,8 @@ this.insertDecl = function(id ) {
     this.err('exists.in.current', { id: id });
   }
 
-  this.insertDecl0(id);
+  this.insertDecl0(true, id.name, decl);
+  this.insertID(id);
 
   return true;
 };
@@ -9363,6 +9479,17 @@ this.insertID = function(id) {
   this.idNames[id.name+'%'] = id;
 };
 
+// TODO: looks like `isFresh` is not necessary
+this.insertDecl0 = function(isFresh, name, decl) {
+  name += '%';
+  this.definedNames[name] = decl;
+  if (isFresh)
+    if (HAS.call(this.unresolvedNames, name)) {
+      decl.refMode = this.unresolvedNames[name];
+      this.unresolvedNames[name] = null;
+    }
+    else decl.refMode = new RefMode();
+};
 
 this.findDeclInScope = function(name) {
   name += '%';
@@ -9371,8 +9498,73 @@ this.findDeclInScope = function(name) {
 };
 
 this.finish = function() {
+  var parent = this.parent;
+  if (!parent) return;
+
+  // hand the current scope's unresolved references to the parent scope
+  for (var name in this.unresolvedNames) {
+    if (!HAS.call(this.unresolvedNames, name)) continue;
+    var n = this.unresolvedNames[name];
+    if (n === null) continue;
+    parent.reference(name.substring(0,name.length-1), this);
+  }
 };
     
+this.insertRef = function(name, ref) {
+  this.unresolvedNames[name+'%'] = ref;
+};
+
+this.newSynthName = function(baseName) {
+  var num = 0, targetScope = this.funcScope;
+  var name = baseName;
+  for (;;num++, name = baseName + "" + num) {
+     if (targetScope.findDeclByEmitNameInScope(name))
+       continue; // must not be in the surrounding func scope's defined names, 
+
+     if (targetScope.findRefByEmitNameInScope(name)) continue; // must not be in the surrounding func scope's referenced names;
+     if (this.isLexical()) { // furthermore, if we're not allocating in a func scope,
+       if (this.findRefByEmitNameInScope(name)) continue; // it must not have been referenced in the current scope
+     }
+     break;
+  }
+  return name;
+};
+
+this.makeScopeObj = function() {
+  if (this.scopeObjVar !== null) return;
+  var scopeName = this.newSynthName('scope');
+  var scopeObjVar = new Decl(DECL_MODE_LET, scopeName, this, scopeName);
+  this.insertDecl0(false, scopeName, scopeObjVar); // TODO: not necessary?
+  this.funcScope.insertDecl0(false, scopeName, scopeObjVar);
+  this.scopeObjVar = scopeObjVar;
+  this.wrappedDeclList = [];
+  this.wrappedDeclNames = {};
+};   
+
+this.allocateTemp = function() {
+  var temp = "";
+  if (this.tempStack.length) 
+    temp = this.tempStack.pop();
+  else {
+    do {
+      temp = this.funcScope.declSynth('temp');
+    } while (temp === this.catchVar);
+  }
+  return temp;
+};
+
+this.releaseTemp = function(tempName) {
+  this.tempStack.push(tempName);
+};
+ 
+this.declSynth = function(name) {
+  ASSERT.call(this, this.isConcrete());
+  var synthName = this.newSynthName(name);
+  this.definedEmitNames[synthName+'%'] =
+    new Decl(DECL_MODE_VAR, synthName, this, synthName);
+
+  return synthName;
+};
 
 this.isLoop = function() { return this.type & SCOPE_TYPE_LEXICAL_LOOP; };
 this.isLexical = function() { return this.type & SCOPE_TYPE_LEXICAL_SIMPLE; };
@@ -9388,7 +9580,216 @@ this.isConcrete = function() {
          this.isFunc();
 };
 
+this.addChildLexicalDeclaration = function(decl) {
+   ASSERT.call(this, this.isLoop(), 'only a loop scope can currently have a scope var');
+   this.makeScopeObj();
+   var funcScope = this.funcScope;
+   funcScope.removeDecl(decl);
+   this.wrappedDeclList.push(decl);
+   this.wrappedDeclNames[decl.name+'%'] = decl;
+   decl.synthName = decl.name;
+};
 
+/* consider this contrived example:
+   function a() {
+     var v = null, v1 = null;
+     while (false) {
+       let v = 12; // synthName=v2
+       function b() {
+         try { throw 'e' }
+         catch (v2) {
+            console.log(v);
+            // prints the value of v, i.e 12, because v's emit name is v2 -- and this behaviour is *not* what we want
+            // this means for every name referenced in a catch scope, we have to ensure
+            // emit name for that name does not clash with (i.e, is not the same as) the catch variable; if it is, though,
+            // the catch variable must be renamed.
+            // this might look like a simple rename-as-you-go scheme like the one we are currently using on non-catch scopes;
+            // BUT it is not that simple, because:
+            // a) the catch variable's name can not be determined until the very end of the catch scope, where all names that could
+            // have caused a rename have been visited.
+            // b) a 'let'-var's name is calculated taking the currently accessible catch-var names (along with their synth names)
+            // into account; the problem is, those catch-vars might change their synth names due to the reasons detailed above;
+            // even though this renaming is in turn done taking the currently accessible synth names
+            // into account to prevent name clashes, unnecessary renames look to abound in the process.
+
+            // one solution is to save the catch var when the catch scope begins, and add it to the list of the catch scope's defined
+            // names only at the end of the scope
+
+            // another solution is to keep track of every catch variable in function scope, and at the same time renaming
+            // any synthesized name that clashes with a catch var name each time a catch var is added to the catch var list;
+            // but this solution renames a synthesized name even when it is not in the same scope as the catch var,
+            // like so:
+            //   var v, v1;
+            //   {
+            //     let v = 12; // synthName=v2
+            //     try {}
+            //
+            //     catch (v2) {} // renames previous v2 to something else 
+            //   }
+          }
+       }
+     }
+   }
+*/
+
+this.setCatchVar = function(name) {
+  ASSERT.call(this, this.isCatch(), 'only a catch scope can have a catch variable');
+  ASSERT.call(this, this.catchVar === "", 'scope has already got a catch var: ' + this.catchVarName);
+  this.catchVarName = name;
+};
+
+this.finishWithActuallyDeclaringTheCatchVar = function() {
+  // catch var names of catch scopes with non-simple catch params are calculated in the emit phase
+  if ( this.catchVarName === "" ) return;
+
+  // TODO: this.insertDecl0(true, synthName, decl), maybe?
+  var synthName = this.newSynthName(this.catchVarName);
+  var decl = this.findDeclInScope(this.catchVarName);
+  decl.synthName = synthName;
+};
+
+function getOrCreate(l, name) {
+  var entry = l.findName(name);
+  if (!entry)
+    entry = l.addNewLiquidName(name);
+   
+  return entry;
+};
+
+this.getOrCreateLocalLiquidName = function(name) {
+  var entry = null;
+  if ( !this.funcScope.localLiquidNames )
+    this.funcScope.localLiquidNames = new LiquidNames();
+  
+  return getOrCreate(this.funcScope.localLiquidNames, name);
+};
+
+// if a name is either referenced at func scope, directly or indirectly,
+// or it is a func scope binding, real or synth, it must be passed to this method
+this.updateLiquidNamesWith = function(name) {
+  if (this.funcScope.globalLiquidNames)
+    this.funcScope.globalLiquidNames.mustNotHaveReal(name);
+  if (this.funcScope.localLiquidNames)
+    this.funcScope.localLiquidNames.mustNotHaveReal(name);
+};
+
+this.getOrCreateGlobalLiquidName = function(name) {
+  if (!this.funcScope.globalLiquidNames)
+    this.funcScope.globalLiquidNames = new LiquidNames();
+
+  return getOrCreate(this.funcScope.globalLiquidNames, name);
+};  
+
+this.synthesizeNames = function() {
+  var list = null, e = 0;
+  // synthesize everything -- even the real names;
+  // because in the presence of references that cross function boundaries,
+  // the function's name list is of little actual help.
+  // one solution is to have every reference keep track of the scope it was not resolved in; 
+  // the informarion can then be used while calculating the synthetic name for the reference (in case the reference resolves to
+  // a decl that must be synthesized), or when the reference has resolved to a real (i.e., func-scope)
+  // name declaration; in the former case, the name has to be chosen taking the names in the tracking scopes into account;
+  // the latter case, though, is something the opposite -- the tracking scopes must rename the decls in their name lists
+  // so as to avoid possible clashes with the reference's name, recursively applying the rename semantics, i.e., renaming their entries  // keeping the scopes those entries are tracking into account.
+  // the solution is potentially heavy, and complex.
+  //
+  // another solution is to defer the name synthesization until the very end of the very last scope; when there, the top-most
+  // scope will be synthesized first, followed by its descendant scopes,
+  // followed by theirs, and so on, until all scopes are synthesized; this way, every reference's emit name is already known,
+  // as they have already been synthesized in a parent of the current scope; any variable that possibly clashes with that reference's
+  // name will have to be renamed regardless of whether it is a variable that has to be synthesized nevertheless, or of whether it is a  // real name.
+  // this solution is obviously unfaithful to the source's names, potentially at least, but it is way more simple,
+  // way more straightforward, and, arguably, way more lighter, and it is the solution currently used.
+  list = this.nameList;
+  e = 0;
+  while (e < list.length)
+    this.synthesizeDecl(list[e++]);
+
+  list = this.children;
+  if (list.length) {
+    e = 0;
+    while (e < list.length)
+      list[e++].synthesizeNames();
+  }
+};
+
+this.createMappingForUnresolvedNames = function() {
+  ASSERT.call(this, !this.referencedEmitNames, 'this scope has already got a referencedemitNames');
+  this.referencedEmitNames = {};
+
+  for (var name in this.unresolvedNames ) {
+    if (!HAS.call(this.unresolvedNames, name) )
+      continue;
+    if (this.unresolvedNames[name] === null) 
+      continue;
+
+    var resolvedRef = this.definedNames[name]; // will look it up the prototype chain, which is in this case the scope chain
+    this.updateLiquidNamesWith(resolvedRef.synthName);
+    this.referencedEmitNames[resolvedRef.synthName+'%'] = resolvedRef;
+  }
+};
+
+this.findRefByEmitNameInScope = function(name) {
+  if (!this.referencedEmitNames)
+    this.createMappingForUnresolvedNames();
+  name += '%';
+  return HAS.call(this.referencedEmitNames, name) ?
+    this.referencedEmitNames[name] : null;
+};
+
+this.synthesizeDecl = function(decl) {
+  ASSERT.call(this, this === decl.scope, 'a scope can only synthesize its own declarations');
+  var synthName = this.newSynthName(decl.name);
+  decl.synthName = synthName;
+  this.funcScope.insertEmitName(synthName, decl);
+  this.updateLiquidNamesWith(synthName);
+};
+
+this.insertEmitName = function(name, decl) {
+  this.definedEmitNames[name+'%'] = decl;
+}; 
+
+this.findDeclByEmitNameInScope = function(name) {
+  name += '%';
+  return HAS.call(this.definedEmitNames, name) ? 
+    this.definedEmitNames[name] : null;
+};
+
+
+}]  ],
+[SortedObj.prototype, [function(){
+this.set = function(name, val) {
+  if (!HAS.call(obj, name))
+    this.keys.push(name);
+  return obj[name] = val;
+};
+
+this.at = function(i) {
+  return i < this.keys.length ? obj[this.keys[i]] : void 0;
+};
+
+this.get = function(name) {
+  return obj[name]; 
+};
+
+this.remove = function(name) {
+  if (!HAS.call(obj, name))
+    return false;
+  delete obj[name];
+
+  var list = this.keys, i = 0;
+
+  while (name !== list[i])
+    i++;
+
+  while (i < list.length-1) {
+    list[i] = list[i+1];
+    i++;
+  }
+
+  list.pop();
+  return true;
+};
 
 }]  ],
 [Transformer.prototype, [function(){
