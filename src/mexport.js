@@ -4,4 +4,8 @@ this.parse = function(src, isModule ) {
 };
 
 this.Parser = Parser;  
-this.ErrorString = ErrorString; this.Template = Template;
+this.ErrorString = ErrorString;
+this.Template = Template;
+this.Emitter = Emitter;
+this.Transformer = Transformer;
+this.Scope = Scope;

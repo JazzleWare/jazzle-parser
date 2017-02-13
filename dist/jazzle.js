@@ -10,6 +10,14 @@ function Decl(type, name, scope, synthName) {
 }
 
 ;
+function Emitter(spaceString) {
+  this.spaceString = arguments.length ? spaceString : "  ";
+  this.indentCache = [""];
+  this.lineStarted = false;
+  this.indentLevel = 0;
+  this.code = "";
+}
+;
 function ErrorString(stringsAndTemplates) {
   this.stringsAndTemplates = stringsAndTemplates;
 }
@@ -579,6 +587,12 @@ var DIR_MODULE = 1,
     DIR_HANDLED_BY_NEWLINE = DIR_MAYBE << 1,
     DIR_HAS_OCTAL_ERROR = DIR_HANDLED_BY_NEWLINE << 1;
 
+var EC_NONE = 0,
+    EC_NEW_HEAD = 1,
+    EC_START_STMT = 2;
+
+var PREC_NONE = PREC_WITH_NO_OP;
+
 function MAIN_CORE(n) {
   return n.expression;
 }
@@ -848,6 +862,8 @@ function agtb(a, b) {
 
 // TODO: choose a more descriptive name
 var NORMALIZE_COMMON = ['li0', 'c0', 'col0', 'li', 'c', 'col', 'loc0', 'loc'];
+;
+var Emitters = {};
 ;
 // ! ~ - + typeof void delete    % ** * /    - +    << >>
 // > <= < >= in instanceof   === !==    &    ^   |   ?:    =       ...
@@ -1384,6 +1400,391 @@ this.syntheticUnlessInAFunc = function() {
   return this.type & DECL_MODE_LET;
 };
 
+
+}]  ],
+[Emitter.prototype, [function(){
+this.indent = function() {
+  this.indentLevel++; 
+};
+
+this.i = function() {
+  this.indent();
+  return this; 
+};
+
+this.l = function() {
+  this.startLine();
+  return this; 
+};
+
+this.emitAny = function(n, prec, startStmt) {
+  if (HAS.call(Emitters, n.type))
+    return Emitters[n.type].call(this, n, prec, startStmt);
+  this.err('unknow.node');
+};
+
+this.eA = function(n, prec, startStmt) {
+  this.emitAny(n, prec, startStmt); 
+  return this; 
+};
+
+this.emitNonSeq = function(n, prec, flags) {
+  var paren = n.type === 'SequenceExpression';
+  if (paren) this.w('(');
+  this.emitAny(n, prec, flags);
+  if (paren) this.w(')');
+};
+
+this.eN = function(n, prec, flags) {
+  this.emitNonSeq(n, prec, flags);
+  return this;
+};
+
+this.write = function(rawStr) {
+  if (this.lineStarted) {
+    this.code += this.getOrCreateIndent(this.indentLevel);
+    this.lineStarted = false;
+  }
+  this.code += rawStr;
+};
+
+this.w = function(rawStr) {
+  this.write(rawStr);
+  return this;
+};
+
+this.space = function() {
+  if (this.lineStarted)
+    this.err('useless.space');
+
+  this.write(' ');
+};
+
+this.s = function() {
+  this.space();
+  return this;
+};
+
+this.writeMulti =
+this.wm = function() {
+  var i = 0;
+  while (i < arguments.length) {
+    var str = arguments[i++];
+    if (str === ' ')
+      this.space();
+    else
+      this.write(str);
+  }
+
+  return this;
+};
+
+this.unindent = function() {
+  if (this.indentLevel <= 0)
+    this.err('unindent.nowidth');
+
+  this.indentLevel--;
+};
+
+this.u = function() {
+  this.unindent();
+  return this;
+};
+
+this.getOrCreateIndent = function(indentLen) {
+  var cache = this.indentCache;
+  if (indentLen >= cache.length) {
+    if (indentLen !== cache.length)
+      this.err('inceremental.indent');
+    cache.push(cache[cache.length-1] + this.spaceString);
+  }
+  return cache[indentLen];
+};
+
+this.startLine = function() {
+  this.insertNL();
+  this.lineStarted = true;
+};
+
+this.insertNL = function() {
+  this.code += '\n';
+};
+
+},
+function(){
+Emitters['ArrayExpression'] = function(n, prec, flags) {
+  var list = n.elements, i = 0;
+  var si = spreadIdx(list, 0);
+  if (si !== -1)
+    return this.emitArrayWithSpread(n, prec, flags, si);
+
+  this.w('[');
+  this.emitArrayChunk(list, 0, list.length-1);
+  this.w(']');
+};
+
+this.emitArrayWithSpread = function(n, prec, flags, si) {
+  var paren = flags & EC_NEW_HEAD;
+  if (paren) this.w('(');
+  this.wm('jz','.','concat','(')
+  var list = n.elements, startChunk = 0;
+  while (si !== -1) {
+    if (startChunk > 0)
+      this.wm(',',' ');
+    if (si > startChunk) {
+      this.w('[');
+      this.emitArrayChunk(list, startChunk, si-1);
+      this.wm(']',',',' ');
+    }
+    this.eN(list[si].argument);
+    startChunk = si + 1;
+    si = spreadIdx(list, startChunk);
+  }
+  if (startChunk < list.length) {
+    if (startChunk > 0) this.wm(',',' ');
+    this.w('[').emitArrayChunk(list, startChunk, list.length-1); 
+    this.w(']');
+  }
+  this.w(')');
+  if (paren) this.w(')');
+};
+
+this.emitArrayChunk = function(list, from, to) {
+  var i = from;
+  while (i <= to) {
+    if (i !== from) this.wm(',',' ');
+    var elem = list[i];
+    if (elem === null) this.w('void 0');
+    else this.eN(elem, PREC_NONE, EC_NONE);
+    i++;
+  }
+};
+
+function spreadIdx(array, start) {
+  var list = array, i = start;
+  while (i < list.length) {
+    var elem = list[i];
+    if (elem !== null && elem.type === 'SpreadElement')
+      return i;
+    ++i;
+  }
+  return -1;
+}
+
+},
+function(){
+this.emitDependentStmt = function(n, isElse) {
+  if (n.type === 'BlockStatement')
+    this.s().emitBlock(n, PREC_NONE, EC_NONE);
+  else if (isElse && n.type === 'IfStatement')
+    this.s().emitIf(n);
+  else
+    this.i().l().eA(n, PREC_NONE, EC_NONE).u();
+};
+
+Emitters['BlockStatement'] =
+this.emitBlock = function(n, prec, flags) {
+  this.w('{');
+  var list = n.body;
+  if (list.length > 0) {
+    this.i();
+    var i = 0;
+    while (i < list.length) {
+      this.l().eA(list[i], PREC_NONE, EC_NONE);
+      i++;
+    }
+    this.u().l();
+  }
+  this.w('}');
+};
+
+},
+function(){
+Emitters['Identifier'] = function(n, prec, flags) {
+  return this.emitIdentifierWithValue(n.name);
+};
+
+// TODO: write chunks instead of characters
+this.emitIdentifierWithValue = function(value) {
+  var i = 0;
+  while (i < value.length) {
+    var ch = value.charCodeAt(i);
+    if (ch <= 0xFF) this.w(value.charAt(i));
+    else this.writeUnicodeEscapeWithValue(ch);
+    i++;
+  }
+};
+
+},
+function(){
+Emitters['IfStatement'] =
+this.emitIf = function(n, prec, flags) {
+  this
+    .wm('if',' ','(')
+    .eA(n.test, PREC_NONE, EC_NONE)
+    .w(')')
+    .emitDependentStmt(n.consequent, false);
+  if (n.alternate) {
+    this.l();
+    this.w('else').emitDependentStmt(n.alternate, true);
+  }
+};
+
+},
+function(){
+Emitters['Literal'] =
+this.emitLiteral = function(n, prec, flags) {
+  switch (n.value) {
+  case true: return this.write('true');
+  case false: return this.write('false');
+  case null: return this.write('null');
+  default:
+    switch (typeof n.value) {
+    case NUMBER_TYPE:
+      return this.emitNumberLiteralWithValue(n.value);
+    case STRING_TYPE:
+      return this.emitStringLiteralWithRawValue(n.raw);
+    }
+    ASSERT.call(this, false,
+      'Unknown value for literal: ' + (typeof n.value));
+  }
+};
+
+this.emitNumberLiteralWithValue =
+function(nv) {
+  this.write(""+nv);
+};
+
+this.emitStringLiteralWithRawValue =
+function(svRaw) {
+  this.write(svRaw);
+};
+
+},
+function(){
+Emitters['NewExpression'] = function(n, prec, flags) {
+  this.wm('new',' ').eN(n.callee, PREC_NONE, EC_NEW_HEAD);
+  this.w('(').emitArgList(n.arguments);
+  this.w(')');
+};
+
+this.emitArgList = function(argList) {
+  var i = 0;
+  while (i < argList.length) {
+    if (i>0) this.w(',',' ');
+    this.eN(argList[i], PREC_NONE, EC_NONE);
+    i++;
+  }
+};
+
+},
+function(){
+Emitters['ObjectExpression'] = function(n, prec, flags) {
+  var list = n.properties;
+  var mi = findComputed(list);
+  if (mi !== -1)
+    return this.emitObjectWithComputed(n, prec, flags, mi);
+
+  var paren = flags & EC_START_STMT;
+
+  if (paren) this.w('(');
+  this.w('{').emitObjectChunk(list, 0, list.length-1); 
+  this.w('}')
+  if (paren) this.w(')');
+};
+
+this.emitObjectChunk = function(list, from, to) {
+  var i = from;
+  while (i <= to) {
+    if (i > from) this.wm(',',' ');
+    this.emitProp(list[i]);
+    i++;
+  }
+};
+
+// mi -> member idx
+this.emitObjectWithComputed = function(n, prec, flags, mi) {
+  var paren = flags & EC_NEW_HEAD;
+  if (paren) this.w('(');
+  this.wm('jz','.','obj','(','{');
+  var list = n.properties;
+  this.emitObjectChunk(n.properties, 0, mi-1);
+  this.w('}');
+  while (mi < list.length) {
+    var prop = list[mi];
+
+    this.wm(',',' ');
+    if (prop.computed) this.eN(prop.key);
+    else this.emitNonComputedAsString(prop.key);
+    
+    this.wm(',',' ').eN(prop.value);
+    
+    ++mi;
+  }
+  this.w(')');
+  if (paren) this.w(')');
+};  
+
+this.emitProp = function(prop) {
+  ASSERT.call(this, !prop.computed, 
+    'computed prop is not emittable by this function');
+  this.emitNonComputed(prop.key);
+  this.wm(':',' ').eN(prop.value);
+};
+
+this.emitNonComputed = function(name) {
+  switch (name.type) {
+  case 'Identifier':
+    if (this.isReserved(name.name))
+      this.emitStringLiteralWithRawValue(name.name);
+    else
+      this.emitIdentifierWithValue(name.name);
+    break;
+  
+  case 'Literal':
+    this.emitLiteral(name);
+    break;
+
+  default:
+    ASSERT.call(this, false,
+      'Unknown type for prop key');
+  }
+};
+
+this.emitNonComputedAsString = function(name) {
+  switch (name.type) {
+  case 'Identifier':
+    return this.emitStringLiteralWithRawValue("'"+name.name+"'");
+  case 'Literal':
+    return this.emitLiteral(name);
+  }
+};
+
+function findComputed(list) {
+  var i = 0;
+  while (i < list.length) {
+    if (list[i].computed)
+      return i;
+    i++;
+  }
+
+  return -1;
+}
+
+},
+function(){
+this.emitProgram = function(n, prec, flags) {
+  var list = n.body, i = 0;
+  while (i < list.length) {
+    var stmt = list[i++];
+    i > 0 && this.startLine();
+    this.emit(stmt, PREC_NONE, EC_NONE);
+  }
+};
+
+},
+function(){
+this.isReserved = function(idString) { return false; };
 
 }]  ],
 [ErrorString.prototype, [function(){
@@ -9499,6 +9900,7 @@ null,
 null,
 null,
 null,
+null,
 null]);
 this.parse = function(src, isModule ) {
   var newp = new Parser(src, isModule);
@@ -9506,5 +9908,9 @@ this.parse = function(src, isModule ) {
 };
 
 this.Parser = Parser;  
-this.ErrorString = ErrorString; this.Template = Template;
+this.ErrorString = ErrorString;
+this.Template = Template;
+this.Emitter = Emitter;
+this.Transformer = Transformer;
+this.Scope = Scope;
 ;}).call (function(){try{return module.exports;}catch(e){return this;}}.call(this))

@@ -229,6 +229,12 @@ var DIR_MODULE = 1,
     DIR_HANDLED_BY_NEWLINE = DIR_MAYBE << 1,
     DIR_HAS_OCTAL_ERROR = DIR_HANDLED_BY_NEWLINE << 1;
 
+var EC_NONE = 0,
+    EC_NEW_HEAD = 1,
+    EC_START_STMT = 2;
+
+var PREC_NONE = PREC_WITH_NO_OP;
+
 function MAIN_CORE(n) {
   return n.expression;
 }
