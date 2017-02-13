@@ -253,6 +253,10 @@ this.isGlobal = function() { return this.type & ST_GLOBAL; };
 // a scope is concrete if a 'var'-declaration gets hoisted to it
 this.isConcrete = function() { return this.type & ST_CONCRETE; };
 
+this.isDeclaration = function() { 
+  return (this.type & ST_FN_STMT) || (this.type & ST_CLASS_STMT);
+};
+
 // #if V
 this.addChildLexicalDeclaration = function(decl) {
    ASSERT.call(this, this.isLoop(), 'only a loop scope can currently have a scope var');

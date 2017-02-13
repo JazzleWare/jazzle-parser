@@ -92,6 +92,7 @@ this . makeStrict  = function() {
    if ( this.tight ) return;
 
    this.tight = true;
+   this.scope.strict = true;
 
    var a = 0, argNames = this.scope.nameList;
    while (a < argNames.length) {
