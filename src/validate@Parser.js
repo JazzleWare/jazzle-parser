@@ -1,5 +1,5 @@
 this .validateID  = function (e) {
-  var n = e || this.ltval;
+  var n = e === "" ? this.ltval : e;
 
   SWITCH:
   switch (n.length) {
@@ -36,14 +36,18 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
 
 //       case 'eval':
-//          if (this.tight) return this.err('eval.arguments.in.strict', n);
+//          if (this.tight) return this.err('eval.arguments.in.strict');
 
          default:
             break SWITCH;
      }
      case 5: switch (n) {
          case 'await':
-            if ( this. isScript ) break SWITCH;
+            if (this.isScript &&
+               !(this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR))
+              break SWITCH;
+            else
+              this.errorReservedID(e);
          case 'final':
          case 'float':
          case 'short':
@@ -51,7 +55,7 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
     
          case 'yield': 
-            if (!this.tight && !(this.scopeFlags & SCOPE_YIELD)) {
+            if (!this.tight && !(this.scopeFlags & SCOPE_FLAG_GEN)) {
               break SWITCH;
             }
 
@@ -104,7 +108,7 @@ this .validateID  = function (e) {
             if ( this.v <= 5 )
               return this.errorReservedID(e) ;
 //       case 'arguments':
-//          if (this.tight) return this.err('eval.arguments.in.strict', n);
+//          if (this.tight) return this.err('eval.arguments.in.strict');
 
          default: break SWITCH;
      }
@@ -129,11 +133,12 @@ this .validateID  = function (e) {
 };
 
 this.errorReservedID = function(id) {
-    if ( !this.throwReserved ) {
-       this.throwReserved = !false;
-       return null;
-    }
-    if ( this.err('reserved.id',id) ) return this.errorHandlerOutput;
+  this.resvchk();
+  if ( !this.throwReserved ) {
+     this.throwReserved = true;
+     return null;
+  }
+  if ( this.err('reserved.id',{tn:id}) ) return this.errorHandlerOutput;
 }
 
 

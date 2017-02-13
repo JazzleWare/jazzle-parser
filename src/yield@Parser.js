@@ -7,17 +7,17 @@ this.parseYield = function(context) {
   var startc = this.c0, startLoc = this.locBegin();
 
   this.next();
-  if (  !this.newLineBeforeLookAhead  ) {
+  if (  !this.nl  ) {
      if ( this.lttype === 'op' && this.ltraw === '*' ) {
-            deleg = !false;
+            deleg = true;
             this.next();
-            arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CONTEXT_FOR );
+            arg = this.parseNonSeqExpr ( PREC_WITH_NO_OP, context & CTX_FOR );
             if (!arg &&
-                 this.err('yield.has.no.expr.deleg',startc,startLoc,c,li,col,context) )
+                 this.err('yield.has.no.expr.deleg') )
               return this.errorHandlerOutput ;
      }
      else
-        arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CONTEXT_FOR)|CONTEXT_NULLABLE );
+        arg = this. parseNonSeqExpr ( PREC_WITH_NO_OP, (context & CTX_FOR)|CTX_NULLABLE );
   }
 
   var endI, endLoc;
@@ -27,10 +27,10 @@ this.parseYield = function(context) {
 
   var n = { type: 'YieldExpression', argument: arg && core(arg), start: startc, delegate: deleg,
            end: endI, loc: { start : startLoc, end: endLoc }/* ,y:-1*/ }
-
-  if ( !this.firstYS )
-        this.firstYS = n;
  
+  if (this.suspys === null)
+    this.suspys = n;
+
   return n;
 };
 

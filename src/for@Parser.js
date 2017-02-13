@@ -1,151 +1,175 @@
+this.parseFor = function() {
+  if (!this.ensureStmt_soft())
+    this.err('not.stmt');
 
-this . parseFor = function() {
-  this.ensureStmt();
-  this.fixupLabels(!false) ;
+  this.fixupLabels(true) ;
 
   var startc = this.c0,
       startLoc = this.locBegin();
 
   this.next () ;
-  if ( !this.expectType_soft ('(' ) &&
-        this.err('for.with.no.opening.paren',startc, startLoc) )
-    return this.errorHandlerOutput ;
+  if (!this.expectType_soft ('('))
+    this.err('for.with.no.opening.paren',{extra:[startc,startLoc]});
 
-  var head = null;
-  var headIsExpr = false;
+  var head = null, headIsExpr = false;
 
   var scopeFlags = this.scopeFlags;
 
-  this.scopeFlags = SCOPE_BLOCK;
+  // inside a for statement's init is like a block
+  this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
   this.enterLexicalScope(true);
 
-  if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
-     case 'var':
-        this.canBeStatement = !false;
-        head = this.parseVariableDeclaration(CONTEXT_FOR);
-        break;
-
-     case 'let':
-        if ( this.v >= 5 ) {
-          this.canBeStatement = !false;
-          head = this.parseLet(CONTEXT_FOR);
-        }
-
-        break;
-
-     case 'const' :
-
-        if ( this.v < 5 && this.err('const.not.in.v5',startc, startLoc) )
-          return this.errorHandlerOutput ;
-
-        this.canBeStatement = !false;
-        head = this. parseVariableDeclaration(CONTEXT_FOR);
-           break ;
-  }
-  this.scopeFlags = scopeFlags;
-
-  if ( head === null ) {
-       headIsExpr = !false;
-       head = this.parseExpr( CONTEXT_NULLABLE|CONTEXT_ELEM|CONTEXT_FOR ) ;
-  }
-  else 
-     this.foundStatement = false;
-
-  var kind = 'ForOfStatement';
-  var nbody = null;
-  var afterHead = null;
-
-  if ( head !== null /* && // if we have a head
-       ( headIsExpr || // that is an expression
-       (head.declarations.length === 1  && !head.declarations[0].init ) ) */ && // or one and only one lone declarator
-       this.lttype === 'Identifier' ) { // then if the token ahead is an id
+  this.missingInit = false;
+  if ( this.lttype === 'Identifier' ) {
     switch ( this.ltval ) {
-       case 'in':
-          kind = 'ForInStatement';
+    case 'var':
+      this.canBeStatement = true;
+      head = this.parseVariableDeclaration(CTX_FOR);
+      break;
 
-       case 'of':
-          if (!headIsExpr) {
-             if ( head.declarations.length !== 1 &&
-                  this.err('for.in.or.of.multi',startc, startLoc,head) )
-                return this.errorHandlerOutput;
-//           if ( head.kind === 'const' &&
-//                this.err( 'for.in.or.of.const', startc, starLoc, head) )
-//              return this.errorHandlerOutput;
-          }
+    case 'let':
+      if ( this.v > 5 ) {
+        this.canBeStatement = true;
+        head = this.parseLet(CTX_FOR);
+      }
+      break;
 
-          if ( this.unsatisfiedAssignment )
-            this.unsatisfiedAssignment = null;
+    case 'const' :
+      if (this.v < 5)
+        this.err('for.const.not.in.v5',{extra:[startc,startLoc,scopeFlags]});
 
-          if (headIsExpr) this.toAssig(core(head));
+      this.canBeStatement = true;
+      head = this. parseVariableDeclaration(CTX_FOR);
+         break ;
 
-          this.next();
-          afterHead = this.parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE) ;
-          if ( ! this.expectType_soft (')') &&
-                 this.err('for.iter.no.end.paren',start,startLoc,head,afterHead) )
-            return this.errorHandlerOutput ;
-
-          this.scopeFlags &= CLEAR_IB;
-          this.scopeFlags |= ( SCOPE_BREAK|SCOPE_CONTINUE );
-          nbody = this.parseStatement(!false);
-          if ( !nbody && this.err('null.stmt','for.iter',
-               { s:startc, l:startLoc, h: head, iter: afterHead, scopeFlags: scopeFlags }) )
-            return this.errorHandlerOutput;
-
-          this.scopeFlags = scopeFlags;
-
-          this.foundStatement = !false;
-          this.exitScope();
-          return { type: kind, loc: { start: startLoc, end: nbody.loc.end },
-            start: startc, end: nbody.end, right: core(afterHead), left: core(head), body: nbody/* ,y:-1*/ };
-
-       default:
-          return this.err('for.iter.not.of.in',startc, startLoc,head);
     }
   }
 
-  if ( this.unsatisfiedAssignment &&
-       this.err('for.simple.head.is.unsatisfied',startc,startLoc,head) )
-    return this.errorHandlerOutput ;
-
-/*
-  if ( head && !headIsExpr ) {
-    head.end = this.c;
-    head.loc.end = { line: head.loc.end.line, column: this.col };
-  }
-*/
-  if ( ! this.expectType_soft (';') &&
-         this.err('for.simple.no.init.comma',startc,startLoc,head) )
-    return this.errorHandlerOutput ;
-
-  afterHead = this.parseExpr(CONTEXT_NULLABLE );
-  if ( ! this.expectType_soft (';') &&
-         this.err('for.simple.no.test.comma',startc,startLoc,head,afterHead) )
-    return this.errorHandlerOutput ;
-
-  var tail = this.parseExpr(CONTEXT_NULLABLE );
-
-  if ( ! this.expectType_soft (')') &&
-         this.err('for.simple.no.end.paren',startc,startLoc,head,afterHead,tail) )
-    return this.errorHandlerOutput ;
-
-  this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= ( SCOPE_CONTINUE|SCOPE_BREAK );
-  nbody = this.parseStatement(! false);
-  if ( !nbody && this.err('null.stmt','for.simple',
-      { s:startc, l:startc, h: head, t: afterHead, u: tail, scopeFlags: scopeFlags } ) )
-    return this.errorhandlerOutput;  
-
   this.scopeFlags = scopeFlags;
 
-  this.foundStatement = !false;
+  if (head === null) {
+    headIsExpr = true;
+    head = this.parseExpr( CTX_NULLABLE|CTX_PAT|CTX_FOR ) ;
+  }
+  else 
+    this.foundStatement = false;
 
+  var nbody = null;
+  var afterHead = null;
+
+  if (head !== null && this.lttype === 'Identifier') {
+    var kind = 'ForInStatement';
+    switch ( this.ltval ) {
+    case 'of':
+       kind = 'ForOfStatement';
+       this.ensureVarsAreNotResolvingToCatchParams();
+
+    case 'in':
+      if (this.ltval === 'in')
+        this.kw(), this.resvchk();
+
+      if (headIsExpr) {
+        if (head.type === 'AssignmentExpression') { // TODO: not in the spec
+          // TODO: squash with the `else if (head.init)` below
+        //if (this.tight || kind === 'ForOfStatement' || this.v < 7)
+            this.err('for.in.has.init.assig',{tn:head,extra:[startc,startLoc,kind]});
+        }
+        this.adjustErrors()
+        this.toAssig(head, CTX_FOR|CTX_PAT);
+        this.currentExprIsAssig();
+      }
+      else if (head.declarations.length !== 1)
+        this.err('for.decl.multi',{tn:head,extra:[startc,startLoc,kind]});
+      else if (this.missingInit)
+        this.missingInit = false;
+      else if (head.declarations[0].init) {
+        if (this.tight || kind === 'ForOfStatement' ||
+            this.v < 7 || head.declarations[0].id.type !== 'Identifier' || head.kind !== 'var')
+          this.err('for.in.has.decl.init',{tn:head,extra:[startc,startLoc,kind]});
+      }
+
+      this.next();
+      afterHead = kind === 'ForOfStatement' ? 
+        this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR) :
+        this.parseExpr(CTX_NONE|CTX_TOP);
+
+      if (!this.expectType_soft(')'))
+        this.err('for.iter.no.end.paren',{extra:[head,startc,startLoc,afterHead,kind]});
+
+      this.scopeFlags &= CLEAR_IB;
+      this.scopeFlags |= ( SCOPE_FLAG_BREAK|SCOPE_FLAG_CONTINUE );
+
+      nbody = this.parseStatement(true);
+      if (!nbody)
+        this.err('null.stmt');
+
+      this.scopeFlags = scopeFlags;
+      this.foundStatement = true;
+      this.exitScope();
+
+      return {
+        type: kind, loc: { start: startLoc, end: nbody.loc.end },
+        start: startc, end: nbody.end,
+        right: core(afterHead), left: head,
+        body: nbody/* ,y:-1*/
+      };
+
+    default:
+      this.err('for.iter.not.of.in',{extra:[startc,startLoc,head]});
+
+    }
+  }
+
+  if (headIsExpr)
+    this.currentExprIsSimple();
+  else if (head && this.missingInit)
+    this.err('for.decl.no.init',{extra:[startc,startLoc,head]});
+
+  if (!this.expectType_soft (';'))
+    this.err('for.simple.no.init.semi',{extra:[startc,startLoc,head]});
+
+  afterHead = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+  if (!this.expectType_soft (';'))
+    this.err('for.simple.no.test.semi',{extra:[startc,startLoc,head,afterHead]});
+
+  var tail = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+  if (!this.expectType_soft (')'))
+    this.err('for.simple.no.end.paren',{extra:[startc,startLoc,head,afterHead,tail]});
+
+  this.scopeFlags &= CLEAR_IB;
+  this.scopeFlags |= ( SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
+
+  nbody = this.parseStatement(true);
+  if (!nbody)
+    this.err('null.stmt');
+
+  this.scopeFlags = scopeFlags;
+  this.foundStatement = true;
   this.exitScope();
-  return { type: 'ForStatement', init: head && core(head), start : startc, end: nbody.end,
-         test: afterHead && core(afterHead),
-         loc: { start: startLoc, end: nbody.loc.end },
-          update: tail && core(tail),
-         body: nbody/* ,y:-1*/ };
+
+  return {
+    type: 'ForStatement', init: head && core(head), 
+    start : startc, end: nbody.end,
+    test: afterHead && core(afterHead),
+    loc: { start: startLoc, end: nbody.loc.end },
+    update: tail && core(tail), body: nbody/* ,y:-1*/
+  };
 };
 
-
+// TODO: exsureVarsAreNotResolvingToCatchParams_soft
+this.ensureVarsAreNotResolvingToCatchParams = function() {
+// #if V
+  var list = this.scope.nameList, e = 0;
+  while (e < list.length) {
+    if (list[e].type & DECL_MODE_CATCH_PARAMS)
+      this.err('for.of.var.overrides.catch',{tn:this.idNames[list[e].id.name+'%']});
+    e++;
+  }
+// #else
+  for (var name in this.scope.definedNames) {
+    if (this.scope.definedNames[name] & DECL_MODE_CATCH_PARAMS)
+      this.err('for.of.var.overrides.catch',{tn:this.idNames[name]});
+  }
+// #end
+};

@@ -1,12 +1,10 @@
-var Parser = function (src, isModule) {
+var Parser = function (src, o) {
 
   this.src = src;
 
-  this.unsatisfiedAssignment = null;
-  this.unsatisfiedArg = null;
   this.unsatisfiedLabel = null;
 
-  this.newLineBeforeLookAhead = false;
+  this.nl = false;
 
   this.ltval = null;
   this.lttype= "";
@@ -27,34 +25,67 @@ var Parser = function (src, isModule) {
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
-  this.tight = !!isModule ;
+  this.tight = false;
 
-  this.parenYS = null;
   this.firstNonSimpArg = null;
 
-  this.isScript = !isModule;
-  this.v = 12 ;
+  this.isScript = false;
+  this.v = 7;
 
-  this.firstParen = null;
-  this.firstUnassignable = null;
-
-  this.firstElemWithYS = null;
-  this.firstYS = null;
-  
-  this.throwReserved = !false;
- 
-  this.errorHandlers = {};
-  this.errorHandlerOutput = null;
-
-  this.arrowParen = false;
-  this.firstEA = null;
-  this.firstEAContainer = null;
-  this.defaultEA = null;
+  this.throwReserved = true;
 
   this.first__proto__ = false;
-  this.firstNonTailRest = null;
 
   this.scope = null;
-  this.directive = DIRECTIVE_NONE;
+  this.directive = DIR_NONE;
+  
+  this.declMode = DECL_NONE;
+ 
+  // TODO:eliminate
+  this.pendingExprHead = null;
+
+  // ERROR TYPE           CORE ERROR NODE    OWNER NODE
+  this.pt = ERR_NONE_YET; this.pe = null; this.po = null; // paramErr info
+  this.at = ERR_NONE_YET; this.ae = null; this.ao = null; // assigErr info
+  this.st = ERR_NONE_YET; this.se = null; this.so = null; // simpleErr info
+
+  this.suspys = null;
+  this.missingInit = false;
+
+  this.dv = { value: "", raw: "" };
+
+  // "pin" location; for errors that might not have been precisely cause by a syntax node, like:
+  // function l() { '\12'; 'use strict' }
+  //                 ^
+  // 
+  // for (a i\u0074 e) break;
+  //         ^
+  //
+  // var e = [a -= 12] = 5
+  //            ^
+  this.ploc = { c0: -1, li0: -1, col0: -1 }; // paramErr locPin; currently only for the last error above
+  this.aloc = { c0: -1, li0: -1, col0: -1 }; // assigErr locPin; currently only for the last error above
+
+  // escErr locPin; like the name suggests, it's not a simpleErr -- none of the simpleErrs needs a pinpoint
+  this.esct = ERR_NONE_YET;
+  this.eloc = { c0: -1, li0: -1, col0: -1 };
+
+  this.parenAsync = null; // so that things like (async)(a,b)=>12 will not get to parse.
+
+  this.errorListener = this; // any object with an `onErr(errType "string", errParams {*})` will do
+
+  this.onToken_ = null;
+  this.onComment_ = null;
+//this.core = MAIN_CORE;
+  this.misc = {
+    alloHashBang: false,
+    allowImportExportEverywhere: false,
+    allowReturnOutsideFunction: false,
+    directSourceFile: "",
+    sourceFile: ""
+  };
+  this.program = null;
+
+  this.setOptions(o);
 };
 

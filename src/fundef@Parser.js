@@ -1,242 +1,179 @@
-this .parseArgs  = function (argLen) {
-  var list = [], elem = null;
+this.parseFunc = function(context, flags) {
+  var prevLabels = this.labels,
+      prevStrict = this.tight,
+      prevScopeFlags = this.scopeFlags,
+      prevDeclMode = this.declMode,
+      prevNonSimpArg = this.firstNonSimpArg;
 
-  if ( !this.expectType_soft('(') &&
-        this.err('func.args.no.opening.paren',argLen) )
-    return this.errorHandlerOutput  ;
+  var isStmt = false, startc = this.c0, startLoc = this.locBegin();
+  if (this.canBeStatement) {
+    isStmt = true;
+    this.canBeStatement = false;
+  }
 
-  var firstNonSimpArg = null;
-  while ( list.length !== argLen ) {
-    elem = this.parsePattern();
-    if ( elem ) {
-       if ( this.lttype === 'op' && this.ltraw === '=' ) {
-         elem = this.parseAssig(elem);
-         this.scope.makeComplex();
-       }
+  var isGen = false,
+      isWhole = !(flags & MEM_CLASS_OR_OBJ);
+   
+  var argLen = !(flags & MEM_ACCESSOR) ? ARGLEN_ANY :
+    (flags & MEM_SET) ? ARGLEN_SET : ARGLEN_GET;
 
-       if ( !firstNonSimpArg && elem.type !== 'Identifier' )
-             firstNonSimpArg =  elem;
+  // current func name
+  var cfn = null;
 
-       list.push(elem);
+  if (isWhole) { 
+    this.kw();
+    this.next();
+    if (this.lttype === 'op' && this.ltraw === '*') {
+      if (this.v <= 5)
+        this.err('ver.gen');
+      if (flags & MEM_ASYNC)
+        this.err('async.gen.not.yet.supported');
+      if (this.unsatisfiedLabel)
+        this.err('gen.label.not.allowed');
+      if (!this.canDeclareFunctionsInScope(true))
+        this.err('gen.decl.not.allowed');
+
+      isGen = true;
+      this.next();
     }
-    else
-       break ;
-    
-    if ( this.lttype === ',' )
-       this.next();
-    else
-        break ;
- 
-  }
-  if ( argLen === ANY_ARG_LEN ) {
-     if ( this.lttype === '...' ) {
-        this.scope.makeComplex();
-        elem = this.parseRestElement();
-        list.push( elem  );
-        if ( !firstNonSimpArg )
-              firstNonSimpArg = elem;
-     }
-  }
-  else {
-     if ( list.length !== argLen &&
-          this.err('func.args.not.enough',argLen,list) )
-       return this.errorHandlerOutput;
-  }
 
-  if ( ! this.expectType_soft (')') &&
-       this.err('func.args.no.end.paren',argLen,list) )
-    return this.errorHandlerOutput ;
-
-  if ( firstNonSimpArg )
-     this.firstNonSimpArg = firstNonSimpArg ;
- 
-  return list;
-};
-
-this .parseFunc = function(context, argListMode, argLen ) {
-  var canBeStatement = false, startc = this.c0, startLoc = this.locBegin();
-  var prevLabels = this.labels;
-  var prevStrict = this.tight;
-
-  var prevScopeFlags = this.scopeFlags;
-  var prevYS = this.firstYS ;
-  var prevNonSimpArg = this.firstNonSimpArg;
-
-  if ( !this.canBeStatement ) 
-    this.scopeFlags = 0; //  FunctionExpression's BindingIdentifier can be 'yield', even when in a *
-  else if ( !(this.scopeFlags & SCOPE_WITH_FUNC_DECL) &&
-            (this.tight || !(this.scopeFlags & SCOPE_IF)) )
-      this.err('func.decl.not.in.block', startc, startLoc);
-
-  var isGen = false;
-
-  var currentFuncName = null;
-
-  if ( argListMode & WHOLE_FUNCTION ) {
-     if ( canBeStatement = this.canBeStatement )
-          this.canBeStatement = false;
-
-     this.next();
-
-     if ( this.lttype === 'op' && this.ltraw === '*' ) {
-          isGen = !false;
-          this.next();
-     }
-     if ( !canBeStatement && isGen ) // GeneratorExpression's BindingIdentifier can't be 'yield'
-       this.scopeFlags = SCOPE_YIELD;
-
-     if ( canBeStatement && context !== CONTEXT_DEFAULT  )  {
-        if ( this.lttype !== 'Identifier' &&
-             this.err('missing.name','func', 
-                { s: startc, l: startLoc, labels: prevLabels, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
-                  args: [context, argListMode, argLen] } ) )
-          return this.errorHandlerOutput ;
-
-        this.scope.setDeclMode(DECL_MODE_VAR);
-        currentFuncName = this.parsePattern();
-
-        if ( this.tight && arguments_or_eval(currentFuncName.name) &&
-             this.err('binding.to.eval.or.arguments','func',
-                { s: startc, l: startLoc, labels: prevLabels, stmt: !false, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimpArg,
-                  args: [context, argListMode, argLen] } ) )
-          return this.errorHandlerOutput ;
-     }
-     else if ( this. lttype === 'Identifier' ) {
+    if (isStmt) {
+      if (!this.canDeclareFunctionsInScope(isGen))
+        this.err('func.decl.not.allowed',{c0:startc,loc0:startLoc});
+      if (this.unsatisfiedLabel) {
+        if (!this.canLabelFunctionsInScope(isGen))
+          this.err('func.label.not.allowed',{c0:startc,loc0:startLoc});
+        this.fixupLabels(false);
+      }
+      if (this.lttype === 'Identifier') {
+        this.declMode = DECL_MODE_FUNC_STMT;
+        cfn = this.parsePattern();
+      }
+      else if (!(context & CTX_DEFAULT))
+        this.err('func.decl.has.no.name');
+    }
+    else {
+      // FunctionExpression's BindingIdentifier can be yield regardless of context;
+      // but a GeneratorExpression's BindingIdentifier can't be 'yield'
+      this.scopeFlags = isGen ?
+        SCOPE_FLAG_ALLOW_YIELD_EXPR :
+        SCOPE_FLAG_NONE;
+      if (this.lttype === 'Identifier') {
         this.enterLexicalScope(false);
         this.scope.synth = true;
-        this.scope.setDeclMode(DECL_MODE_VAR);
-        currentFuncName = this.parsePattern();
-        
-        if ( this.tight && arguments_or_eval(currentFuncName.name) &&
-             this.err('binding.to.eval.or.arguments','func',
-                { s: startc, l: startLoc, labels: prevLabels, stmt: canBeStatement, strict: prevStrict, inArgsList: prevInArgList,
-                  argNames: prevArgNames, scopeFlags: prevScopeFlags, ys: prevYS, nonSimp: prevNonSimArg,
-                  context: [ context, argListMode, argLen] } )   )
-          return this.errorHandlerOutput;
-     }
-     else
-        currentFuncName = null;
+        this.declMode = DECL_MODE_FUNC_EXPR;
+        cfn = this.parsePattern();
+      }
+    }
   }
-  else if ( argListMode & ARGLIST_AND_BODY_GEN )
-     isGen = !false; 
+  else if (flags & MEM_GEN)
+    isGen = true;
 
-  if ( this.scopeFlags )
-       this.scopeFlags = 0;
+  this.enterFuncScope(isStmt); 
+  this.declMode = DECL_MODE_FUNC_PARAMS;
 
-  this.enterFuncScope(canBeStatement);
-  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
-  
-  if ( isGen ) this.scopeFlags |= SCOPE_YIELD|SCOPE_ARGS;
-  var argList = this.parseArgs(argLen) ;
-  this.scope.setDeclMode(DECL_MODE_NONE);
+  this.scopeFlags = SCOPE_FLAG_NONE;
 
-  this.tight = this.tight || argListMode !== WHOLE_FUNCTION;
-  this.scopeFlags = SCOPE_FUNCTION;
-  if ( argListMode & METH_FUNCTION )
-    this.scopeFlags |= SCOPE_METH;
-  
-  else if ( argListMode & CONSTRUCTOR_FUNCTION )
-    this.scopeFlags |= SCOPE_CONSTRUCTOR;
-   
-  if ( isGen ) this.scopeFlags |= SCOPE_YIELD;
+  if (isGen)
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
+
+  if (flags & MEM_SUPER)
+    this.scopeFlags |= (flags & (MEM_SUPER|MEM_CONSTRUCTOR));
+
+  // TODO: super is allowed in methods of a class regardless of whether the class
+  // has an actual heritage clause; but this could probably be implemented better
+  else if (!isWhole && !(flags & MEM_CONSTRUCTOR))
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_SUPER;
+ 
+  if (flags & MEM_ASYNC) {
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+  }
+
+  // class members, along with obj-methods, have strict formal parameter lists,
+  // which is a rather misleading name for a parameter list in which dupes are not allowed
+  if (!this.tight && !isWhole)
+    this.enterComplex();
+
+  this.firstNonSimpArg = null;
+
+  this.scopeFlags |= SCOPE_FLAG_ARG_LIST;
+  var argList = this.parseArgs(argLen);
+  this.scopeFlags &= ~SCOPE_FLAG_ARG_LIST;
+
+  this.scopeFlags |= SCOPE_FLAG_FN;  
 
   this.labels = {};
 
-  var nbody = this.parseFuncBody(context);
-  var n = { type: canBeStatement ? 'FunctionDeclaration' : 'FunctionExpression',
-            id: currentFuncName,
-           start: startc,
-           end: nbody.end,
-           generator: isGen,
-           body: nbody,
-            loc: { start: startLoc, end: nbody.loc.end },
-           expression: nbody.type !== 'BlockStatement' ,  
-            params: argList };
+  var nbody = this.parseFuncBody(context & CTX_FOR);
 
-  if ( canBeStatement )
-     this.foundStatement = !false;
+  var n = {
+    type: isStmt ? 'FunctionDeclaration' : 'FunctionExpression', id: cfn,
+    start: startc, end: nbody.end, generator: isGen,
+    body: nbody, loc: { start: startLoc, end: nbody.loc.end },
+    expression: nbody.type !== 'BlockStatement', params: argList,
+
+    // TODO: this should go in parseAsync
+    async: (flags & MEM_ASYNC) !== 0
+  };
+
+  if (isStmt)
+    this.foundStatement = true;
 
   this.labels = prevLabels;
-
   this.tight = prevStrict;
   this.scopeFlags = prevScopeFlags;
-  this.firstYS = prevYS;
+  this.declMode = prevDeclMode;
   this.firstNonSimpArg = prevNonSimpArg;
-
-  this.exitScope();
-
-  return  n  ;
-};
-
-this.parseFuncBody = function(context) {
-  var elem = null;
   
-  if ( this.lttype !== '{' ) {
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CONTEXT_NULLABLE);
-    if ( elem === null )
-      return this.err('func.body.is.empty.expr',context);
-    return elem;
+  this.exitScope();
+  return n;
+};
+  
+this.parseMeth = function(name, flags) {
+  if (this.lttype !== '(')
+    this.err('meth.paren');
+  var val = null;
+  if (flags & MEM_CLASS) {
+    // all modifiers come at the beginning
+    if (flags & MEM_STATIC) {
+      if (flags & MEM_PROTOTYPE)
+        this.err('class.prototype.is.static.mem',{tn:name,extra:flags});
+
+      flags &= ~(MEM_CONSTRUCTOR|MEM_SUPER);
+    }
+
+    if (flags & MEM_CONSTRUCTOR) {
+      if (flags & MEM_SPECIAL)
+        this.err('class.constructor.is.special.mem',{tn:name, extra:{flags:flags}});
+      if (flags & MEM_HAS_CONSTRUCTOR)
+        this.err('class.constructor.is.a.dup',{tn:name});
+    }
+
+    val = this.parseFunc(CTX_NONE, flags);
+
+    return {
+      type: 'MethodDefinition', key: core(name),
+      start: name.start, end: val.end,
+      kind: (flags & MEM_CONSTRUCTOR) ? 'constructor' : (flags & MEM_GET) ? 'get' :
+            (flags & MEM_SET) ? 'set' : 'method',
+      computed: name.type === PAREN,
+      loc: { start: name.loc.start, end: val.loc.end },
+      value: val, 'static': !!(flags & MEM_STATIC)/* ,y:-1*/
+    }
   }
+   
+  val = this.parseFunc(CTX_NONE, flags);
 
-  this.scopeFlags |= SCOPE_BLOCK;
-  var startc= this.c - 1, startLoc = this.locOn(1);
-  this.next() ;
-
-  this.directive = DIRECTIVE_FUNC;
-  var list = this.blck();
-
-  var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
-           loc: { start: startLoc, end: this.loc() }, scope: this.scope/* ,y:-1*/ };
-
-  if ( ! this.expectType_soft ( '}' ) &&
-         this.err('func.body.is.unfinished',n) )
-    return this.errorHandlerOutput ;
-
-  return  n;
+  return {
+    type: 'Property', key: core(name),
+    start: name.start, end: val.end,
+    kind:
+     !(flags & MEM_ACCESSOR) ? 'init' :
+      (flags & MEM_SET) ? 'set' : 'get',
+    computed: name.type === PAREN,
+    loc: { start: name.loc.start, end : val.loc.end },
+    method: (flags & MEM_ACCESSOR) === 0, shorthand: false,
+    value : val/* ,y:-1*/
+  }
 };
-
-// #if V
-this . makeStrict  = function() {
-   if ( this.firstNonSimpArg )
-     return this.err('func.strict.non.simple.param')  ; 
-
-   if ( this.tight ) return;
-
-   this.tight = !false;
-
-   var a = 0, argNames = this.scope.nameList;
-   while (a < argNames.length) {
-     var decl = argNames[a];
-     if (decl.type&DECL_DUPE)
-       this.err('func.args.has.dup',decl.name);
-     ASSERT.call(this, !arguments_or_eval(decl.name));
-     this.validateID(decl.name);
-
-     a++;
-   }
-};
-
-// #else
-this . makeStrict  = function() {
-   if ( this.firstNonSimpArg )
-     return this.err('func.strict.non.simple.param')  ; 
-
-   if ( this.tight ) return;
-
-   this.tight = !false;
-
-   var a = null, argNames = this.scope.definedNames;
-   for (a in argNames) {
-     var declType = argNames[a];
-     a = a.substring(0,a.length-1);
-     if (declType&DECL_DUPE)
-       this.err('func.args.has.dup',a);
-
-     ASSERT.call(this, !arguments_or_eval(a));
-     this.validateID(a);
-   }
-};
-// #end
 

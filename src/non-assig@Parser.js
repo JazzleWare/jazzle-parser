@@ -1,39 +1,58 @@
 this.parseExpr = function (context) {
-  var head = this.parseNonSeqExpr(PREC_WITH_NO_OP,context );
+  var head = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+  var lastExpr = null;
 
-  var lastExpr;
-  if ( this.lttype === ',' ) {
-    context &= CONTEXT_FOR;
+  if ( this.lttype !== ',' )
+    return head;
 
-    var e = [core(head)] ;
-    do {
-      this.next() ;
-      lastExpr = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
-      e.push(core(lastExpr));
-    } while (this.lttype === ',' ) ;
+  // TODO: abide to the original context by using `context = context|(CTX_FOR|CTX_PARPAT)` rather than the
+  // assignment below
+  context = (context & CTX_FOR)|CTX_PARPAT;
 
-    return  { type: 'SequenceExpression', expressions: e, start: head.start, end: lastExpr.end,
-              loc: { start : head.loc.start, end : lastExpr.loc.end}/* ,y:-1*/ };
-  }
+  var e = [core(head)];
+  do {
+    this.next() ;
+    lastExpr = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+    e.push(core(lastExpr));
+  } while (this.lttype === ',' );
 
-  return head ;
+  return {
+    type: 'SequenceExpression', expressions: e,
+    start: head.start, end: lastExpr.end,
+    loc: { start : head.loc.start, end : lastExpr.loc.end}/* ,y:-1*/
+  };
 };
 
-this .parseCond = function(cond,context ) {
-    this.next();
-    var seq = this. parseNonSeqExpr(PREC_WITH_NO_OP, CONTEXT_NONE ) ;
-    if ( !this.expectType_soft (':') && this.err('cond.colon',cond,context,seq) )
-      return this.errorHandlerOutput;
+this.parseCond = function(cond, context) {
+  this.next();
+  var seq =
+    this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE);
 
-    var alt = this. parseNonSeqExpr(PREC_WITH_NO_OP, context ) ;
-    return { type: 'ConditionalExpression', test: core(cond), start: cond.start , end: alt.end ,
-             loc: { start: cond.loc.start, end: alt.loc.end }, consequent: core(seq), alternate: core(alt) /* ,y:-1*/};
+  if (!this.expectType_soft(':'))
+    this.err('cond.colon',{extra:[cond,seq,context]});
+
+  var alt =
+    this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CTX_FOR);
+
+  return {
+    type: 'ConditionalExpression', test: core(cond),
+    start: cond.start, end: alt.end,
+    loc: {
+      start: cond.loc.start,
+      end: alt.loc.end
+    }, consequent: core(seq),
+    alternate: core(alt) /* ,y:-1*/
+  };
 };
 
-this .parseUnaryExpression = function(context ) {
-  var u = null, startLoc = null, startc = 0;
-  var isVDT = this.isVDT;
-  if ( isVDT ) {
+this.parseUnaryExpression = function(context) {
+  var u = null,
+      startLoc = null,  
+      startc = 0,
+      isVDT = this.isVDT;
+
+  if (isVDT) {
+    this.kw();
     this.isVDT = VDT_NONE;
     u = this.ltval;
     startLoc = this.locBegin();
@@ -46,193 +65,207 @@ this .parseUnaryExpression = function(context ) {
   }
 
   this.next();
+  var arg = this.parseNonSeqExpr(PREC_U, context & CTX_FOR);
 
-  var arg = this. parseNonSeqExpr(PREC_U,context|CONTEXT_UNASSIGNABLE_CONTAINER );
+  if (this.tight &&
+      isVDT === VDT_DELETE &&
+      core(arg).type !== 'MemberExpression')
+    this.err('delete.arg.not.a.mem',{tn:arg,extra:{c0:startc,loc0:startLoc,context:context}});
 
-  if (this.tight && isVDT === VDT_DELETE && core(arg).type !== 'MemberExpression')
-    this.err('delete.arg.not.a.mem', startc, startLoc, arg);
-
-  return { type: 'UnaryExpression', operator: u, start: startc, end: arg.end,
-           loc: { start: startLoc, end: arg.loc.end }, prefix: !false, argument: core(arg) };
+  if (isVDT === VDT_AWAIT) {
+    var n = {
+      type: 'AwaitExpression', argument: core(arg),
+      start: startc, end: arg.end,
+      loc: { start: startLoc, end: arg.loc.end }
+    };
+    this.suspys = n;
+    return n;
+  }
+  
+  return {
+    type: 'UnaryExpression', operator: u,
+    start: startc, end: arg.end,
+    loc: {
+      start: startLoc,
+      end: arg.loc.end
+    }, argument: core(arg),
+    prefix: true
+  };
 };
 
-this .parseUpdateExpression = function(arg, context) {
-    var c = 0,
-        loc = null,
-        u = this.ltraw;
-
-    if ( arg === null ) {
-       c  = this.c-2;
-       loc = this.locOn(2);
-       this.next() ;
-       arg = this. parseExprHead(context|CONTEXT_UNASSIGNABLE_CONTAINER );
-       this.assert(arg); // TODO: this must have error handling
-
-       if ( !this.ensureSimpAssig_soft (core(arg)) &&
-            this.err('incdec.pre.not.simple.assig',c,loc,arg) )
-         return this.errorHandlerOutput;
-
-       return { type: 'UpdateExpression', argument: core(arg), start: c, operator: u,
-                prefix: !false, end: arg.end, loc: { start: loc, end: arg.loc.end } };
-    }
-
-    if ( !this.ensureSimpAssig_soft(core(arg)) &&
-          this.err('incdec.post.not.simple.assig',arg) )
-      return this.errorHandlerOutput;
-
-    c  = this.c;
-    loc = { start: arg.loc.start, end: { line: this.li, column: this.col } };
+this.parseUpdateExpression = function(arg, context) {
+  var c = 0, loc = null, u = this.ltraw;
+  if (arg === null) {
+    c = this.c-2;
+    loc = this.locOn(2);
     this.next() ;
-    return { type: 'UpdateExpression', argument: core(arg), start: arg.start, operator: u,
-             prefix: false, end: c, loc: loc };
+    arg = this.parseExprHead(context & CTX_FOR);
+    if (arg === null)
+      this.err('unexpected.lookahead');
 
+    if (!this.ensureSimpAssig_soft(core(arg)))
+      this.err('incdec.pre.not.simple.assig',{tn:core(arg)});
+
+    return {
+      type: 'UpdateExpression', operator: u,
+      start: c, end: arg.end, argument: core(arg),
+      loc: { start: loc, end: arg.loc.end },
+      prefix: true
+    };
+  }
+
+  if (!this.ensureSimpAssig_soft(core(arg)))
+    this.err('incdec.post.not.simple.assig',{tn:core(arg)});
+
+  c  = this.c;
+  loc = {
+    start: arg.loc.start,
+    end: { line: this.li, column: this.col }
+  };
+
+  this.next() ;
+  return {
+    type: 'UpdateExpression', operator: u,
+    start: arg.start, end: c,
+    argument: core(arg), loc: loc,
+    prefix: false
+  };
 };
 
 this .parseO = function(context ) {
+  switch ( this. lttype ) {
+  case 'op': return true;
+  case '--': return true;
+  case '-': this.prec = PREC_ADD_MIN; return true;
+  case '/':
+    if ( this.src.charCodeAt(this.c) === CH_EQUALITY_SIGN ) {
+      this.c++ ;
+      this.prec = PREC_OP_ASSIG;
+      this.ltraw = '/=';
+      this.col++; 
+    }
+    else
+      this.prec = PREC_MUL ; 
 
-    switch ( this. lttype ) {
+    return true;
 
-      case 'op': return !false;
-      case '--': return !false;
-      case '-': this.prec = PREC_ADD_MIN; return !false;
-      case '/':
-           if ( this.src.charCodeAt(this.c) === CHAR_EQUALITY_SIGN ) {
-             this.c++ ;
-             this.prec = PREC_OP_ASSIG;
-             this.ltraw = '/=';
-             this.col++; 
-           }
-           else
-              this.prec = PREC_MUL ; 
+  case 'Identifier':
+    switch ( this. ltval ) {
+    case 'in':
+      this.resvchk();
+    case 'of':
+      if (context & CTX_FOR)
+        break ;
 
-           return !false;
+      this.prec = PREC_COMP ;
+      this.ltraw = this.ltval;
+      return true;
 
-      case 'Identifier': switch ( this. ltval ) {
-         case 'instanceof':
-           this.prec = PREC_COMP  ;
-           this.ltraw = this.ltval ;
-           return !false;
+    case 'instanceof':
+      this.resvchk();
+      this.prec = PREC_COMP  ;
+      this.ltraw = this.ltval ;
+      return true;
 
-         case 'of':
-         case 'in':
-            if ( context & CONTEXT_FOR ) break ;
-            this.prec = PREC_COMP ;
-            this.ltraw = this.ltval;
-            return !false;
-     }
-     break;
+    }
+    break;
 
-     case '?': this .prec = PREC_COND  ; return !false;
-   }
+  case '?':
+    this .prec = PREC_COND;
+    return true;
 
-   return false ;
+  default:
+    return false;
+
+  }
 };
 
-this.parseNonSeqExpr = function (prec, context  ) {
-    var firstUnassignable = null, firstParen = null;
+this.parseNonSeqExpr = function (prec, context) {
+  var head = this.parseExprHead(context);
+  if ( head === null ) {
+    switch ( this.lttype ) {
+    case 'u':
+    case '-':
+      head = this.parseUnaryExpression(context);
+      break;
 
-    var head = this. parseExprHead(context);
+    case '--':
+       head = this.parseUpdateExpression(null, context);
+       break;
 
-    if ( head === null ) {
-         switch ( this.lttype ) {
-           case 'u':
-           case '-':
-              head = this. parseUnaryExpression(context & CONTEXT_FOR );
-              break ;
+    case 'yield':
+      // make sure there is no other expression before it 
+      if (prec !== PREC_WITH_NO_OP) 
+        return this.err('yield.as.an.id');
 
-           case '--':
-              head = this. parseUpdateExpression(null, context&CONTEXT_FOR );
-              break ;
-
-           case 'yield':
-              if (prec !== PREC_WITH_NO_OP) // make sure there is no other expression before it 
-                return this.err('yield.as.an.id',context,prec) ;
-
-              return this.parseYield(context); // everything that comes belongs to it
-   
-           default:
-              if (!(context & CONTEXT_NULLABLE) )
-                return this.err('nexpr.null.head',context,prec);
-               
-              return null;
-         }
+      // everything that comes belongs to it 
+      return this.parseYield(context); 
+ 
+    default:
+      if (!(context & CTX_NULLABLE) )
+        return this.err('nexpr.null.head');
+       
+      return null;
     }
-    else if ( prec === PREC_WITH_NO_OP ) {
-      firstParen = head. type === PAREN ? head.expr : this.firstParen ;      
-      firstUnassignable = this.firstUnassignable;
-    }   
+  }
 
-    var op = false;
-    while ( !false ) {
-       op = this. parseO( context );
-       if ( op && isAssignment(this.prec) ) {
-         this.firstUnassignable = firstUnassignable;
-         if ( prec === PREC_WITH_NO_OP )
-            head =  this. parseAssignment(head, context );
-         
-         else
-            head = this.err('assig.not.first',
-                 { c:context, u:firstUnassignable, h: head, paren: firstParen, prec: prec });
+  var op = this.parseO(context);
+  var assig = op && isAssignment(this.prec);
+  if (assig) {
+    if (prec === PREC_WITH_NO_OP)
+      head = this.parseAssignment(head, context);
+    else
+      this.err('assig.not.first');
+  }
 
-         break ;
-       }
-       else {
-         if ( this.unsatisfiedArg && 
-              this.err('arrow.paren.no.arrow',{c:context, u:firstUnassignable, h: head, p:firstParen, prec: prec}) )
-           return this.errorHandlerOutput; 
-
-         if ( this.firstEA )
-            if( !(context & CONTEXT_ELEM_OR_PARAM) || op )
-              this.err('assig.to.eval.or.arguments');
-
-         if ( this.unsatisfiedAssignment ) {
-            if ( !(prec===PREC_WITH_NO_OP && (context & CONTEXT_ELEM_OR_PARAM ) ) )
-              this.err('assignable.unsatisfied');
-
-            else break ;
-         }
-         if ( !op ) break;
-       }
-
-       if ( isMMorAA(this.prec) ) {
-         if ( this. newLineBeforeLookAhead )
-           break ;
-         head = this. parseUpdateExpression(head, context & CONTEXT_FOR ) ;
-         continue;
-       }
-       if ( isQuestion(this.prec) ) {
-          if ( prec === PREC_WITH_NO_OP ) {
-            head = this. parseCond(head, context&CONTEXT_FOR );
-          }
-          break ;
-       }
-
-       if ( this. prec < prec ) break ;
-       if ( this. prec  === prec && !isRassoc(prec) ) break ;
-
-       var o = this.ltraw;
-       var currentPrec = this. prec;
-       this.next();
-       var right = this.parseNonSeqExpr(currentPrec, (context & CONTEXT_FOR)|CONTEXT_UNASSIGNABLE_CONTAINER );
-       head = { type: !isBin(currentPrec )  ? 'LogicalExpression' :   'BinaryExpression',
-                operator: o,
-                start: head.start,
-                end: right.end,
-                loc: {
-                   start: head.loc.start,
-                   end: right.loc.end
-                },
-                left: core(head),
-                right: core(right)/* ,y:-1*/
-              };
-    }
+  if ((context & CTX_PAT) &&
+     (context & CTX_NO_SIMPLE_ERR))
+      this.currentExprIsSimple();
   
-    if ( prec === PREC_WITH_NO_OP ) {
-      this.firstParen = firstParen ;
-      this.firstUnassignable = firstUnassignable;
+  if (!op || assig)
+    return head;
+
+  do {
+    var currentPrec = this.prec;
+
+    if (currentPrec === PREC_COND) {
+      if (prec === PREC_WITH_NO_OP)
+        head = this.parseCond(head, context);
+      break;
     }
 
-    return head;
+    if ( isMMorAA(currentPrec) ) {
+      if (this.nl )
+        break;
+    
+      head = this.parseUpdateExpression(head, context);
+      continue;
+    }
+    
+    if (prec === PREC_U && currentPrec === PREC_EX)
+      this.err('unary.before.an.exponentiation');
+    if (currentPrec < prec)
+      break;
+    if (currentPrec === prec && !isRassoc(prec))
+      break;
+
+    var o = this.ltraw;
+    this.next();
+    var right = this.parseNonSeqExpr(currentPrec, context & CTX_FOR);
+    head = {
+      type: !isBin(currentPrec) ? 'LogicalExpression' : 'BinaryExpression',
+      operator: o,
+      start: head.start,
+      end: right.end,
+      loc: {
+        start: head.loc.start,
+        end: right.loc.end
+      },
+      left: core(head),
+      right: core(right)/* ,y:-1*/
+    };
+
+  } while (op = this.parseO(context));
+
+  return head;
 };
-
-

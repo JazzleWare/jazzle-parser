@@ -45,7 +45,7 @@ this.exit = function() {
 
 this.newSynthLabelName = function(baseLabelName) {
   baseLabelName = baseLabelName || 
-    (baseLabelName === "" ? 'label' baseLabelName);
+    (baseLabelName === "" ? 'label' : baseLabelName);
   var synthName = baseLabelName, num = 0;
 
   RENAME:

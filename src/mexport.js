@@ -4,10 +4,4 @@ this.parse = function(src, isModule ) {
 };
 
 this.Parser = Parser;  
-this.Scope = Scope;
-this.Emitter = Emitter;
-this.Partitioner = Partitioner;
-this.Decl = Decl;
-this.RefMode = RefMode;
-this.Transformer = Transformer;
-
+this.ErrorString = ErrorString; this.Template = Template;

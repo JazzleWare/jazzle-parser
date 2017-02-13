@@ -1,4 +1,14 @@
 this.next = function () {
+  if (this.onToken_ !== null) {
+    switch (this.lttype) {
+    case "eof":
+    case "":
+      break;
+    default:
+      this.onToken(null);
+    }
+  }
+
   if ( this.skipS() ) return;
   if (this.c >= this.src.length) {
       this. lttype =  'eof' ;
@@ -9,46 +19,59 @@ this.next = function () {
       l = this.src,
       e = l.length,
       r = 0,
-      peek,
+      peek = -1,
       start =  c;
 
+  this.c0 = c;
+  this.col0 = this.col;
+  this.li0 = this.li;
+
   peek  = this.src.charCodeAt(start);
-  if ( isIDHead(peek) )this.readAnIdentifierToken('');
-  else if (Num(peek))this.readNumberLiteral(peek);
+  if ( isIDHead(peek) ) {
+    if (this.directive !== DIR_NONE)
+      this.directive = DIR_NONE;
+
+    this.esct = ERR_NONE_YET;
+    this.readAnIdentifierToken('');
+  }
+  else if (num(peek))this.readNumberLiteral(peek);
   else {
+
     switch (peek) {
-      case CHAR_MIN: this.opMin(); break;
-      case CHAR_ADD: this.opAdd() ; break;
-      case CHAR_MULTI_QUOTE:
-      case CHAR_SINGLE_QUOTE:
+      case CH_MIN: this.opMin(); break;
+      case CH_ADD: this.opAdd() ; break;
+      case CH_MULTI_QUOTE:
+      case CH_SINGLE_QUOTE:
         return this.readStrLiteral(peek);
-      case CHAR_SINGLEDOT: this.readDot () ; break ;
-      case CHAR_EQUALITY_SIGN:  this.opEq () ;   break ;
-      case CHAR_LESS_THAN: this.opLess() ;   break ;
-      case CHAR_GREATER_THAN: this.opGrea() ;   break ;
-      case CHAR_MUL:
-         this.ltraw = '*';
+      case CH_SINGLEDOT: this.readDot () ; break ;
+      case CH_EQUALITY_SIGN:  this.opEq () ;   break ;
+      case CH_LESS_THAN: this.opLess() ;   break ;
+      case CH_GREATER_THAN: this.opGrea() ;   break ;
+      case CH_MUL:
+         this.prec = PREC_MUL;
          this.lttype = 'op';
+         this.ltraw = '*';
          c++ ;
-         if ( l.charCodeAt(c+1) === peek) {
+         if ( l.charCodeAt(c) === peek) {
+           if (this.v <= 5)
+             this.err('ver.**');
+
            this.ltraw = '**';
+           this.prec = PREC_EX;
            c++ ;
          }
-         if (l.charCodeAt(c) === CHAR_EQUALITY_SIGN) {
+         if (l.charCodeAt(c) === CH_EQUALITY_SIGN) {
            c++;
            this. prec = PREC_OP_ASSIG;
            this.ltraw += '=';
          }
-         else {
-           this. prec = PREC_MUL;
-         }
          this.c=c;
          break ;
 
-      case CHAR_MODULO:
+      case CH_MODULO:
          this.lttype = 'op';
          c++ ;
-         if (l.charCodeAt(c) === CHAR_EQUALITY_SIGN) {
+         if (l.charCodeAt(c) === CH_EQUALITY_SIGN) {
            c++;
            this. prec = PREC_OP_ASSIG;
            this.ltraw = '%=';
@@ -60,13 +83,13 @@ this.next = function () {
          this.c=c;
          break ;
 
-      case CHAR_EXCLAMATION:
+      case CH_EXCLAMATION:
          c++ ;
-         if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+         if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
            this. lttype = 'op';
            c++;
            this.prec = PREC_EQUAL;
-           if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+           if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
              this.ltraw = '!==';
              c++;
            }
@@ -79,24 +102,24 @@ this.next = function () {
          this.c=c;
          break ;
 
-      case CHAR_COMPLEMENT:
+      case CH_COMPLEMENT:
             c++;
             this.c=c;
             this.ltraw = '~';
             this.lttype = 'u';
             break ;
 
-      case CHAR_OR:
+      case CH_OR:
          c++;
          this.lttype = 'op' ;
          switch ( l.charCodeAt(c) ) {
-            case CHAR_EQUALITY_SIGN:
+            case CH_EQUALITY_SIGN:
                  c++;
                  this.prec = PREC_OP_ASSIG ;
                  this.ltraw = '|=';
                  break ;
 
-            case CHAR_OR:
+            case CH_OR:
                  c++;
                  this.prec = PREC_BOOL_OR;
                  this.ltraw = '||'; break ;
@@ -109,17 +132,17 @@ this.next = function () {
          this.c=c;
          break;
 
-      case CHAR_AND:
+      case CH_AND:
           c++ ;
           this.lttype = 'op';
           switch ( l.charCodeAt(c) ) {
-            case CHAR_EQUALITY_SIGN:
+            case CH_EQUALITY_SIGN:
                c++;
                this. prec = PREC_OP_ASSIG;
                this.ltraw = '&=';
                break;
 
-            case CHAR_AND:
+            case CH_AND:
                c ++;
                this.prec = PREC_BOOL_AND;
                this.ltraw = '&&';
@@ -133,10 +156,10 @@ this.next = function () {
          this.c=c;
          break ;
 
-      case CHAR_XOR:
+      case CH_XOR:
         c++;
         this.lttype = 'op';
-        if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+        if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
           c++;
           this.prec = PREC_OP_ASSIG;
           this.ltraw = '^=';
@@ -152,19 +175,22 @@ this.next = function () {
 
         var mustBeAnID = 0 ;
 
-        this.c = c;
-        this.c0 = c;
-        this.col0 = this.col;
-        this.li0 = this.li;
+        if (CH_BACK_SLASH === peek) {
+          this.esct = ERR_PIN_UNICODE_IN_RESV;
+          this.eloc.c0 = this.c;
+          this.eloc.li0 = this.li;
+          this.eloc.col0 = this.col;
 
-        if (CHAR_BACK_SLASH === peek) {
-            mustBeAnID = 1;
-            peek = l.charCodeAt(++ this.c);
-            if (peek !== CHAR_u )
-                return this.err('id.u.not.after.slash');
-            
-            else
-               peek = this.peekUSeq();
+          mustBeAnID = 1;
+          peek = l.charCodeAt(++ this.c);
+          if (peek !== CH_u )
+              return this.err('id.u.not.after.slash');
+          
+          else
+             peek = this.peekUSeq();
+
+          if (peek >= 0x0D800 && peek <= 0x0DBFF )
+            this.err('id.name.has.surrogate.pair');
         }
         if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
             mustBeAnID = 2 ;
@@ -172,19 +198,23 @@ this.next = function () {
             r = this.peekTheSecondByte();
         }
         if (mustBeAnID) {
-           if (!isIDHead(mustBeAnID === 1 ? peek :
-                  ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
-              if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead',peek);
-              else return this.err('id.multi.must.be.idhead',peek,r);
-            }
-            this.readAnIdentifierToken( mustBeAnID === 2 ?
-                String.fromCharCode( peek, r ) :
-                fromcode( peek )
-            );
+          if (!isIDHead(mustBeAnID === 1 ? peek :
+             ((peek - 0x0D800)<<10) + (r-0x0DC00) + (0x010000) ) ) {
+            if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead',{extra:peek});
+            else return this.err('id.multi.must.be.idhead',{extra:[peek,r]});
+          }
+ 
+          this.readAnIdentifierToken( mustBeAnID === 2 ?
+              String.fromCharCode( peek, r ) :
+              fromcode( peek )
+          );
         }
         else 
           this.readMisc();
     }
+
+    if (this.directive !== DIR_NONE)
+      this.directive = DIR_NONE;
   }
 
   this.col += ( this.c - start );
@@ -196,10 +226,10 @@ this . opEq = function()  {
     this.lttype = 'op';
     c++ ;
 
-    if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+    if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
       c++;
       this.prec = PREC_EQUAL ;
-      if ( l.charCodeAt(c ) === CHAR_EQUALITY_SIGN ){
+      if ( l.charCodeAt(c ) === CH_EQUALITY_SIGN ){
         c++ ;
         this.ltraw = '===';
       }
@@ -207,7 +237,7 @@ this . opEq = function()  {
     }
     else {
         this.prec = PREC_SIMP_ASSIG;
-        if ( l.charCodeAt(c) === CHAR_GREATER_THAN) {
+        if ( l.charCodeAt(c) === CH_GREATER_THAN) {
           c++;
           this. ltraw = '=>';
         }
@@ -223,14 +253,14 @@ this . opMin = function() {
    c++;
 
    switch( l.charCodeAt(c) ) {
-      case  CHAR_EQUALITY_SIGN:
+      case  CH_EQUALITY_SIGN:
          c++;
          this.prec = PREC_OP_ASSIG;
          this. lttype = 'op';
          this.ltraw = '-=';
          break ;
 
-      case  CHAR_MIN:
+      case  CH_MIN:
          c++;
          this.prec = PREC_OO;
          this. lttype = this.ltraw = '--';
@@ -249,9 +279,9 @@ this . opLess = function () {
   this.lttype = 'op';
   c++ ;
 
-  if ( l.charCodeAt(c ) === CHAR_LESS_THAN ) {
+  if ( l.charCodeAt(c ) === CH_LESS_THAN ) {
      c++;
-     if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+     if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
         c++;
         this. prec = PREC_OP_ASSIG ;
         this. ltraw = '<<=' ;
@@ -263,7 +293,7 @@ this . opLess = function () {
   }
   else  {
      this. prec = PREC_COMP ;
-     if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+     if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
         c++ ;
         this.ltraw = '<=';
      }
@@ -279,7 +309,7 @@ this . opAdd = function() {
    c++ ;
 
    switch ( l.charCodeAt(c) ) {
-       case CHAR_EQUALITY_SIGN:
+       case CH_EQUALITY_SIGN:
          c ++ ;
          this. prec = PREC_OP_ASSIG;
          this. lttype = 'op';
@@ -287,7 +317,7 @@ this . opAdd = function() {
 
          break ;
 
-       case CHAR_ADD:
+       case CH_ADD:
          c++ ;
          this. prec = PREC_OO;
          this. lttype = '--';
@@ -305,11 +335,11 @@ this . opGrea = function()   {
   this.lttype = 'op';
   c++ ;
 
-  if ( l.charCodeAt(c) === CHAR_GREATER_THAN ) {
+  if ( l.charCodeAt(c) === CH_GREATER_THAN ) {
     c++;
-    if ( l.charCodeAt(c) === CHAR_GREATER_THAN ) {
+    if ( l.charCodeAt(c) === CH_GREATER_THAN ) {
        c++;
-       if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+       if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
          c++ ;
          this. prec = PREC_OP_ASSIG;
          this. ltraw = '>>>=';
@@ -319,7 +349,7 @@ this . opGrea = function()   {
          this. prec = PREC_SH;
        }
     }
-    else if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+    else if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
        c++ ;
        this. prec = PREC_OP_ASSIG;
        this.ltraw = '>>=';
@@ -331,7 +361,7 @@ this . opGrea = function()   {
   }
   else  {
     this. prec = PREC_COMP  ;
-    if ( l.charCodeAt(c) === CHAR_EQUALITY_SIGN ) {
+    if ( l.charCodeAt(c) === CH_EQUALITY_SIGN ) {
       c++ ;
       this. ltraw = '>=';
     }
@@ -341,119 +371,125 @@ this . opGrea = function()   {
 };
 
 this.skipS = function() {
-     var noNewLine = !false,
-         startOffset = this.c,
-         c = this.c,
-         l = this.src,
-         e = l.length,
-         start = c;
+  var noNewLine = true,
+      startOffset = this.c,
+      c = this.c,
+      l = this.src,
+      e = l.length,
+      start = c;
 
-     while ( c < e ) {
-       switch ( l.charCodeAt ( c ) ) {
-         case CHAR_WHITESPACE :
-             while ( ++c < e &&  l.charCodeAt(c) === CHAR_WHITESPACE );
-             continue ;
-         case CHAR_CARRIAGE_RETURN : if ( CHAR_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
-         case CHAR_LINE_FEED :
-            if ( noNewLine ) noNewLine = false ;
-            start = ++ c ;
-            this.li ++ ;
-            this.col = ( 0)
-            continue ;
+  while ( c < e ) {
+    switch ( l.charCodeAt ( c ) ) {
+    case CH_WHITESPACE :
+      while ( ++c < e &&  l.charCodeAt(c) === CH_WHITESPACE );
+      continue ;
+    case CH_CARRIAGE_RETURN : if ( CH_LINE_FEED === l.charCodeAt( c + 1 ) ) c ++;
+    case CH_LINE_FEED :
+      if ( noNewLine ) noNewLine = false ;
+      start = ++ c ;
+      this.li ++ ;
+      this.col = ( 0)
+      continue ;
 
-         case CHAR_VTAB:
-         case CHAR_TAB:
-         case CHAR_FORM_FEED: c++ ; continue ;  
+    case CH_VTAB:
+    case CH_TAB:
+    case CH_FORM_FEED: c++ ; continue ;  
 
-         case CHAR_DIV:
-             switch ( l.charCodeAt ( c + ( 1) ) ) {
-                 case CHAR_DIV:
-                     c ++ ;
-                     this.c=c;
-                     this.readLineComment () ;
-                     if ( noNewLine ) noNewLine = false ;
-                     start = c = this.c ;
-                     continue ;
+    case CH_DIV:
+      switch ( l.charCodeAt ( c + ( 1) ) ) {
+      case CH_DIV:
+        c += 2;
+        this.col += (c-start) ;
+        this.c=c;
+        this.readLineComment () ;
+        if (noNewLine) noNewLine = false ;
+        start = c = this.c ;
+        continue ;
 
-                 case CHAR_MUL:
-                   c +=  2 ;
-                   this.col += (c-start ) ;
-                   this.c = c ;
-                   noNewLine = this. readMultiComment () && noNewLine ;
-                   start = c = this.c ;
-                   continue ;
+      case CH_MUL:
+        c += 2;
+        this.col += (c-start) ;
+        this.c = c ;
+        noNewLine = this. readMultiComment () && noNewLine ;
+        start = c = this.c ;
+        continue ;
 
-                 default:
-                     c++ ;
-                     this.newLineBeforeLookAhead = ! noNewLine ;
-                     this.col += (c-start ) ;
-                     this.c=c ;
-                     this.prec  = 0xAD ;
-                     this.lttype =  '/';
-                     this.ltraw = '/' ;
-                     return !false;
-             }
+      default:
+        this.c0 = c;
+        this.col0 = this.col + (c-start);
+        this.li0 = this.li;
+        c++ ;
+        this.nl = ! noNewLine ;
+        this.col += (c-start) ;
+        this.c=c ;
+        this.prec  = 0xAD ;
+        this.lttype =  '/';
+        this.ltraw = '/' ;
+        return true;
+      }
 
-         case 0x0020:case 0x00A0:case 0x1680:case 0x2000:
-         case 0x2001:case 0x2002:case 0x2003:case 0x2004:
-         case 0x2005:case 0x2006:case 0x2007:case 0x2008:
-         case 0x2009:case 0x200A:case 0x202F:case 0x205F:
-         case 0x3000:case 0xFEFF: c ++ ; continue ;
+    case 0x0020:case 0x00A0:case 0x1680:case 0x2000:
+    case 0x2001:case 0x2002:case 0x2003:case 0x2004:
+    case 0x2005:case 0x2006:case 0x2007:case 0x2008:
+    case 0x2009:case 0x200A:case 0x202F:case 0x205F:
+    case 0x3000:case 0xFEFF: c ++ ; continue ;
 
-         case 0x2028:
-         case 0x2029:
-            if ( noNewLine ) noNewLine = false ;
-            start = ++c ;
-            this.col = 0 ;
-            this.li ++ ;
-            continue;
+    case 0x2028:
+    case 0x2029:
+      if ( noNewLine ) noNewLine = false ;
+      start = ++c ;
+      this.col = 0 ;
+      this.li ++ ;
+      continue;
 
-         case CHAR_LESS_THAN:
-            if ( this.isScript &&
-                 l.charCodeAt(c+1) === CHAR_EXCLAMATION &&
-                 l.charCodeAt(c+2) === CHAR_MIN &&
-                 l.charCodeAt(c+ 1 + 2) === CHAR_MIN ) {
-               this.c = c + 4;
-               this.readLineComment();
-               c = this.c;
-               continue;
-            }
-            this.col += (c-start ) ;
-            this.c=c;
-            this.newLineBeforeLookAhead = !noNewLine ;
-            return ;
+    case CH_LESS_THAN:
+      if ( this.v > 5 && this.isScript &&
+        l.charCodeAt(c+1) === CH_EXCLAMATION &&
+        l.charCodeAt(c+2) === CH_MIN &&
+        l.charCodeAt(c+1+2) === CH_MIN
+      ) {
+        this.c = c + 4;
+        this.col += (this.c-start) ;
+        this.readLineComment();
+        c = this.c;
+        continue;
+      }
+      this.col += (c-start ) ;
+      this.c=c;
+      this.nl = !noNewLine ;
+      return ;
  
-         case CHAR_MIN:
-            if ( (!noNewLine || startOffset === 0) &&
-                 this.isScript &&
-                 l.charCodeAt(c+1) === CHAR_MIN && l.charCodeAt(c+2) === CHAR_GREATER_THAN ) {
-               this.c = c + 1 + 2;
-               this.readLineComment();
-               c = this.c;
-               continue;
-            }
+    case CH_MIN:
+      if (this.v > 5 && (!noNewLine || startOffset === 0) &&
+           this.isScript &&
+           l.charCodeAt(c+1) === CH_MIN && l.charCodeAt(c+2) === CH_GREATER_THAN ) {
+        this.c = c + 1 + 2;
+        this.col += (this.c-start) ;
+        this.readLineComment();
+        c = this.c;
+        continue;
+      }
   
-         default :
-   
-            this.col += (c-start ) ;
-            this.c=c;
-            this.newLineBeforeLookAhead = !noNewLine ;
-            return ;
-       }
-     }
+    default :
+      this.col += (c-start ) ;
+      this.c=c;
+      this.nl = !noNewLine ;
+      return ;
+    }
+  }
 
   this.col += (c-start ) ;
   this.c = c ;
-  this.newLineBeforeLookAhead = !noNewLine ;
+  this.nl = !noNewLine ;
 };
 
 this.readDot = function() {
    ++this.c;
-   if( this.src.charCodeAt(this.c)===CHAR_SINGLEDOT) {
-     if (this.src.charCodeAt(++ this.c) === CHAR_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
-     this.err('Unexpectd ' + this.src[this.c]) ;
+   if( this.src.charCodeAt(this.c)===CH_SINGLEDOT) {
+     if (this.src.charCodeAt(++ this.c) === CH_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
+     this.err('Unexpectd ') ;
    }
-   else if ( Num(this.src.charCodeAt(this.c))) {
+   else if ( num(this.src.charCodeAt(this.c))) {
        this.lttype = 'Literal' ;
        this.c0  = this.c - 1;
        this.li0 = this.li;
@@ -467,20 +503,20 @@ this.readDot = function() {
 
 this.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
 
-this.expectType = function (n)  {
-  this.assert(this.lttype === n, 'expected ' + n + '; got ' + this.lttype  )  ;
-  this.next();
-};
-
 this.expectID = function (n) {
-  this.assert(this.lttype === 'Identifier' && this.ltval === n)  ;
-  this.next();
+  if (this.lttype === 'Identifier' && this.ltval === n)
+    return this.next();
+  
+  if (this.lttype !== 'Identifier')
+    this.err('an.id.was.expected',{extra:n});
+ 
+  this.err('unexpected.id',{extra:n});
 };
 
 this.expectType_soft = function (n)  {
   if (this.lttype === n ) {
       this.next();
-      return !false;
+      return true;
   }
 
   return false;
@@ -489,9 +525,13 @@ this.expectType_soft = function (n)  {
 this.expectID_soft = function (n) {
   if (this.lttype === 'Identifier' && this.ltval === n) {
      this.next();
-     return !false;
+     return true;
   }
 
   return false;
 };
 
+this.kw = function() {
+  if (this.onToken_)
+    this.lttype = 'Keyword';
+};

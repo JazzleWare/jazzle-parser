@@ -1,9 +1,9 @@
 {
-  "name": "jsrube",
-  "main": "dist/lube.js",
-  "version": "0.5.21",
-  "description": "A very fast ECMAScript parser, fully written in plain ECMAScript 3",
-  "homepage": "https://github.com/icefapper/jsrube",
+  "name": "jazzle",
+  "main": "dist/jazzle.js",
+  "version": "0.5.880",
+  "description": "A dazzlingly fast ECMAScript parser written in vanilla ES3",
+  "homepage": "https://github.com/JazzleWare/jazzle-parser",
   "engines": { "node": ">=6.20.0" },
   "author": {
     "name": "Neni Onoda",
@@ -23,10 +23,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/icefapper/jsRube.git"
+    "url": "https://github.com/JazzleWare/jazzle-parser.git"
   },
   "bugs": {
-    "url": "https://github.com/icefapper/jsRube/issues"
+    "url": "https://github.com/JazzleWare/jazzle-parser/issues"
   },
   "license": "MIT",
   "keywords": [
@@ -39,8 +39,8 @@
     "syntax"
   ],
   "scripts": {
-    "test": "node quick-test.js",
-    "benchmark": "node bench"
+    "test": "node test/run.js",
+    "benchmark": "node bench/run.js"
   },
   "devDependencies": {
     "acorn": "^3.2.0",

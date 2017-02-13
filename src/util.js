@@ -44,13 +44,11 @@ function arguments_or_eval(l) {
   switch ( l ) {
      case 'arguments':
      case 'eval':
-       return !false;
+       return true;
   }
 
   return false;
 };
-
-var has   = Object.prototype.hasOwnProperty;
 
 function fromcode(codePoint )  {
   if ( codePoint <= 0xFFFF)
@@ -64,26 +62,13 @@ function fromcode(codePoint )  {
 function core(n) { return n.type === PAREN ? n.expr : n; };
 
 function toNum (n) {
-  return (n >= CHAR_0 && n <= CHAR_9) ? n - CHAR_0 :
-         (n <= CHAR_f && n >= CHAR_a) ? 10 + n - CHAR_a :
-         (n >= CHAR_A && n <= CHAR_F) ? 10 + n - CHAR_A : -1;
-};
-
-function createObj(fromPrototype) {
-  function Obj() {}
-  Obj.prototype = fromPrototype;
-  return new Obj();
+  return (n >= CH_0 && n <= CH_9) ? n - CH_0 :
+         (n <= CH_f && n >= CH_a) ? 10 + n - CH_a :
+         (n >= CH_A && n <= CH_F) ? 10 + n - CH_A : -1;
 }
 
-function getOwnN(obj, name, notHave) {
-  return HAS.call(obj, name) ? obj[name] : notHave;
-}
-
-function getOwn(obj, name) {
-  return getOwnN(obj, name, null);
-}
-
-function hasOwn(obj, name) {
-  return HAS.call(obj, name);
+function createObj(baseObj) {
+  function E() {} E.prototype = baseObj;
+  return new E();
 }
 

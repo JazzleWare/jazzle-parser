@@ -25,7 +25,8 @@ function curlyReplace(matchedString, b, matchIndex, wholeString ) {
 
 function regexReplace(matchedString, b, noB, matchIndex, wholeString) {
   var c = parseInt('0x' + ( b || noB ) ) ;
-  this.assert(c <= 0x010FFFF );
+  if (c > 0x010FFFF )
+    this.err('regex.val.not.in.range');
   
   if ( c <= 0xFFFF ) return String.fromCharCode(c) ;
 
@@ -52,6 +53,8 @@ function verifyRegex_soft (regex, flags) {
 }
 
 this.parseRegExpLiteral = function() {
+  if (this.v < 2)
+    this.err('ver.regex');
      var startc = this.c - 1, startLoc = this.locOn(1),
          c = this.c, src = this.src, len = src.length;
 
@@ -59,43 +62,43 @@ this.parseRegExpLiteral = function() {
      WHILE:
      while ( c < len ) {
        switch ( src.charCodeAt(c) ) {
-         case CHAR_LSQBRACKET:
+         case CH_LSQBRACKET:
             if ( !inSquareBrackets )
-               inSquareBrackets = !false;
+               inSquareBrackets = true;
 
             break;
 
-         case CHAR_BACK_SLASH:
+         case CH_BACK_SLASH:
             ++c;
             if (c < len) switch(src.charCodeAt(c)) {
-               case CHAR_CARRIAGE_RETURN: 
-                  if ( l.charCodeAt(c + 1) === CHAR_LINE_FEED ) c++;
-               case CHAR_LINE_FEED :
+               case CH_CARRIAGE_RETURN: 
+                  if ( l.charCodeAt(c + 1) === CH_LINE_FEED ) c++;
+               case CH_LINE_FEED :
                case 0x2028 :
                case 0x2029 :
-                  if ( this.err('regex.newline.esc',c,startLoc) )
+                  if ( this.err('regex.newline.esc',{c0:c}) )
                     return this.errorHandlerOutput ;
             }
 
             break;
 
-         case CHAR_RSQBRACKET:
+         case CH_RSQBRACKET:
             if ( inSquareBrackets )
                inSquareBrackets = false;
 
             break;
 
-         case CHAR_DIV :
+         case CH_DIV :
             if ( inSquareBrackets )
                break;
 
             break WHILE;
 
-         case CHAR_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CHAR_LINE_FEED ) c++ ;
-         case CHAR_LINE_FEED :
+         case CH_CARRIAGE_RETURN: if ( l.charCodeAt(c + 1 ) === CH_LINE_FEED ) c++ ;
+         case CH_LINE_FEED :
          case 0x2028 :
          case 0x2029 :
-           if ( this.err('regex.newline',c,startLoc) )
+           if ( this.err('regex.newline',{c0:c}) )
              return this.errorHandlerOutput ;
 
 //       default:if ( o >= 0x0D800 && o <= 0x0DBFF ) { this.col-- ; }
@@ -104,8 +107,8 @@ this.parseRegExpLiteral = function() {
        c++ ;
      }
 
-     if ( src.charCodeAt(c) !== CHAR_DIV && 
-          this.err('regex.unfinished',startc,startLoc,c) )
+     if ( src.charCodeAt(c) !== CH_DIV && 
+          this.err('regex.unfinished') )
        return this.errorHandlerOutput ;
 
      var flags = 0;
@@ -113,25 +116,25 @@ this.parseRegExpLiteral = function() {
      WHILE:
      while ( flagCount <= 5 ) {
         switch ( src.charCodeAt ( ++c ) ) {
-            case CHAR_g:
+            case CH_g:
                 if (flags & gRegexFlag)
-                  this.err('regex.flag.is.dup',startc,startLoc,c);
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= gRegexFlag; break;
-            case CHAR_u:
+            case CH_u:
                 if (flags & uRegexFlag)
-                  this.err('regex.flag.is.dup',startc,startLoc,c);
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= uRegexFlag; break;
-            case CHAR_y:
+            case CH_y:
                 if (flags & yRegexFlag)
-                  this.err('regex.flag.is.dup',startc,startLoc,c);
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= yRegexFlag; break;
-            case CHAR_m:
+            case CH_m:
                 if (flags & mRegexFlag)
-                  this.err('regex.flag.is.dup',startc,startLoc,c);
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= mRegexFlag; break;
-            case CHAR_i:
+            case CH_i:
                 if (flags & iRegexFlag)
-                  this.err('regex.flag.is.dup',startc,startLoc,c);
+                  this.err('regex.flag.is.dup',{c0:c});
                 flags |= iRegexFlag; break;
 
             default : break WHILE;
@@ -165,14 +168,23 @@ this.parseRegExpLiteral = function() {
         val = verifyRegex( patternString, flagsString ) ;
 
      if ( !val &&
-        this.err('regex.not.valid',startc,startLoc,flagsString,patternString) )
+        this.err('regex.not.valid') )
        return this.errorHandlerOutput;
 
      this.col += (c-this.c);
      var regex = { type: 'Literal', regex: { pattern: patternString, flags: flagsString },
                    start: startc, end: c,
-                   value: val, loc: { start: startLoc, end: this.loc() } };
+                   value: val, loc: { start: startLoc, end: this.loc() }, 
+                   raw: this.src.substring(startc, c) };
      this.c = c;
+
+     if (this.onToken_ !== null) {
+       this.onToken({
+         type: 'RegularExpression', value: this.src.substring(startc,c), start: startc,
+         end: c, regex: regex.regex, loc: regex.loc });
+       this.lttype = "";
+     }
+
      this.next () ;
 
      return regex ;

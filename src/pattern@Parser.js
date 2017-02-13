@@ -2,9 +2,11 @@
 this.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
-       var id = this.validateID(null);
-       this.scope.parserDeclare(id);
-       if (this.tight) this.assert(!arguments_or_eval(id.name));
+       var id = this.validateID("");
+       this.declare(id);
+       if (this.tight && arguments_or_eval(id.name))
+         this.err('bind.arguments.or.eval');
+
        return id;
 
     case '[':
@@ -18,6 +20,9 @@ this.parsePattern = function() {
 };
 
 this. parseArrayPattern = function() {
+  if (this.v <= 5)
+    this.err('ver.patarr');
+
   var startc = this.c - 1,
       startLoc = this.locOn(1),
       elem = null,
@@ -26,10 +31,11 @@ this. parseArrayPattern = function() {
   this.enterComplex();
 
   this.next();
-  while ( !false ) {
+  while ( true ) {
       elem = this.parsePattern();
       if ( elem ) {
-         if ( this.lttype === 'op' && this.ltraw === '=' ) elem = this.parseAssig(elem);
+         if ( this.lttype === 'op' && this.ltraw === '=' )
+           elem = this.parseAssig(elem);
       }
       else {
          if ( this.lttype === '...' ) {
@@ -52,13 +58,15 @@ this. parseArrayPattern = function() {
            start: startc, end: this.c, elements : list/* ,y:-1*/};
 
   if ( !this. expectType_soft ( ']' ) &&
-        this.err('pat.array.is.unfinished',elem) )
+        this.err('pat.array.is.unfinished') )
     return this.errorHandlerOutput ;
 
   return elem;
 };
 
 this.parseObjectPattern  = function() {
+    if (this.v <= 5)
+      this.err('ver.patobj');
 
     var sh = false;
     var startc = this.c-1;
@@ -80,24 +88,39 @@ this.parseObjectPattern  = function() {
               this.next();
               val = this.parsePattern()
             }
-            else { this.validateID(name.name); sh = !false; val = name; }
+            else {
+              this.validateID(name.name);
+              sh = true;
+              val = name;
+              this.declare(name);
+            }
             break ;
 
          case '[':
             name = this.memberExpr();
-            this.expectType(':');
+            if (!this.expectType_soft(':'))
+              this.err('obj.pattern.no.:');
+
             val = this.parsePattern();
             break ;
 
          case 'Literal':
             name = this.numstr();
-            this.expectType(':');
+            if (!this.expectType_soft(':'))
+              this.err('obj.pattern.no.:');
+
             val = this.parsePattern();
             break ;
 
          default:
             break LOOP;
       }
+
+      // TODO: this is a subtle case that was only lately noticed;
+      // parsePattern must have a way to throw when the pattern is not supposed to be null 
+      if (val === null)
+        this.err('obj.prop.is.null');
+
       if ( this.lttype === 'op' && this.ltraw === '=' )
         val = this.parseAssig(val);
 
@@ -114,34 +137,38 @@ this.parseObjectPattern  = function() {
               end: this.c,
               properties: list/* ,y:-1*/ };
 
-    if ( ! this.expectType_soft ('}') && this.err('pat.obj.is.unfinished',n) )
+    if ( ! this.expectType_soft ('}') && this.err('pat.obj.is.unfinished') )
       return this.errorHandlerOutput ;
 
     return n;
 };
 
 this .parseAssig = function (head) {
-    this.next() ;
-    var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CONTEXT_NONE );
-    return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
-           right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
+  if (this.v <= 5)
+    this.err('ver.assig');
+  this.next() ;
+  var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CTX_NONE );
+  return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
+         right: core(e), loc: { start: head.loc.start, end: e.loc.end } /* ,y:-1*/};
 };
 
-
+// TODO: needs reconsideration,
 this.parseRestElement = function() {
-   var startc = this.c-1-2,
-       startLoc = this.locOn(1+2);
+   if (this.v <= 5)
+     this.err('ver.spread.rest');
+   var startc = this.c0,
+       startLoc = this.locBegin();
 
    this.next ();
+   if ( this.v < 7 && this.lttype !== 'Identifier' ) {
+      this.err('rest.binding.arg.peek.is.not.id');
+   }
+
    var e = this.parsePattern();
 
    if (!e) {
-      if (this.err('rest.has.no.arg',starc, startLoc))
+      if (this.err('rest.has.no.arg'))
        return this.errorHandlerOutput ;
-   }
-   else if ( e.type !== 'Identifier' ) {
-      if (this.err('rest.arg.not.id', startc, startLoc, e) )
-        return this.errorHandlerOutput;
    }
 
    return { type: 'RestElement', loc: { start: startLoc, end: e.loc.end }, start: startc, end: e.end,argument: e };

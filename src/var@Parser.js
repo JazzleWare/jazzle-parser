@@ -1,92 +1,144 @@
-this . parseVariableDeclaration = function(context) {
-     if ( ! this.canBeStatement &&
-            this.err('not.stmt','var',context) )
-       return this.errorHandlerOutput;
+this.parseVariableDeclaration = function(context) {
+  if (!this.canBeStatement)
+    this.err('not.stmt');
 
-     this.canBeStatement = false;
+  this.canBeStatement = false;
 
-     var startc = this.c0, startLoc = this.locBegin(), kind = this.ltval;
-     var elem = null;
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      kind = this.ltval,
+      elem = null;
 
-     this.next () ;
+  if (this.unsatisfiedLabel) {
+    if (kind === 'var')
+      this.fixupLabels(false);
+    else
+      this.err('decl.label',{c0:startc,loc0:startLoc});
+  }
 
-     this.setDeclModeByName(kind);
-     
-     elem = this.parseVariableDeclarator(context);
-     if ( elem === null ) {
-       if (kind !== 'let' && 
-           this.err('var.has.no.declarators',startc,startLoc,kind,elem,context,isInArgsList,inComplexArgs,argNames  ) )
-         return this.errorHandlerOutput;
+  if (this.onToken_ !== null) {
+    if (kind === 'let')
+      this.lttype = ""; // turn off the automatic tokeniser
+    else
+      this.lttype = 'Keyword';
+  }
 
-       return null; 
-     }
+  this.next();
+  if (kind !== 'var') {
+    if (this.hasDeclarator()) {
+      if (!(this.scopeFlags & SCOPE_FLAG_IN_BLOCK))
+        this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
+      if (kind === 'let' && this.onToken_ !== null &&
+         (this.lttype !== 'Identifier' || this.ltval !== 'in'))
+        this.onToken_kw(startc,startLoc,'let');
+    }
+  }
 
-     var list = [elem];
-     
-     var isConst = kind === 'const';
-     if ( isConst  && elem.init === null ) {
-       this.assert(context & CONTEXT_FOR);
-       this.unsatisfiedAssignment = elem;
-     }
+  this.declMode = kind === 'var' ? 
+    DECL_MODE_VAR : DECL_MODE_LET;
+  
+  if (kind === 'let' &&
+      this.lttype === 'Identifier' &&
+      this.ltval === 'in') {
+    return null;
+  }
 
-     if (!this.unsatisfiedAssignment) // parseVariableDeclarator sets it when it finds an uninitialized BindingPattern
-          while ( this.lttype === ',' ) {
-            this.next();     
-            elem = this.parseVariableDeclarator(context);
-            if (!elem &&
-                 this.err('var.has.an.empty.declarator',startc,startLoc,kind,list,context,isInArgList,inComplexArgs,argNames ) )
-              return this.erroHandlerOutput ;
+  elem = this.parseVariableDeclarator(context);
+  if (elem === null) {
+    if (kind !== 'let') 
+      this.err('var.has.no.declarators',{extra:[startc,startLoc,context,elem,kind]});
 
-            if (isConst) this.assert(elem.init !== null);
-            list.push(elem);
-          }
+    return null; 
+  }
 
-     var lastItem = list[list.length-1];
-     var endI = 0, endLoc = null;
+  var isConst = kind === 'const';
+  // TODO: if there is a context flag signifying that an init must be present,
+  // this is no longer needed
+  if (isConst && !elem.init && !this.missingInit) {
+    if (!(context & CTX_FOR))
+      this.err('const.has.no.init',{extra:[startc,startLoc,context,elem]});
+    else this.missingInit = true;
+  }
 
-     if ( !(context & CONTEXT_FOR) ) {
-       endI = this.semiI() || lastItem.end;
-       endLoc = this.semiLoc();
-       if (  !endLoc ) {
-          if ( this.newLineBeforeLookAhead ) endLoc =  lastItem.loc.end; 
-          else if ( this.err('no.semi','var', [startc,startLoc,kind,list,endI] ) )
-             return this.errorHandlerOutput;
-       }
-     }
-     else {
-       endI = lastItem.end;
-       endLoc = lastItem.loc.end;
-     }
+  var list = null;
+  if (this.missingInit) {
+    if (context & CTX_FOR)
+      list = [elem];
+    else this.err('var.must.have.init',{extra:[startc,startLoc,context,elem,kind]});
+  }
+  else {
+    list = [elem];
+    while (this.lttype === ',') {
+      this.next();
+      elem = this.parseVariableDeclarator(context);
+      if (!elem)
+        this.err('var.has.an.empty.declarator',{extra:[startc,startLoc,context,list,kind]});
+   
+      if (this.missingInit || (isConst && !elem.init))
+        this.err('var.must.have.init',{extra:[startc,startLoc,context,list,kind],elem:elem});
+   
+      list.push(elem);
+    }
+  }
 
-     this.foundStatement  = !false ;
+  var lastItem = list[list.length-1];
+  var endI = 0, endLoc = null;
 
-     return { declarations: list, type: 'VariableDeclaration', start: startc, end: endI,
-              loc: { start: startLoc, end: endLoc }, kind: kind /* ,y:-1*/};
+  if (!(context & CTX_FOR)) {
+    endI = this.semiI() || lastItem.end;
+    endLoc = this.semiLoc_soft();
+    if (!endLoc) {
+      if (this.nl)
+        endLoc =  lastItem.loc.end; 
+      else  
+        this.err('no.semi');
+    }
+  }
+  else {
+    endI = lastItem.end;
+    endLoc = lastItem.loc.end;
+  }
+
+  this.foundStatement = true ;
+
+  return {
+    declarations: list,
+    type: 'VariableDeclaration',
+    start: startc,
+    end: endI,
+    loc: { start: startLoc, end: endLoc },
+    kind: kind /* ,y:-1*/
+  };
 };
 
-this . parseVariableDeclarator = function(context) {
-  if ( (context & CONTEXT_FOR) &&
-       this.lttype === 'Identifier' &&
-       this.ltval === 'in' )
-      return null;
-
+this.parseVariableDeclarator = function(context) {
   var head = this.parsePattern(), init = null;
-  if ( !head ) return null;
+  if (!head)
+    return null;
 
-  if ( this.lttype === 'op' && this.ltraw === '=' )  {
+  if (this.lttype === 'op') {
+    if (this.ltraw === '=')  {
        this.next();
-       init = this.parseNonSeqExpr(PREC_WITH_NO_OP,context);
+       init = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+    }
+    else 
+      this.err('var.decl.not.=',{extra:[context,head]});
   }
-  else if ( head.type !== 'Identifier' ) { // our pattern is an arr or an obj?
-       if (!( context & CONTEXT_FOR) )  // bail out in case it is not a 'for' loop's init
-         this.err('var.decl.neither.of.in',head,init,context) ;
+  else if (head.type !== 'Identifier') { // our pattern is an arr or an obj?
+    if (!( context & CTX_FOR))  // bail out in case it is not a 'for' loop's init
+      this.err('var.decl.neither.of.in',{extra:[context,head]});
 
-       if( !this.unsatisfiedAssignment )
-         this.unsatisfiedAssignment  =  head;     // an 'in' or 'of' will satisfy it
+    this.missingInit = true;
   }
 
   var initOrHead = init || head;
-  return { type: 'VariableDeclarator', id: head, start: head.start, end: initOrHead.end,
-           loc: { start: head.loc.start, end: initOrHead.loc.end }, init: init && core(init)/* ,y:-1*/ };
+  return {
+    type: 'VariableDeclarator', id: head,
+    start: head.start, end: initOrHead.end,
+    loc: {
+      start: head.loc.start,
+      end: initOrHead.loc.end 
+    }, init: init && core(init)/* ,y:-1*/
+  };
 };
 

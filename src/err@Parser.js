@@ -1,44 +1,66 @@
-this.err = function(errorType, errorTok, args) {
-   throw new Error("Error: " + errorType + "\n" + this.src.substr(this.c-120,120) + ">>>>" + this.src.charAt(this.c+1) + "<<<<" + this.src.substr(this.c, 120));
-
-   if ( has.call(this.errorHandlers, errorType) )
-     return this.handleError(this.errorHandlers[errorType], errorTok, args );
-
-   throw new CustomError( createMessage( Errors[errorType], errorTok, args ) );
+this.err = function(errorType, errParams) {
+  errParams = this.normalize(errParams);
+  return this.errorListener.onErr(errorType, errParams);
 };
 
+this.normalize = function(err) {
+  // normalized err
+  var loc0 = { li: this.li0, col: this.col0 },
+      loc = { li: this.li, col: this.col };
 
-function CustomError(start,li,col,message) {
-   this.atChar = start;
-   this.atLine = li;
-   this.atCol = col;
-   this.message = message;
+  var e = {
+    cur0: { c: this.c0, loc: loc0 },
+    cur: { c: this.c, loc: loc },
+    tn: null,
+    parser: this,
+    extra: null
+  };
+  
+  if (err) {
+    if (err.tn) {
+      var tn = err.tn;
+      e.tn = tn;
 
-}
+      if (HAS.call(tn,'start')) e.cur0.c = tn.start;
+      if (HAS.call(tn,'end')) e.cur.c = tn.end;
+      if (tn.loc) {
+	if (HAS.call(tn.loc, 'start')) {
+          e.cur0.loc.li = tn.loc.start.line;
+          e.cur0.loc.col =  tn.loc.start.column;
+        }
+        if (HAS.call(tn.loc, 'start')) {
+          e.cur.loc.li = tn.loc.end.line;
+          e.cur.loc.col = tn.loc.end.column;
+        }
+      }
+    }
+    if (err.loc0) {
+      var loc0 = err.loc0;
+      e.cur.loc.li = loc0.line;
+      e.cur.loc.col = loc0.column;
+    }
+    if (err.loc) {
+      var loc = err.loc;
+      e.cur.loc.li = loc.line;
+      e.cur.loc.col = loc.column;
+    }
 
-CustomError.prototype = Error.prototype;
+    if (HAS.call(err,'c0'))
+      e.cur0.c = err.c0;
+    
+    if (HAS.call(err,'c'))
+      e.cur.c = err.c;
 
-function createMessage( errorMessage, errorTok, args  ) {
-  return errorMessage.replace( /%\{([^\}]*)\}/g,
-  function(matchedString, name, matchIndex, wholeString) {
-     if ( name.length === 0 )
-       throw new Error( "placeholder empty on " + matchIndex + " for [" + errorMessage + "]" );
+    if (HAS.call(err, 'extra')) 
+      e.extra = err.extra;
+  }
 
-     if ( !has.call(args, name) )
-       throw new Error( "[" + name + "] not found in params " );
-     
-     return args[name] + "" ;
-  }) ;
+  e.c0 = e.cur0.c; e.li0 = e.cur0.loc.li; e.col0 = e.cur0.loc.col;
+  e.c = e.cur.c; e.li = e.cur.loc.li; e.col = e.cur.loc.col;
 
-}
-   
-this.handleError = function(handlerFunction, errorTok, args ) {
-   var output = handlerFunction.call( this, params, coords );
-   if ( output ) {
-     this.errorHandlerOutput = output;
-     return !false;
-   }
+  e.loc0 = e.cur0.loc;
+  e.loc = e.cur.loc;
 
-   return false;
+  return e;
 };
 

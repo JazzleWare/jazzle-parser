@@ -1,208 +1,204 @@
-
-this.parenParamError = function() {
-  return this.err('err.arrow.arg', this.firstParen);
+this.asArrowFuncArgList = function(argList) {
+  var i = 0, list = argList;
+  while (i < list.length)
+    this.asArrowFuncArg(list[i++]);
 };
 
-this.restError = function(r) {
-  return this.err('err.arrow.arg', r);
-};
+this.asArrowFuncArg = function(arg) {
+  var i = 0, list = null;
 
-this.containsYieldOrSuperError = function() {
-  return this.err('err.arrow.arg', this.firstElemWithYS );
-};
- 
-this.notBindableError = function(l) {
-  return this.err('err.arrow.arg', l) ;
-};
+  if (this.firstNonSimpArg === null && arg.type !== 'Identifier')
+    this.firstNonSimpArg = arg;
 
-this.notParamList = function(l) {
-  return this.err('err.arrow.arg', l);
-};
+  if (arg === this.po)
+    this.throwTricky('p', this.pt);
 
-this .asArrowFuncArgList = function(head) {
-   if ( head === null )
-     return;
+  switch  ( arg.type ) {
+  case 'Identifier':
+    if ((this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) &&
+       arg.name === 'await')
+      this.err('arrow.param.is.await.in.an.async',{tn:arg});
+     
+    // TODO: this can also get checked in the scope manager rather than below
+    if (this.tight && arguments_or_eval(arg.name))
+      this.err('binding.to.arguments.or.eval',{tn:arg});
 
-   if ( head.type === 'SequenceExpression' ) {
-         if ( head === this.firstParen && this.parenParamError() )
-           return this.errorHandlerOutput ;
+    this.declare(arg);
+    return;
 
-         var i = 0, list = head.expressions;
-         while ( i < list.length ) {
-           this.asArrowFuncArg(list[i]);
-           i++;
-         }
-   }
-   else
-      this.asArrowFuncArg(head);
-};
-
-this. asArrowFuncArg = function(arg) {
-    var i = 0, list = null;
-
-    if (arg.type !== 'Identifier')
-      this.firstNonSimpArg = arg;
-
-    switch  ( arg.type ) {
-        case 'Identifier':
-           if ( arg === this.firstParen && this.parenParamError() )
-              return this.errorHandlerOutput ;
-
-           if (this.tight)
-             this.assert(!arguments_or_eval(arg.name));
-
-           return this.scope.parserDeclare(arg);
-
-        case 'ArrayExpression':
-           if ( arg === this.firstParen && this.parenParamError() ) 
-             return errorHandlerOutput ;
-
-           list = arg.elements;
-           while ( i < list.length ) {
-              if ( list[i] ) {
-                 this.asArrowFuncArg(list[i]);
-                 if ( list[i].type === 'SpreadElement' ) {
-                    i++;
-                    break;
-                 }
-              }
-              i++;
-           }
-           if ( i !== list.length && this.restError() )
-             return this.errorHandlerOutput;
-
-           arg.type = 'ArrayPattern';
-           return;
-
-        case 'AssignmentExpression':
-           if (arg === this.firstParen && this.parenParamError() )
-             return this.errorHandlerOutput;
-
-           if (arg.operator !== '=' && this.notBindableError(arg) )
-             return this.errorHandlerOutput ;
-
-           this.asArrowFuncArg(arg.left);
-           if ( arg === this.firstElemWithYS && this.containsYieldOrSuperError() )
-             return this.errorHandlerOutput;
-
-           arg.type = 'AssignmentPattern';
-           delete arg.operator ;
-           return;
-
-        case 'ObjectExpression':
-           if (arg === this.firstParen && this.parenParamError() )
-             return this.errorHandlerOutput ;
-           list = arg.properties;
-           while ( i < list.length )
-              this.asArrowFuncArg(list[i++].value );
-
-           arg.type = 'ObjectPattern';
-           return;
-
-        case 'AssignmentPattern':
-           if (arg === this.firstParen && this.parenParamError() )
-             return this.errorHandlerOutput ;
-
-           if ( arg === this.firstElemWithYS && this.containsYieldOrSuper() )
-             return this.errorHandlerOutput;
-
-           this.asArrowFuncArg(arg.left) ;
-           return;
-
-        case 'ArrayPattern' :
-           list = arg.elements;
-           while ( i < list.length )
-             this.asArrowFuncArg(list[i++] ) ;
-
-           return;
-
-        case 'SpreadElement':
-            this.assert(arg !== this.firstNonTailRest);
-            this.asArrowFuncArg(arg.argument);
-            arg.type = 'RestElement';
-            return;
-
-        case 'RestElement':
-            this.asArrowFuncArg(arg.argument);
-            return;
-
-        case 'ObjectPattern':
-            list = arg.properties;
-            while ( i < list.length )
-               this.asArrowFuncArgList ( list[i++].value  );
-
-            return;
-
-        default:
-           if ( this.notBindableError(arg) )
-             return this.errorHandlerOutput;
+  case 'ArrayExpression':
+    list = arg.elements;
+    while (i < list.length) {
+      if (list[i])
+        this.asArrowFuncArg(list[i]);
+      i++;
     }
+    arg.type = 'ArrayPattern';
+    return;
+
+  case 'AssignmentExpression':
+//  if (arg.operator !== '=')
+//    this.err('complex.assig.not.arg');
+
+    this.asArrowFuncArg(arg.left);
+    delete arg.operator ;
+    arg.type = 'AssignmentPattern';
+
+    return;
+
+  case 'ObjectExpression':
+    list = arg.properties;
+    while (i < list.length)
+      this.asArrowFuncArg(list[i++].value );
+
+    arg.type = 'ObjectPattern';
+    return;
+
+  case 'AssignmentPattern':
+    this.asArrowFuncArg(arg.left) ;
+    return;
+
+  case 'ArrayPattern' :
+    list = arg.elements;
+    while ( i < list.length ) {
+      if (list[i])
+        this.asArrowFuncArg(list[i]);
+      i++ ;
+    }
+    return;
+
+  case 'SpreadElement':
+    if (this.v < 7 && arg.argument.type !== 'Identifier')
+      this.err('rest.binding.arg.not.id', {tn:arg});
+    this.asArrowFuncArg(arg.argument);
+    arg.type = 'RestElement';
+    return;
+
+  case 'RestElement':
+    if (this.v < 7 && arg.argument.type !== 'Identifier')
+      this.err('rest.binding.arg.not.id',{tn:arg});
+    this.asArrowFuncArg(arg.argument);
+    return;
+
+  case 'ObjectPattern':
+    list = arg.properties;
+    while (i < list.length)
+      this.asArrowFuncArg(list[i++].value);
+    return;
+
+  default:
+    this.err('not.bindable');
+
+  }
 };
 
 
-this . parseArrowFunctionExpression = function(arg,context)   {
+this.parseArrowFunctionExpression = function(arg, context)   {
+  if (this.v <= 5)
+    this.err('ver.arrow');
+  var tight = this.tight, async = false;
 
-  if ( this.unsatisfiedArg )
-       this.unsatisfiedArg = null;
-
-  var tight = this.tight;
   this.enterFuncScope(false);
-  this.scope.setDeclMode(DECL_MODE_FUNCTION_PARAMS);
+  this.declMode = DECL_MODE_FUNC_PARAMS;
   this.enterComplex();
 
-  switch ( arg.type ) {
-    case 'Identifier':
-       this.asArrowFuncArg(arg, 0)  ;
-       break ;
+  var scopeFlags = this.scopeFlags;
+  this.scopeFlags &= INHERITED_SCOPE_FLAGS;
 
-    case PAREN:
-       this.asArrowFuncArgList(core(arg));
-       break ;
-
-    default:
-       if ( this.notParamList(arg) )
-         return this.errorHandlerOutput ;
+  if (this.pt === ERR_ASYNC_NEWLINE_BEFORE_PAREN) {
+    ASSERT.call(this, arg === this.pe, 'how can an error core not be equal to the erroneous argument?!');
+    this.err('arrow.newline.before.paren.async');
   }
 
-  if ( this.firstEA )
-     this.firstEA = null;
+  switch ( arg.type ) {
+  case 'Identifier':
+    this.firstNonSimpArg = null;
+    this.asArrowFuncArg(arg);
+    break;
 
-  if ( this.newLineBeforeLookAhead &&
-       this.err('new.line.before.arrow'))
-     return this.errorHandlerOutput;
+  case PAREN_NODE:
+    this.firstNonSimpArg = null;
+    if (arg.expr) {
+      if (arg.expr.type === 'SequenceExpression')
+        this.asArrowFuncArgList(arg.expr.expressions);
+      else
+        this.asArrowFuncArg(arg.expr);
+    }
+    break;
+
+  case 'CallExpression':
+    if (this.v >= 7 && arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
+      this.err('not.a.valid.arg.list',{tn:arg});
+    if (this.parenAsync !== null && arg.callee === this.parenAsync.expr)
+      this.err('arrow.has.a.paren.async');
+
+//  if (this.v < 7)
+//    this.err('ver.async');
+
+    async = true;
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+    this.asArrowFuncArgList(arg.arguments);
+    break;
+
+  case INTERMEDIATE_ASYNC:
+    async = true;
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+    this.asArrowFuncArg(arg.id);
+    break;
+
+  default:
+    this.err('not.a.valid.arg.list');
+
+  }
+
+  this.currentExprIsParams();
+
+  if (this.nl)
+    this.err('arrow.newline');
 
   this.next();
 
-  var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= ( SCOPE_FUNCTION|SCOPE_METH|SCOPE_CONSTRUCTOR) ;
-
-  var isExpr = !false, nbody = null;
+  var isExpr = true, nbody = null;
 
   if ( this.lttype === '{' ) {
-       var prevLabels = this.labels, prevYS = this.firstYS;
-       this.firstYS = null;
-       this.labels = {};
-       isExpr = false;
-       nbody = this.parseFuncBody(CONTEXT_NONE);
-       this.labels = prevLabels;
-       this.firstYS = prevYS;
+    var prevLabels = this.labels;
+    this.labels = {};
+    isExpr = false;
+    this.scopeFlags |= SCOPE_FLAG_FN;
+    nbody = this.parseFuncBody(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+    this.labels = prevLabels;
   }
   else
-    nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context) ;
+    nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_PAT) ;
 
   this.exitScope();
-  var params = core(arg);
   this.tight = tight;
-  return { type: 'ArrowFunctionExpression',
-           params: params ?  params.type === 'SequenceExpression' ? params.expressions : [params] : [] ,
-           start: arg.start,
-           end: nbody.end,
-           loc: { start: arg.loc.start, end: nbody.loc.end },
-           generator: false,
-           expression: isExpr,
-           body: core(nbody),
-           id : null
+
+  this.scopeFlags = scopeFlags;
+
+  var params = core(arg);
+  if (params === null)
+    params = [];
+  else if (params.type === 'SequenceExpression')
+    params = params.expressions;
+  else if (params.type === 'CallExpression')
+    params = params.arguments;
+  else {
+    if (params.type === INTERMEDIATE_ASYNC)
+      params = params.id;
+    params = [params];
+  }
+
+  return {
+    type: 'ArrowFunctionExpression', params: params, 
+    start: arg.start, end: nbody.end,
+    loc: {
+      start: arg.loc.start,
+      end: nbody.loc.end
+    },
+    generator: false, expression: isExpr,
+    body: core(nbody), id : null,
+    async: async
   }; 
 };
-
 
