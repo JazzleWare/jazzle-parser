@@ -12,6 +12,31 @@ this.l = function() {
   return this; 
 };
 
+this.emitHead =
+function(n, prec, flags) {
+  switch (n.type) {
+  case 'ConditionalExpression':
+  case 'UnaryExpression':
+  case 'BinaryExpression':
+  case 'LogicalExpression':
+  case 'UpdateExpression':
+  case 'ConditionalExpression':
+  case 'AssignmentExpression':
+  case 'ArrowFunctionExpression':
+  case 'SequenceExpression':
+    this.w('(').eA(n, PREC_NONE, EC_NONE).w(')');
+    break;
+  default: 
+    this.emitAny(n, prec, flags);
+    break;
+  }
+};
+
+this.eH = function(n, prec, flags) {
+  this.emitHead(n, prec, flags);
+  return this;
+};
+
 this.emitAny = function(n, prec, startStmt) {
   if (HAS.call(Emitters, n.type))
     return Emitters[n.type].call(this, n, prec, startStmt);

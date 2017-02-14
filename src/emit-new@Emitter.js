@@ -1,5 +1,5 @@
 Emitters['NewExpression'] = function(n, prec, flags) {
-  this.wm('new',' ').eN(n.callee, PREC_NONE, EC_NEW_HEAD);
+  this.wm('new',' ').eH(n.callee, PREC_NONE, EC_NEW_HEAD);
   this.w('(').emitArgList(n.arguments);
   this.w(')');
 };

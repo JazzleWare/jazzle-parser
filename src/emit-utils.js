@@ -7,3 +7,14 @@ function toBody(b) {
 
   return { type: 'EmptyStatement' };
 }
+
+function spreadIdx(array, start) {
+  var list = array, i = start;
+  while (i < list.length) {
+    var elem = list[i];
+    if (elem !== null && elem.type === 'SpreadElement')
+      return i;
+    ++i;
+  }
+  return -1;
+}

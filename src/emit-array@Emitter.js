@@ -2,18 +2,18 @@ Emitters['ArrayExpression'] = function(n, prec, flags) {
   var list = n.elements, i = 0;
   var si = spreadIdx(list, 0);
   if (si !== -1)
-    return this.emitArrayWithSpread(n, prec, flags, si);
+    return this.emitArrayWithSpread(list, flags, si);
 
   this.w('[');
   this.emitArrayChunk(list, 0, list.length-1);
   this.w(']');
 };
 
-this.emitArrayWithSpread = function(n, prec, flags, si) {
+this.emitArrayWithSpread = function(list, flags, si) {
   var paren = flags & EC_NEW_HEAD;
   if (paren) this.w('(');
   this.wm('jz','.','concat','(')
-  var list = n.elements, startChunk = 0;
+  var startChunk = 0;
   while (si !== -1) {
     if (startChunk > 0)
       this.wm(',',' ');
@@ -45,14 +45,3 @@ this.emitArrayChunk = function(list, from, to) {
     i++;
   }
 };
-
-function spreadIdx(array, start) {
-  var list = array, i = start;
-  while (i < list.length) {
-    var elem = list[i];
-    if (elem !== null && elem.type === 'SpreadElement')
-      return i;
-    ++i;
-  }
-  return -1;
-}
