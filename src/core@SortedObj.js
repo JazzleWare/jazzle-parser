@@ -1,21 +1,21 @@
 this.set = function(name, val) {
-  if (!HAS.call(obj, name))
+  if (!HAS.call(this.obj, name))
     this.keys.push(name);
-  return obj[name] = val;
+  return this.obj[name] = val;
 };
 
 this.at = function(i) {
-  return i < this.keys.length ? obj[this.keys[i]] : void 0;
+  return i < this.keys.length ? this.obj[this.keys[i]] : void 0;
 };
 
 this.get = function(name) {
-  return obj[name]; 
+  return this.obj[name]; 
 };
 
 this.remove = function(name) {
-  if (!HAS.call(obj, name))
+  if (!HAS.call(this.obj, name))
     return false;
-  delete obj[name];
+  delete this.obj[name];
 
   var list = this.keys, i = 0;
 
@@ -29,4 +29,8 @@ this.remove = function(name) {
 
   list.pop();
   return true;
+};
+
+this.has = function(name) {
+  return HAS.call(this.obj, name);
 };

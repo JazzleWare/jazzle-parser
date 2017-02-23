@@ -9,3 +9,4 @@ this.Template = Template;
 this.Emitter = Emitter;
 this.Transformer = Transformer;
 this.Scope = Scope;
+this.Hitmap = Hitmap;

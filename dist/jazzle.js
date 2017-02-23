@@ -64,6 +64,15 @@ ErrorString.from = function(str) {
   return error;
 };
 ;
+function Hitmap() {
+  var validNames = arguments.length ? new SortedObj({}) : null;
+  var i = 0;
+  while (i < arguments.length)
+    validNames.set(arguments[i++], true);
+  this.validNames = validNames;
+  this.names = new SortedObj({});
+}
+;
 function LabelTracker(parent) {
   // the parent label tracker, or null if it is a top-level label tracker
   this.parent = parent || null;
@@ -1979,6 +1988,49 @@ this.applyTo = function(obj) {
   return errorMessage;
 };
 
+
+}]  ],
+[Hitmap.prototype, [function(){
+this.isValidName = function(name) {
+  return this.isValidName_m(name+'%');
+};
+
+this.isValidName_m = function(mname) {
+  return this.validNames === null ? true : 
+    this.validNames.has(mname);
+};
+
+this.set = function(name, value) {
+  return this.set_m(name+'%', value);
+};
+
+this.set_m = function(mname, value) {
+  ASSERT.call(this, this.isValidName_m(mname),
+    'not among the valid names: <' + mname + '>');
+  if (!this.names.has(mname))
+    this.names.set(mname, {gets: 0, sets: 0, name: mname, value: null});
+
+  var entry = this.names.get(mname);
+  entry.sets++;
+  entry.value = value;
+
+  return entry;
+};
+
+this.getOrCreate = this.getoc = function(name) {
+  return this.getOrCreate_m(name+'%');
+};
+
+this.getOrCreate_m = this.getoc_m = function(mname) {
+  ASSERT.call(this, this.isValidName_m(mname),
+    'not among the valid names: <' + mname + '>');
+  if (!this.names.has(mname))
+    this.set_m(mname).sets = 0;
+
+  var entry = this.names.get(mname);
+  entry.gets++;
+  return entry;
+};
 
 }]  ],
 [LabelTracker.prototype, [function(){
@@ -9730,23 +9782,23 @@ this.insertID = function(id) {
 }]  ],
 [SortedObj.prototype, [function(){
 this.set = function(name, val) {
-  if (!HAS.call(obj, name))
+  if (!HAS.call(this.obj, name))
     this.keys.push(name);
-  return obj[name] = val;
+  return this.obj[name] = val;
 };
 
 this.at = function(i) {
-  return i < this.keys.length ? obj[this.keys[i]] : void 0;
+  return i < this.keys.length ? this.obj[this.keys[i]] : void 0;
 };
 
 this.get = function(name) {
-  return obj[name]; 
+  return this.obj[name]; 
 };
 
 this.remove = function(name) {
-  if (!HAS.call(obj, name))
+  if (!HAS.call(this.obj, name))
     return false;
-  delete obj[name];
+  delete this.obj[name];
 
   var list = this.keys, i = 0;
 
@@ -9760,6 +9812,10 @@ this.remove = function(name) {
 
   list.pop();
   return true;
+};
+
+this.has = function(name) {
+  return HAS.call(this.obj, name);
 };
 
 }]  ],
@@ -10089,4 +10145,5 @@ this.Template = Template;
 this.Emitter = Emitter;
 this.Transformer = Transformer;
 this.Scope = Scope;
+this.Hitmap = Hitmap;
 ;}).call (function(){try{return module.exports;}catch(e){return this;}}.call(this))
