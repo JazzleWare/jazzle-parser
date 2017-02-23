@@ -1677,6 +1677,21 @@ function(n, flags, ri) {
 
 },
 function(){
+Emitters['DoWhileStatement'] = function(n, prec, flags) {
+  this.w('do').emitDependentStmt(n.body);
+  if (n.body.type !== 'BlockStatement')
+    this.l();
+  this.wm('while',' ','(').eA(n.test, PREC_NONE, EC_NONE).w(')');
+};
+
+},
+function(){
+Emitters['ExpressionStatement'] = function(n, prec, flags) {
+  this.eA(n.expression, PREC_NONE, EC_START_STMT).w(';');
+};
+
+},
+function(){
 Emitters['Identifier'] = function(n, prec, flags) {
   return this.emitIdentifierWithValue(n.name);
 };
@@ -1887,6 +1902,53 @@ Emitters['SequenceExpression'] = function(n, prec, flags) {
     this.wm(',',' ').eN(list[i], PREC_NONE, EC_NONE);
     i++;
   }
+};
+
+},
+function(){
+Emitters['SwitchStatement'] = function(n, prec, flags) {
+  this.wm('switch',' ','(')
+      .eA(n.discriminant, PREC_NONE, EC_NONE)
+      .wm(')',' ','{');
+  var list = n.cases, i = 0;
+  if (list.length > 0) {
+    while (i < list.length)
+      this.l().emitCase(list[i++]);
+    this.l();
+  }
+  this.w('}');
+};
+
+this.emitCase = function(c) {
+  if (c.test) {
+    this.wm('case',' ')
+        .eA(c.test, PREC_NONE, EC_NONE)
+        .w(':');
+  } else
+    this.wm('default',':');
+
+  var list = c.consequent, i = 0;
+  if (list.length > 0) {
+    this.i();
+    while (i < list.length)
+      this.l().eA(list[i++], PREC_NONE, EC_NONE);
+    this.u();
+  }
+};
+
+},
+function(){
+Emitters['TryStatement'] = function(n, prec, flags) {
+  this.w('try').emitDependentStmt(n.block, false);
+  if (n.handler)
+    this.l().emitCatchClause(n.handler);
+  if (n.finalizer)
+    this.l().w('finally').emitDependentStmt(n.finalizer);
+};
+
+this.emitCatchClause = function(c) {
+  this.wm('catch',' ','(').emitIdentifierWithValue('err');
+  this.w(')').emitDependentStmt(c.body);
 };
 
 },

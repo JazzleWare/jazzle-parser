@@ -1,6 +1,6 @@
-'ArrayExpression' 
-'ArrayPattern'
-'ArrowFunctionExpression'
+'ArrayExpression'                      *
+'ArrayPattern'                         t
+'ArrowFunctionExpression'               
 'AssignmentExpression'  
 'AssignmentPattern'
 'AssignmentProperty'
