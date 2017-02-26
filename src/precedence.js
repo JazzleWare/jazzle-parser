@@ -57,4 +57,15 @@ function isBin(prec) { return prec !== PREC_BOOL_OR && prec !== PREC_BOOL_AND ; 
 function isMMorAA(prec) { return prec < 0 ;  }
 function isQuestion(prec) { return prec === PREC_COND  ; }
 
+function bp(o) {
+  ASSERT.call(this, HAS.call(binPrec, o), 'Unknown op');
+  return binPrec[o];
+}
 
+function isRightAssoc(o) {
+  return bp(o) === PREC_U;
+}
+
+function isLeftAssoc(o) {
+  return !(bp(o) & 1);
+}
