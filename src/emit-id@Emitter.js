@@ -3,6 +3,7 @@ Emitters['Identifier'] = function(n, prec, flags) {
 };
 
 // TODO: write chunks instead of characters
+this.writeIdentifierName =
 this.emitIdentifierWithValue = function(value) {
   var i = 0;
   while (i < value.length) {

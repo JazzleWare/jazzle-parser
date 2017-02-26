@@ -16,6 +16,7 @@ function Emitter(spaceString) {
   this.lineStarted = false;
   this.indentLevel = 0;
   this.code = "";
+  this.noWrap_ = false;
 }
 ;
 function ErrorString(stringsAndTemplates) {
@@ -1090,6 +1091,9 @@ function synth_binexpr(left, o, right, yc) {
    };
 }
 
+function synth_exprstmt(expr) {
+  return { type: 'ExpressionStatement', expression: expr };
+}
 
 ;
 function synth_id(name) { 
@@ -1104,7 +1108,7 @@ function synth_assig(left, right, o) {
 
 function synth_lit_str(value) {
   ASSERT.call(this, typeof value === typeof "", 'str value not of type string');
-  return { type: 'Literal', value: value };
+  return { type: 'Literal', value: value, raw: '"'+value+'"' };
 }
 
 function synth_do_while(cond, body) {
@@ -1157,12 +1161,10 @@ function synth_assig_explicit(left, right, o) {
   return assig;
 }
 
-function synth_seq(list) {
-  if (list.length === 1)
-    return list[0];
+function synth_seq(list, isVal) {
 
   ASSERT.call(this, list.length > 0, 'sequence expressions must not have 0 items');
-  return { type: 'SyntheticExprSequence', expressions: list, y: -1 };
+  return { type: isVal ? 'SequenceExpression' : 'SequenceStatement', expressions: list, y: -1 };
 }
 
 function synth_not(expr) {
@@ -1241,6 +1243,8 @@ function push_if_assig(n, list) {
     list.push(n);
 }
 
+;
+var transform = {};
 ;
 var IDS_ = fromRunLenCodes([0,8472,1,21,1,3948,2],
  fromRunLenCodes([0,65,26,6,26,47,1,10,1,4,1,5,23,1,31,1,458,4,12,14,5,7,1,1,1,129,
@@ -1566,6 +1570,11 @@ this.insertNL = function() {
   this.code += '\n';
 };
 
+this.noWrap = function() {
+  this.noWrap_ = true;
+  return this;
+};
+
 },
 function(){
 Emitters['ArrayExpression'] = function(n, prec, flags) {
@@ -1614,6 +1623,24 @@ this.emitArrayChunk = function(list, from, to) {
     else this.eN(elem, PREC_NONE, EC_NONE);
     i++;
   }
+};
+
+},
+function(){
+Emitters['SyntheticAssignment'] =
+Emitters['AssignmentExpression'] =
+this.emitAssig = function(n, prec, flags) {
+  this.emitAssigLeft(n.left, flags);
+  this.wm(' ',n.operator,' ');
+  this.emitAssigRight(n.right);
+};
+
+this.emitAssigLeft = function(n, flags) {
+  return this.emitHead(n, PREC_NONE, flags);
+};
+
+this.emitAssigRight = function(n) {
+  this.eN(n, PREC_NONE, EC_NONE);
 };
 
 },
@@ -1722,6 +1749,9 @@ this.emitBlock = function(n, prec, flags) {
 
 },
 function(){
+Emitters['ObjIterGet'] =
+Emitters['Unornull'] =
+Emitters['ArrIterGet'] =
 Emitters['CallExpression'] = function(n, prec, flags) {
   var ri = spreadIdx(n.arguments, 0); 
   if (ri !== -1)
@@ -1810,11 +1840,43 @@ Emitters['ExpressionStatement'] = function(n, prec, flags) {
 
 },
 function(){
+Emitters['FunctionExpression'] =
+Emitters['FunctionDeclaration'] = function(n, prec, flags) {
+  if (n.generator)
+    return this.emitGenerator(n, prec, flags);
+
+  var paren = false;
+  if (n.type === 'FunctionExpression')
+    paren = flags & EC_START_STMT;
+  if (paren) this.w('(');
+
+  this.w('function');
+  if (n.id) { this.w(' ').writeIdentifierName(n.id.name); }
+  this.w('(').emitParams(n.params);
+  this.wm(')',' ').emitAny(n.body, PREC_NONE, EC_NONE);
+  if (paren) this.w(')');
+};
+
+this.emitParams = function(list) {
+  var i = 0;
+  while (i < list.length) {
+    if (i) this.wm(',',' ');
+    var elem = list[i];
+    ASSERT.call(this, elem.type === 'Identifier',
+      '<'+elem.type+'> is not a valid type for a parameter during the emit phase');
+    this.writeIdentifierName(elem.name);
+    i++;
+  }
+};
+
+},
+function(){
 Emitters['Identifier'] = function(n, prec, flags) {
   return this.emitIdentifierWithValue(n.name);
 };
 
 // TODO: write chunks instead of characters
+this.writeIdentifierName =
 this.emitIdentifierWithValue = function(value) {
   var i = 0;
   while (i < value.length) {
@@ -2001,13 +2063,22 @@ function findComputed(list) {
 
 },
 function(){
-this.emitProgram = function(n, prec, flags) {
+Emitters['Program'] = function(n, prec, flags) {
   var list = n.body, i = 0;
   while (i < list.length) {
     var stmt = list[i++];
     i > 0 && this.startLine();
-    this.emit(stmt, PREC_NONE, EC_NONE);
+    this.emitAny(stmt, PREC_NONE, EC_START_STMT);
   }
+};
+
+},
+function(){
+Emitters['ReturnStatement'] = function(n, prec, flags) {
+  this.w('return');
+  if (n.argument)
+    this.noWrap().s().emitAny(n.argument);
+  this.w(';');
 };
 
 },
@@ -2019,6 +2090,21 @@ Emitters['SequenceExpression'] = function(n, prec, flags) {
   while (i < list.length) {
     this.wm(',',' ').eN(list[i], PREC_NONE, EC_NONE);
     i++;
+  }
+};
+
+},
+function(){
+Emitters['SpecialIdentifier'] = function(n, prec, flags) {
+  switch (n.kind) {
+  case 'tempVar':
+    return this.writeIdentifierName(n.name);
+  case 'unornull':
+    this.wm('jz','.','uon');
+    return;
+  default:
+    this.writeIdentifierName(n.kind);
+    return;
   }
 };
 
@@ -2052,6 +2138,25 @@ this.emitCase = function(c) {
       this.l().eA(list[i++], PREC_NONE, EC_NONE);
     this.u();
   }
+};
+
+},
+function(){
+Emitters['SequenceStatement'] = function(n, prec, flags) {
+  var list = n.expressions, i = 0;
+  while (i < list.length) {
+    if (i > 0) this.l();
+    this.emitAsStmt(list[i++]);
+  }
+};
+
+this.emitAsStmt = function(seqElem) {
+  switch (seqElem.type) {
+  case 'AssignmentExpression':
+  seqElem = synth_exprstmt(seqElem);
+  }
+
+  this.emitAny(seqElem, PREC_NONE, EC_NONE);
 };
 
 },
@@ -9813,7 +9918,6 @@ this.createMappingForUnresolvedNames = function() {
       continue;
 
     var resolvedRef = this.definedNames[name]; // will look it up the prototype chain, which is in this case the scope chain
-    this.updateLiquidNamesWith(resolvedRef.synthName);
     this.referencedEmitNames[resolvedRef.synthName+'%'] = resolvedRef;
   }
 };
@@ -9971,8 +10075,6 @@ this.releaseTemp = this.rl = function(id) {
   this.currentScope.releaseTemp(id.name);
 };
 
-var transform = {};
-
 this.transform = this.tr = function(n, list, isVal) {
   var ntype = n.type;
   switch (ntype) {
@@ -9990,11 +10092,6 @@ this.transform = this.tr = function(n, list, isVal) {
   }
 };
 
-transform['ExpressionStatement'] = function(n, list, isVal) {
-  n.expression = this.tr(n.expression, list, false);
-  return n.expression ? NOEXPR : n;
-};
-
 this.rlit = function(id) { isTemp(id) && this.rl(id); };
 
 this.save = function(n, list) {
@@ -10003,6 +10100,8 @@ this.save = function(n, list) {
   return temp;
 };
 
+},
+function(){
 var transformAssig = {};
 transform['SyntheticAssignment'] =
 transform['AssignmentExpression'] = function(n, list, isVal) {
@@ -10027,7 +10126,7 @@ transform['AssignmentExpression'] = function(n, list, isVal) {
   if (tts) {
     if (isVal) push_checked(tr, list);
     else push_if_assig(tr, list);
-    return synth_seq(list);
+    return synth_seq(list, isVal);
   }
   
   return tr;
@@ -10167,40 +10266,10 @@ transformAssig['AssignmentPattern'] = function(n, list, isVal) {
   return NOEXPR;
 };
 
-transform['YieldExpression'] = function(n, list, isVal) {
-  if (n.argument)
-    n.argument = this.tr(n.argument, list, true);
-  push_checked(n, list);
-  return isVal ? sentVal() : NOEXPR;
-};
 
-transform['LogicalExpression'] = function(n, list, isVal) {
-  n.left = this.tr(n.left, list, true);
-  if (this.y(n.right))
-    return this.transformLogicalExpressionWithYield(n, list, isVal)
-  n.right = this.tr(n.right, list, isVal);
-  return n;
-};
 
-this.transformLogicalExpressionWithYield = function(n, list, isVal) {
-  var ifBody = [],
-      t = null;
-  if (isVal) {
-    t = this.allocTemp();
-    n.left = synth_assig(t, n.left);
-    if (n.operator === '||')
-      n.left = synth_not(n.left); 
-    this.rl(t);
-  }
-  var tr = this.tr(n.right, ifBody, isVal);
-  if (isVal) {
-    t = this.save(tr, ifBody);
-    this.rl(t);
-  }
-  push_checked(synth_if(n.left, ifBody), list);
-  return isVal ? t : NOEXPR;
-};
-
+},
+function(){
 transform['ConditionalExpression'] = function(n, list, isVal) {
   n.test = this.transform(n.test, list, true);
   if (this.y(n.consequent) || this.y(n.alternate))
@@ -10228,7 +10297,69 @@ this.transformConditionalExpressionWithYield = function(n, list, isVal) {
 };
 
 
+},
+function(){
+transform['ExpressionStatement'] = function(n, list, isVal) {
+  n.expression = this.tr(n.expression, list, false);
+  return n;
+};
+
+
+
+},
+function(){
+transform['LogicalExpression'] = function(n, list, isVal) {
+  n.left = this.tr(n.left, list, true);
+  if (this.y(n.right))
+    return this.transformLogicalExpressionWithYield(n, list, isVal)
+  n.right = this.tr(n.right, list, isVal);
+  return n;
+};
+
+this.transformLogicalExpressionWithYield = function(n, list, isVal) {
+  var ifBody = [],
+      t = null;
+  if (isVal) {
+    t = this.allocTemp();
+    n.left = synth_assig(t, n.left);
+    if (n.operator === '||')
+      n.left = synth_not(n.left); 
+    this.rl(t);
+  }
+  var tr = this.tr(n.right, ifBody, isVal);
+  if (isVal) {
+    t = this.save(tr, ifBody);
+    this.rl(t);
+  }
+  push_checked(synth_if(n.left, ifBody), list);
+  return isVal ? t : NOEXPR;
+};
+
+
+
+},
+function(){
+transform['Program'] = function(n, list, isVal) {
+  var b = n.body, i = 0;
+  while (i < b.length) {
+    b[i] = this.transform(b[i], null, false);
+    i++;
+  }
+  return n;
+};
+
+},
+function(){
+transform['YieldExpression'] = function(n, list, isVal) {
+  if (n.argument)
+    n.argument = this.tr(n.argument, list, true);
+  push_checked(n, list);
+  return isVal ? sentVal() : NOEXPR;
+};
+
+
 }]  ],
+null,
 null,
 null,
 null,

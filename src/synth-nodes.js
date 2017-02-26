@@ -135,4 +135,7 @@ function synth_binexpr(left, o, right, yc) {
    };
 }
 
+function synth_exprstmt(expr) {
+  return { type: 'ExpressionStatement', expression: expr };
+}
 

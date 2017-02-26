@@ -10,7 +10,7 @@ function synth_assig(left, right, o) {
 
 function synth_lit_str(value) {
   ASSERT.call(this, typeof value === typeof "", 'str value not of type string');
-  return { type: 'Literal', value: value };
+  return { type: 'Literal', value: value, raw: '"'+value+'"' };
 }
 
 function synth_do_while(cond, body) {
@@ -63,12 +63,10 @@ function synth_assig_explicit(left, right, o) {
   return assig;
 }
 
-function synth_seq(list) {
-  if (list.length === 1)
-    return list[0];
+function synth_seq(list, isVal) {
 
   ASSERT.call(this, list.length > 0, 'sequence expressions must not have 0 items');
-  return { type: 'SyntheticExprSequence', expressions: list, y: -1 };
+  return { type: isVal ? 'SequenceExpression' : 'SequenceStatement', expressions: list, y: -1 };
 }
 
 function synth_not(expr) {

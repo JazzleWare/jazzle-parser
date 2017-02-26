@@ -360,7 +360,6 @@ this.createMappingForUnresolvedNames = function() {
       continue;
 
     var resolvedRef = this.definedNames[name]; // will look it up the prototype chain, which is in this case the scope chain
-    this.updateLiquidNamesWith(resolvedRef.synthName);
     this.referencedEmitNames[resolvedRef.synthName+'%'] = resolvedRef;
   }
 };

@@ -1,3 +1,6 @@
+Emitters['ObjIterGet'] =
+Emitters['Unornull'] =
+Emitters['ArrIterGet'] =
 Emitters['CallExpression'] = function(n, prec, flags) {
   var ri = spreadIdx(n.arguments, 0); 
   if (ri !== -1)

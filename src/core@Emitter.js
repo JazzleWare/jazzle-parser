@@ -129,3 +129,8 @@ this.startLine = function() {
 this.insertNL = function() {
   this.code += '\n';
 };
+
+this.noWrap = function() {
+  this.noWrap_ = true;
+  return this;
+};
