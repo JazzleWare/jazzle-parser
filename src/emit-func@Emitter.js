@@ -10,7 +10,9 @@ Emitters['FunctionDeclaration'] = function(n, prec, flags) {
 
   this.w('function');
   if (n.id) { this.w(' ').writeIdentifierName(n.id.name); }
-  this.w('(').emitParams(n.params);
+  this.w('(');
+  if (!functionHasNonSimpleParams(n))
+    this.emitParams(n.params);
   this.wm(')',' ').emitAny(n.body, PREC_NONE, EC_NONE);
   if (paren) this.w(')');
 };
@@ -25,4 +27,4 @@ this.emitParams = function(list) {
     this.writeIdentifierName(elem.name);
     i++;
   }
-};
+}

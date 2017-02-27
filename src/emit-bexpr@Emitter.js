@@ -30,6 +30,9 @@ function isBinaryExpression(n) {
 }
 
 this.emitBinaryExpressionComponent = function(n, flags) {
+  if (n.type === 'UnaryExpression' || n.type === 'UpdateExpression')
+    return this.emitAny(n, PREC_NONE, flags);
+    
   return this.emitHead(n, PREC_NONE, flags);
 };
 

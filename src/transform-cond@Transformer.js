@@ -1,13 +1,15 @@
 transform['ConditionalExpression'] = function(n, list, isVal) {
-  n.test = this.transform(n.test, list, true);
-  if (this.y(n.consequent) || this.y(n.alternate))
+  if (this.y(n))
     return this.transformConditionalExpressionWithYield(n, list, isVal);
-  n.consequent = this.tr(n.consequent, list, isVal);
-  n.alternate = this.tr(n.alternate, list, isVal);
+
+  n.test = this.tr(n.test, null, true);
+  n.consequent = this.tr(n.consequent, null, true);
+  n.alternate = this.tr(n.alternate, null, true);
   return n;
 };
 
 this.transformConditionalExpressionWithYield = function(n, list, isVal) {
+  n.test = this.transform(n.test, list, true);
   var ifBody = [], elseBody = [];
       t = null;
   n.consequent = this.tr(n.consequent, ifBody, isVal);

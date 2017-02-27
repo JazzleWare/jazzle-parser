@@ -1,3 +1,4 @@
+Emitters['SynthSequenceExpression'] =
 Emitters['SequenceExpression'] = function(n, prec, flags) {
   var list = n.expressions, i = 0;
   this.eN(list[i], prec, flags);

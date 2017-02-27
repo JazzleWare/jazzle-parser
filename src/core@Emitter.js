@@ -24,6 +24,7 @@ function(n, prec, flags) {
   case 'AssignmentExpression':
   case 'ArrowFunctionExpression':
   case 'SequenceExpression':
+  case 'SynthSequenceExpression':
     this.w('(').eA(n, PREC_NONE, EC_NONE).w(')');
     break;
   default: 
@@ -49,7 +50,9 @@ this.eA = function(n, prec, startStmt) {
 };
 
 this.emitNonSeq = function(n, prec, flags) {
-  var paren = n.type === 'SequenceExpression';
+  var paren =
+    n.type === 'SequenceExpression' ||
+    n.type === 'SynthSequenceExpression';
   if (paren) this.w('(');
   this.emitAny(n, prec, flags);
   if (paren) this.w(')');

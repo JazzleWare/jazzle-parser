@@ -74,7 +74,7 @@ Builder.prototype.writeFileString = function(str) {
 };
 
 Builder.prototype.writeModule = function(  module ) {
-   console.log( "--WRITING MODULE", module.name );
+   console.log( "--WRITING MODULE", module.name, "ON", module.path );
    this. write_string(  ';\n');
    this. writeFileString(  fs .readFileSync( module.path ) );
    console.log( "--FINISHED MODULE" );

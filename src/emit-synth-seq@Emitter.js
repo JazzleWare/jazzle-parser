@@ -9,6 +9,7 @@ Emitters['SequenceStatement'] = function(n, prec, flags) {
 this.emitAsStmt = function(seqElem) {
   switch (seqElem.type) {
   case 'AssignmentExpression':
+  case 'SyntheticAssignment':
   seqElem = synth_exprstmt(seqElem);
   }
 

@@ -66,10 +66,14 @@ function synth_assig_explicit(left, right, o) {
 function synth_seq(list, isVal) {
 
   ASSERT.call(this, list.length > 0, 'sequence expressions must not have 0 items');
-  return { type: isVal ? 'SequenceExpression' : 'SequenceStatement', expressions: list, y: -1 };
+  return { type: isVal ? 'SynthSequenceExpression' : 'SequenceStatement', expressions: list, y: -1 };
 }
 
 function synth_not(expr) {
   return { type: 'UnaryExpression', operator: '!', y: -1, argument: expr };
+}
+
+function synth_jz_arguments_to_array() {
+  return { type: 'SpecialIdentifier', kind: 'argsToArray' };
 }
 

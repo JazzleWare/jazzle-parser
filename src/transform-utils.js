@@ -69,3 +69,11 @@ function push_if_assig(n, list) {
     list.push(n);
 }
 
+function functionHasNonSimpleParams(fn) {
+  var list = fn.params, i = 0;
+  while (i < list.length)
+    if (list[i++].type !== 'Identifier')
+      return true;
+  
+  return false;
+}

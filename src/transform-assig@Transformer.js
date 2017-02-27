@@ -158,8 +158,7 @@ transformAssig['AssignmentPattern'] = function(n, list, isVal) {
          ) ), left.right, t );
   this.rl(t);
   assigDefault = this.tr(assigDefault, list, true);
-  push_checked(synth_assig(left.left, assigDefault), list);
+  push_checked(this.tr(synth_assig(left.left, assigDefault), list, isVal), list);
   return NOEXPR;
 };
-
 
