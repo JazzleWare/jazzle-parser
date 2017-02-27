@@ -1592,6 +1592,18 @@ this.noWrap = function() {
 
 },
 function(){
+Emitters['UpdateExpression'] = function(n, prec, flags) {
+  var o = n.operator;
+  if (n.prefix) {
+    if (this.code.charCodeAt(this.code.length-1) === o.charCodeAt(0))
+      this.s();
+    this.w(o).eH(n.argument);
+  } else
+    this.eH(n.argument, PREC_NONE, flags).w(o);
+};
+
+},
+function(){
 Emitters['ArrayExpression'] = function(n, prec, flags) {
   var list = n.elements, i = 0;
   var si = spreadIdx(list, 0);
@@ -10147,6 +10159,16 @@ this.save = function(n, list) {
 
 },
 function(){
+transform['UpdateExpression'] = function(n, pushTarget, isVal) {
+  if (this.y(n.argument))
+    n.argument = this.transform(n.argument, pushTarget, true);
+  else
+    n.argument = this.transform(n.argument, null, true);
+  return n;
+};
+
+},
+function(){
 transform['ArgsPrologue'] = function(n, pushTarget, isVal) {
   var synthLeft = { type: 'ArrayPattern', elements: n.left, y: 0 };
   var synthAssig = { type: 'AssignmentExpression', left: synthLeft, right: n.right, y: 0 };
@@ -10513,6 +10535,21 @@ transform['Program'] = function(n, list, isVal) {
     b[i] = this.transform(b[i], null, false);
     i++;
   }
+  return n;
+};
+
+},
+function(){
+transform['SequenceExpression'] = function(n, pushTarget, isVal) {
+  if (this.y(n))
+    return this.transformSequenceExpressionWithYield(n, pushTarget, isVal);
+
+  var list = n.expressions, i = 0;
+  while (i < list.length) {
+    list[i] = this.tr(list[i], null, true);
+    i++;
+  }
+
   return n;
 };
 
