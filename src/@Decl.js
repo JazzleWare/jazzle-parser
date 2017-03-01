@@ -1,8 +1,7 @@
-function Decl(type, name, scope, synthName) {
-  this.type = type;
-  this.name = name; 
-  this.scope = scope;
-  this.synthName = synthName;
-  this.refMode = null;
+function Decl() {
+  this.mode = DM_MODE;
+  this.ref = null;
+  this.name = "";
+  this.site = null;
+  this.synthName = "";
 }
-

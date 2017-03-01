@@ -1,14 +1,29 @@
 (function(){
 "use strict";
 ;
-function Decl(type, name, scope, synthName) {
-  this.type = type;
-  this.name = name; 
-  this.scope = scope;
-  this.synthName = synthName;
-  this.refMode = null;
+function CatchScope(sParent) {
+  LexicalScope.call(this, sParent, ST_CATCH);
+  
+  this.paramList = new SortedObj();
+  this.hasSimpleList = true;
+  this.catchVarName = "";
 }
-
+;
+function ClassScope(sParent, sType) {
+  Scope.call(this, sParent, sType|ST_CLS);
+  
+  this.synthCLSPName = "";
+  this.synthSuperName = "";
+  this.synthCLSName = "";
+}
+;
+function Decl() {
+  this.mode = DM_MODE;
+  this.ref = null;
+  this.name = "";
+  this.site = null;
+  this.synthName = "";
+}
 ;
 function Emitter(spaceString) {
   this.spaceString = arguments.length ? spaceString : "  ";
@@ -65,6 +80,21 @@ ErrorString.from = function(str) {
   return error;
 };
 ;
+function FunctionScope(sParent, sType) {
+  Scope.call(this, sParent, sType|ST_FN);
+
+  this.prologue = null;
+  this.firstDup = null;
+  this.firstNonSimple = null;
+  this.paramList = [];
+  this.paramMap = {};
+}
+;
+function GlobalScope() {
+  Scope.call(this, null, ST_GLOBAL);
+  
+}
+;
 function Hitmap() {
   var validNames = arguments.length ? new SortedObj({}) : null;
   var i = 0;
@@ -91,6 +121,19 @@ function LabelTracker(parent) {
   this.synthAtExit = false;
 
   this.target = null;
+}
+;
+function LexicalScope(sParent, sType) {
+  Scope.call(this, sParent, sType|ST_LEXICAL);
+
+  this.synthName = "";
+  this.childBindings = null;
+  
+  var surroundingCatch =
+    sParent.isCatch() ?
+      sParent :
+      sParent.isLexical() ?                                sParent.surroundingCatch :
+        null;
 }
 ;
 var Parser = function (src, o) {
@@ -185,74 +228,38 @@ var Parser = function (src, o) {
 };
 
 ;
-function RefMode() {
-   this.direct = 0;
-   this.indirect = 0; this.lors = [];
+function Ref(scope) {
+  this.lors = [];
+  this.indirect = new RefCount();
+  this.scope = scope;
+  this.direct = new RefCount();
+  this.unresolved = true;
 }
-
 ;
-function Scope(parent, type) {
-  this.type = type;
-
-  if (!parent) 
-    ASSERT.call(this.isConcrete(), 'sub-scopes must have a parent');
-
-  this.parent = parent;
-  this.funcScope = 
-     (this.isConcrete() || this.isGlobal()) ? this : this.parent.funcScope;
-
-
-  this.definedNames = this.parent ? createObj(this.parent.definedNames) : {};
-  this.unresolvedNames = {};
-
-  // serves the same purpose as the definedNames above, except that it only contains the names in the current scope;
-  // iterating over the definedNames object means iterating over _all_ names available to the current scope;
-  // this is the reason nameList exists -- to keep the track of the names local to this scope
-  this.nameList = []; 
-
-  this.wrappedDeclList = null;
-  this.wrappedDeclNames = null;
-  this.scopeObjVar = null;
-
-  this.tempStack = this.isConcrete() ? [] : null;
-
-  if (this.isLexical() && !this.isLoop() && this.parent.isLoop())
-    this.type |= ST_LOOP;    
-
-  this.children = [];
-  if (this.parent) this.parent.children.push(this);
-
-  // TODO: replace both with something like 'cachedEmitNames', along with some associated methods like 'cacheEmitNames'
-  //
-  // used when name synthesizing starts
-  this.referencedEmitNames = null; // <k, v>: (emitName, actualName) -- for the names referenced in the current scope
-  // <k, v>: (emitName, actualName) -- for the name defined in the current scope; only functions are supposed to have one of these 
-  this.definedEmitNames = {}; 
-
-
-  this.idNames = {};
-  this.isInComplexArgs = false;
-  this.strict = this.parent ? this.parent.strict : false;
-  this.synth = false;
-  
-  // TODO: is it really needed? because all it will do is to delegate errors
-  this.parser = null;
-  if (this.parent && this.isConcrete())
-    this.parser = this.parent.parser;
+function RefCount() {
+  this.fw = 0;
+  this.bw = 0;
 }
+;
+function Scope(sParent, sType) {
+  this.parent = sParent;
+  this.type = sType;
+  this.scs = this.isConcrete() ?
+    this :
+    this.parent.scs;
+  
+  this.defs = this.parent ?
+    SortedObj.from(this.parent.defs) :
+    new SortedObj();
 
-Scope.createFunc = function(parent, decl) {
-  var scope = new Scope(parent, decl ?
-       ST_FN_STMT :
-       ST_FN_EXPR );
-  return scope;
-};
-
-Scope.createLexical = function(parent, loop) {
-   return new Scope(parent, !loop ?
-        ST_LEXICAL :
-        ST_LEXICAL|ST_LOOP);
-};
+  this.refs = new SortedObj();
+  this.allowed = this.calculateAllowedActions();
+  this.mode = this.calculateScopeMode();
+  this.labelTracker = new LabelTracker();
+  this.allNames = this.parent ? 
+    this.parent.allNames :
+    new SortedObj();
+}
 ;
 function SortedObj() {
   this.keys = [];
@@ -942,16 +949,58 @@ function isLeftAssoc(o) {
   return !(bp(o) & 1);
 }
 ;
+var ST_GLOBAL = 1,
+    ST_MODULE = ST_GLOBAL << 1,
+    ST_SCRIPT = ST_MODULE << 1,
+    ST_METH = ST_SCRIPT << 1,
+    ST_DECL = ST_METH << 1,
+    ST_EXPR = ST_DECL << 1,
+    ST_CTOR = ST_EXPR << 1,
+    ST_FN = ST_CTOR << 1,
+    ST_CATCH = ST_FN << 1,
+    ST_BLOCK = ST_CATCH << 1,
+    ST_BARE = ST_BLOCK << 1,
+    ST_ARROW = ST_BLOCK << 1,
+    ST_CLS = ST_ARROW << 1,
+    ST_GEN = ST_CLS << 1,
+    ST_ASYNC = ST_GEN << 1, 
+    ST_CLASSMEM = ST_ASYNC << 1,
+    ST_HOISTED = ST_DECL,
+    ST_LEXICAL = ST_BLOCK|ST_CATCH,
+    ST_TOP = ST_MODULE|ST_SCRIPT,
+    ST_CONCRETE = ST_TOP|ST_FN,
+    ST_NONE = 0;
 
-var SCOPE_FUNC = 1, SCOPE_CATCH = 2, SCOPE_LEXICAL = 0;
+var SM_LOOP = 1,
+    SM_UNIQUE = SM_LOOP << 1,
+    SM_STRICT = SM_UNIQUE << 1,
+    SM_INARGS = SM_STRICT << 1,
+    SM_INBLOCK = SM_INARGS << 1,
+    SM_INSIDE_IF = SM_INBLOCK << 1,
+    SM_CLS_WTH_SUPER = SM_INSIDE_IF << 1,
+    SM_FOR_INIT = SM_CLS_WITH_SUPER << 1,
+    SM_NONE = 0;
 
-var REF_I = 1, REF_D = 2;
+var SA_THROW = 1,
+    SA_AWAIT = SA_THROW << 1,
+    SA_BREAK = SA_AWAIT << 1,
+    SA_RETURN = SA_BREAK << 1,
+    SA_YIELD = SA_RETURN << 1,
+    SA_CONTINUE = SA_YIELD << 1,
+    SA_CALLSUP = SA_CONTINUE << 1,
+    SA_MEMSUP = SA_CALLSUP << 1,
+    SA_NONE = 0;
 
-var has = Object.hasOwnProperty; 
-
-var VAR_DEF = 1, LET_OR_CONST = 2;
-     
-var SCOPE_LOOP = 4;
+var DM_VARLIKE = 1,
+    DM_FUNC = DM_VARLIKE << 1,
+    DM_LEXICAL = DM_FUNC << 1,
+    DM_DECLNAME = DM_LEXICAL << 1,
+    DM_CLS = DM_DECLNAME << 1,
+    DM_NAME = DM_CLS << 1,
+    DM_PARAM_FN = DM_NAME << 1,
+    DM_EXPRNAME = DM_PARAM_FN << 1,
+    DM_PARAM_CATCH = DM_EXPR << 1,
+    DM_NONE = 0;
 
 ;
 
@@ -1430,25 +1479,9 @@ function createObj(baseObj) {
              def[1][e++].call(def[0]);
        }
      }).call([
-[Decl.prototype, [function(){
-this.funcDecl = function() { return this.scope === this.scope.funcScope; };
-
-this.isScopeObj = function() { 
-   return this === this.scope.scopeObjVar;
-};
-
-this.needsScopeVar = function() {
-   return ( this.type & DECL_MODE_LET ) &&
-          this.scope.isLoop() &&
-          this.refMode.indirect; 
-};
-
-this.syntheticUnlessInAFunc = function() {
-  return this.type & DECL_MODE_LET;
-};
-
-
-}]  ],
+null,
+null,
+null,
 [Emitter.prototype, [function(){
 this.indent = function() {
   this.indentLevel++; 
@@ -2260,6 +2293,43 @@ this.applyTo = function(obj) {
 
 
 }]  ],
+[FunctionScope.prototype, [function(){
+this.hasOwnArguments = function() {
+  return !this.isArrow();
+};
+
+this.enterUniqueArgs = function() {
+  if (this.insideUniqueArgs())
+    return;
+  switch (this.type & ~(ST_DECL|ST_EXPR)) {
+  case ST_GEN:
+  case ST_FN:
+  case ST_CTOR:
+  case ST_METH:
+  case ST_ARROW:
+    this.mode |= SM_INARGS;
+    break;
+  default:
+    ASSERT.call(this, false,
+      'args mode can only be used for a func-like'+
+      ' scope and it must be the first sub-mode');
+  }
+
+  if (this.firstDup)
+    this.parser.err('argsdup');
+
+  this.mode |= SM_UNIQUE;
+};
+
+this.exitUniqueArgs = function() {
+  ASSERT.call(this, this.insideUniqueArgs(),
+    'can not unset unique when it has not been set');
+
+  this.mode &= ~SM_UNIQUE;
+};
+
+}]  ],
+null,
 [Hitmap.prototype, [function(){
 this.isValidName = function(name) {
   return this.isValidName_m(name+'%');
@@ -2374,6 +2444,7 @@ this.newSynthLabelName = function(baseLabelName) {
 };
 
 }]  ],
+null,
 [Parser.prototype, [function(){
 this.asArrowFuncArgList = function(argList) {
   var i = 0, list = argList;
@@ -9612,441 +9683,177 @@ this.parseYield = function(context) {
 
 
 }]  ],
-[RefMode.prototype, [function(){
-this.updateExistingRefWith = function(name, fromScope) {
-
-  // TODO: check whether the scope has a direct eval, because it can make things like this happen:
-  // var a = []; while (a.length<12) { let e = a.length; a.push(function(){ return eval("e++") }); }
-  // when there is a direct eval in a (possibly loop) scope, the transformation for closure-let must be applied for every let
-  // declaration the scope might contain, even if none of them has been expressly accessed from inside a function
-  if (!fromScope.isFunc()) {
-    var ref = fromScope.unresolvedNames[name+'%'];
-    if (ref.indirect) this.indirect |= ACCESS_EXISTING;
-    if (ref.direct) this.direct |= ACCESS_EXISTING;
-  }
-  else {
-    // let e = 12; var l = function() { return e--; };
-    if (!fromScope.isDeclaration()) this.indirect |= ACCESS_EXISTING;
-
-    // let e = 12; function l()  { return e--; } 
-    else this.indirect |= ACCESS_FORWARD;
-  }
-};
-
-this.updateForwardRefWith = function(name, fromScope) {
-   var ref = fromScope.unresolvedNames[name+'%'];
-   if (fromScope.isFunc()) {
-     this.indirect |= ref.direct;
-     this.indirect |= ref.indirect;
-   }
-   else {
-     this.indirect |= ref.indirect;
-     this.direct |= ref.direct;
-   }   
-};
-
-
-}]  ],
+null,
+null,
 [Scope.prototype, [function(){
-
-this.reference = function(name, fromScope) {
-  if (!fromScope) fromScope = this;
-
-  var decl = this.findDeclInScope(name), ref = null;
-  if (decl) {
-    ref = decl.refMode;
-    if (this !== fromScope) {
-      ref.updateExistingRefWith(name, fromScope);
-      // a catch name is never forward-accessed, even when referenced from within a function declaration 
-      if (decl.type & DECL_MODE_CATCH_PARAMS) 
-        if (ref.indirect) ref.indirect = ACCESS_EXISTING;
-    }
-    else ref.direct |= ACCESS_EXISTING;
-  }
-  else {
-    ref = this.findRefInScope(name);
-    if (!ref) {
-      ref = new RefMode();
-      this.insertRef(name, ref);
-    }
-    if (this !== fromScope)
-      ref.updateForwardRefWith(name, fromScope);
-    else
-      ref.direct |= ACCESS_FORWARD;
-  }
+this.isAnyFunc = function() {
+  this.type & ST_FN;
 };
 
-this.declare = function(name, declType) {
-  return declare[declType].call(this, name, declType);
+this.isIndirect = function() {
+  this.type & (ST_FN|ST_CLS);
 };
 
-this.findRefInScope = function(name) {
-  name += '%';
-  return HAS.call(this.unresolvedNames, name) ?
-            this.unresolvedNames[name] : null;
+this.isLexical = function() {
+  return this.type & (ST_BLOCK|ST_CATCH);
 };
 
-this.hoistIdToScope = function(id, targetScope, decl) { 
-   var scope = this;
-    var isFresh = targetScope.findDeclInScope(id.name) === null; 
-   while (true) {
-     ASSERT.call(this, scope !== null, 'reached the head of scope chain while hoisting name "'+id+'"'); 
-     if ( !scope.insertDecl(id, decl) ) {
-       break;
-     }
-
-     if (scope === targetScope)
-       break;
-
-     scope = scope.parent;
-   }
-   decl.scope = scope;
-   if (isFresh) targetScope.nameList.push(decl);
-};
-   
-var declare = {};
-
-declare[DECL_MODE_CLASS_STMT|DECL_MODE_VAR] = 
-declare[DECL_MODE_FUNC_PARAMS] =
-declare[DECL_MODE_FUNC_STMT|DECL_MODE_VAR] =
-declare[DECL_MODE_VAR] = function(id, declType) {
-   var func = this.funcScope;
-   var decl = new Decl(declType, id.name, func, id.name);
-
-   this.hoistIdToScope(id, func, decl );
-   return decl;
+this.isDecl = function() {
+  return this.type & ST_DECL;
 };
 
-declare[DECL_MODE_CATCH_PARAMS|DECL_MODE_LET] = declare[DECL_MODE_FCE] =
-declare[DECL_MODE_FUNC_STMT|DECL_MODE_LET] = declare[DECL_MODE_CLASS_STMT|DECL_MODE_LET] =
-declare[DECL_MODE_LET] = function(id, declType) {
-   if (declType & DECL_MODE_CATCH_PARAMS)
-     this.catchVarIsSynth = true;
-
-   var decl = new Decl(declType, id.name, this, id.name);
-   this.insertDecl(id, decl);
-   this.nameList.push(decl);
-   return decl;
+this.isConcrete = function() {
+  return this.type & (ST_MODLUE|ST_SCRIPT|ST_FN|
+    ST_GLOBAL|ST_CLS);
 };
 
-declare[DECL_MODE_CATCH_PARAMS] = function(id, declType) {
-  var name = id.name + '%';
-  this.catchVarIsSynth = false; 
-  var catchVar = new Decl( DECL_MODE_CATCH_PARAMS, id.name, this, id.name);
-  this.catchVarName = id.name;
-
-  this.insertDecl(id, catchVar); 
-  this.nameList.push(catchVar);
-};
- 
-// returns false if the variable was not inserted
-// in the current scope because of having
-// the same name as a catch var in the scope
-// (this implies the scope must be a catch scope for this to happen)
-this.insertDecl = function(id, decl) {
-
-  var declType = decl.type;
-  var existingDecl = this.findDeclInScope(id.name);
-  var func = this.funcScope;
-
-  if (existingDecl !== DECL_NOT_FOUND) {
-    var existingType = existingDecl.type;
-
-    // if a var name in a catch scope has the same name as a catch var,
-    // it will not get hoisted any further
-    if ((declType & DECL_MODE_VAR_LIKE) && (existingType & DECL_MODE_CATCH_PARAMS))
-       return false;
-
-    // if a var decl is overriding a var decl of the same name, no matter what scope we are in,
-    // it's not a problem.
-    if ((declType & DECL_MODE_VAR_LIKE) && (existingType & DECL_MODE_VAR_LIKE))
-      return true; 
-     
-    this.err('exists.in.current',{tn:id,extra:this.idNames[id.name+'%']});
-  }
-
-  this.insertDecl0(true, id.name, decl);
-  this.insertID(id);
-
-  return true;
+this.isExpr = function() {
+  return this.type & ST_EXPR;
 };
 
-// TODO: looks like `isFresh` is not necessary
-this.insertDecl0 = function(isFresh, name, decl) {
-  name += '%';
-  this.definedNames[name] = decl;
-  if (isFresh)
-    if (HAS.call(this.unresolvedNames, name)) {
-      decl.refMode = this.unresolvedNames[name];
-      this.unresolvedNames[name] = null;
-    }
-    else decl.refMode = new RefMode();
+this.isClass = function() {
+  return this.type & ST_CLS;
 };
 
-this.findDeclInScope = function(name) {
-  name += '%';
-  return HAS.call(this.definedNames, name) ? 
-     this.definedNames[name] : DECL_NOT_FOUND;
+this.isHoisted = function() {
+  return this.isDecls();
 };
 
-this.finish = function() {
-  var parent = this.parent;
-  if (!parent) return;
-
-  // hand the current scope's unresolved references to the parent scope
-  for (var name in this.unresolvedNames) {
-    if (!HAS.call(this.unresolvedNames, name)) continue;
-    var n = this.unresolvedNames[name];
-    if (n === null) continue;
-    parent.reference(name.substring(0,name.length-1), this);
-  }
-};
-    
-this.insertRef = function(name, ref) {
-  this.unresolvedNames[name+'%'] = ref;
+this.isCatch = function() {
+  return this.type & ST_CATCH;
 };
 
-this.newSynthName = function(baseName) {
-  var num = 0, targetScope = this.funcScope;
-  var name = baseName;
-  for (;;num++, name = baseName + "" + num) {
-     if (targetScope.findDeclByEmitNameInScope(name))
-       continue; // must not be in the surrounding func scope's defined names, 
-
-     if (targetScope.findRefByEmitNameInScope(name)) continue; // must not be in the surrounding func scope's referenced names;
-     if (this.isLexical()) { // furthermore, if we're not allocating in a func scope,
-       if (this.findRefByEmitNameInScope(name)) continue; // it must not have been referenced in the current scope
-     }
-     break;
-  }
-  return name;
+this.isBlock = function() {
+  return this.isLexical();
 };
 
-this.makeScopeObj = function() {
-  if (this.scopeObjVar !== null) return;
-  var scopeName = this.newSynthName('scope');
-  var scopeObjVar = new Decl(DECL_MODE_LET, scopeName, this, scopeName);
-  this.insertDecl0(false, scopeName, scopeObjVar); // TODO: not necessary?
-  this.funcScope.insertDecl0(false, scopeName, scopeObjVar);
-  this.scopeObjVar = scopeObjVar;
-  this.wrappedDeclList = [];
-  this.wrappedDeclNames = {};
-};   
-
-this.allocateTemp = function() {
-  var temp = "";
-  if (this.tempStack.length) 
-    temp = this.tempStack.pop();
-  else {
-    do {
-      temp = this.funcScope.declSynth('temp');
-    } while (temp === this.catchVar);
-  }
-  return temp;
+this.isBare = function() {
+  return this.type & ST_BARE;
 };
 
-this.releaseTemp = function(tempName) {
-  this.tempStack.push(tempName);
-};
- 
-this.declSynth = function(name) {
-  ASSERT.call(this, this.isConcrete());
-  var synthName = this.newSynthName(name);
-  this.definedEmitNames[synthName+'%'] =
-    new Decl(DECL_MODE_VAR, synthName, this, synthName);
-
-  return synthName;
+this.isMeth = function() {
+  return this.type & ST_METH;
 };
 
-this.isLoop = function() { return this.type & ST_LOOP; };
-this.isLexical = function() { return this.type & ST_LEXICAL; };
-this.isFunc = function() { return this.type & ST_FN; };
-this.isHoisted = function() { return this.type & ST_HOISTED; };
-this.isCatch = function() { return this.type & ST_CATCH; };
-this.isGlobal = function() { return this.type & ST_GLOBAL; };
-
-// a scope is concrete if a 'var'-declaration gets hoisted to it
-this.isConcrete = function() { return this.type & ST_CONCRETE; };
-
-this.isDeclaration = function() { 
-  return (this.type & ST_FN_STMT) || (this.type & ST_CLASS_STMT);
+this.isCtor = function() {
+  return this.type & ST_CTOR;
 };
 
-this.addChildLexicalDeclaration = function(decl) {
-   ASSERT.call(this, this.isLoop(), 'only a loop scope can currently have a scope var');
-   this.makeScopeObj();
-   var funcScope = this.funcScope;
-   funcScope.removeDecl(decl);
-   this.wrappedDeclList.push(decl);
-   this.wrappedDeclNames[decl.name+'%'] = decl;
-   decl.synthName = decl.name;
+this.isGen = function() {
+  return this.type & ST_GEN;
 };
 
-/* consider this contrived example:
-   function a() {
-     var v = null, v1 = null;
-     while (false) {
-       let v = 12; // synthName=v2
-       function b() {
-         try { throw 'e' }
-         catch (v2) {
-            console.log(v);
-            // prints the value of v, i.e 12, because v's emit name is v2 -- and this behaviour is *not* what we want
-            // this means for every name referenced in a catch scope, we have to ensure
-            // emit name for that name does not clash with (i.e, is not the same as) the catch variable; if it is, though,
-            // the catch variable must be renamed.
-            // this might look like a simple rename-as-you-go scheme like the one we are currently using on non-catch scopes;
-            // BUT it is not that simple, because:
-            // a) the catch variable's name can not be determined until the very end of the catch scope, where all names that could
-            // have caused a rename have been visited.
-            // b) a 'let'-var's name is calculated taking the currently accessible catch-var names (along with their synth names)
-            // into account; the problem is, those catch-vars might change their synth names due to the reasons detailed above;
-            // even though this renaming is in turn done taking the currently accessible synth names
-            // into account to prevent name clashes, unnecessary renames look to abound in the process.
-
-            // one solution is to save the catch var when the catch scope begins, and add it to the list of the catch scope's defined
-            // names only at the end of the scope
-
-            // another solution is to keep track of every catch variable in function scope, and at the same time renaming
-            // any synthesized name that clashes with a catch var name each time a catch var is added to the catch var list;
-            // but this solution renames a synthesized name even when it is not in the same scope as the catch var,
-            // like so:
-            //   var v, v1;
-            //   {
-            //     let v = 12; // synthName=v2
-            //     try {}
-            //
-            //     catch (v2) {} // renames previous v2 to something else 
-            //   }
-          }
-       }
-     }
-   }
-*/
-
-this.setCatchVar = function(name) {
-  ASSERT.call(this, this.isCatch(), 'only a catch scope can have a catch variable');
-  ASSERT.call(this, this.catchVar === "", 'scope has already got a catch var: ' + this.catchVarName);
-  this.catchVarName = name;
+this.isAnyNonMemFunc = function() {
+  return this.type & (ST_FN|ST_ARROW);
 };
 
-this.synthesizeNames = function() {
-  var list = null, e = 0;
-  // synthesize everything -- even the real names;
-  // because in the presence of references that cross function boundaries,
-  // the function's name list is of little actual help.
-  // one solution is to have every reference keep track of the scope it was not resolved in; 
-  // the informarion can then be used while calculating the synthetic name for the reference (in case the reference resolves to
-  // a decl that must be synthesized), or when the reference has resolved to a real (i.e., func-scope)
-  // name declaration; in the former case, the name has to be chosen taking the names in the tracking scopes into account;
-  // the latter case, though, is something the opposite -- the tracking scopes must rename the decls in their name lists
-  // so as to avoid possible clashes with the reference's name, recursively applying the rename semantics, i.e., renaming their entries  // keeping the scopes those entries are tracking into account.
-  // the solution is potentially heavy, and complex.
-  //
-  // another solution is to defer the name synthesization until the very end of the very last scope; when there, the top-most
-  // scope will be synthesized first, followed by its descendant scopes,
-  // followed by theirs, and so on, until all scopes are synthesized; this way, every reference's emit name is already known,
-  // as they have already been synthesized in a parent of the current scope; any variable that possibly clashes with that reference's
-  // name will have to be renamed regardless of whether it is a variable that has to be synthesized nevertheless, or of whether it is a  // real name.
-  // this solution is obviously unfaithful to the source's names, potentially at least, but it is way more simple,
-  // way more straightforward, and, arguably, way more lighter, and it is the solution currently used.
-  list = this.nameList;
-  e = 0;
-  while (e < list.length)
-    this.synthesizeDecl(list[e++]);
-
-  list = this.children;
-  if (list.length) {
-    e = 0;
-    while (e < list.length)
-      list[e++].synthesizeNames();
-  }
+this.isSimpleNonMemFunc = function() {
+  return this.type & (ST_EXPR|ST_DECL|ST_FN);
 };
 
-this.createMappingForUnresolvedNames = function() {
-  ASSERT.call(this, !this.referencedEmitNames, 'this scope has already got a referencedemitNames');
-  this.referencedEmitNames = {};
-
-  for (var name in this.unresolvedNames ) {
-    if (!HAS.call(this.unresolvedNames, name) )
-      continue;
-    if (this.unresolvedNames[name] === null) 
-      continue;
-
-    var resolvedRef = this.definedNames[name]; // will look it up the prototype chain, which is in this case the scope chain
-    this.referencedEmitNames[resolvedRef.synthName+'%'] = resolvedRef;
-  }
+this.isScript = function() {
+  return this.type & ST_SCRIPT;
 };
 
-this.findRefByEmitNameInScope = function(name) {
-  if (!this.referencedEmitNames)
-    this.createMappingForUnresolvedNames();
-  name += '%';
-  return HAS.call(this.referencedEmitNames, name) ?
-    this.referencedEmitNames[name] : null;
+this.isModule = function() {
+  return this.type & ST_MODULE;
 };
 
-this.synthesizeDecl = function(decl) {
-  ASSERT.call(this, this === decl.scope, 'a scope can only synthesize its own declarations');
-  var synthName = this.newSynthName(decl.name);
-  decl.synthName = synthName;
-  this.funcScope.insertEmitName(synthName, decl);
-  this.updateLiquidNamesWith(synthName);
+this.isTopLevel = function() {
+  return this.type & (ST_SCRIPT|ST_MODULE);
 };
 
-this.insertEmitName = function(name, decl) {
-  this.definedEmitNames[name+'%'] = decl;
-}; 
-
-this.findDeclByEmitNameInScope = function(name) {
-  name += '%';
-  return HAS.call(this.definedEmitNames, name) ? 
-    this.definedEmitNames[name] : null;
+this.isArrow = function() {
+  return this.type & ST_ARROW;
 };
 
-this.err = function(errType, errParams) {
-  this.funcScope.parser.err(errType, errParams);
+this.insideIf = function() {
+  return this.mode & SM_INSIDE_IF;
 };
 
-
-},
-function(){
-
-this.spawnFunc = function(fundecl) {
-  return new Scope(
-    this,
-    fundecl ?
-      ST_FN_STMT :
-      ST_FN_EXPR
-  );
+this.insideLoop = function() {
+  return this.mode & SM_LOOP;
 };
 
-this.spawnLexical = function(loop) {
-  return new Scope(
-    this,
-    !loop ?
-     ST_LEXICAL :
-     ST_LEXICAL|ST_LOOP);
+this.insideStrict = function() {
+  return this.mode & SM_STRICT;
 };
 
-this.spawnCatch = function() {
-  return new Scope(
-    this,
-    ST_LEXICAL|ST_CATCH);
+this.insideBlock = function() {
+  return this.mode & SM_BLOCK;
 };
 
-this.mustNotHaveAnyDupeParams = function() {
-  return this.strict || this.isInComplexArgs;
+this.insideFuncArgs = function() {
+  return this.mode & SM_INARGS;
 };
 
-this.hasParam = function(name) {
-  return HAS.call(this.idNames, name+'%');
+this.insideForInit = function() {
+  return this.mode & SM_FOR_INIT;
 };
 
-this.insertID = function(id) {
-  this.idNames[id.name+'%'] = id;
+this.canReturn = function() {
+  return this.mode & SA_RETURN;
 };
 
+this.canContinue = function() {
+  return this.mode & SA_CONTINUE;
+};
+
+this.canBreak = function() {
+  return this.mode & SA_BREAK;
+};
+
+this.canDeclareLet = function() {
+  return this.isBlock();
+};
+
+this.canDeclareFunc = function() {
+  return this.isTopLevel() ||
+         this.isLexical() ||
+         this.insideIf();
+};
+
+this.canYield = function() {
+  return this.mode & SA_YIELD;
+};
+
+this.canAwait = function() {
+  return this.mode & SA_AWAIT;
+};
+
+this.canSupCall = function() {
+  return this.mode & SA_CALLSUP;
+};
+
+this.canSupMem = function() {
+  return this.mode & SA_MEMSUP;
+};
+
+this.canHaveNewTarget = function() {
+  return !this.isArrow() && this.isAnyFunc();
+};
+
+this.canDup = function() {
+  ASSERT.call(this, this.insideFuncArgs(),
+    'it has no meaning to call canDup when not ' +
+    'in func-arguments');
+  return !this.insideStrict() &&
+         !this.insideUnique();
+};
+
+this.enterForInit = function() {
+  ASSERT.call(this, this.type === ST_BARE,
+    'to enter for init mode, the scope has to be a bare one');
+  
+  this.mode |= SM_FOR_INIT;
+};
+
+this.exitForInit = function() {
+  ASSERT.call(this, this.insideForInit(),
+    'can not unset the for-init mode when it is not set');
+
+  this.mode &= ~SM_FOR_INIT;
+};
 
 }]  ],
 [SortedObj.prototype, [function(){

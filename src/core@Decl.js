@@ -1,16 +1,19 @@
-this.funcDecl = function() { return this.scope === this.scope.funcScope; };
+this.absorbRef = function(otherRef) {
+  ASSERT.call(this, otherRef.unresolved,
+    'a resolved reference must not be absorbed by a declref');
 
-this.isScopeObj = function() { 
-   return this === this.scope.scopeObjVar;
+  var fromScope = otherRef.scope;
+  var cur = this.ref;
+  
+  if (fromScope.isIndirect()) {
+    if (fromScope.isHoisted())
+      cur.indirect.fw += ref.total();
+    else
+      cur.indirect.ex += ref.total()
+  } else {
+    cur.indirect.ex += ref.indirect.total();
+    cur.direct.ex += ref.direct.total();
+  }
+
+  return cur;
 };
-
-this.needsScopeVar = function() {
-   return ( this.type & DECL_MODE_LET ) &&
-          this.scope.isLoop() &&
-          this.refMode.indirect; 
-};
-
-this.syntheticUnlessInAFunc = function() {
-  return this.type & DECL_MODE_LET;
-};
-
