@@ -1,5 +1,5 @@
 function Decl() {
-  this.mode = DM_MODE;
+  this.mode = DM_NONE;
   this.ref = null;
   this.name = "";
   this.site = null;

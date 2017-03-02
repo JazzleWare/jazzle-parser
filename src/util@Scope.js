@@ -25,7 +25,7 @@ this.isObjMem = function() {
 this.isArrow = function() { return this.type & ST_ARROW; };
 this.isBlock = function() { return this.type & ST_BLOCK; };
 this.isCatch = function() { return this.type & ST_CATCH; };
-this.isBare = function() { return this.type & ST_BARE; };
+this.isBody = function() { return this.type & ST_BODY; };
 this.isMeth = function() { return this.type & ST_METH; };
 this.isExpr = function() { return this.type & ST_EXPR; };
 this.isAccessor = function() {
@@ -40,7 +40,9 @@ this.isLexical = function() {
 this.isTopLevel = function() {
   return this.type & ST_TOP;
 };
-this.isHoistable = function() { return this.isDecl(); };
+this.isHoistable = function() {
+  return this.isSimpleFunc() && this.isDecl();
+};
 this.isIndirect = function() { 
   return this.isAnyFunc() || this.isClass();
 };
