@@ -14,7 +14,7 @@ var ST_GLOBAL = 1,
     ST_BLOCK = ST_ARROW << 1,
     ST_CATCH = ST_BLOCK << 1,
     ST_BODY = ST_CATCH << 1,
-    ST_METH = ST_BARE << 1,
+    ST_METH = ST_BODY << 1,
     ST_EXPR = ST_METH << 1,
     ST_GEN = ST_EXPR << 1,
 

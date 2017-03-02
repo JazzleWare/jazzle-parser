@@ -56,26 +56,55 @@ this.declareLexical_m = function(mname, mode) {
 };
 
 this.declareVarLike_m = function(mname, mode) {
-  var existing = this.findDecl_m(mname);
-  if (existing) {
-    if (existing.isCatchArg()) {
-      if (!(mode & DM_VAR))
-        this.err('nonvar.can.not.override.catchparam');
-      if (!existing.ref.scope.hasSimpleList)
-        this.err('non.simple.catch.var.is.not.overridable');
-    } else if (!existing.isVarLike())
-      this.err('var.can.not.override.nonvarlike');
+  var dest = null, varDecl = null;
+  if (this.isLexical()) {
+    var catchScope = this.surroundingCatchScope;
+    if (catchScope) {
+      varDecl = catchScope.findCatchVar_m(mname);
+      if (varDecl) {
+        if (!catchScope.hasSimpleList)
+          this.err('non.simple.catch.var.is.not.overridable');
 
-    if (!existing.isFunc() && (mode & DM_FUNC))
-      existing.mode = mode;
-
-    return existing;
+        dest = catchScope;
+      }
+    }
   }
 
-  var newDecl = new Decl().m(mode).n(_u(mname)).r(ref),
-      ref = this.findRef_m(mname, true);
+  if (dest === null) {
+    dest = this.scs;
+    varDecl = dest.findDecl_m(mname);
+    if (varDecl) {
+      if (!varDecl.isVarLike())
+        this.err('var.can.not.override.nonvarlike');
+      if (!varDecl.isFunc() && (mode & DM_FUNC))
+        varDecl.mode = mode;
+    }
+  }
 
-  this.insertDecl_m(mname, newDecl);
+  var newDecl = varDecl;
+  if (newDecl === null)
+    newDecl = new Decl().m(mode).n(_u(mname));
+
+  var cur = this;
+  while (cur !== dest) {
+    var existing = cur.findDecl_m(mname);
+    if (existing) {
+      if (!existing.isVarLike())
+        this.err('var.can.not.override.nonvarlike');
+    }
+    else
+      cur.insertDecl_m(mname, newDecl);
+
+    cur = dest.parent;
+  }
+
+  if (!varDecl) {
+    var ref = dest.findRef_m(mname, true);
+    newDecl.r(ref);
+    dest.insertDecl_m(mname, newDecl);
+  }
+
+  return newDecl;
 };
 
 this.findDecl_m = function(mname) {
