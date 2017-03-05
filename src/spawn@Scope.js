@@ -3,11 +3,11 @@ this.clsScope = function(t) {
 };
 
 this.genScope = function(t) {
-  return new Scope(this, ST_GEN|t);
+  return new FunctionScope(this, ST_GEN|t);
 };
 
 this.fnScope = function(t) {
-  return new Scope(this, ST_FN|t);
+  return new FunctionScope(this, ST_FN|t);
 };
 
 this.blockScope = function() {
@@ -27,11 +27,11 @@ this.catchScope = function() {
 };
 
 this.arrowScope = function() {
-  return new Scope(this, ST_ARROW);
+  return new FunctionScope(this, ST_ARROW);
 };
 
 this.ctorScope = function() {
   ASSERT.call(this, this.isClass(),
     'only class scopes');
-  return new Scope(this, ST_CTOR);
+  return new FunctionScope(this, ST_CTOR);
 };

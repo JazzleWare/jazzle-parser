@@ -5,3 +5,5 @@ function CatchScope(sParent) {
   this.hasSimpleList = true;
   this.catchVarName = "";
 }
+
+CatchScope.prototype = createObj(LexicalScope.prototype);

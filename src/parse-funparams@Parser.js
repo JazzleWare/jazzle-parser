@@ -5,16 +5,18 @@ this.parseArgs = function (argLen) {
   if (!this.expectType_soft('('))
     this.err('func.args.no.opening.paren');
 
-  var firstNonSimpArg = null;
+  var gotNonSimple = false;
   while (list.length !== argLen) {
     elem = this.parsePattern();
     if (elem) {
       if (this.lttype === 'op' && this.ltraw === '=') {
+        this.scope.enterUniqueArgs();
         elem = this.parseAssig(elem);
-        this.makeComplex();
       }
-      if (!firstNonSimpArg && elem.type !== 'Identifier')
-        firstNonSimpArg =  elem;
+      if (!gotNonSimple && elem.type !== 'Identifier') {
+        gotNonSimple = true;
+        this.scope.firstNonSimple = elem;
+      }
       list.push(elem);
     }
     else {
@@ -34,11 +36,13 @@ this.parseArgs = function (argLen) {
   }
   if (argLen === ARGLEN_ANY) {
     if (tail && this.lttype === '...') {
-      this.makeComplex();
+      this.enterUniqueArgs();
       elem = this.parseRestElement();
-      list.push( elem  );
-      if ( !firstNonSimpArg )
-        firstNonSimpArg = elem;
+      list.push(elem);
+      if (!gotNonSimple) {
+        gotNonSimple = true;
+        this.scope.firstNonSimple = elem;
+      }
     }
   }
   else if (list.length !== argLen)
@@ -47,9 +51,9 @@ this.parseArgs = function (argLen) {
   if (!this.expectType_soft (')'))
     this.err('func.args.no.end.paren');
 
-  if (firstNonSimpArg)
-    this.firstNonSimpArg = firstNonSimpArg;
- 
+  if (this.scope.insideUniqueArgs())
+    this.scope.exitUniqueArgs();
+
   return list;
 };
 

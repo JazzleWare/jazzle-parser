@@ -6,3 +6,5 @@ function ClassScope(sParent, sType) {
   this.synthCLSName = "";
   this.exprName = "";
 }
+
+ClassScope.prototype = createObj(Scope.prototype);

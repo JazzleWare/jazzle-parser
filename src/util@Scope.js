@@ -28,6 +28,8 @@ this.isCatch = function() { return this.type & ST_CATCH; };
 this.isBody = function() { return this.type & ST_BODY; };
 this.isMeth = function() { return this.type & ST_METH; };
 this.isExpr = function() { return this.type & ST_EXPR; };
+this.isGen = function() { return this.type & ST_GEN; };
+this.isAsync = function() { return this.type & ST_ASYNC; };
 this.isAccessor = function() {
   return this.type & ST_ACCESSOR;
 };

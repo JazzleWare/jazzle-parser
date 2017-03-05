@@ -1,9 +1,6 @@
-this.parseFunc = function(context, flags) {
+this.parseFunc = function(context, st) {
   var prevLabels = this.labels,
-      prevStrict = this.tight,
-      prevScopeFlags = this.scopeFlags,
-      prevDeclMode = this.declMode,
-      prevNonSimpArg = this.firstNonSimpArg;
+      prevDeclMode = this.declMode;
 
   var isStmt = false, startc = this.c0, startLoc = this.locBegin();
   if (this.canBeStatement) {
@@ -12,10 +9,10 @@ this.parseFunc = function(context, flags) {
   }
 
   var isGen = false,
-      isWhole = !(flags & MEM_CLASS_OR_OBJ);
+      isWhole = !(st & (ST_CLASSMEM|ST_OBJMEM));
    
-  var argLen = !(flags & MEM_ACCESSOR) ? ARGLEN_ANY :
-    (flags & MEM_SET) ? ARGLEN_SET : ARGLEN_GET;
+  var argLen = !(st & ST_ACCESSOR) ? ARGLEN_ANY :
+    (st & ST_SETTER) ? ARGLEN_SET : ARGLEN_GET;
 
   // current func name
   var cfn = null;
@@ -26,7 +23,7 @@ this.parseFunc = function(context, flags) {
     if (this.lttype === 'op' && this.ltraw === '*') {
       if (this.v <= 5)
         this.err('ver.gen');
-      if (flags & MEM_ASYNC)
+      if (st & ST_ASYNC)
         this.err('async.gen.not.yet.supported');
       if (this.unsatisfiedLabel)
         this.err('gen.label.not.allowed');

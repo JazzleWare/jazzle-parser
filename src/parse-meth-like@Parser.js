@@ -1,47 +1,47 @@
-this.parseMeth = function(name, flags) {
+this.parseMeth = function(name, context, st) {
   if (this.lttype !== '(')
     this.err('meth.paren');
   var val = null;
-  if (flags & MEM_CLASS) {
+  if (st & ST_CLS) {
     // all modifiers come at the beginning
-    if (flags & MEM_STATIC) {
-      if (flags & MEM_PROTOTYPE)
+    if (st & ST_STATICMEM) {
+      if (context & CTX_PROTOTYPE_NOT_ALLOWED)
         this.err('class.prototype.is.static.mem',{tn:name,extra:flags});
 
-      flags &= ~(MEM_CONSTRUCTOR|MEM_SUPER);
+      st &= ~ST_CTOR;
     }
 
-    if (flags & MEM_CONSTRUCTOR) {
-      if (flags & MEM_SPECIAL)
+    if (st & ST_CTOR) {
+      if (st & ST_SPECIAL)
         this.err('class.constructor.is.special.mem',{tn:name, extra:{flags:flags}});
-      if (flags & MEM_HAS_CONSTRUCTOR)
+      if (context & CTX_CTOR_NOT_ALLOWED)
         this.err('class.constructor.is.a.dup',{tn:name});
     }
 
-    val = this.parseFunc(CTX_NONE, flags);
+    val = this.parseFunc(CTX_NONE, st);
 
     return {
       type: 'MethodDefinition', key: core(name),
       start: name.start, end: val.end,
-      kind: (flags & MEM_CONSTRUCTOR) ? 'constructor' : (flags & MEM_GET) ? 'get' :
-            (flags & MEM_SET) ? 'set' : 'method',
+      kind: (st & ST_CTOR) ? 'constructor' : (flags & ST_GETTER) ? 'get' :
+            (ST & ST_SETTER) ? 'set' : 'method',
       computed: name.type === PAREN,
       loc: { start: name.loc.start, end: val.loc.end },
-      value: val, 'static': !!(flags & MEM_STATIC)/* ,y:-1*/
+      value: val, 'static': !!(st & ST_STATICMEM)/* ,y:-1*/
     }
   }
    
-  val = this.parseFunc(CTX_NONE, flags);
+  val = this.parseFunc(CTX_NONE, st);
 
   return {
     type: 'Property', key: core(name),
     start: name.start, end: val.end,
     kind:
-     !(flags & MEM_ACCESSOR) ? 'init' :
-      (flags & MEM_SET) ? 'set' : 'get',
+     !(st & ST_ACCESSOR) ? 'init' :
+      (st & ST_SETTER) ? 'set' : 'get',
     computed: name.type === PAREN,
     loc: { start: name.loc.start, end : val.loc.end },
-    method: (flags & MEM_ACCESSOR) === 0, shorthand: false,
+    method: (st & ST_ACCESSOR) === 0, shorthand: false,
     value : val/* ,y:-1*/
   }
 };

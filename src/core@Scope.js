@@ -1,8 +1,8 @@
 this.calculateAllowedActions = function() {
   var a = SA_NONE;
-  if (this.isLexical() || this.isBare())
+  if (this.isLexical() || this.isBody())
     a |= this.parent.allowed;
-  else if (this.isFunc()) {
+  else if (this.isAnyFunc()) {
     a |= SA_RETURN;
     if (this.isCtor())
       a |= (SA_CALLSUP|SA_MEMSUP);

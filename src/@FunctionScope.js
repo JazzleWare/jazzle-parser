@@ -8,3 +8,5 @@ function FunctionScope(sParent, sType) {
   this.paramMap = {};
   this.exprName = "";
 }
+
+FunctionScope.prototype = createObj(Scope.prototype);

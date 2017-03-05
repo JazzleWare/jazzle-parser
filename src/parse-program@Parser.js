@@ -13,7 +13,6 @@ this.parseProgram = function () {
   this.scope = new Scope(globalScope, ST_SCRIPT);
   this.scope.parser = this;
   this.next();
-  this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
   var list = this.blck(); 
         

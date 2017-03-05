@@ -31,3 +31,13 @@ this.exitUniqueArgs = function() {
 
   this.mode &= ~SM_UNIQUE;
 };
+
+this.enterFuncArgs = function() {
+  this.mode |= SM_INARGS;
+};
+
+this.exitFuncArgs = function() {
+  ASSERT.call(this, this.insideFuncArgs(),
+    'can not get out of an argument list when not in it');
+  this.mode &= ~SM_INARGS;
+};

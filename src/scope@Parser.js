@@ -128,3 +128,10 @@ this.canLabelFunctionsInScope = function(isGen) {
           this.scope.isConcrete(); 
 };
 
+this.enterScope = function(scope) {
+  this.scope = scope;
+};
+
+this.exitScope = function() {
+  this.scope = this.scope.parent;
+};

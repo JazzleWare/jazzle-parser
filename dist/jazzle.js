@@ -8,6 +8,8 @@ function CatchScope(sParent) {
   this.hasSimpleList = true;
   this.catchVarName = "";
 }
+
+CatchScope.prototype = createObj(LexicalScope.prototype);
 ;
 function ClassScope(sParent, sType) {
   Scope.call(this, sParent, sType|ST_CLS);
@@ -17,6 +19,8 @@ function ClassScope(sParent, sType) {
   this.synthCLSName = "";
   this.exprName = "";
 }
+
+ClassScope.prototype = createObj(Scope.prototype);
 ;
 function Decl() {
   this.mode = DM_NONE;
@@ -91,11 +95,14 @@ function FunctionScope(sParent, sType) {
   this.paramMap = {};
   this.exprName = "";
 }
+
+FunctionScope.prototype = createObj(Scope.prototype);
 ;
 function GlobalScope() {
-  Scope.call(this, null, ST_GLOBAL);
-  
+  Scope.call(this, null, ST_GLOBAL);  
 }
+
+GlobalScope.prototype = createObj(Scope.prototype);
 ;
 function Hitmap() {
   var validNames = arguments.length ? new SortedObj({}) : null;
@@ -137,6 +144,8 @@ function LexicalScope(sParent, sType) {
       sParent.isLexical() ?                                sParent.surroundingCatch :
         null;
 }
+
+LexicalScope.prototype = createObj(Scope.prototype);
 ;
 var Parser = function (src, o) {
 
@@ -491,34 +500,16 @@ var HAS = {}.hasOwnProperty;
 
 function ASSERT(cond, message) { if (!cond) throw new Error(message); }
 
-// TODO: ST_STRICT and ST_ALLOW_FUNC_DECL
-var ST_FN_EXPR = 1,
-    ST_FN_STMT = ST_FN_EXPR << 1,
-    ST_LEXICAL = ST_FN_STMT << 1,
-    ST_LOOP = ST_LEXICAL << 1,
-    ST_MODULE = ST_LOOP << 1,
-    ST_SCRIPT = ST_MODULE << 1,
-    ST_GLOBAL = ST_SCRIPT << 1,
-    
-    // TODO: only used to determine whether a scope can have a catch var
-    ST_CATCH = ST_GLOBAL << 1,
-
-    ST_CLASS_EXPR = ST_CATCH << 1,
-    ST_CLASS_STMT = ST_CLASS_EXPR << 1,
-
-    ST_FN = ST_FN_EXPR|ST_FN_STMT,
-    ST_TOP = ST_SCRIPT|ST_MODULE,
-    ST_CONCRETE = ST_TOP|ST_FN,
-    ST_HOISTED = ST_FN_STMT|ST_CLASS_STMT;
-
 var CTX_NONE = 0,
     CTX_PARAM = 1,
     CTX_FOR = CTX_PARAM << 1,
     CTX_PAT = CTX_FOR << 1,
     CTX_NULLABLE = CTX_PAT << 1,
-    CTX_DEFAULT = CTX_NULLABLE << 1,
-    CTX_HASPROTO = CTX_DEFAULT << 1,
-    CTX_HAS_A_PARAM_ERR = CTX_HASPROTO << 1,
+    CTX_HASPROTO = CTX_NULLABLE << 1,
+    CTX_PROTOTYPE_NOT_ALLOWED = CTX_HASPROTO << 1,
+    CTX_CTOR_NOT_ALLOWED = CTX_PROTOTYPE_NOT_ALLOWED << 1,
+    CTX_DEFAULT = CTX_CTOR_NOT_ALLOWED << 1,
+    CTX_HAS_A_PARAM_ERR = CTX_DEFAULT << 1,
     CTX_HAS_AN_ASSIG_ERR = CTX_HAS_A_PARAM_ERR << 1,
     CTX_HAS_A_SIMPLE_ERR = CTX_HAS_AN_ASSIG_ERR << 1,
     CTX_NO_SIMPLE_ERR = CTX_HAS_A_SIMPLE_ERR << 1,
@@ -533,62 +524,14 @@ var CTX_NONE = 0,
 // the ordering is also to make the relevant value sets (i.e., SCOPE_FLAG_* and MEM_*)
 // span less bit lengths; this order sensitivity is something that must change in a very
 // near future.
-var MEM_CLASS = 1, 
-    MEM_GEN = MEM_CLASS << 1,
-   
-    SCOPE_FLAG_GEN = MEM_GEN,
-    SCOPE_FLAG_ALLOW_YIELD_EXPR = SCOPE_FLAG_GEN,
-
-    MEM_SUPER = MEM_GEN << 1,
-    SCOPE_FLAG_ALLOW_SUPER = MEM_SUPER,    
-
-    MEM_CONSTRUCTOR = MEM_SUPER << 1,
-    SCOPE_FLAG_IN_CONSTRUCTOR = MEM_CONSTRUCTOR,
-
-    MEM_ASYNC = MEM_CONSTRUCTOR << 1,
-    SCOPE_FLAG_ALLOW_AWAIT_EXPR = MEM_ASYNC,
-
-    SCOPE_FLAG_BREAK = SCOPE_FLAG_ALLOW_AWAIT_EXPR << 1,
-    SCOPE_FLAG_CONTINUE = SCOPE_FLAG_BREAK << 1,
-    SCOPE_FLAG_FN = SCOPE_FLAG_CONTINUE << 1,
-    SCOPE_FLAG_ARG_LIST = SCOPE_FLAG_FN << 1,
-    SCOPE_FLAG_IN_BLOCK = SCOPE_FLAG_ARG_LIST << 1,
-    SCOPE_FLAG_IN_IF = SCOPE_FLAG_IN_BLOCK << 1,
-    SCOPE_FLAG_ALLOW_RETURN_STMT = SCOPE_FLAG_FN,
-    SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER = SCOPE_FLAG_IN_CONSTRUCTOR|SCOPE_FLAG_ALLOW_SUPER,
-    SCOPE_FLAG_NONE = 0,
-    INHERITED_SCOPE_FLAGS = SCOPE_FLAG_ALLOW_SUPER|MEM_CONSTRUCTOR,
-    CLEAR_IB = ~(SCOPE_FLAG_IN_BLOCK|SCOPE_FLAG_IN_IF),
-
-    MEM_OBJ = MEM_ASYNC << 1,
-    MEM_SET = MEM_OBJ << 1,
-    MEM_GET = MEM_SET << 1,
-    MEM_STATIC = MEM_GET << 1,
-    MEM_PROTOTYPE = MEM_STATIC << 1,
-    MEM_OBJ_METH = MEM_PROTOTYPE << 1,
-    MEM_PROTO = MEM_OBJ_METH << 1,
+var MEM_PROTOTYPE = 1,
+    MEM_PROTO = MEM_PROTOTYPE << 1,
     MEM_HAS_CONSTRUCTOR = MEM_PROTO << 1,
-    MEM_ACCESSOR = MEM_GET|MEM_SET,
-    MEM_SPECIAL = MEM_ACCESSOR|MEM_GEN|MEM_ASYNC,
-    MEM_CLASS_OR_OBJ = MEM_CLASS|MEM_OBJ;
+    MEM_NONE;
 
 var ARGLEN_GET = 0,
     ARGLEN_SET = 1,
     ARGLEN_ANY = -1;
-
-var DECL_MODE_VAR = 1,
-    DECL_MODE_LET = DECL_MODE_VAR << 1,
-    DECL_MODE_FUNC_STMT = DECL_MODE_LET << 1,
-    DECL_DUPE = DECL_MODE_FUNC_STMT << 1,
-    DECL_MODE_FUNC_PARAMS = DECL_DUPE << 1,
-    DECL_MODE_FUNC_EXPR = DECL_MODE_FUNC_PARAMS << 1,
-    DECL_MODE_CATCH_PARAMS = DECL_MODE_FUNC_EXPR << 1,
-    DECL_MODE_CLASS_STMT = DECL_MODE_CATCH_PARAMS << 1,
-    DECL_MODE_CLASS_EXPR = DECL_MODE_FUNC_EXPR,
-    DECL_MODE_VAR_LIKE = DECL_MODE_VAR|DECL_MODE_FUNC_PARAMS,
-    DECL_MODE_LET_LIKE = DECL_MODE_LET|DECL_MODE_CATCH_PARAMS,
-    DECL_MODE_EITHER = DECL_MODE_CLASS_STMT|DECL_MODE_FUNC_STMT,
-    DECL_MODE_FCE = DECL_MODE_FUNC_EXPR|DECL_MODE_CLASS_EXPR;
 
 var DECL_NONE = 0;
 var DECL_NOT_FOUND = 
@@ -958,7 +901,7 @@ function isLeftAssoc(o) {
 var ST_GLOBAL = 1,
     ST_MODULE = ST_GLOBAL << 1,
     ST_SCRIPT = ST_MODULE << 1,
-    ST_DECL = ST_GEN << 1,
+    ST_DECL = ST_SCRIPT << 1,
     ST_CLS = ST_DECL << 1,
     ST_FN = ST_CLS << 1,
     ST_CLSMEM = ST_FN << 1,
@@ -970,8 +913,9 @@ var ST_GLOBAL = 1,
     ST_ARROW = ST_OBJMEM << 1,
     ST_BLOCK = ST_ARROW << 1,
     ST_CATCH = ST_BLOCK << 1,
-    ST_BODY = ST_CATCH << 1,
-    ST_METH = ST_BARE << 1,
+    ST_ASYNC = ST_CATCH << 1,
+    ST_BODY = ST_ASYNC << 1,
+    ST_METH = ST_BODY << 1,
     ST_EXPR = ST_METH << 1,
     ST_GEN = ST_EXPR << 1,
 
@@ -2431,8 +2375,27 @@ this.exitUniqueArgs = function() {
   this.mode &= ~SM_UNIQUE;
 };
 
+this.enterFuncArgs = function() {
+  this.mode |= SM_INARGS;
+};
+
+this.exitFuncArgs = function() {
+  ASSERT.call(this, this.insideFuncArgs(),
+    'can not get out of an argument list when not in it');
+  this.mode &= ~SM_INARGS;
+};
+
 }]  ],
-null,
+[GlobalScope.prototype, [function(){
+this.moduleScope = function() {
+  return new Scope(this, ST_MODULE);
+};
+
+this.scriptScope = function() {
+  return new Scope(this, ST_SCRIPT);
+};
+
+}]  ],
 [Hitmap.prototype, [function(){
 this.isValidName = function(name) {
   return this.isValidName_m(name+'%');
@@ -2547,215 +2510,19 @@ this.newSynthLabelName = function(baseLabelName) {
 };
 
 }]  ],
-null,
+[LexicalScope.prototype, [function(){
+this.toBlock = function() {
+  ASSERT.call(this, this.isBody(),
+    'only body scopes are convertible to blocks');
+  ASSERT.call(this, this.children.length === 0,
+    'only body scopes without children ' +
+    'are converible to blocks');
+  this.type |= ST_BLOCK;
+  return this;
+};
+
+}]  ],
 [Parser.prototype, [function(){
-this.asArrowFuncArgList = function(argList) {
-  var i = 0, list = argList;
-  while (i < list.length)
-    this.asArrowFuncArg(list[i++]);
-};
-
-this.asArrowFuncArg = function(arg) {
-  var i = 0, list = null;
-
-  if (this.firstNonSimpArg === null && arg.type !== 'Identifier')
-    this.firstNonSimpArg = arg;
-
-  if (arg === this.po)
-    this.throwTricky('p', this.pt);
-
-  switch  ( arg.type ) {
-  case 'Identifier':
-    if ((this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) &&
-       arg.name === 'await')
-      this.err('arrow.param.is.await.in.an.async',{tn:arg});
-     
-    // TODO: this can also get checked in the scope manager rather than below
-    if (this.tight && arguments_or_eval(arg.name))
-      this.err('binding.to.arguments.or.eval',{tn:arg});
-
-    this.declare(arg);
-    return;
-
-  case 'ArrayExpression':
-    list = arg.elements;
-    while (i < list.length) {
-      if (list[i])
-        this.asArrowFuncArg(list[i]);
-      i++;
-    }
-    arg.type = 'ArrayPattern';
-    return;
-
-  case 'AssignmentExpression':
-//  if (arg.operator !== '=')
-//    this.err('complex.assig.not.arg');
-
-    this.asArrowFuncArg(arg.left);
-    delete arg.operator ;
-    arg.type = 'AssignmentPattern';
-
-    return;
-
-  case 'ObjectExpression':
-    list = arg.properties;
-    while (i < list.length)
-      this.asArrowFuncArg(list[i++].value );
-
-    arg.type = 'ObjectPattern';
-    return;
-
-  case 'AssignmentPattern':
-    this.asArrowFuncArg(arg.left) ;
-    return;
-
-  case 'ArrayPattern' :
-    list = arg.elements;
-    while ( i < list.length ) {
-      if (list[i])
-        this.asArrowFuncArg(list[i]);
-      i++ ;
-    }
-    return;
-
-  case 'SpreadElement':
-    if (this.v < 7 && arg.argument.type !== 'Identifier')
-      this.err('rest.binding.arg.not.id', {tn:arg});
-    this.asArrowFuncArg(arg.argument);
-    arg.type = 'RestElement';
-    return;
-
-  case 'RestElement':
-    if (this.v < 7 && arg.argument.type !== 'Identifier')
-      this.err('rest.binding.arg.not.id',{tn:arg});
-    this.asArrowFuncArg(arg.argument);
-    return;
-
-  case 'ObjectPattern':
-    list = arg.properties;
-    while (i < list.length)
-      this.asArrowFuncArg(list[i++].value);
-    return;
-
-  default:
-    this.err('not.bindable');
-
-  }
-};
-
-
-this.parseArrowFunctionExpression = function(arg, context)   {
-  if (this.v <= 5)
-    this.err('ver.arrow');
-  var tight = this.tight, async = false;
-
-  this.enterFuncScope(false);
-  this.declMode = DECL_MODE_FUNC_PARAMS;
-  this.enterComplex();
-
-  var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= INHERITED_SCOPE_FLAGS;
-
-  if (this.pt === ERR_ASYNC_NEWLINE_BEFORE_PAREN) {
-    ASSERT.call(this, arg === this.pe, 'how can an error core not be equal to the erroneous argument?!');
-    this.err('arrow.newline.before.paren.async');
-  }
-
-  switch ( arg.type ) {
-  case 'Identifier':
-    this.firstNonSimpArg = null;
-    this.asArrowFuncArg(arg);
-    break;
-
-  case PAREN_NODE:
-    this.firstNonSimpArg = null;
-    if (arg.expr) {
-      if (arg.expr.type === 'SequenceExpression')
-        this.asArrowFuncArgList(arg.expr.expressions);
-      else
-        this.asArrowFuncArg(arg.expr);
-    }
-    break;
-
-  case 'CallExpression':
-    if (this.v >= 7 && arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
-      this.err('not.a.valid.arg.list',{tn:arg});
-    if (this.parenAsync !== null && arg.callee === this.parenAsync.expr)
-      this.err('arrow.has.a.paren.async');
-
-//  if (this.v < 7)
-//    this.err('ver.async');
-
-    async = true;
-    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
-    this.asArrowFuncArgList(arg.arguments);
-    break;
-
-  case INTERMEDIATE_ASYNC:
-    async = true;
-    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
-    this.asArrowFuncArg(arg.id);
-    break;
-
-  default:
-    this.err('not.a.valid.arg.list');
-
-  }
-
-  this.currentExprIsParams();
-
-  if (this.nl)
-    this.err('arrow.newline');
-
-  this.next();
-
-  var isExpr = true, nbody = null;
-
-  if ( this.lttype === '{' ) {
-    var prevLabels = this.labels;
-    this.labels = {};
-    isExpr = false;
-    this.scopeFlags |= SCOPE_FLAG_FN;
-    nbody = this.parseFuncBody(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
-    this.labels = prevLabels;
-  }
-  else
-    nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_PAT) ;
-
-  this.exitScope();
-  this.tight = tight;
-
-  this.scopeFlags = scopeFlags;
-
-  var params = core(arg);
-  if (params === null)
-    params = [];
-  else if (params.type === 'SequenceExpression')
-    params = params.expressions;
-  else if (params.type === 'CallExpression')
-    params = params.arguments;
-  else {
-    if (params.type === INTERMEDIATE_ASYNC)
-      params = params.id;
-    params = [params];
-  }
-
-  return {
-    type: 'ArrowFunctionExpression', params: params, 
-    start: arg.start, end: nbody.end,
-    loc: {
-      start: arg.loc.start,
-      end: nbody.loc.end
-    },
-    generator: false, expression: isExpr,
-    body: core(nbody), id : null,
-    async: async
-  }; 
-};
-
-
-},
-function(){
 this .ensureSimpAssig_soft = function(head) {
   switch(head.type) {
   case 'Identifier':
@@ -2776,340 +2543,6 @@ this.ensureSpreadToRestArgument_soft = function(head) {
 };
 
 
-
-},
-function(){
-function idAsync(c0,li0,col0,raw) {
-  return {
-    type: 'Identifier', name: 'async',
-    start: c0, end: c0 + raw.length,
-    loc: {
-      start: { line: li0, column: col0 }, 
-      end: { line: li0, column: col0 + raw.length }
-    }, raw: raw
-  };
-}
-
-this.parseAsync = function(context) {
-  if (this.v < 7) 
-    return this.id();
-
-  var c0 = this.c0,
-      li0 = this.li0,
-      col0 = this.col0,
-      raw = this.ltraw;
-
-  var stmt = this.canBeStatement;
-  if (stmt)
-    this.canBeStatement = false;
-
-  this.next();
-
-  var n = null;
-  switch (this.lttype) {
-  case 'Identifier':
-    if (this.nl) {
-      if ((context & CTX_ASYNC_NO_NEWLINE_FN) &&
-         this.ltval === 'function')
-        n = null;
-      else
-        n = idAsync(c0,li0,col0,raw);
-      break;
-    }
-    if (this.ltval === 'function') {
-      // TODO: eliminate
-      if (stmt) {
-        this.canBeStatement = stmt;
-        if (this.unsatisfiedLabel)
-          this.err('async.label.not.allowed',{c0:c0,li0:li0,col0:col0});
-        if (!this.canDeclareFunctionsInScope(true))
-          this.err('async.is.not.allowed',{c0:c0,li0:li0,col0:col0});
-
-        stmt = false;
-      }
-
-      n = this.parseFunc(context, MEM_ASYNC);
-      n.start = c0;
-      n.loc.start.line = li0;
-      n.loc.start.column = col0;
-      break;
-    }
-    if (context & CTX_ASYNC_NO_NEWLINE_FN) {
-      n = null;
-      break;
-    }
-    n = this.parseAsync_intermediate(c0,li0,col0);
-    this.st = ERR_INTERMEDIATE_ASYNC;
-    this.se = n;
-    break;
-
-  case '(':
-    if (context & CTX_ASYNC_NO_NEWLINE_FN) {
-      n = null;
-      break; 
-    }
-    var hasNewLineBeforeParen = this.nl;
-    var args = this.parseParen(context & CTX_PAT), async = idAsync(c0,li0,col0,raw);
-    n = {
-      type: 'CallExpression', callee: async,
-      start: c0, end: args.end,
-      loc: {
-        start: async.loc.start,
-        end: args.loc.end
-      }, arguments: args.expr ?
-        args.expr.type === 'SequenceExpression' ?
-          args.expr.expressions :
-          [args.expr] :
-        []
-    };
-    
-    if ((context & CTX_PAT) && hasNewLineBeforeParen) {
-      this.pt = ERR_ASYNC_NEWLINE_BEFORE_PAREN;
-      this.pe = n;
-    }
-
-    break;
-
-  default:
-    if (context & CTX_ASYNC_NO_NEWLINE_FN)
-      n = null;
-    else
-      n = idAsync(c0,li0,col0,raw);
-    break;
-  }
-
-  if (stmt)
-    this.canBeStatement = stmt;
-
-  return n;
-};
-
-this.parseAsync_intermediate = function(c0, li0, col0) {
-  var id = this.validateID("");
-  return {
-    type: INTERMEDIATE_ASYNC,
-    id: id,
-    start: c0,
-    loc: { 
-      start: { line: li0, column: col0 }
-    }
-  };
-};
-
-
-},
-function(){
-this. parseClass = function(context) {
-  if (this.v <= 5)
-    this.err('ver.class');
-  if (this.unsatisfiedLabel)
-    this.err('class.label.not.allowed');
-
-  var startc = this.c0,
-      startLoc = this.locBegin();
-
-  var isStmt = false, name = null;
-  if (this.canBeStatement) {
-    isStmt = true;
-    this.canBeStatement = false;
-  }
-
-  if (this.onToken_ !== null)
-    this.lttype = 'Keyword';
-
-  this.next(); // 'class'
-
-  var prevStrict = this.tight;
-
-  this.tight = true;
-
-  // TODO: this is highly unnecessary, and prone to many errors if missed
-//this.scope.strict = true;
-
-  if (isStmt) {
-    if (!this.canDeclareClassInScope())
-      this.err('class.decl.not.in.block',{c0:startc,loc0:startLoc});
-    if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
-      this.declMode = DECL_MODE_CLASS_STMT;
-      name = this.parsePattern();
-    }
-    else if (!(context & CTX_DEFAULT))
-      this.err('class.decl.has.no.name', {c0:startc,loc0:startLoc});
-  }
-  else if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
-    this.enterLexicalScope(false);
-    this.scope.synth = true;
-    this.declMode = DECL_MODE_CLASS_EXPR;
-    name = this.parsePattern();
-  }
-
-  var memParseFlags = MEM_CLASS;
-  var superClass = null;
-  if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
-     this.kw();
-     this.next();
-     superClass = this.parseExprHead(CTX_NONE);
-     memParseFlags |= MEM_SUPER;
-  }
-
-  var list = [];
-  var startcBody = this.c - 1, startLocBody = this.locOn(1);
-
-  if (!this.expectType_soft('{'))
-    this.err('class.no.curly',{c0:startc,loc0:startLoc,extra:{n:name,s:superClass,c:context}});
-
-  var elem = null;
-
-  while (true) {
-    if (this.lttype === ';') {
-      this.next();
-      continue;
-    }
-    elem = this.parseMem(CTX_NONE, memParseFlags);
-    if (elem !== null) {
-      list.push(elem);
-      if (elem.kind === 'constructor')
-        memParseFlags |= MEM_HAS_CONSTRUCTOR;
-    }
-    else break;
-  }
-
-  var endLoc = this.loc();
-  var n = {
-    type: isStmt ? 'ClassDeclaration' : 'ClassExpression', id: name, start: startc,
-    end: this.c, superClass: superClass,
-    loc: { start: startLoc, end: endLoc },
-    body: {
-      type: 'ClassBody', loc: { start: startLocBody, end: endLoc },
-      start: startcBody, end: this.c,
-      body: list ,y:-1
-    } ,y:-1 
-  };
-
-  this.tight = prevStrict;
-
-  if (!this.expectType_soft('}'))
-    this.err('class.unfinished',{tn:n, extra:{delim:'}'}});
-
-  if (isStmt)
-    this.foundStatement = true;
-
-  return n;
-};
-
-this.parseSuper = function() {
-  if (this.v <=5 ) this.err('ver.super');
-
-  var n = {
-    type: 'Super', loc: { start: this.locBegin(), end: this.loc() },
-    start: this.c0, end: this.c
-  };
- 
-  this.next();
-  switch ( this.lttype ) {
-  case '(':
-    if ((this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER) !==
-      SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER)
-      this.err('class.super.call',{tn:n});
- 
-    break;
- 
-  case '.':
-  case '[':
-    if (!(this.scopeFlags & SCOPE_FLAG_ALLOW_SUPER))
-      this.err('class.super.mem',{tn:n});
- 
-    break ;
-  
-  default:
-    this.err('class.super.lone',{tn:n}); 
-
-  }
- 
-  return n;
-};
-
-},
-function(){
-this.readMultiComment = function () {
-  var c = this.c, l = this.src, e = l.length,
-      r = -1, n = true, start = c;
-
-  var c0 = c, li0 = this.li, col0 = this.col;
-
-  while (c < e) {
-    switch (r = l.charCodeAt(c++ ) ) {
-    case CH_MUL:
-      if (l.charCodeAt(c) === CH_DIV) {
-        c++;
-        this.col += (c-start);
-        this.c = c;
-        if (this.onComment_ !== null)
-          this.onComment(true,c0,{line:li0,column:col0},
-            this.c,{line:this.li,column:this.col});
-
-        return n;
-      }
-      continue ;
-
-    case CH_CARRIAGE_RETURN:
-      if (CH_LINE_FEED === l.charCodeAt(c))
-        c++;
-    case CH_LINE_FEED:
-    case 0x2028:
-    case 0x2029:
-      start = c;
-      if (n)
-        n = false;
-      this.col = 0;
-      this.li++;
-      continue;
-
-//  default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
-
-    }
-  }
-
-  this.col += (c-start);
-  this.c = c;
-
-  this.err( 'comment.multi.unfinished',{extra:{c0:c0,li0:li0,col0:col0}});
-};
-
-this.readLineComment = function() {
-  var c = this.c, l = this.src,
-      e = l.length, r = -1;
-
-  var c0 = c, li0 = this.li, col0 = this.col, li = -1, col = -1;
-
-  L:
-  while ( c < e )
-    switch (r = l.charCodeAt(c++ ) ) {
-    case CH_CARRIAGE_RETURN:
-      if (CH_LINE_FEED === l.charCodeAt(c))
-        c++;
-    case CH_LINE_FEED :
-    case 0x2028:
-    case 0x2029 :
-      col = this.col;
-      li = this.li;
-      this.col = 0 ;
-      this.li++;
-      break L;
-    
-//  default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
-    }
-
-   this.c=c;
-
-   if (this.onComment_ !== null) {
-     if (li === -1) { li = this.li; col = this.col; }
-     this.onComment(false,c0,{line:li0,column:col0},
-       this.c,{line:li,column:col+(c-c0)});
-   }
-
-   return;
-};
 
 },
 function(){
@@ -3250,376 +2683,182 @@ this.onToken_kw = function(c0,loc0,val) {
 
 },
 function(){
-this.parseExport = function() {
-  if (this.v <= 5) this.err('ver.exim');
+this.asArrowFuncArgList = function(argList) {
+  var i = 0, list = argList;
+  while (i < list.length)
+    this.asArrowFuncArg(list[i++]);
+};
 
-  if ( !this.canBeStatement && this.err('not.stmt') )
-    return this.errorHandlerOutput ;
+this.asArrowFuncArg = function(arg) {
+  var i = 0, list = null;
 
-  this.canBeStatement = false;
+  if (this.firstNonSimpArg === null && arg.type !== 'Identifier')
+    this.firstNonSimpArg = arg;
 
-  var startc = this.c0, startLoc = this.locBegin();
-  this.next();
+  if (arg === this.po)
+    this.throwTricky('p', this.pt);
 
-  var list = [], local = null, src = null ;
-  var endI = 0;
-  var ex = null;
+  switch  ( arg.type ) {
+  case 'Identifier':
+    if ((this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) &&
+       arg.name === 'await')
+      this.err('arrow.param.is.await.in.an.async',{tn:arg});
+     
+    // TODO: this can also get checked in the scope manager rather than below
+    if (this.tight && arguments_or_eval(arg.name))
+      this.err('binding.to.arguments.or.eval',{tn:arg});
 
-  var semiLoc = null;
-  switch ( this.lttype ) {
-  case 'op':
-    if (this.ltraw !== '*' &&
-        this.err('export.all.not.*',{extra:[startc,startLoc]}) )
-      return this.errorHandlerOutput;
- 
-    this.next();
-    if ( !this.expectID_soft('from') &&
-          this.err('export.all.no.from',{extra:[startc,startLoc]}) )
-      return this.errorHandlerOutput;
+    this.declare(arg);
+    return;
 
-    if (!(this.lttype === 'Literal' &&
-         typeof this.ltval === STRING_TYPE ) && 
-         this.err('export.all.source.not.str',{extra:[startc,startLoc]}) )
-      return this.errorHandlerOutput;
+  case 'ArrayExpression':
+    list = arg.elements;
+    while (i < list.length) {
+      if (list[i])
+        this.asArrowFuncArg(list[i]);
+      i++;
+    }
+    arg.type = 'ArrayPattern';
+    return;
 
-    src = this.numstr();
-    
-    endI = this.semiI();
-    semiLoc = this.semiLoc_soft();
-    if ( !semiLoc && !this.newlineBeforeLookAhead &&
-         this.err('no.semi') )
-      return this.errorHandlerOutput;
+  case 'AssignmentExpression':
+//  if (arg.operator !== '=')
+//    this.err('complex.assig.not.arg');
 
-    this.foundStatement = true;
-    
-    return  { type: 'ExportAllDeclaration',
-               start: startc,
-               loc: { start: startLoc, end: semiLoc || src.loc.end },
-                end: endI || src.end,
-               source: src };
+    this.asArrowFuncArg(arg.left);
+    delete arg.operator ;
+    arg.type = 'AssignmentPattern';
 
-   case '{':
-     this.next();
-     var firstReserved = null;
+    return;
 
-     while ( this.lttype === 'Identifier' ) {
-       local = this.id();
-       if ( !firstReserved ) {
-         this.throwReserved = false;
-         this.validateID(local.name);
-         if ( this.throwReserved )
-           firstReserved = local;
-         else
-           this.throwReserved = true;
-       }
-       ex = local;
-       if ( this.lttype === 'Identifier' ) {
-         if ( this.ltval !== 'as' && 
-              this.err('export.specifier.not.as',{extra:[startc,startLoc,local,list]}) )
-           return this.errorHandlerOutput ;
+  case 'ObjectExpression':
+    list = arg.properties;
+    while (i < list.length)
+      this.asArrowFuncArg(list[i++].value );
 
-         this.next();
-         if ( this.lttype !== 'Identifier' ) { 
-            if (  this.err('export.specifier.after.as.id',{extra:[startc,startLoc,local,list]}) )
-           return this.errorHandlerOutput;
-         }
-         else
-            ex = this.id();
-       }
-       list.push({ type: 'ExportSpecifier',
-                  start: local.start,
-                  loc: { start: local.loc.start, end: ex.loc.end }, 
-                   end: ex.end, exported: ex,
-                  local: local }) ;
+    arg.type = 'ObjectPattern';
+    return;
 
-       if ( this.lttype === ',' )
-         this.next();
-       else
-         break;
-     }
+  case 'AssignmentPattern':
+    this.asArrowFuncArg(arg.left) ;
+    return;
 
-     endI = this.c;
-     var li = this.li, col = this.col;
-  
-     if ( !this.expectType_soft('}') && 
-           this.err('export.named.list.not.finished',{extra:[startc,startLoc,list,endI,li,col]}) )
-       return this.errorHandlerOutput  ;
+  case 'ArrayPattern' :
+    list = arg.elements;
+    while ( i < list.length ) {
+      if (list[i])
+        this.asArrowFuncArg(list[i]);
+      i++ ;
+    }
+    return;
 
-     if ( this.lttype === 'Identifier' ) {
-       if ( this.ltval !== 'from' &&
-            this.err('export.named.not.id.from',{extra:[startc,startLoc,list,endI,li,col]}) )
-          return this.errorHandlerOutput;
+  case 'SpreadElement':
+    if (this.v < 7 && arg.argument.type !== 'Identifier')
+      this.err('rest.binding.arg.not.id', {tn:arg});
+    this.asArrowFuncArg(arg.argument);
+    arg.type = 'RestElement';
+    return;
 
-       else this.next();
-       if ( !( this.lttype === 'Literal' &&
-              typeof this.ltval ===  STRING_TYPE) &&
-            this.err('export.named.source.not.str', {extra:[startc,startloc,list,endI,li,col]}) )
-         return this.errorHandlerOutput ;
+  case 'RestElement':
+    if (this.v < 7 && arg.argument.type !== 'Identifier')
+      this.err('rest.binding.arg.not.id',{tn:arg});
+    this.asArrowFuncArg(arg.argument);
+    return;
 
-       else {
-          src = this.numstr();
-          endI = src.end;
-       }
-     }
-     else
-        if (firstReserved && this.err('export.named.has.reserved',{tn:firstReserved,extra:[startc,startLoc,list,endI,li,col]}) )
-          return this.errorHandlerOutput ;
+  case 'ObjectPattern':
+    list = arg.properties;
+    while (i < list.length)
+      this.asArrowFuncArg(list[i++].value);
+    return;
 
-     endI = this.semiI() || endI;
-     semiLoc = this.semiLoc_soft();
-     if ( !semiLoc && !this.nl &&
-          this.err('no.semi'))
-       return this.errorHandlerOutput; 
-
-     this.foundStatement = true;
-     return { type: 'ExportNamedDeclaration',
-             start: startc,
-             loc: { start: startLoc, end: semiLoc || ( src && src.loc.end ) ||
-                                          { line: li, column: col } },
-              end: endI, declaration: null,
-               specifiers: list,
-              source: src };
+  default:
+    this.err('not.bindable');
 
   }
+};
 
-  var context = CTX_NONE;
-
-  if ( this.lttype === 'Identifier' && 
-       this.ltval === 'default' ) {
-    context = CTX_DEFAULT;
-    if (this.onToken_ !== null)
-      this.lttype = 'Keyword';
-    this.next();
-  }
-  
-  if ( this.lttype === 'Identifier' ) {
-      switch ( this.ltval ) {
-         case 'let':
-         case 'const':
-            if (context === CTX_DEFAULT && 
-                this.err('export.default.const.let',{extra:[startc,startLoc]}) )
-              return this.errorHandlerOutput;
-                
-            this.canBeStatement = true;
-            ex = this.parseVariableDeclaration(CTX_NONE);
-            break;
-              
-         case 'class':
-            this.canBeStatement = true;
-            ex = this.parseClass(context);
-            break;
-  
-         case 'var':
-            this.canBeStatement = true;
-            ex = this.parseVariableDeclaration(CTX_NONE ) ;
-            break ;
-
-         case 'function':
-            this.canBeStatement = true;
-            ex = this.parseFunc( context, 0 );
-            break ;
-
-         case 'async':
-           this.canBeStatement = true;
-           if (context & CTX_DEFAULT) {
-             ex = this.parseAsync(context);
-             if (this.foundStatement)
-               this.foundStatement = false;
-             else {
-               this.pendingExprHead = ex;
-               ex = null;
-             }
-             break;
-           }
-
-           ex = this.parseAsync(context|CTX_ASYNC_NO_NEWLINE_FN);
-           if (ex === null) {
-             if (this.lttype === 'Identifier' && this.ltval === 'function') {
-               ASSERT.call(this, this.nl, 'no newline before the "function" thing and still errors? -- impossible!');
-               this.err('export.newline.before.the.function', {extra:[startc,startLoc]});
-             } 
-             else
-               this.err('export.async.but.no.function',{extra:[startc,startLoc]});
-           }
-       }
-  }
-
-  if ( context !== CTX_DEFAULT ) {
-
-    if (!ex && this.err('export.named.no.exports',{extra:[startc,startLoc]}) )
-      return this.errorHandlerOutput ;
-    
-    this.foundStatement = true;
-    return { type: 'ExportNamedDeclaration',
-           start: startc,
-           loc: { start: startLoc, end: ex.loc.end },
-            end: ex.end , declaration: ex,
-             specifiers: list ,
-            source: null };
-  }
-
-  var endLoc = null;
-
-  if ( ex === null ) {
-    // TODO: this can exclusively happen as a result of calling `parseAsync` for parsing an async declaration;
-    // eliminate
-    if (this.canBeStatement)
-      this.canBeStatement = false
-
-    ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT );
-    endI = this.semiI();
-    endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
-    if ( !endLoc && !this.nl &&
-         this.err('no.semi') )
-      return this.errorHandlerOutput;
-  }
-
-  this.foundStatement = true;
-  return { type: 'ExportDefaultDeclaration',    
-          start: startc,
-          loc: { start: startLoc, end: endLoc || ex.loc.end },
-           end: endI || ex.end, declaration: core( ex ) };
-}; 
 
 },
 function(){
-// TODO: needs a thorough simplification
-this.parseImport = function() {
-  if (this.v <= 5)
-    this.err('ver.exim');
+this.toAssig = function(head, context) {
+  if (head === this.ao)
+    this.throwTricky('a', this.at, this.ae)
 
-  if (!this.canBeStatement)
-    this.err('not.stmt');
-
-  this.canBeStatement = false;
-
-  var startc = this.c0,
-      startLoc = this.locBegin(),
-      hasList = false;
-
-  this.next();
-
-  var hasMore = true, list = [], local = null;
-  if ( this.lttype === 'Identifier' ) {
-    local = this.validateID("");
-    list.push({
-      type: 'ImportDefaultSpecifier',
-      start: local.start,
-      loc: local.loc,
-      end: local.end,
-      local: local
-    });
-    if (this.lttype === ',')
-      this.next();
-    else
-      hasMore = false;
-  }
-
-  var spStartc = 0, spStartLoc = null;
-  
-  if (hasMore) switch (this.lttype) {   
-  case 'op':
-    if (this.ltraw !== '*')
-      this.err('import.namespace.specifier.not.*');
-    else {
-      spStartc = this.c - 1;
-      spStartLoc = this.locOn(1);
-  
-      this.next();
-      if (!this.expectID_soft('as'))
-        this.err('import.namespace.specifier.no.as');
-      if (this.lttype !== 'Identifier')
-        this.err('import.namespace.specifier.local.not.id');
- 
-      local = this.validateID("");
-      list.push({
-        type: 'ImportNamespaceSpecifier',
-        start: spStartc,
-        loc: { start: spStartLoc, end: local.loc.end },
-        end: local.end,
-        local: local
-      });
-    }
-    break;
-  
-  case '{':
-    hasList = true;
-    this.next();
-    while ( this.lttype === 'Identifier' ) {
-      local = this.id();
-      var im = local; 
-      if ( this.lttype === 'Identifier' ) {
-        if ( this.ltval !== 'as' && 
-             this.err('import.specifier.no.as') )
-          return this.errorHandlerOutput ;
- 
-        this.next();
-        if ( this.lttype !== 'Identifier' &&
-             this.err('import.specifier.local.not.id') )
-          return this.errorHandlerOutput ;
- 
-        local = this.validateID("");
+  var i = 0, list = null;
+  switch (head.type) {
+  case 'Identifier':
+    if (this.tight && arguments_or_eval(head.name)) {
+      if (this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT)
+        this.st = ERR_NONE_YET;
+      if (this.st === ERR_NONE_YET) {
+        this.st = ERR_ARGUMENTS_OR_EVAL_ASSIGNED;
+        this.se = head;
       }
-      else this.validateID(local.name);
- 
-      list.push({
-        type: 'ImportSpecifier',
-        start: im.start,
-        loc: { start: im.loc.start, end: local.loc.end },
-        end: local.end, imported: im,
-        local: local
-      });
- 
-      if ( this.lttype === ',' )
-         this.next();
-      else
-         break ;                                  
+//    if (context & CTX_NO_SIMPLE_ERR)
+//      this.currentExprIsSimple();
     }
- 
-    if (!this.expectType_soft('}')) 
-      this.err('import.specifier.list.unfinished');
- 
-    break ;
+    return;
+
+  case 'MemberExpression':
+    return;
+
+  case 'ObjectExpression':
+    if (this.v <= 5) this.err('ver.pat.obj',{tn:head});
+    i = 0; list = head.properties;
+    while (i < list.length)
+      this.toAssig(list[i++], context);
+    head.type = 'ObjectPattern';
+    return;
+
+  case 'ArrayExpression':
+    if (this.v <= 5) this.err('ver.pat.arr',{tn:head});
+    i = 0; list = head.elements;
+    while (i < list.length) {
+      list[i] && this.toAssig(list[i], context);
+      i++ ;
+    }
+    head.type = 'ArrayPattern';
+    return;
+
+  case 'AssignmentExpression':
+    // TODO: operator is the one that must be pinned,
+    // but head is pinned currently
+    if (head.operator !== '=')
+      this.err('complex.assig.not.pattern');
+
+    // TODO: the left is not re-checked for errors
+    // because it is already an assignable pattern;
+    // this requires keeping track of the latest
+    // ea error, in order to re-record it if it is
+    // also the first error in the current pattern
+    if (this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT &&
+       head === this.so) {
+      this.st = ERR_NONE_YET;
+      this.toAssig(this.se);
+    }
+
+    head.type = 'AssignmentPattern';
+    delete head.operator;
+    return;
+
+  case 'SpreadElement':
+    if (head.argument.type === 'AssignmentExpression')
+      this.err('rest.arg.not.valid',{tn:head});
+    this.toAssig(head.argument, context);
+    head.type = 'RestElement';
+    return;
+
+  case 'Property':
+    this.toAssig(head.value, context);
+    return;
 
   default:
-    if (list.length) {
-      ASSERT.call(this, list.length === 1,
-        'how come has more than a single specifier been parsed before the comma was reached?!');
-      this.err('import.invalid.specifier.after.comma');
-    }
+    this.err('not.assignable',{tn:core(head)});
+ 
   }
+};
 
-   if (list.length || hasList) {
-     if (!this.expectID_soft('from'))
-       this.err('import.from');
-   }
 
-   // TODO: even though it's working the way it should, errors might be misleading for cases like:
-   // `import , from "a"`
-   if (!(this.lttype === 'Literal' &&
-        typeof this.ltval === STRING_TYPE))
-     this.err('import.source.is.not.str');
-
-   var src = this.numstr();
-   var endI = this.semiI() || src.end, 
-       semiLoc = this.semiLoc_soft();
-
-   if (!semiLoc && !this.nl)
-     this.err('no.semi');
-   
-   this.foundStatement = true;
-
-   return {
-     type: 'ImportDeclaration',
-     start: startc,
-     loc: {
-       start: startLoc,
-       end: semiLoc || src.loc.end
-     },
-     end:  endI , specifiers: list,
-     source: src
-   };
-}; 
 
 },
 function(){
@@ -4319,1119 +3558,6 @@ this.normalize = function(err) {
 
 },
 function(){
-this.readEsc = function ()  {
-  var src = this.src, b0 = 0, b = 0, start = this.c;
-  switch ( src.charCodeAt ( ++this.c ) ) {
-   case CH_BACK_SLASH: return '\\';
-   case CH_MULTI_QUOTE: return'\"' ;
-   case CH_SINGLE_QUOTE: return '\'' ;
-   case CH_b: return '\b' ;
-   case CH_v: return '\v' ;
-   case CH_f: return '\f' ;
-   case CH_t: return '\t' ;
-   case CH_r: return '\r' ;
-   case CH_n: return '\n' ;
-   case CH_u:
-      b0 = this.peekUSeq();
-      if ( b0 >= 0x0D800 && b0 <= 0x0DBFF ) {
-        this.c++;
-        return String.fromCharCode(b0, this.peekTheSecondByte());
-      }
-      return fromcode(b0);
-
-   case CH_x :
-      b0 = toNum(this.src.charCodeAt(++this.c));
-      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
-        return this.errorHandlerOutput;
-      b = toNum(this.src.charCodeAt(++this.c));
-      if ( b === -1 && this.err('hex.esc.byte.not.hex') )
-        return this.errorHandlerOutput;
-      return String.fromCharCode((b0<<4)|b);
-
-   case CH_0: case CH_1: case CH_2:
-   case CH_3:
-       b0 = src.charCodeAt(this.c);
-       if ( this.tight ) {
-          if ( b0 === CH_0 ) {
-               b0 = src.charCodeAt(this.c +  1);
-               if ( b0 < CH_0 || b0 >= CH_8 )
-                 return '\0';
-          }
-          if ( this.err('strict.oct.str.esc') )
-            return this.errorHandlerOutput
-       }
-       else if (this.directive !== DIR_NONE) {
-         if (this.esct === ERR_NONE_YET) {
-           this.eloc.c0 = this.c;
-           this.eloc.li0 = this.li;
-           this.eloc.col0 = this.col + (this.c-start);
-           this.esct = ERR_PIN_OCTAL_IN_STRICT;
-         }
-       }
-
-       b = b0 - CH_0;
-       b0 = src.charCodeAt(this.c + 1 );
-       if ( b0 >= CH_0 && b0 < CH_8 ) {
-          this.c++;
-          b <<= 3;
-          b += (b0-CH_0);
-          b0 = src.charCodeAt(this.c+1);
-          if ( b0 >= CH_0 && b0 < CH_8 ) {
-             this.c++;
-             b <<= 3;
-             b += (b0-CH_0);
-          }
-       }
-       return String.fromCharCode(b)  ;
-
-    case CH_4: case CH_5: case CH_6: case CH_7:
-       if (this.tight)
-         this.err('strict.oct.str.esc');
-       else if (this.directive !== DIR_NONE) {
-         if (this.esct === ERR_NONE_YET) {
-           this.eloc.c0 = this.c;
-           this.eloc.li0 = this.li;
-           this.eloc.col0 = this.col + (this.c-start);
-           this.esct = ERR_PIN_OCTAL_IN_STRICT;
-         }
-       }
-
-       b0 = src.charCodeAt(this.c);
-       b  = b0 - CH_0;
-       b0 = src.charCodeAt(this.c + 1 );
-       if ( b0 >= CH_0 && b0 < CH_8 ) {
-          this.c++; 
-          b <<= 3; 
-          b += (b0-CH_0);
-       }
-       return String.fromCharCode(b)  ;
-
-   case CH_8:
-   case CH_9:
-       if ( this.err('esc.8.or.9') ) 
-         return this.errorHandlerOutput ;
-       return '';
-
-   case CH_CARRIAGE_RETURN:
-      if ( src.charCodeAt(this.c + 1) === CH_LINE_FEED ) this.c++;
-   case CH_LINE_FEED:
-   case 0x2028:
-   case 0x2029:
-      start = this.c;
-      this.col = 0;
-      this.li++;
-      return '';
-
-   default:
-      return src.charAt(this.c) ;
-  }
-};
-
-this.readStrictEsc = function ()  {
-  var src = this.src, b0 = 0, b = 0;
-  switch ( src.charCodeAt ( ++this.c ) ) {
-   case CH_BACK_SLASH: return '\\';
-   case CH_MULTI_QUOTE: return'\"' ;
-   case CH_SINGLE_QUOTE: return '\'' ;
-   case CH_b: return '\b' ;
-   case CH_v: return '\v' ;
-   case CH_f: return '\f' ;
-   case CH_t: return '\t' ;
-   case CH_r: return '\r' ;
-   case CH_n: return '\n' ;
-   case CH_u:
-      b0 = this.peekUSeq();
-      if ( b0 >= 0x0D800 && b0 <= 0x0DBFF ) {
-        this.c++;
-        return String.fromCharCode(b0, this.peekTheSecondByte());
-      }
-      return fromcode(b0);
-
-   case CH_x :
-      b0 = toNum(this.src.charCodeAt(++this.c));
-      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
-        return this.errorHandlerOutput;
-      b = toNum(this.src.charCodeAt(++this.c));
-      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
-        return this.errorHandlerOutput;
-      return String.fromCharCode((b0<<4)|b);
-
-   case CH_0: case CH_1: case CH_2:
-   case CH_3:
-       b0 = src.charCodeAt(this.c);
-       if ( b0 === CH_0 ) {
-            b0 = src.charCodeAt(this.c +  1);
-            if ( b0 < CH_0 || b0 >= CH_8 )
-              return '\0';
-       }
-       if ( this.err('strict.oct.str.esc.templ') )
-         return this.errorHandlerOutput
-
-    case CH_4: case CH_5: case CH_6: case CH_7:
-       if (this.err('strict.oct.str.esc.templ') )
-         return this.errorHandlerOutput  ;
-
-   case CH_8:
-   case CH_9:
-       if ( this.err('esc.8.or.9') ) 
-         return this.errorHandlerOutput ;
-
-   case CH_CARRIAGE_RETURN:
-      if ( src.charCodeAt(this.c + 1) === CH_LINE_FEED ) this.c++;
-   case CH_LINE_FEED:
-   case 0x2028:
-   case 0x2029:
-      this.col = 0;
-      this.li++;
-      return '';
-
-   default:
-      return src.charAt(this.c) ;
-  }
-};
-
-
-
-},
-function(){
-
-this.peekTheSecondByte = function () {
-  var e = this.src.charCodeAt(this.c), start = this.c;
-  if (CH_BACK_SLASH === e) {
-    if (CH_u !== this.src.charCodeAt(++this.c) &&
-        this.err('u.second.esc.not.u') )
-      return this.errorHandlerOutput ;
-
-    e = (this.peekUSeq());
-  }
-//  else this.col--;
-  if ( (e < 0x0DC00 || e > 0x0DFFF) && this.err('u.second.not.in.range',{extra:start}) )
-    return this.errorHandlerOutput;
-
-  return e;
-};
-
-this.peekUSeq = function () {
-  var c = ++this.c, l = this.src, e = l.length;
-  var byteVal = 0;
-  var n = l.charCodeAt(c);
-  if (CH_LCURLY === n) { // u{ 
-    ++c;
-    n = l.charCodeAt(c);
-    do {
-      n = toNum(n);
-      if ( n === - 1 && this.err('u.esc.hex',{c0:c}) )
-        return this.errorHandlerOutput ;
-
-      byteVal <<= 4;
-      byteVal += n;
-      if (byteVal > 0x010FFFF && this.err('u.curly.not.in.range',{c0:c}) )
-        return this.errorHandler ;
-
-      n = l.charCodeAt( ++ c);
-    } while (c < e && n !== CH_RCURLY);
-
-    if ( n !== CH_RCURLY && this.err('u.curly.is.unfinished',{c0:c}) ) 
-      return this.errorHandlerOutput ;
-
-    this.c = c;
-    return byteVal;
-  }
- 
-  n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
-    return this.errorHandlerOutput;
-  byteVal = n;
-  c++ ;
-  n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
-    return this.errorHandlerOutput;
-  byteVal <<= 4; byteVal += n;
-  c++ ;
-  n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
-    return this.errorHandlerOutput;
-  byteVal <<= 4; byteVal += n;
-  c++ ;
-  n = toNum(l.charCodeAt(c));
-  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
-    return this.errorHandlerOutput;
-  byteVal <<= 4; byteVal += n;
-
-  this.c = c;
-
-  return byteVal;
-};
-
-
-
-},
-function(){
-this.parseFor = function() {
-  if (!this.ensureStmt_soft())
-    this.err('not.stmt');
-
-  this.fixupLabels(true) ;
-
-  var startc = this.c0,
-      startLoc = this.locBegin();
-
-  this.next () ;
-  if (!this.expectType_soft ('('))
-    this.err('for.with.no.opening.paren',{extra:[startc,startLoc]});
-
-  var head = null, headIsExpr = false;
-
-  var scopeFlags = this.scopeFlags;
-
-  // inside a for statement's init is like a block
-  this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
-
-  this.enterLexicalScope(true);
-
-  this.missingInit = false;
-  if ( this.lttype === 'Identifier' ) {
-    switch ( this.ltval ) {
-    case 'var':
-      this.canBeStatement = true;
-      head = this.parseVariableDeclaration(CTX_FOR);
-      break;
-
-    case 'let':
-      if ( this.v > 5 ) {
-        this.canBeStatement = true;
-        head = this.parseLet(CTX_FOR);
-      }
-      break;
-
-    case 'const' :
-      if (this.v < 5)
-        this.err('for.const.not.in.v5',{extra:[startc,startLoc,scopeFlags]});
-
-      this.canBeStatement = true;
-      head = this. parseVariableDeclaration(CTX_FOR);
-         break ;
-
-    }
-  }
-
-  this.scopeFlags = scopeFlags;
-
-  if (head === null) {
-    headIsExpr = true;
-    head = this.parseExpr( CTX_NULLABLE|CTX_PAT|CTX_FOR ) ;
-  }
-  else 
-    this.foundStatement = false;
-
-  var nbody = null;
-  var afterHead = null;
-
-  if (head !== null && this.lttype === 'Identifier') {
-    var kind = 'ForInStatement';
-    switch ( this.ltval ) {
-    case 'of':
-       kind = 'ForOfStatement';
-       this.ensureVarsAreNotResolvingToCatchParams();
-
-    case 'in':
-      if (this.ltval === 'in')
-        this.kw(), this.resvchk();
-
-      if (headIsExpr) {
-        if (head.type === 'AssignmentExpression') { // TODO: not in the spec
-          // TODO: squash with the `else if (head.init)` below
-        //if (this.tight || kind === 'ForOfStatement' || this.v < 7)
-            this.err('for.in.has.init.assig',{tn:head,extra:[startc,startLoc,kind]});
-        }
-        this.adjustErrors()
-        this.toAssig(head, CTX_FOR|CTX_PAT);
-        this.currentExprIsAssig();
-      }
-      else if (head.declarations.length !== 1)
-        this.err('for.decl.multi',{tn:head,extra:[startc,startLoc,kind]});
-      else if (this.missingInit)
-        this.missingInit = false;
-      else if (head.declarations[0].init) {
-        if (this.tight || kind === 'ForOfStatement' ||
-            this.v < 7 || head.declarations[0].id.type !== 'Identifier' || head.kind !== 'var')
-          this.err('for.in.has.decl.init',{tn:head,extra:[startc,startLoc,kind]});
-      }
-
-      this.next();
-      afterHead = kind === 'ForOfStatement' ? 
-        this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR) :
-        this.parseExpr(CTX_NONE|CTX_TOP);
-
-      if (!this.expectType_soft(')'))
-        this.err('for.iter.no.end.paren',{extra:[head,startc,startLoc,afterHead,kind]});
-
-      this.scopeFlags &= CLEAR_IB;
-      this.scopeFlags |= ( SCOPE_FLAG_BREAK|SCOPE_FLAG_CONTINUE );
-
-      nbody = this.parseStatement(true);
-      if (!nbody)
-        this.err('null.stmt');
-
-      this.scopeFlags = scopeFlags;
-      this.foundStatement = true;
-      this.exitScope();
-
-      return {
-        type: kind, loc: { start: startLoc, end: nbody.loc.end },
-        start: startc, end: nbody.end,
-        right: core(afterHead), left: head,
-        body: nbody ,y:-1
-      };
-
-    default:
-      this.err('for.iter.not.of.in',{extra:[startc,startLoc,head]});
-
-    }
-  }
-
-  if (headIsExpr)
-    this.currentExprIsSimple();
-  else if (head && this.missingInit)
-    this.err('for.decl.no.init',{extra:[startc,startLoc,head]});
-
-  if (!this.expectType_soft (';'))
-    this.err('for.simple.no.init.semi',{extra:[startc,startLoc,head]});
-
-  afterHead = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
-  if (!this.expectType_soft (';'))
-    this.err('for.simple.no.test.semi',{extra:[startc,startLoc,head,afterHead]});
-
-  var tail = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
-  if (!this.expectType_soft (')'))
-    this.err('for.simple.no.end.paren',{extra:[startc,startLoc,head,afterHead,tail]});
-
-  this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= ( SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
-
-  nbody = this.parseStatement(true);
-  if (!nbody)
-    this.err('null.stmt');
-
-  this.scopeFlags = scopeFlags;
-  this.foundStatement = true;
-  this.exitScope();
-
-  return {
-    type: 'ForStatement', init: head && core(head), 
-    start : startc, end: nbody.end,
-    test: afterHead && core(afterHead),
-    loc: { start: startLoc, end: nbody.loc.end },
-    update: tail && core(tail), body: nbody ,y:-1
-  };
-};
-
-// TODO: exsureVarsAreNotResolvingToCatchParams_soft
-this.ensureVarsAreNotResolvingToCatchParams = function() {
-  var list = this.scope.nameList, e = 0;
-  while (e < list.length) {
-    if (list[e].type & DECL_MODE_CATCH_PARAMS)
-      this.err('for.of.var.overrides.catch',{tn:this.idNames[list[e].id.name+'%']});
-    e++;
-  }
-};
-
-},
-function(){
-this.parseArgs = function (argLen) {
-  var c0 = -1, li0 = -1, col0 = -1, tail = true,
-      list = [], elem = null;
-
-  if (!this.expectType_soft('('))
-    this.err('func.args.no.opening.paren');
-
-  var firstNonSimpArg = null;
-  while (list.length !== argLen) {
-    elem = this.parsePattern();
-    if (elem) {
-      if (this.lttype === 'op' && this.ltraw === '=') {
-        elem = this.parseAssig(elem);
-        this.makeComplex();
-      }
-      if (!firstNonSimpArg && elem.type !== 'Identifier')
-        firstNonSimpArg =  elem;
-      list.push(elem);
-    }
-    else {
-      if (list.length !== 0) {
-        if (this.v < 7)
-          this.err('arg.non.tail.in.func',
-            {c0:c0,li0:li0,col0:col0,extra:{list:list}});
-      }
-      break ;
-    }
-
-    if (this.lttype === ',' ) {
-      c0 = this.c0, li0 = this.li0, col0 = this.col0;
-      this.next();
-    }
-    else { tail = false; break; }
-  }
-  if (argLen === ARGLEN_ANY) {
-    if (tail && this.lttype === '...') {
-      this.makeComplex();
-      elem = this.parseRestElement();
-      list.push( elem  );
-      if ( !firstNonSimpArg )
-        firstNonSimpArg = elem;
-    }
-  }
-  else if (list.length !== argLen)
-    this.err('func.args.not.enough');
-
-  if (!this.expectType_soft (')'))
-    this.err('func.args.no.end.paren');
-
-  if (firstNonSimpArg)
-    this.firstNonSimpArg = firstNonSimpArg;
- 
-  return list;
-};
-
-this.parseFuncBody = function(context) {
-  var elem = null;
-  
-  if ( this.lttype !== '{' ) {
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_NULLABLE|CTX_PAT);
-    if ( elem === null )
-      return this.err('func.body.is.empty.expr');
-    return elem;
-  }
-
-  this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
-  var startc= this.c - 1, startLoc = this.locOn(1);
-
-
-  this.directive = DIR_FUNC;
-  this.clearAllStrictErrors();
-
-  this.next() ;
-
-  var list = this.blck();
-
-  var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
-           loc: { start: startLoc, end: this.loc() }/* ,scope: this.scope ,y:-1*/ };
-
-  if ( ! this.expectType_soft ( '}' ) &&
-         this.err('func.body.is.unfinished') )
-    return this.errorHandlerOutput ;
-
-  return  n;
-};
-
-this . makeStrict  = function() {
-   if ( this.firstNonSimpArg )
-     return this.err('func.strict.non.simple.param')  ; 
-
-   if ( this.tight ) return;
-
-   this.tight = true;
-   this.scope.strict = true;
-
-   var a = 0, argNames = this.scope.nameList;
-   while (a < argNames.length) {
-     var decl = argNames[a];
-     if (decl.type&DECL_DUPE)
-       this.err('func.args.has.dup',{tn:this.idNames[decl.id.name+'%']});
-     ASSERT.call(this, !arguments_or_eval(decl.name));
-     this.validateID(decl.name);
-
-     a++;
-   }
-};
-
-
-
-},
-function(){
-this.parseFunc = function(context, flags) {
-  var prevLabels = this.labels,
-      prevStrict = this.tight,
-      prevScopeFlags = this.scopeFlags,
-      prevDeclMode = this.declMode,
-      prevNonSimpArg = this.firstNonSimpArg;
-
-  var isStmt = false, startc = this.c0, startLoc = this.locBegin();
-  if (this.canBeStatement) {
-    isStmt = true;
-    this.canBeStatement = false;
-  }
-
-  var isGen = false,
-      isWhole = !(flags & MEM_CLASS_OR_OBJ);
-   
-  var argLen = !(flags & MEM_ACCESSOR) ? ARGLEN_ANY :
-    (flags & MEM_SET) ? ARGLEN_SET : ARGLEN_GET;
-
-  // current func name
-  var cfn = null;
-
-  if (isWhole) { 
-    this.kw();
-    this.next();
-    if (this.lttype === 'op' && this.ltraw === '*') {
-      if (this.v <= 5)
-        this.err('ver.gen');
-      if (flags & MEM_ASYNC)
-        this.err('async.gen.not.yet.supported');
-      if (this.unsatisfiedLabel)
-        this.err('gen.label.not.allowed');
-      if (!this.canDeclareFunctionsInScope(true))
-        this.err('gen.decl.not.allowed');
-
-      isGen = true;
-      this.next();
-    }
-
-    if (isStmt) {
-      if (!this.canDeclareFunctionsInScope(isGen))
-        this.err('func.decl.not.allowed',{c0:startc,loc0:startLoc});
-      if (this.unsatisfiedLabel) {
-        if (!this.canLabelFunctionsInScope(isGen))
-          this.err('func.label.not.allowed',{c0:startc,loc0:startLoc});
-        this.fixupLabels(false);
-      }
-      if (this.lttype === 'Identifier') {
-        this.declMode = DECL_MODE_FUNC_STMT;
-        cfn = this.parsePattern();
-      }
-      else if (!(context & CTX_DEFAULT))
-        this.err('func.decl.has.no.name');
-    }
-    else {
-      // FunctionExpression's BindingIdentifier can be yield regardless of context;
-      // but a GeneratorExpression's BindingIdentifier can't be 'yield'
-      this.scopeFlags = isGen ?
-        SCOPE_FLAG_ALLOW_YIELD_EXPR :
-        SCOPE_FLAG_NONE;
-      if (this.lttype === 'Identifier') {
-        this.enterLexicalScope(false);
-        this.scope.synth = true;
-        this.declMode = DECL_MODE_FUNC_EXPR;
-        cfn = this.parsePattern();
-      }
-    }
-  }
-  else if (flags & MEM_GEN)
-    isGen = true;
-
-  this.enterFuncScope(isStmt); 
-  this.declMode = DECL_MODE_FUNC_PARAMS;
-
-  this.scopeFlags = SCOPE_FLAG_NONE;
-
-  if (isGen)
-    this.scopeFlags |= SCOPE_FLAG_ALLOW_YIELD_EXPR;
-
-  if (flags & MEM_SUPER)
-    this.scopeFlags |= (flags & (MEM_SUPER|MEM_CONSTRUCTOR));
-
-  // TODO: super is allowed in methods of a class regardless of whether the class
-  // has an actual heritage clause; but this could probably be implemented better
-  else if (!isWhole && !(flags & MEM_CONSTRUCTOR))
-    this.scopeFlags |= SCOPE_FLAG_ALLOW_SUPER;
- 
-  if (flags & MEM_ASYNC) {
-    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
-  }
-
-  // class members, along with obj-methods, have strict formal parameter lists,
-  // which is a rather misleading name for a parameter list in which dupes are not allowed
-  if (!this.tight && !isWhole)
-    this.enterComplex();
-
-  this.firstNonSimpArg = null;
-
-  this.scopeFlags |= SCOPE_FLAG_ARG_LIST;
-  var argList = this.parseArgs(argLen);
-  this.scopeFlags &= ~SCOPE_FLAG_ARG_LIST;
-
-  this.scopeFlags |= SCOPE_FLAG_FN;  
-
-  this.labels = {};
-
-  var nbody = this.parseFuncBody(context & CTX_FOR);
-
-  var n = {
-    type: isStmt ? 'FunctionDeclaration' : 'FunctionExpression', id: cfn,
-    start: startc, end: nbody.end, generator: isGen,
-    body: nbody, loc: { start: startLoc, end: nbody.loc.end },
-    expression: nbody.type !== 'BlockStatement', params: argList,
-
-    // TODO: this should go in parseAsync
-    async: (flags & MEM_ASYNC) !== 0
-  };
-
-  if (isStmt)
-    this.foundStatement = true;
-
-  this.labels = prevLabels;
-  this.tight = prevStrict;
-  this.scopeFlags = prevScopeFlags;
-  this.declMode = prevDeclMode;
-  this.firstNonSimpArg = prevNonSimpArg;
-  
-  this.exitScope();
-  return n;
-};
-  
-this.parseMeth = function(name, flags) {
-  if (this.lttype !== '(')
-    this.err('meth.paren');
-  var val = null;
-  if (flags & MEM_CLASS) {
-    // all modifiers come at the beginning
-    if (flags & MEM_STATIC) {
-      if (flags & MEM_PROTOTYPE)
-        this.err('class.prototype.is.static.mem',{tn:name,extra:flags});
-
-      flags &= ~(MEM_CONSTRUCTOR|MEM_SUPER);
-    }
-
-    if (flags & MEM_CONSTRUCTOR) {
-      if (flags & MEM_SPECIAL)
-        this.err('class.constructor.is.special.mem',{tn:name, extra:{flags:flags}});
-      if (flags & MEM_HAS_CONSTRUCTOR)
-        this.err('class.constructor.is.a.dup',{tn:name});
-    }
-
-    val = this.parseFunc(CTX_NONE, flags);
-
-    return {
-      type: 'MethodDefinition', key: core(name),
-      start: name.start, end: val.end,
-      kind: (flags & MEM_CONSTRUCTOR) ? 'constructor' : (flags & MEM_GET) ? 'get' :
-            (flags & MEM_SET) ? 'set' : 'method',
-      computed: name.type === PAREN,
-      loc: { start: name.loc.start, end: val.loc.end },
-      value: val, 'static': !!(flags & MEM_STATIC) ,y:-1
-    }
-  }
-   
-  val = this.parseFunc(CTX_NONE, flags);
-
-  return {
-    type: 'Property', key: core(name),
-    start: name.start, end: val.end,
-    kind:
-     !(flags & MEM_ACCESSOR) ? 'init' :
-      (flags & MEM_SET) ? 'set' : 'get',
-    computed: name.type === PAREN,
-    loc: { start: name.loc.start, end : val.loc.end },
-    method: (flags & MEM_ACCESSOR) === 0, shorthand: false,
-    value : val ,y:-1
-  }
-};
-
-
-},
-function(){
-this . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
-this. parseIdStatementOrId = function ( context ) {
-  var id = this.ltval ;
-  var pendingExprHead = null;
-
-  SWITCH:
-  switch (id.length) {
-  case 1:
-    pendingExprHead = this.id(); break SWITCH ;
-
-  case 2:
-    switch (id) {
-    case 'do':
-      this.resvchk(); this.kw();
-      return this.parseDoWhileStatement();
-    case 'if':
-      this.resvchk(); this.kw();
-      return this.parseIfStatement();
-    case 'in':
-      this.resvchk(); this.kw();
-      // TODO: is it actually needed anymore?
-      if ( context & CTX_FOR )
-        return null;
- 
-       this.notId() ;
-    default: pendingExprHead = this.id(); break SWITCH ;
-    }
-
-  case 3:
-    switch (id) {
-    case 'new':
-      this.resvchk(); this.kw();
-      if ( this.canBeStatement ) {
-        this.canBeStatement = false ;
-        this.pendingExprHead = this.parseNewHead();
-        return null;
-      }
-      return this.parseNewHead();
-
-    case 'for':
-      this.resvchk(); this.kw();
-      return this.parseFor();
-    case 'try':
-      this.resvchk(); this.kw();
-      return this.parseTryStatement();
-    case 'let':
-      if ( this.canBeStatement && this.v > 5 )
-        return this.parseLet(CTX_NONE);
-
-      if (this.tight) this.err('strict.let.is.id');
-
-      pendingExprHead = this.id();
-      break SWITCH;
-
-    case 'var':
-      this.resvchk();
-      return this.parseVariableDeclaration( context & CTX_FOR );
-    case 'int':
-      if (this.v <= 5) {
-        this.errorReservedID();
-      }
-
-    default: pendingExprHead = this.id(); break SWITCH  ;
-    }
-
-  case 4:
-    switch (id) {
-    case 'null':
-      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Null';
-      pendingExprHead = this.parseNull();
-      break SWITCH;
-    case 'void':
-      this.resvchk(); this.kw();
-      if ( this.canBeStatement )
-         this.canBeStatement = false;
-      this.lttype = 'u'; 
-      this.isVDT = VDT_VOID;
-      return null;
-    case 'this':
-      this.resvchk(); this.kw();
-      pendingExprHead = this. parseThis();
-      break SWITCH;
-    case 'true':
-      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
-      pendingExprHead = this.parseTrue();
-      break SWITCH;
-    case 'case':
-      this.resvchk();
-      if ( this.canBeStatement ) {
-        this.foundStatement = true;
-        this.canBeStatement = false ;
-        return null;
-      }
-
-    case 'else':
-      this.resvchk(); this.kw();
-      this.notId();
-    case 'with':
-      this.resvchk(); this.kw();
-      return this.parseWithStatement();
-    case 'enum': case 'byte': case 'char':
-    case 'goto': case 'long':
-      if (this. v <= 5 ) this.errorReservedID();
-
-    default: pendingExprHead = this.id(); break SWITCH  ;
-  }
-
-  case 5:
-    switch (id) {
-    case 'super':
-      this.resvchk(); this.kw();
-      pendingExprHead = this.parseSuper();
-      break SWITCH;
-    case 'break':
-      this.resvchk(); this.kw();
-      return this.parseBreakStatement();
-    case 'catch':
-      this.resvchk(); this.kw();
-      this.notId();
-    case 'class':
-      this.resvchk(); this.kw();
-      return this.parseClass(CTX_NONE ) ;
-    case 'const':
-      this.resvchk();
-      if (this.v<5) this.err('const.not.in.v5') ;
-      return this.parseVariableDeclaration(CTX_NONE);
-
-    case 'throw':
-      this.resvchk(); this.kw();
-      return this.parseThrowStatement();
-    case 'while':
-      this.resvchk(); this.kw();
-      return this.parseWhileStatement();
-    case 'yield': 
-      if ( this.scopeFlags & SCOPE_FLAG_GEN ) {
-        this.resvchk(); this.kw();
-        if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
-          this.err('yield.args');
-
-        if ( this.canBeStatement )
-          this.canBeStatement = false;
-
-        this.lttype = 'yield';
-        return null;
-      }
-      else if (this.tight) this.errorReservedID(null);
-
-      pendingExprHead = this.id();
-      break SWITCH;
-          
-    case 'false':
-      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
-      pendingExprHead = this.parseFalse();
-      break SWITCH;
-
-    case 'await':
-      if (this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) {
-        this.resvchk(); this.kw();
-        if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
-          this.err('await.args');
-        if (this.canBeStatement)
-          this.canBeStatement = false;
-        this.isVDT = VDT_AWAIT;
-        this.lttype = 'u';
-        return null;
-      }
-      if (!this.isScript) {
-        this.resvchk(); this.kw();
-        this.err('await.in.strict');
-      }
-
-      pendingExprHead = this.suspys = this.id(); // async(e=await)=>l ;
-      break SWITCH;
-
-    case 'async':
-      pendingExprHead = this.parseAsync(context);
-      break SWITCH;
-
-    case 'final':
-    case 'float':
-    case 'short':
-      if ( this. v <= 5 ) this.errorReservedID() ;
-    default: pendingExprHead = this.id(); break SWITCH ;
-    }
-
-  case 6: switch (id) {
-    case 'static':
-      if (this.tight || this.v <= 5)
-        this.errorReservedID();
-
-    case 'delete':
-    case 'typeof':
-      this.resvchk(); this.kw();
-      if ( this.canBeStatement )
-        this.canBeStatement = false ;
-      this.lttype = 'u'; 
-      this.isVDT = id === 'delete' ? VDT_DELETE : VDT_VOID;
-      return null;
-
-    case 'export': 
-      this.resvchk(); this.kw();
-      if ( this.isScript && this.err('export.not.in.module') )
-        return this.errorHandlerOutput;
-
-      return this.parseExport() ;
-
-    case 'import':
-      this.resvchk(); this.kw();
-      if ( this.isScript && this.err('import.not.in.module') )
-        return this.errorHandlerOutput;
-
-      return this.parseImport();
-
-    case 'return':
-      this.resvchk(); this.kw();
-      return this.parseReturnStatement();
-    case 'switch':
-      this.resvchk(); this.kw();
-      return this.parseSwitchStatement();
-    case 'public':
-      if (this.tight) this.errorReservedID();
-    case 'double': case 'native': case 'throws':
-      if ( this. v <= 5 ) this.errorReservedID();
-
-    default: pendingExprHead = this.id(); break SWITCH ;
-    }
-
-  case 7:
-    switch (id) {
-    case 'default':
-      this.resvchk();
-      if ( this.canBeStatement ) this.canBeStatement = false ;
-      return null;
-
-    case 'extends': case 'finally':
-      this.resvchk(); this.kw();
-      this.notId();
-
-    case 'package': case 'private':
-      if (this.tight)
-        this.errorReservedID();
-
-    case 'boolean':
-      if (this.v <= 5)
-        this.errorReservedID();
-
-    default: pendingExprHead = this.id(); break SWITCH  ;
-    }
-
-  case 8:
-    switch (id) {
-    case 'function':
-      this.resvchk(); this.kw();
-      return this.parseFunc(context&CTX_FOR, 0 );
-    case 'debugger':
-      this.resvchk(); this.kw();
-      return this.prseDbg();
-    case 'continue':
-      this.resvchk(); this.kw();
-      return this.parseContinueStatement();
-    case 'abstract': case 'volatile':
-      if ( this. v <= 5 ) this.errorReservedID();
-
-    default: pendingExprHead = this.id(); break SWITCH  ;
-    }
-
-  case 9:
-    switch (id ) {
-    case 'interface': case 'protected':
-      if (this.tight) this.errorReservedID() ;
-
-    case 'transient':
-      if (this.v <= 5) this.errorReservedID();
-
-    default: pendingExprHead = this.id(); break SWITCH  ;
-    }
-
-  case 10:
-    switch ( id ) {
-    case 'instanceof':
-       this.resvchk(); this.kw();
-       this.notId();
-    case 'implements':
-      if ( this.v <= 5 || this.tight )
-        this.errorReservedID(id);
-
-    default: pendingExprHead = this.id(); break SWITCH ;
-    }
-
-  case 12:
-     if ( this.v <= 5 && id === 'synchronized' ) this.errorReservedID();
-
-  default: pendingExprHead = this.id();
-
-  }
-
-  if ( this.canBeStatement ) {
-    this.canBeStatement = false;
-    this.pendingExprHead = pendingExprHead;
-    return null;
-  }
-
-  return pendingExprHead;
-};
- 
-this.resvchk = function() {
-  if (this.esct !== ERR_NONE_YET) {
-    ASSERT.call(this.esct === ERR_PIN_UNICODE_IN_RESV,
-      'the error in this.esct is something other than ERR_PIN_UNICODE_IN_RESV: ' + this.esct);
-    this.err('resv.unicode');
-  }
-};
-
-
-},
-function(){
-this.readAnIdentifierToken = function (v) {
-  var c = this.c, src = this.src, len = src.length, peek, start = c;
-  c++; // start reading the body
-
-  var byte2, startSlice = c; // the head is already supplied in v
-
-  while ( c < len ) {
-    peek = src.charCodeAt(c); 
-    if ( isIDBody(peek) ) {
-      c++;
-      continue;
-    }
-
-    if ( peek === CH_BACK_SLASH ) {
-      if (this.esct === ERR_NONE_YET) {
-        this.esct = ERR_PIN_UNICODE_IN_RESV;
-        this.eloc.c0 = c;
-        this.eloc.li0 = this.li;
-        this.eloc.col0 = this.col + (c-start);
-      }
-      if ( !v ) // if all previous characters have been non-u characters 
-        v = src.charAt (startSlice-1); // v = IDHead
-
-      if ( startSlice < c ) // if there are any non-u characters behind the current '\'
-        v += src.slice(startSlice,c) ; // v = v + those characters
-
-      this.c = ++c;
-      (CH_u !== src.charCodeAt(c) && this.err('id.u.not.after.slash'));
-
-      peek = this. peekUSeq() ;
-      if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
-        this.c++;
-        byte2 = this.peekTheSecondByte();
-        if (!isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000) &&
-             this.err('id.multi.must.be.idbody',{extra:[peek,byte2]}) )
-          return this.errorHandlerOutput ;
-
-        v += String.fromCharCode(peek, byte2);
-      }
-      else {
-         if ( !isIDBody(peek) &&
-               this.err('id.esc.must.be.idbody',{extra:peek}) )
-           return this.errorHandlerOutput;
-     
-         v += fromcode(peek);
-      }
-      c = this.c;
-      c++;
-      startSlice = c;
-    }
-    else if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
-       if ( !v ) { v = src.charAt(startSlice-1); }
-       if ( startSlice < c ) v += src.slice(startSlice,c) ;
-       c++;
-       this.c = c; 
-       byte2 = this.peekTheSecondByte() ;
-       if (!isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000) &&
-            this.err('id.multi.must.be.idbody') )
-         return this.errorHandlerOutput ;
-
-       v += String.fromCharCode(peek, byte2);
-       c = this.c ;
-       c++;
-       startSlice = c;
-    }
-    else { break ; } 
-   }
-   if ( v ) { // if we have come across at least one u character
-      if ( startSlice < c ) // but all others that came after the last u-character have not been u-characters
-        v += src.slice(startSlice,c); // then append all those characters
-
-      this.ltraw = src.slice(this.c0,c);
-      this.ltval = v  ;
-   }
-   else {
-      this.ltval = this.ltraw = v = src.slice(startSlice-1,c);
-   }
-   this.c = c;
-   this.lttype= 'Identifier';
-};
-
-
-
-},
-function(){
 function get(obj, name, value) {
   if (obj === null || obj === void 0)
     return value;
@@ -5515,1127 +3641,10 @@ this.setOptions = function(o) {
 
 },
 function(){
-
-this.parseLet = function(context) {
-
-// this function is only calld when we have a 'let' at the start of a statement,
-// or else when we have a 'let' at the start of a for's init; so, CTX_FOR means "at the start of a for's init ",
-// not 'in for'
-
-  var startc = this.c0, startLoc = this.locBegin();
-  var c = this.c, li = this.li, col = this.col, raw = this.ltraw;
-
-  var letDecl = this.parseVariableDeclaration(context);
-
-  if ( letDecl )
-    return letDecl;
-
-  if (this.tight && this.err('strict.let.is.id',{c0:startc,loc:startLoc}) )
-    return this.errorHandlerOutput ;
-
-  this.canBeStatement = false;
-  this.pendingExprHead = {
-     type: 'Identifier',
-     name: 'let',
-     start: startc,
-     end: c,
-     loc: { start: startLoc, end: { line: li, column: col }, raw: raw }
-  };
-
-  if (this.onToken_ !== null)
-    this.onToken({type: 'Identifier', value: raw, start: startc, end: c, loc:this.pendingExprHead.loc });
-
-  return null ;
-};
-
-this.hasDeclarator = function() {
-
-  switch (this.lttype) {
-  case '[':
-  case '{':
-  case 'Identifier':
-    return true;
-  
-  default:
-    return false;
-
-  }
-};
-
-},
-function(){
 this.loc = function() { return { line: this.li, column: this.col }; };
 this.locBegin = function() { return  { line: this.li0, column: this.col0 }; };
 this.locOn = function(l) { return { line: this.li, column: this.col - l }; };
 
-
-
-},
-function(){
-// TODO: the values for li, col, and c can be calculated
-// by adding the value of raw.length to li0, col0, and c0, respectively,
-// but this holds only in a limited use case where the
-// value of the `raw` param is known to be either 'static', 'get', or 'set';
-// but if this is going to be called for any value of raw containing surrogates, it may not work correctly.
-function assembleID(c0, li0, col0, raw, val) {
-  return { 
-    type: 'Identifier', raw: raw,
-    name: val, end: c0 + raw.length,
-    start: c0, 
-    loc: {
-      start: { line: li0, column: col0 },
-      end: { line: li0, column: col0 + raw.length }
-    }
-  }
-}
-
-this.parseMem = function(context, flags) {
-  var c0 = 0, li0 = 0, col0 = 0, nmod = 0,
-      nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "", latestFlag = 0;
-
-  var asyncNewLine = false;
-  if (this.v > 5 && this.lttype === 'Identifier') {
-    LOOP:  
-    // TODO: check version number when parsing get/set
-    do {
-      if (nmod === 0) {
-        c0 = this.c0; li0 = this.li; col0 = this.col0;
-      }
-      switch (this.ltval) {
-      case 'static':
-        if (!(flags & MEM_CLASS)) break LOOP;
-        if (flags & MEM_STATIC) break LOOP;
-        if (flags & MEM_ASYNC) break LOOP;
-
-        nc0 = this.c0; nli0 = this.li0;
-        ncol0 = this.col0; nraw = this.ltraw;
-        nval = this.ltval;
-
-        flags |= latestFlag = MEM_STATIC;
-        nmod++;
-
-        if (this.onToken_ !== null) {
-          this.lttype = "";
-          this.next();
-          if (this.lttype !== '(')
-            this.onToken_kw(nc0,{line:nli0,column:ncol0},nraw);
-          else
-            this.onToken({ type: 'Identifier', value: nraw, start: nc0, end: nc0+nraw.length,
-              loc: {
-                start: { line: nli0, column: ncol0 },
-                end: { line: nli0, column: ncol0+nraw.length }
-              }
-            });
-        }
-        else
-          this.next();
-
-        break;
-
-      case 'get':
-      case 'set':
-        if (flags & MEM_ACCESSOR) break LOOP;
-        if (flags & MEM_ASYNC) break LOOP;
-
-        nc0 = this.c0; nli0 = this.li0;
-        ncol0 = this.col0; nraw = this.ltraw;
-        nval = this.ltval;
-        
-        flags |= latestFlag = this.ltval === 'get' ? MEM_GET : MEM_SET;
-        nmod++;
-        this.next();
-        break;
-
-      case 'async':
-        if (flags & MEM_ACCESSOR) break LOOP;
-        if (flags & MEM_ASYNC) break LOOP;
-
-        nc0 = this.c0; nli0 = this.li0;
-        ncol0 = this.col0; nraw = this.ltraw;
-        nval = this.ltval;
-
-        flags |= latestFlag = MEM_ASYNC;
-        nmod++;
-        this.next();
-        if (this.nl) {
-          asyncNewLine = true;
-          break;
-        }
-
-        break;
-
-      default:
-        break LOOP;
-
-      }
-    } while (this.lttype === 'Identifier');
-  }
-  
-  if (this.lttype === 'op' && this.ltraw === '*') {
-    if (this.v <= 5)
-      this.err('ver.mem.gen');
-    if (flags & MEM_ASYNC)
-      this.err('async.gen.not.yet.supported');
-
-    if (!c0) { c0 = this.c-1; li0 = this.li; col0 = this.col-1; }
-
-    flags |= latestFlag = MEM_GEN;
-    nmod++;
-    this.next();
-  }
-
-  var nmem = null;
-  switch (this.lttype) {
-  case 'Identifier':
-    if (asyncNewLine)
-      this.err('async.newline');
-
-    if ((flags & MEM_CLASS)) {
-      if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
-      if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
-    }
-    else if (this.ltval === '__proto__')
-      flags |= MEM_PROTO;
-
-    nmem = this.memberID();
-    break;
-  case 'Literal':
-    if (asyncNewLine)
-      this.err('async.newline');
-
-    if ((flags & MEM_CLASS)) {
-      if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
-      if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
-    }
-    else if (this.v > 5 && this.ltval === '__proto__')
-      flags |= MEM_PROTO;
-
-    nmem = this.numstr();
-    break;
-  case '[':
-    if (asyncNewLine)
-      this.err('async.newline');
-
-    nmem = this.memberExpr();
-    break;
-  default:
-    if (nmod && latestFlag !== MEM_GEN) {
-      nmem = assembleID(nc0, nli0, ncol0, nraw, nval);
-      flags &= ~latestFlag; // it's found out to be a name, not a modifier
-      nmod--;
-    }
-  }
-
-  if (nmem === null) {
-    if (flags & MEM_GEN)
-      this.err('mem.gen.has.no.name');
-    return null;
-  } 
-
-  if (this.lttype === '(') {
-    if (this.v <= 5) this.err('ver.mem.meth');
-    var mem = this.parseMeth(nmem, flags);
-    if (c0 && c0 !== mem.start) {
-      mem.start = c0;
-      mem.loc.start = { line: li0, column: col0 };
-    }
-    return mem;
-  }
-
-  if (flags & MEM_CLASS)
-    this.err('meth.paren');
-
-  if (nmod)
-    this.err('obj.meth.no.paren');
-
-  // TODO: it is not strictly needed -- this.parseObjElem itself can verify if the name passed to it is
-  // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad
-  // faster
-  if (flags & MEM_PROTO)
-    context |= CTX_HASPROTO;
-
-  return this.parseObjElem(nmem, context|(flags & MEM_PROTO));
-};
- 
-this.parseObjElem = function(name, context) {
-  var hasProto = context & CTX_HASPROTO, firstProto = this.first__proto__;
-  var val = null;
-  context &= ~CTX_HASPROTO;
-
-  switch (this.lttype) {
-  case ':':
-    if (hasProto && firstProto)
-      this.err('obj.proto.has.dup',{tn:name});
-
-    this.next();
-    val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
-
-    if (context & CTX_PARPAT) {
-      if (val.type === PAREN_NODE) {
-        if ((context & CTX_PARAM) &&
-           !(context & CTX_HAS_A_PARAM_ERR) &&
-           this.pt === ERR_NONE_YET) {
-          this.pt = ERR_PAREN_UNBINDABLE; this.pe = val;
-        }
-        if ((context & CTX_PAT) &&
-           !(context & CTX_HAS_A_PARAM_ERR) &&
-           this.at === ERR_NONE_YET &&
-           !this.ensureSimpAssig_soft(val.expr)) {
-          this.at = ERR_PAREN_UNBINDABLE; this.pe = val;
-        }
-      }
-    }
-
-    val = {
-      type: 'Property', start: name.start,
-      key: core(name), end: val.end,
-      kind: 'init',
-      loc: { start: name.loc.start, end: val.loc.end },
-      computed: name.type === PAREN,
-      method: false, shorthand: false, value: core(val) ,y:-1
-    };
-
-    if (hasProto)
-      this.first__proto__ = val;
-
-    return val;
- 
-  case 'op':
-    if (this.v <= 5)
-      this.err('mem.short.assig');
-    if (name.type !== 'Identifier')
-      this.err('obj.prop.assig.not.id',{tn:name});
-    if (this.ltraw !== '=')
-      this.err('obj.prop.assig.not.assigop');
-    if (context & CTX_NO_SIMPLE_ERR)
-      this.err('obj.prop.assig.not.allowed');
-
-    val = this.parseAssignment(name, context);
-    if (!(context & CTX_HAS_A_SIMPLE_ERR) &&
-       this.st === ERR_NONE_YET) {
-      this.st = ERR_SHORTHAND_UNASSIGNED; this.se = val;
-    }
- 
-    break;
-
-  default:
-    if (this.v <= 5)
-      this.err('mem.short');
-    if (name.type !== 'Identifier')
-      this.err('obj.prop.assig.not.id',{tn:name});
-    this.validateID(name.name);
-    val = name;
-    break;
-  }
-  
-  return {
-    type: 'Property', key: name,
-    start: val.start, end: val.end,
-    loc: val.loc, kind: 'init',
-    shorthand: true, method: false,
-    value: val, computed: false ,y:-1
-  };
-};
-
-
-
-},
-function(){
-this .memberID = function() { return this.v > 5 ? this.id() : this.validateID("") ; };
-this .memberExpr = function() {
-  if (this.v <= 5)
-    this.err('ver.mem.comp');
-
-  var startc = this.c - 1,
-      startLoc = this.locOn(1);
-  this.next() ;
-  
-  // none of the modifications memberExpr may make to this.pt, this.at, and this.st
-  // overwrite some other unrecorded this.pt, this.at, or this.st -- an unrecorded value of <pt:at:st>
-  // means a whole elem was just parsed, and <pt:at:st> is immediately recorded after that whole
-  // potpat element is parsed, so if a memberExpr overwrites <pt:at:st>, that <pt:at:st> is not an
-  // unrecorded one.
-  
-  // TODO: it is not necessary to reset <pt:at>
-  this.pt = this.at = this.st = 0;
-  var e = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR); // TODO: should be CTX_NULLABLE, or else the next line is in vain 
-  if (!e && this.err('prop.dyna.no.expr') ) // 
-    return this.errorHandlerOutput ;
-
-  var n = { type: PAREN, expr: e, start: startc, end: this.c, loc: { start: startLoc, end: this.loc() } } ;
-  if ( !this.expectType_soft (']') &&
-        this.err('prop.dyna.is.unfinished') )
-    return this.errorHandlerOutput ;
- 
-  return n;
-};
-
-
-
-},
-function(){
-this.parseArrayExpression = function(context) {
-
-  var startc = this.c - 1,
-      startLoc = this.locOn(1);
-
-  this.next();
-
-  var elem = null,
-      list = [];
-  var elemContext = CTX_NULLABLE;
-
-  if (context & CTX_PAT) {
-    elemContext |= (context & CTX_PARPAT);
-    elemContext |= (context & CTX_PARPAT_ERR);
-  }
-  else
-    elemContext |= CTX_PAT|CTX_NO_SIMPLE_ERR;
-
-  var pt = ERR_NONE_YET, pe = null, po = null;
-  var at = ERR_NONE_YET, ae = null, ao = null;
-  var st = ERR_NONE_YET, se = null, so = null;
-
-  var pc0 = -1, pli0 = -1, pcol0 = -1;
-  var ac0 = -1, ali0 = -1, acol0 = -1;
-  var sc0 = -1, sli0 = -1, scol0 = -1;
-
-  if (context & CTX_PARPAT) {
-    if ((context & CTX_PARAM) &&
-       !(context & CTX_HAS_A_PARAM_ERR)) {
-      this.pt = ERR_NONE_YET; this.pe = this.po = null;
-    }
-
-    if ((context & CTX_PAT) &&
-       !(context & CTX_HAS_AN_ASSIG_ERR)) {
-      this.at = ERR_NONE_YET; this.ae = this.ao = null;
-    }
-
-    if (!(context & CTX_HAS_A_SIMPLE_ERR)) {
-      this.st = ERR_NONE_YET; this.se = this.so = null;
-    }
-  }
-
-  var hasMore = true;
-  var hasRest = false, hasNonTailRest = false;
-
-  while (hasMore) {
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
-    if (elem === null && this.lttype === '...') {
-      elem = this.parseSpreadElement(elemContext);
-      hasRest = true;
-    }
-    if (this.lttype === ',') {
-      if (hasRest)
-        hasNonTailRest = true; 
-      if (elem === null) {
-        if (this.v <= 5) this.err('ver.elision');
-        list.push(null);
-      }
-      else list.push(core(elem));
-      this.next();
-    }
-    else {
-      if (elem) {
-        list.push(core(elem));
-        hasMore = false;
-      }
-      else break;
-    }
- 
-    if (elem && (elemContext & CTX_PARPAT)) {
-      var elemCore = elem;
-      // TODO: [...(a),] = 12
-      var t = ERR_NONE_YET;
-      if (elemCore.type === PAREN_NODE)
-        t = ERR_PAREN_UNBINDABLE;
-      else if (hasNonTailRest)
-        t = ERR_NON_TAIL_REST;
-
-      if ((elemContext & CTX_PARAM) && 
-         !(elemContext & CTX_HAS_A_PARAM_ERR)) {
-        if (this.pt === ERR_NONE_YET && t !== ERR_NONE_YET) {
-          this.pt = t; this.pe = elemCore;
-        }
-        if (this.pt !== ERR_NONE_YET) {
-          if (pt === ERR_NONE_YET || agtb(this.pt, pt)) {
-            pt = this.pt; pe = this.pe; po = core(elem);
-            if (pt & ERR_P_SYN)
-              elemContext |= CTX_HAS_A_PARAM_ERR;
-            if (pt & ERR_PIN) 
-              pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
-          }
-        }
-      }
-
-      // ([a]) = 12
-      if (t === ERR_PAREN_UNBINDABLE && this.ensureSimpAssig_soft(elem.expr))
-        t = ERR_NONE_YET;
-
-      if ((elemContext & CTX_PAT) &&
-         !(elemContext & CTX_HAS_AN_ASSIG_ERR)) {
-        if (this.at === ERR_NONE_YET && t !== ERR_NONE_YET) {
-          this.at = t; this.ae = elemCore;
-        }
-        if (this.at !== ERR_NONE_YET) {
-          if (at === ERR_NONE_YET || agtb(this.at, at)) {
-            at = this.at; ae = this.ae; ao = core(elem);
-            if (at & ERR_A_SYN)
-              elemContext |= CTX_HAS_AN_ASSIG_ERR;
-            if (at & ERR_PIN)
-              ac0 = this.aloc.c0, ali0 = this.aloc.li0, acol0 = this.aloc.col0;
-          }
-        }
-      }
-      if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
-        if (this.st !== ERR_NONE_YET) {
-          if (st === ERR_NONE_YET || agtb(this.st, st)) {
-            st = this.st; se = this.se; so = core(elem);
-            if (st & ERR_S_SYN)
-              elemContext |= CTX_HAS_A_SIMPLE_ERR;
-            if (st & ERR_PIN)
-              sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
-          }
-        }
-      }
-    }
-
-    hasRest = hasNonTailRest = false;
-  }
-  
-  var n = {
-    type: 'ArrayExpression',
-    loc: { start: startLoc, end: this.loc() },
-    start: startc,
-    end: this.c,
-    elements : list  ,y:-1
-  };
-
-  if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
-    this.pt = pt; this.pe = pe; this.po = po;
-    if (pt & ERR_PIN)
-      this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0;
-  }
-  if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
-    this.at = at; this.ae = ae; this.ao = ao;
-    if (at & ERR_PIN)
-      this.aloc.c0 = ac0, this.aloc.li0 = ali0, this.aloc.col0 = acol0;
-  }
-  if ((context & CTX_PARPAT) && st !== ERR_NONE_YET) {
-    this.st = st; this.se = se; this.so = so;
-    if (st & ERR_PIN)
-      this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.col0 = scol0;
-  }
-
-  if (!this.expectType_soft(']'))
-    this.err('array.unfinished');
-  
-  return n;
-};
-
-},
-function(){
-this.toAssig = function(head, context) {
-  if (head === this.ao)
-    this.throwTricky('a', this.at, this.ae)
-
-  var i = 0, list = null;
-  switch (head.type) {
-  case 'Identifier':
-    if (this.tight && arguments_or_eval(head.name)) {
-      if (this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT)
-        this.st = ERR_NONE_YET;
-      if (this.st === ERR_NONE_YET) {
-        this.st = ERR_ARGUMENTS_OR_EVAL_ASSIGNED;
-        this.se = head;
-      }
-//    if (context & CTX_NO_SIMPLE_ERR)
-//      this.currentExprIsSimple();
-    }
-    return;
-
-  case 'MemberExpression':
-    return;
-
-  case 'ObjectExpression':
-    if (this.v <= 5) this.err('ver.pat.obj',{tn:head});
-    i = 0; list = head.properties;
-    while (i < list.length)
-      this.toAssig(list[i++], context);
-    head.type = 'ObjectPattern';
-    return;
-
-  case 'ArrayExpression':
-    if (this.v <= 5) this.err('ver.pat.arr',{tn:head});
-    i = 0; list = head.elements;
-    while (i < list.length) {
-      list[i] && this.toAssig(list[i], context);
-      i++ ;
-    }
-    head.type = 'ArrayPattern';
-    return;
-
-  case 'AssignmentExpression':
-    // TODO: operator is the one that must be pinned,
-    // but head is pinned currently
-    if (head.operator !== '=')
-      this.err('complex.assig.not.pattern');
-
-    // TODO: the left is not re-checked for errors
-    // because it is already an assignable pattern;
-    // this requires keeping track of the latest
-    // ea error, in order to re-record it if it is
-    // also the first error in the current pattern
-    if (this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT &&
-       head === this.so) {
-      this.st = ERR_NONE_YET;
-      this.toAssig(this.se);
-    }
-
-    head.type = 'AssignmentPattern';
-    delete head.operator;
-    return;
-
-  case 'SpreadElement':
-    if (head.argument.type === 'AssignmentExpression')
-      this.err('rest.arg.not.valid',{tn:head});
-    this.toAssig(head.argument, context);
-    head.type = 'RestElement';
-    return;
-
-  case 'Property':
-    this.toAssig(head.value, context);
-    return;
-
-  default:
-    this.err('not.assignable',{tn:core(head)});
- 
-  }
-};
-
-this.parseAssignment = function(head, context) {
-  var o = this.ltraw;
-  if (o === '=>')
-    return this.parseArrowFunctionExpression(head);
-
-  if (head.type === PAREN_NODE && !this.ensureSimpAssig_soft(head.expr)) {
-    this.at = ERR_PAREN_UNBINDABLE;
-    this.ae = this.ao = head;
-    this.throwTricky('a', this.at, this.ae);
-  }
-
-  var right = null;
-  if (o === '=') {
-    if (context & CTX_PARPAT)
-      this.adjustErrors();
-
-    var st = ERR_NONE_YET, se = null, so = null,
-        pt = ERR_NONE_YET, pe = null, po = null;
-
-    this.toAssig(core(head), context);
-
-    // flush any remaining simple error, now that there are no more assignment errors
-    if ((context & CTX_NO_SIMPLE_ERR) && this.st !== ERR_NONE_YET)
-      this.throwTricky('s', this.st);
-
-    var sc0 = -1, sli0 = -1, scol0 = -1,
-        pc0 = -1, pli0 = -1, pcol0 = -1;
-
-    if ((context & CTX_PARPAT) && this.st !== ERR_NONE_YET) {
-      st = this.st; se = this.se; so = this.so;
-      if (st & ERR_PIN)
-        sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
-    }
-    if ((context & CTX_PARAM) && this.pt !== ERR_NONE_YET) {
-      pt = this.pt; pe = this.pe; po = this.po;
-      if (pt & ERR_PIN)
-        pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
-    }
-
-    this.currentExprIsAssig();
-    this.next();
-    right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
-      (context & CTX_FOR)|CTX_PAT|CTX_NO_SIMPLE_ERR);
-
-    if (pt !== ERR_NONE_YET) {
-      this.pt = pt; this.pe = pe; this.po = po;
-      if (pt & ERR_PIN)
-        this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0 = pcol0;
-    }
-    if (st !== ERR_NONE_YET) {
-      this.st = st; this.se = se; this.so = so;
-      if (st & ERR_PIN)
-        this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.scol0;
-    }
-  }
-  else {
-    // TODO: further scrutiny, like checking for this.at, is necessary (?)
-    if (!this.ensureSimpAssig_soft(core(head)))
-      this.err('assig.not.simple',{tn:core(head)});
-
-    var c0 = -1, li0 = -1, col0 = -1;
-    if (context & CTX_PARPAT) {
-      c0 = this.c0; li0 = this.li0; col0 = this.col0;
-    }
-    this.next();
-    right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
-      (context & CTX_FOR)|CTX_PAT|CTX_NO_SIMPLE_ERR);
-
-    if (context & CTX_PARAM) {
-      this.ploc.c0 = c0, this.ploc.li0 = li0, this.ploc.col0 = col0;
-      this.pt = ERR_PIN_NOT_AN_EQ;
-    }
-    if (context & CTX_PAT) {
-      this.aloc.c0 = c0, this.aloc.li0 = li0, this.aloc.col0 = col0;
-      this.at = ERR_PIN_NOT_AN_EQ;
-    }
-  }
- 
-  return {
-    type: 'AssignmentExpression',
-    operator: o,
-    start: head.start,
-    end: right.end,
-    left: head,
-    right: core(right),
-    loc: {
-      start: head.loc.start,
-      end: right.loc.end
-    } ,y:-1
-  };
-};
-
-},
-function(){
-this.parseObjectExpression = function(context) {
-  var startc = this.c0,
-      startLoc = this.locBegin(),
-      elem = null,
-      list = [],
-      first__proto__ = null,
-      elemContext = CTX_NONE,
-      pt = ERR_NONE_YET, pe = null, po = null,
-      at = ERR_NONE_YET, ae = null, ao = null,
-      st = ERR_NONE_YET, se = null, so = null,
-      n = null;
-
-  if (context & CTX_PAT) {
-    elemContext |= context & CTX_PARPAT;
-    elemContext |= context & CTX_PARPAT_ERR;
-  }
-  else 
-    elemContext |= CTX_PAT|CTX_NO_SIMPLE_ERR;
-
-  if (context & CTX_PARPAT) {
-    if ((context & CTX_PARAM) &&
-       !(context & CTX_HAS_A_PARAM_ERR)) {
-      this.pt = ERR_NONE_YET; this.pe = this.po = null;
-    }
-    if ((context & CTX_PAT) &&
-       !(context & CTX_HAS_AN_ASSIG_ERR)) {
-      this.at = ERR_NONE_YET; this.ae = this.ao = null;
-    }
-    if (!(context & CTX_HAS_A_SIMPLE_ERR)) {
-      this.st = ERR_NONE_YET; this.se = this.so = null;
-    }
-  }
-  
-  var pc0 = -1, pli0 = -1, pcol0 = -1;
-  var ac0 = -1, ali0 = -1, acol0 = -1;
-  var sc0 = -1, sli0 = -1, scol0 = -1;
-
-  do {
-    this.next();
-    this.first__proto__ = first__proto__;
-    elem = this.parseMem(elemContext, MEM_OBJ);
-
-    if (elem === null)
-      break;
-
-    if (!first__proto__ && this.first__proto__)
-      first__proto__ = this.first__proto__;
-
-    list.push(core(elem));
-    if (!(elemContext & CTX_PARPAT))
-      continue;
-
-    if ((elemContext & CTX_PARAM) &&
-       !(elemContext & CTX_HAS_A_PARAM_ERR) &&
-       this.pt !== ERR_NONE_YET) {
-      if (pt === ERR_NONE_YET || agtb(this.pt, pt)) {
-        pt = this.pt, pe = this.pe, po = elem;
-        if (pt & ERR_PIN)
-          pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
-        if (pt & ERR_P_SYN)
-          elemContext |= CTX_HAS_A_PARAM_ERR;
-      }
-    }
-    if ((elemContext & CTX_PAT) &&
-       !(elemContext & CTX_HAS_AN_ASSIG_ERR) &&
-       this.at !== ERR_NONE_YET) {
-      if (at === ERR_NONE_YET || agtb(this.at, at)) {
-        at = this.at; ae = this.ae; ao = elem;
-        if (at & ERR_PIN)
-          ac0 = this.aloc.c0, ali0 = this.aloc.li0, acol0 = this.aloc.col0;
-        if (at & ERR_A_SYN)
-          elemContext |= CTX_HAS_AN_ASSIG_ERR;
-      }
-    }
-    // TODO: (elemContext & CTX_PARPAT) maybe?
-    if (!(elemContext & CTX_HAS_A_SIMPLE_ERR) &&
-       this.st !== ERR_NONE_YET) {
-      if (st === ERR_NONE_YET || agtb(this.st, st)) {
-        st = this.st; se = this.se; so = elem;
-        if (st & ERR_PIN)
-          sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
-        if (st & ERR_S_SYN)
-          elemContext |= CTX_HAS_A_SIMPLE_ERR;
-      }
-    }
-  } while (this.lttype === ',');
-
-  n = {
-    properties: list,
-    type: 'ObjectExpression',
-    start: startc,
-    end: this.c,
-    loc: { start: startLoc, end: this.loc() } ,y:-1
-  };
-
-  // TODO: this is a slightly unnecessary work if the parent container already has an err;
-  // (context & CTX_HAS_A(N)_<p:a:s>_ERR) should be also present in the conditions below
-  if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
-    this.pt = pt; this.pe = pe; this.po = po;
-    if (pt & ERR_PIN)
-      this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0 = pcol0;
-  }
-  if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
-    this.at = at; this.ae = ae; this.ao = ao;
-    if (at & ERR_PIN)
-      this.aloc.c0 = ac0, this.aloc.li0 = ali0, this.aloc.col0 = acol0;
-  }
-  if ((context & CTX_PARPAT) && st !== ERR_NONE_YET) {
-    this.st = st; this.se = se; this.so = so;
-    if (st & ERR_PIN)
-      this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.col0 = scol0;
-  }
-
-  if (!this.expectType_soft('}'))
-    this.err('obj.unfinished');
-
-  return n;
-};
-
-
-},
-function(){
-this.parseParen = function(context) {
-  var startc = this.c0,
-      startLoc = this.locBegin(),
-      elem = null,
-      elemContext = CTX_NULLABLE|CTX_PAT,
-      list = null,
-      prevys = this.suspys,
-      hasRest = false,
-      pc0 = -1, pli0 = -1, pcol0 = -1,
-      sc0 = -1, sli0 = -1, scol0 = -1,
-      st = ERR_NONE_YET, se = null, so = null,
-      pt = ERR_NONE_YET, pe = null, po = null;
-
-  if (context & CTX_PAT) {
-    this.pt = this.st = ERR_NONE_YET;
-    this.pe = this.po =
-    this.se = this.so = null;
-    this.suspys = null;
-    elemContext |= CTX_PARAM;
-  }
-  else
-    elemContext |= CTX_NO_SIMPLE_ERR;
-
-  var lastElem = null, hasTailElem = false;
-  this.next();
-  while (true) {
-    lastElem = elem;
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
-    if (elem === null) {
-      if (this.lttype === '...') {
-        if (!(elemContext & CTX_PARAM)) {
-          this.st = ERR_UNEXPECTED_REST;
-          this.se = this.so = null;
-          this.currentExprIsSimple();
-        }
-        elem = this.parseSpreadElement(elemContext);
-        hasRest = true;
-      }
-      else if (list) {
-        if (this.v < 7)
-          this.err('seq.non.tail.expr');
-        else 
-          hasTailElem = true;
-      } 
-      else break;
-    }
-
-    if (elemContext & CTX_PARAM) {
-      // TODO: could be `pt === ERR_NONE_YET`
-      if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
-        // hasTailElem -> elem === null
-        if (this.pt === ERR_NONE_YET && !hasTailElem) {
-          // TODO: function* l() { ({[yield]: (a)})=>12 }
-          if (elem.type === PAREN_NODE) {
-            this.pt = ERR_PAREN_UNBINDABLE;
-            this.pe = elem;
-          }
-          else if(this.suspys) {
-            this.pt = ERR_YIELD_OR_SUPER;
-            this.pe = this.suspys;
-          }
-        }
-        if (this.pt !== ERR_NONE_YET) {
-          if (pt === ERR_NONE_YET || agtb(this.pt, pt)) {
-            pt = this.pt, pe = this.pe, po = core(elem);
-            if (pt & ERR_PIN)
-              pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
-            if (pt & ERR_P_SYN)
-              elemContext |= CTX_HAS_A_PARAM_ERR;
-          }
-        }
-      }
-
-      // TODO: could be `st === ERR_NONE_YET`
-      if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
-        if (this.st === ERR_NONE_YET) {
-          if (hasRest) {
-            this.st = ERR_UNEXPECTED_REST;
-            this.se = elem;
-          }
-          else if (hasTailElem) {
-            this.st = ERR_NON_TAIL_EXPR;
-            this.se = lastElem;
-          }
-        }
-        if (this.st !== ERR_NONE_YET) {
-          if (st === ERR_NONE_YET || agtb(this.st, st)) {
-            st = this.st, se = this.se, so = elem && core(elem);
-            if (st & ERR_PIN)
-              sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
-            if (st & ERR_S_SYN)
-              elemContext |= CTX_HAS_A_SIMPLE_ERR;
-          }
-        }
-      }
-    }
-
-    if (hasTailElem)
-      break;
-
-    if (list) list.push(core(elem));
-    if (this.lttype === ',') {
-      if (hasRest)
-        this.err('rest.arg.has.trailing.comma');
-      if (list === null)
-        list = [core(elem)];
-      this.next();
-    }
-    else break;
-  }
-
-  var n = {
-      type: PAREN_NODE,
-      expr: list ? {
-        type: 'SequenceExpression',
-        expressions: list,
-        start: list[0].start,
-        end: list[list.length-1].end,
-        loc: {
-          start: list[0].loc.start,
-          end: list[list.length-1].loc.end
-        } 
-      } : elem && core(elem),
-      start: startc,
-      end: this.c,
-      loc: { start: startLoc, end: this.loc() }
-  };
-
-  if (!this.expectType_soft(')'))
-    this.err('unfinished.paren',{tn:n});
-
-  if (elem === null && list === null) {
-    if (context & CTX_PARPAT) {
-      st = ERR_EMPTY_LIST_MISSING_ARROW;
-      se = so = n;
-    }
-    else {
-      this.st = ERR_EMPTY_LIST_MISSING_ARROW;
-      this.se = n;
-      this.so = n;
-      this.throwTricky('s', this.st);
-    }
-  }
-
-  if (context & CTX_PAT) {
-    if (pt !== ERR_NONE_YET) {
-      this.pt = pt; this.pe = pe; this.po = po;
-      if (pt & ERR_PIN)
-        this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0 = pcol0;
-    }
-    if (st !== ERR_NONE_YET) {
-      this.st = st; this.se = se; this.so = so;
-      if (st & ERR_PIN)
-        this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.col0 = scol0;
-    }
-    if (list === null && elem !== null &&
-       elem.type === 'Identifier' && elem.name === 'async')
-      this.parenAsync = n;
-  }
-
-  if (prevys !== null)
-    this.suspys = prevys;
-
-  return n;
-};
-
-
-},
-function(){
-this.parseSpreadElement = function(context) {
-  if (this.v <= 5) this.err('ver.spread.rest');
-
-  var startc = this.c0;
-  var startLoc = this.locBegin();
-
-  this.next();
-  var e = this.parseNonSeqExpr(
-    PREC_WITH_NO_OP,
-    context & ~CTX_NULLABLE);
-
-  if (e.type === PAREN_NODE) {
-    if ((context & CTX_PARAM) && !(context & CTX_HAS_A_PARAM_ERR) &&
-       this.pt === ERR_NONE_YET) { 
-      this.pt = ERR_PAREN_UNBINDABLE; this.pe = e;
-    }
-    if ((context & CTX_PAT) && !(context & CTX_HAS_AN_ASSIG_ERR) &&
-       this.at === ERR_NONE_YET && !this.ensureSimpAssig_soft(e.expr)) {
-      this.at = ERR_PAREN_UNBINDABLE; this.ae = e;
-    }
-  }
-    
-  return {
-    type: 'SpreadElement',
-    loc: { start: startLoc, end: e.loc.end },
-    start: startc,
-    end: e.end,
-    argument: core(e)
-  };
-};
-
-},
-function(){
-this.parseNewHead = function () {
-  var startc = this.c0, end = this.c,
-      startLoc = this.locBegin(), li = this.li,
-      col = this.col, raw = this.ltraw ;
-
-  this.next();
-  if (this.lttype === '.') {
-    this.next();
-    return this.parseMeta(startc, end, startLoc, {line:li,column:col}, raw);
-  }
-
-  var head, elem, inner;
-  switch (this  .lttype) {
-  case 'Identifier':
-    head = this.parseIdStatementOrId (CTX_NONE);
-    break;
-
-  case '[':
-    head = this. parseArrayExpression(CTX_NONE);
-    break;
-
-  case '(':
-    head = this. parseParen();
-    break;
-
-  case '{':
-    head = this. parseObjectExpression(CTX_NONE) ;
-    break;
-
-  case '/':
-    head = this. parseRegExpLiteral () ;
-    break;
-
-  case '`':
-    head = this. parseTemplateLiteral () ;
-    break;
-
-  case 'Literal':
-    head = this.numstr ();
-    break;
-
-  default:
-    this.err('new.head.is.not.valid');
-
-  }
-
-  if (head.type === 'Identifier')
-    this.scope.reference(head.name);
-
-  var inner = core( head ) ;
-  while ( true ) {
-    switch (this. lttype) {
-    case '.':
-      this.next();
-      if (this.lttype !== 'Identifier')
-        this.err('mem.name.not.id');
-
-      elem = this.memberID();
-      head = { type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
-        loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false ,y:-1 };
-      inner = head;
-      continue;
-
-    case '[':
-      this.next() ;
-      elem = this.parseExpr(CTX_NONE) ;
-      head = { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
-        loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: true ,y:-1 };
-      inner = head ;
-      if ( !this.expectType_soft (']') ) {
-        this.err('mem.unfinished')  ;
-      }
- 
-      continue;
-
-    case '(':
-      elem = this. parseArgList();
-      inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() }, arguments: elem  ,y:-1};
-      if ( !this. expectType_soft (')') ) {
-        this.err('new.args.is.unfinished') ;
-      }
-
-      return inner;
-
-    case '`' :
-      elem = this.parseTemplateLiteral () ;
-      head = {
-        type : 'TaggedTemplateExpression' ,
-        quasi :elem ,
-        start: head.start,
-         end: elem.end,
-        loc : { start: head.loc.start, end: elem.loc.end },
-        tag : inner  ,y:-1
-      };
-
-      inner = head;
-      continue ;
-
-    default: return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
-      loc: { start: startLoc, end: head.loc.end }, arguments : []  ,y:-1};
-
-    }
-  }
-};
 
 
 },
@@ -7180,101 +4189,6 @@ this.kw = function() {
 
 },
 function(){
-this.parseExpr = function (context) {
-  var head = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
-  var lastExpr = null;
-
-  if ( this.lttype !== ',' )
-    return head;
-
-  // TODO: abide to the original context by using `context = context|(CTX_FOR|CTX_PARPAT)` rather than the
-  // assignment below
-  context = (context & CTX_FOR)|CTX_PARPAT;
-
-  var e = [core(head)];
-  do {
-    this.next() ;
-    lastExpr = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
-    e.push(core(lastExpr));
-  } while (this.lttype === ',' );
-
-  return {
-    type: 'SequenceExpression', expressions: e,
-    start: head.start, end: lastExpr.end,
-    loc: { start : head.loc.start, end : lastExpr.loc.end} ,y:-1
-  };
-};
-
-this.parseCond = function(cond, context) {
-  this.next();
-  var seq =
-    this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE);
-
-  if (!this.expectType_soft(':'))
-    this.err('cond.colon',{extra:[cond,seq,context]});
-
-  var alt =
-    this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CTX_FOR);
-
-  return {
-    type: 'ConditionalExpression', test: core(cond),
-    start: cond.start, end: alt.end,
-    loc: {
-      start: cond.loc.start,
-      end: alt.loc.end
-    }, consequent: core(seq),
-    alternate: core(alt)  ,y:-1
-  };
-};
-
-this.parseUnaryExpression = function(context) {
-  var u = null,
-      startLoc = null,  
-      startc = 0,
-      isVDT = this.isVDT;
-
-  if (isVDT) {
-    this.kw();
-    this.isVDT = VDT_NONE;
-    u = this.ltval;
-    startLoc = this.locBegin();
-    startc = this.c0;
-  }
-  else {
-    u = this.ltraw;
-    startLoc = this.locOn(1);
-    startc = this.c - 1;
-  }
-
-  this.next();
-  var arg = this.parseNonSeqExpr(PREC_U, context & CTX_FOR);
-
-  if (this.tight &&
-      isVDT === VDT_DELETE &&
-      core(arg).type !== 'MemberExpression')
-    this.err('delete.arg.not.a.mem',{tn:arg,extra:{c0:startc,loc0:startLoc,context:context}});
-
-  if (isVDT === VDT_AWAIT) {
-    var n = {
-      type: 'AwaitExpression', argument: core(arg),
-      start: startc, end: arg.end,
-      loc: { start: startLoc, end: arg.loc.end }
-    };
-    this.suspys = n;
-    return n;
-  }
-  
-  return {
-    type: 'UnaryExpression', operator: u,
-    start: startc, end: arg.end,
-    loc: {
-      start: startLoc,
-      end: arg.loc.end
-    }, argument: core(arg),
-    prefix: true
-  };
-};
-
 this.parseUpdateExpression = function(arg, context) {
   var c = 0, loc = null, u = this.ltraw;
   if (arg === null) {
@@ -7314,54 +4228,3239 @@ this.parseUpdateExpression = function(arg, context) {
   };
 };
 
-this .parseO = function(context ) {
-  switch ( this. lttype ) {
-  case 'op': return true;
-  case '--': return true;
-  case '-': this.prec = PREC_ADD_MIN; return true;
-  case '/':
-    if ( this.src.charCodeAt(this.c) === CH_EQUALITY_SIGN ) {
-      this.c++ ;
-      this.prec = PREC_OP_ASSIG;
-      this.ltraw = '/=';
-      this.col++; 
+},
+function(){
+this.parseArgList = function () {
+  var c0 = -1, li0 = -1, col0 = -1, parenAsync = this.parenAsync,
+      elem = null, list = [];
+
+  do { 
+    this.next();
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR); 
+    if (elem)
+      list.push(core(elem));
+    else if (this.lttype === '...')
+      list.push(this.parseSpreadElement(CTX_NONE));
+    else {
+      if (list.length !== 0) {
+        if (this.v < 7)
+          this.err('arg.non.tail',
+            {c0:c0, li0:li0, col0:col0,
+            extra: {list: list, async: parenAsync}});
+      }
+      break;
     }
-    else
-      this.prec = PREC_MUL ; 
 
-    return true;
+    if (this.lttype === ',') {
+      c0 = this.c0;
+      li0 = this.li0;
+      col0 = this.col0;
+    }
+    else break;
+  } while (true);
 
+  if (parenAsync !== null)
+    this.parenAsync = parenAsync;
+
+  return list ;
+};
+
+},
+function(){
+this.parseArrayExpression = function(context) {
+
+  var startc = this.c - 1,
+      startLoc = this.locOn(1);
+
+  this.next();
+
+  var elem = null,
+      list = [];
+  var elemContext = CTX_NULLABLE;
+
+  if (context & CTX_PAT) {
+    elemContext |= (context & CTX_PARPAT);
+    elemContext |= (context & CTX_PARPAT_ERR);
+  }
+  else
+    elemContext |= CTX_PAT|CTX_NO_SIMPLE_ERR;
+
+  var pt = ERR_NONE_YET, pe = null, po = null;
+  var at = ERR_NONE_YET, ae = null, ao = null;
+  var st = ERR_NONE_YET, se = null, so = null;
+
+  var pc0 = -1, pli0 = -1, pcol0 = -1;
+  var ac0 = -1, ali0 = -1, acol0 = -1;
+  var sc0 = -1, sli0 = -1, scol0 = -1;
+
+  if (context & CTX_PARPAT) {
+    if ((context & CTX_PARAM) &&
+       !(context & CTX_HAS_A_PARAM_ERR)) {
+      this.pt = ERR_NONE_YET; this.pe = this.po = null;
+    }
+
+    if ((context & CTX_PAT) &&
+       !(context & CTX_HAS_AN_ASSIG_ERR)) {
+      this.at = ERR_NONE_YET; this.ae = this.ao = null;
+    }
+
+    if (!(context & CTX_HAS_A_SIMPLE_ERR)) {
+      this.st = ERR_NONE_YET; this.se = this.so = null;
+    }
+  }
+
+  var hasMore = true;
+  var hasRest = false, hasNonTailRest = false;
+
+  while (hasMore) {
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
+    if (elem === null && this.lttype === '...') {
+      elem = this.parseSpreadElement(elemContext);
+      hasRest = true;
+    }
+    if (this.lttype === ',') {
+      if (hasRest)
+        hasNonTailRest = true; 
+      if (elem === null) {
+        if (this.v <= 5) this.err('ver.elision');
+        list.push(null);
+      }
+      else list.push(core(elem));
+      this.next();
+    }
+    else {
+      if (elem) {
+        list.push(core(elem));
+        hasMore = false;
+      }
+      else break;
+    }
+ 
+    if (elem && (elemContext & CTX_PARPAT)) {
+      var elemCore = elem;
+      // TODO: [...(a),] = 12
+      var t = ERR_NONE_YET;
+      if (elemCore.type === PAREN_NODE)
+        t = ERR_PAREN_UNBINDABLE;
+      else if (hasNonTailRest)
+        t = ERR_NON_TAIL_REST;
+
+      if ((elemContext & CTX_PARAM) && 
+         !(elemContext & CTX_HAS_A_PARAM_ERR)) {
+        if (this.pt === ERR_NONE_YET && t !== ERR_NONE_YET) {
+          this.pt = t; this.pe = elemCore;
+        }
+        if (this.pt !== ERR_NONE_YET) {
+          if (pt === ERR_NONE_YET || agtb(this.pt, pt)) {
+            pt = this.pt; pe = this.pe; po = core(elem);
+            if (pt & ERR_P_SYN)
+              elemContext |= CTX_HAS_A_PARAM_ERR;
+            if (pt & ERR_PIN) 
+              pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
+          }
+        }
+      }
+
+      // ([a]) = 12
+      if (t === ERR_PAREN_UNBINDABLE && this.ensureSimpAssig_soft(elem.expr))
+        t = ERR_NONE_YET;
+
+      if ((elemContext & CTX_PAT) &&
+         !(elemContext & CTX_HAS_AN_ASSIG_ERR)) {
+        if (this.at === ERR_NONE_YET && t !== ERR_NONE_YET) {
+          this.at = t; this.ae = elemCore;
+        }
+        if (this.at !== ERR_NONE_YET) {
+          if (at === ERR_NONE_YET || agtb(this.at, at)) {
+            at = this.at; ae = this.ae; ao = core(elem);
+            if (at & ERR_A_SYN)
+              elemContext |= CTX_HAS_AN_ASSIG_ERR;
+            if (at & ERR_PIN)
+              ac0 = this.aloc.c0, ali0 = this.aloc.li0, acol0 = this.aloc.col0;
+          }
+        }
+      }
+      if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
+        if (this.st !== ERR_NONE_YET) {
+          if (st === ERR_NONE_YET || agtb(this.st, st)) {
+            st = this.st; se = this.se; so = core(elem);
+            if (st & ERR_S_SYN)
+              elemContext |= CTX_HAS_A_SIMPLE_ERR;
+            if (st & ERR_PIN)
+              sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
+          }
+        }
+      }
+    }
+
+    hasRest = hasNonTailRest = false;
+  }
+  
+  var n = {
+    type: 'ArrayExpression',
+    loc: { start: startLoc, end: this.loc() },
+    start: startc,
+    end: this.c,
+    elements : list  ,y:-1
+  };
+
+  if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
+    this.pt = pt; this.pe = pe; this.po = po;
+    if (pt & ERR_PIN)
+      this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0;
+  }
+  if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
+    this.at = at; this.ae = ae; this.ao = ao;
+    if (at & ERR_PIN)
+      this.aloc.c0 = ac0, this.aloc.li0 = ali0, this.aloc.col0 = acol0;
+  }
+  if ((context & CTX_PARPAT) && st !== ERR_NONE_YET) {
+    this.st = st; this.se = se; this.so = so;
+    if (st & ERR_PIN)
+      this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.col0 = scol0;
+  }
+
+  if (!this.expectType_soft(']'))
+    this.err('array.unfinished');
+  
+  return n;
+};
+
+},
+function(){
+this.parseArrowFunctionExpression = function(arg, context)   {
+  if (this.v <= 5)
+    this.err('ver.arrow');
+  var tight = this.tight, async = false;
+
+  this.enterFuncScope(false);
+  this.declMode = DECL_MODE_FUNC_PARAMS;
+  this.enterComplex();
+
+  var scopeFlags = this.scopeFlags;
+  this.scopeFlags &= INHERITED_SCOPE_FLAGS;
+
+  if (this.pt === ERR_ASYNC_NEWLINE_BEFORE_PAREN) {
+    ASSERT.call(this, arg === this.pe, 'how can an error core not be equal to the erroneous argument?!');
+    this.err('arrow.newline.before.paren.async');
+  }
+
+  switch ( arg.type ) {
   case 'Identifier':
-    switch ( this. ltval ) {
-    case 'in':
-      this.resvchk();
-    case 'of':
-      if (context & CTX_FOR)
-        break ;
+    this.firstNonSimpArg = null;
+    this.asArrowFuncArg(arg);
+    break;
 
-      this.prec = PREC_COMP ;
-      this.ltraw = this.ltval;
-      return true;
-
-    case 'instanceof':
-      this.resvchk();
-      this.prec = PREC_COMP  ;
-      this.ltraw = this.ltval ;
-      return true;
-
+  case PAREN_NODE:
+    this.firstNonSimpArg = null;
+    if (arg.expr) {
+      if (arg.expr.type === 'SequenceExpression')
+        this.asArrowFuncArgList(arg.expr.expressions);
+      else
+        this.asArrowFuncArg(arg.expr);
     }
     break;
 
-  case '?':
-    this .prec = PREC_COND;
-    return true;
+  case 'CallExpression':
+    if (this.v >= 7 && arg.callee.type !== 'Identifier' || arg.callee.name !== 'async')
+      this.err('not.a.valid.arg.list',{tn:arg});
+    if (this.parenAsync !== null && arg.callee === this.parenAsync.expr)
+      this.err('arrow.has.a.paren.async');
 
+//  if (this.v < 7)
+//    this.err('ver.async');
+
+    async = true;
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+    this.asArrowFuncArgList(arg.arguments);
+    break;
+
+  case INTERMEDIATE_ASYNC:
+    async = true;
+    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+    this.asArrowFuncArg(arg.id);
+    break;
+
+  default:
+    this.err('not.a.valid.arg.list');
+
+  }
+
+  this.currentExprIsParams();
+
+  if (this.nl)
+    this.err('arrow.newline');
+
+  this.next();
+
+  var isExpr = true, nbody = null;
+
+  if ( this.lttype === '{' ) {
+    var prevLabels = this.labels;
+    this.labels = {};
+    isExpr = false;
+    this.scopeFlags |= SCOPE_FLAG_FN;
+    nbody = this.parseFuncBody(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+    this.labels = prevLabels;
+  }
+  else
+    nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_PAT) ;
+
+  this.exitScope();
+  this.tight = tight;
+
+  this.scopeFlags = scopeFlags;
+
+  var params = core(arg);
+  if (params === null)
+    params = [];
+  else if (params.type === 'SequenceExpression')
+    params = params.expressions;
+  else if (params.type === 'CallExpression')
+    params = params.arguments;
+  else {
+    if (params.type === INTERMEDIATE_ASYNC)
+      params = params.id;
+    params = [params];
+  }
+
+  return {
+    type: 'ArrowFunctionExpression', params: params, 
+    start: arg.start, end: nbody.end,
+    loc: {
+      start: arg.loc.start,
+      end: nbody.loc.end
+    },
+    generator: false, expression: isExpr,
+    body: core(nbody), id : null,
+    async: async
+  }; 
+};
+
+
+},
+function(){
+this.parseAssignment = function(head, context) {
+  var o = this.ltraw;
+  if (o === '=>')
+    return this.parseArrowFunctionExpression(head);
+
+  if (head.type === PAREN_NODE && !this.ensureSimpAssig_soft(head.expr)) {
+    this.at = ERR_PAREN_UNBINDABLE;
+    this.ae = this.ao = head;
+    this.throwTricky('a', this.at, this.ae);
+  }
+
+  var right = null;
+  if (o === '=') {
+    if (context & CTX_PARPAT)
+      this.adjustErrors();
+
+    var st = ERR_NONE_YET, se = null, so = null,
+        pt = ERR_NONE_YET, pe = null, po = null;
+
+    this.toAssig(core(head), context);
+
+    // flush any remaining simple error, now that there are no more assignment errors
+    if ((context & CTX_NO_SIMPLE_ERR) && this.st !== ERR_NONE_YET)
+      this.throwTricky('s', this.st);
+
+    var sc0 = -1, sli0 = -1, scol0 = -1,
+        pc0 = -1, pli0 = -1, pcol0 = -1;
+
+    if ((context & CTX_PARPAT) && this.st !== ERR_NONE_YET) {
+      st = this.st; se = this.se; so = this.so;
+      if (st & ERR_PIN)
+        sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
+    }
+    if ((context & CTX_PARAM) && this.pt !== ERR_NONE_YET) {
+      pt = this.pt; pe = this.pe; po = this.po;
+      if (pt & ERR_PIN)
+        pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
+    }
+
+    this.currentExprIsAssig();
+    this.next();
+    right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
+      (context & CTX_FOR)|CTX_PAT|CTX_NO_SIMPLE_ERR);
+
+    if (pt !== ERR_NONE_YET) {
+      this.pt = pt; this.pe = pe; this.po = po;
+      if (pt & ERR_PIN)
+        this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0 = pcol0;
+    }
+    if (st !== ERR_NONE_YET) {
+      this.st = st; this.se = se; this.so = so;
+      if (st & ERR_PIN)
+        this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.scol0;
+    }
+  }
+  else {
+    // TODO: further scrutiny, like checking for this.at, is necessary (?)
+    if (!this.ensureSimpAssig_soft(core(head)))
+      this.err('assig.not.simple',{tn:core(head)});
+
+    var c0 = -1, li0 = -1, col0 = -1;
+    if (context & CTX_PARPAT) {
+      c0 = this.c0; li0 = this.li0; col0 = this.col0;
+    }
+    this.next();
+    right = this.parseNonSeqExpr(PREC_WITH_NO_OP,
+      (context & CTX_FOR)|CTX_PAT|CTX_NO_SIMPLE_ERR);
+
+    if (context & CTX_PARAM) {
+      this.ploc.c0 = c0, this.ploc.li0 = li0, this.ploc.col0 = col0;
+      this.pt = ERR_PIN_NOT_AN_EQ;
+    }
+    if (context & CTX_PAT) {
+      this.aloc.c0 = c0, this.aloc.li0 = li0, this.aloc.col0 = col0;
+      this.at = ERR_PIN_NOT_AN_EQ;
+    }
+  }
+ 
+  return {
+    type: 'AssignmentExpression',
+    operator: o,
+    start: head.start,
+    end: right.end,
+    left: head,
+    right: core(right),
+    loc: {
+      start: head.loc.start,
+      end: right.loc.end
+    } ,y:-1
+  };
+};
+
+},
+function(){
+function idAsync(c0,li0,col0,raw) {
+  return {
+    type: 'Identifier', name: 'async',
+    start: c0, end: c0 + raw.length,
+    loc: {
+      start: { line: li0, column: col0 }, 
+      end: { line: li0, column: col0 + raw.length }
+    }, raw: raw
+  };
+}
+
+this.parseAsync = function(context) {
+  if (this.v < 7) 
+    return this.id();
+
+  var c0 = this.c0,
+      li0 = this.li0,
+      col0 = this.col0,
+      raw = this.ltraw;
+
+  var stmt = this.canBeStatement;
+  if (stmt)
+    this.canBeStatement = false;
+
+  this.next();
+
+  var n = null;
+  switch (this.lttype) {
+  case 'Identifier':
+    if (this.nl) {
+      if ((context & CTX_ASYNC_NO_NEWLINE_FN) &&
+         this.ltval === 'function')
+        n = null;
+      else
+        n = idAsync(c0,li0,col0,raw);
+      break;
+    }
+    if (this.ltval === 'function') {
+      // TODO: eliminate
+      if (stmt) {
+        this.canBeStatement = stmt;
+        if (this.unsatisfiedLabel)
+          this.err('async.label.not.allowed',{c0:c0,li0:li0,col0:col0});
+        if (!this.canDeclareFunctionsInScope(true))
+          this.err('async.is.not.allowed',{c0:c0,li0:li0,col0:col0});
+
+        stmt = false;
+      }
+
+      n = this.parseFunc(context, MEM_ASYNC);
+      n.start = c0;
+      n.loc.start.line = li0;
+      n.loc.start.column = col0;
+      break;
+    }
+    if (context & CTX_ASYNC_NO_NEWLINE_FN) {
+      n = null;
+      break;
+    }
+    n = this.parseAsync_intermediate(c0,li0,col0);
+    this.st = ERR_INTERMEDIATE_ASYNC;
+    this.se = n;
+    break;
+
+  case '(':
+    if (context & CTX_ASYNC_NO_NEWLINE_FN) {
+      n = null;
+      break; 
+    }
+    var hasNewLineBeforeParen = this.nl;
+    var args = this.parseParen(context & CTX_PAT), async = idAsync(c0,li0,col0,raw);
+    n = {
+      type: 'CallExpression', callee: async,
+      start: c0, end: args.end,
+      loc: {
+        start: async.loc.start,
+        end: args.loc.end
+      }, arguments: args.expr ?
+        args.expr.type === 'SequenceExpression' ?
+          args.expr.expressions :
+          [args.expr] :
+        []
+    };
+    
+    if ((context & CTX_PAT) && hasNewLineBeforeParen) {
+      this.pt = ERR_ASYNC_NEWLINE_BEFORE_PAREN;
+      this.pe = n;
+    }
+
+    break;
+
+  default:
+    if (context & CTX_ASYNC_NO_NEWLINE_FN)
+      n = null;
+    else
+      n = idAsync(c0,li0,col0,raw);
+    break;
+  }
+
+  if (stmt)
+    this.canBeStatement = stmt;
+
+  return n;
+};
+
+this.parseAsync_intermediate = function(c0, li0, col0) {
+  var id = this.validateID("");
+  return {
+    type: INTERMEDIATE_ASYNC,
+    id: id,
+    start: c0,
+    loc: { 
+      start: { line: li0, column: col0 }
+    }
+  };
+};
+
+
+},
+function(){
+this.parseBlockStatement = function () {
+  this.fixupLabels(false);
+
+  this.enterLexicalScope(false); 
+  var startc = this.c - 1,
+      startLoc = this.locOn(1);
+  this.next();
+  var scopeFlags = this.scopeFlags;
+  this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
+
+  var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
+        loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/};
+
+  if ( !this.expectType_soft ('}' ) &&
+        this.err('block.unfinished',{tn:n,extra:{delim:'}'}}))
+    return this.errorHandlerOutput ;
+
+  this.exitScope(); 
+  this.scopeFlags = scopeFlags;
+  return n;
+};
+
+},
+function(){
+this.parseBreakStatement = function () {
+   if (! this.ensureStmt_soft   () &&
+         this.err('not.stmt') )
+     return this.errorHandlerOutput ;
+
+   this.fixupLabels(false);
+   var startc = this.c0, startLoc = this.locBegin();
+   var c = this.c, li = this.li, col = this.col;
+
+   this.next() ;
+
+   var name = null, label = null, semi = 0;
+
+   var semiLoc = null;
+
+   if ( !this.nl && this.lttype === 'Identifier' ) {
+       label = this.validateID("");
+       name = this.findLabel(label.name + '%');
+       if (!name) this.err('break.no.such.label',{tn:label});
+       semi = this.semiI();
+       semiLoc = this.semiLoc_soft();
+       if ( !semiLoc && !this.nl &&
+            this.err('no.semi') )
+         return this.errorHandlerOutput;
+
+       this.foundStatement = true;
+       return { type: 'BreakStatement', label: label, start: startc, end: semi || label.end,
+           loc: { start: startLoc, end: semiLoc || label.loc.end } };
+   }
+   else if (!(this.scopeFlags & SCOPE_FLAG_BREAK) &&
+         this.err('break.not.in.breakable', {c0:startc,loc0:startLoc}) )
+     return this.errorHandlerOutput ;
+
+   semi = this.semiI();
+   semiLoc = this.semiLoc_soft();
+   if ( !semiLoc && !this.nl &&
+        this.err('no.semi') )
+     return this.errorHandlerOutput;
+
+   this.foundStatement = true;
+   return { type: 'BreakStatement', label: null, start: startc, end: semi || c,
+           loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
+};
+
+},
+function(){
+this. parseCatchClause = function () {
+   var startc = this.c0,
+       startLoc = this.locBegin();
+
+   this.kw();
+   this.next();
+
+   this.enterCatchScope();
+   if ( !this.expectType_soft ('(') &&
+        this.err('catch.has.no.opening.paren',{c0:startc,loc0:startLoc}) )
+     return this.errorHandlerOutput ;
+
+   this.declMode = DECL_MODE_CATCH_PARAMS;
+   var catParam = this.parsePattern();
+   if (this.lttype === 'op' && this.ltraw === '=')
+     this.err('catch.has.an.assig.param',{c0:startc,loc0:startLoc,extra:catParam});
+
+   this.declMode = DECL_NONE;
+   if (catParam === null)
+     this.err('catch.has.no.param',{c0:startc,loc0:startLoc});
+
+   if ( !this.expectType_soft (')') &&
+         this.err('catch.has.no.end.paren',{c0:startc,loc0:startLoc,extra:catParam})  )
+     return this.errorHandlerOutput    ;
+
+   var catBlock = this.parseBlockStatement_dependent('catch');
+
+   this.exitScope();
+   return {
+       type: 'CatchClause',
+        loc: { start: startLoc, end: catBlock.loc.end },
+       start: startc,
+       end: catBlock.end,
+       param: catParam ,
+       body: catBlock ,y:-1
+   };
+};
+
+
+},
+function(){
+this. parseClass = function(context) {
+  if (this.v <= 5)
+    this.err('ver.class');
+  if (this.unsatisfiedLabel)
+    this.err('class.label.not.allowed');
+
+  var startc = this.c0,
+      startLoc = this.locBegin();
+
+  var isStmt = false, name = null;
+  if (this.canBeStatement) {
+    isStmt = true;
+    this.canBeStatement = false;
+  }
+
+  if (this.onToken_ !== null)
+    this.lttype = 'Keyword';
+
+  this.next(); // 'class'
+
+  var prevStrict = this.tight;
+
+  this.tight = true;
+
+  // TODO: this is highly unnecessary, and prone to many errors if missed
+//this.scope.strict = true;
+
+  if (isStmt) {
+    if (!this.canDeclareClassInScope())
+      this.err('class.decl.not.in.block',{c0:startc,loc0:startLoc});
+    if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
+      this.declMode = DECL_MODE_CLASS_STMT;
+      name = this.parsePattern();
+    }
+    else if (!(context & CTX_DEFAULT))
+      this.err('class.decl.has.no.name', {c0:startc,loc0:startLoc});
+  }
+  else if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
+    this.enterLexicalScope(false);
+    this.scope.synth = true;
+    this.declMode = DECL_MODE_CLASS_EXPR;
+    name = this.parsePattern();
+  }
+
+  var memParseFlags = MEM_CLASS;
+  var superClass = null;
+  if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
+     this.kw();
+     this.next();
+     superClass = this.parseExprHead(CTX_NONE);
+     memParseFlags |= MEM_SUPER;
+  }
+
+  var list = [];
+  var startcBody = this.c - 1, startLocBody = this.locOn(1);
+
+  if (!this.expectType_soft('{'))
+    this.err('class.no.curly',{c0:startc,loc0:startLoc,extra:{n:name,s:superClass,c:context}});
+
+  var elem = null;
+
+  while (true) {
+    if (this.lttype === ';') {
+      this.next();
+      continue;
+    }
+    elem = this.parseMem(CTX_NONE, memParseFlags);
+    if (elem !== null) {
+      list.push(elem);
+      if (elem.kind === 'constructor')
+        memParseFlags |= MEM_HAS_CONSTRUCTOR;
+    }
+    else break;
+  }
+
+  var endLoc = this.loc();
+  var n = {
+    type: isStmt ? 'ClassDeclaration' : 'ClassExpression', id: name, start: startc,
+    end: this.c, superClass: superClass,
+    loc: { start: startLoc, end: endLoc },
+    body: {
+      type: 'ClassBody', loc: { start: startLocBody, end: endLoc },
+      start: startcBody, end: this.c,
+      body: list ,y:-1
+    } ,y:-1 
+  };
+
+  this.tight = prevStrict;
+
+  if (!this.expectType_soft('}'))
+    this.err('class.unfinished',{tn:n, extra:{delim:'}'}});
+
+  if (isStmt)
+    this.foundStatement = true;
+
+  return n;
+};
+
+this.parseSuper = function() {
+  if (this.v <=5 ) this.err('ver.super');
+
+  var n = {
+    type: 'Super', loc: { start: this.locBegin(), end: this.loc() },
+    start: this.c0, end: this.c
+  };
+ 
+  this.next();
+  switch ( this.lttype ) {
+  case '(':
+    if ((this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER) !==
+      SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER)
+      this.err('class.super.call',{tn:n});
+ 
+    break;
+ 
+  case '.':
+  case '[':
+    if (!(this.scopeFlags & SCOPE_FLAG_ALLOW_SUPER))
+      this.err('class.super.mem',{tn:n});
+ 
+    break ;
+  
+  default:
+    this.err('class.super.lone',{tn:n}); 
+
+  }
+ 
+  return n;
+};
+
+},
+function(){
+this.readMultiComment = function () {
+  var c = this.c, l = this.src, e = l.length,
+      r = -1, n = true, start = c;
+
+  var c0 = c, li0 = this.li, col0 = this.col;
+
+  while (c < e) {
+    switch (r = l.charCodeAt(c++ ) ) {
+    case CH_MUL:
+      if (l.charCodeAt(c) === CH_DIV) {
+        c++;
+        this.col += (c-start);
+        this.c = c;
+        if (this.onComment_ !== null)
+          this.onComment(true,c0,{line:li0,column:col0},
+            this.c,{line:this.li,column:this.col});
+
+        return n;
+      }
+      continue ;
+
+    case CH_CARRIAGE_RETURN:
+      if (CH_LINE_FEED === l.charCodeAt(c))
+        c++;
+    case CH_LINE_FEED:
+    case 0x2028:
+    case 0x2029:
+      start = c;
+      if (n)
+        n = false;
+      this.col = 0;
+      this.li++;
+      continue;
+
+//  default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
+
+    }
+  }
+
+  this.col += (c-start);
+  this.c = c;
+
+  this.err( 'comment.multi.unfinished',{extra:{c0:c0,li0:li0,col0:col0}});
+};
+
+this.readLineComment = function() {
+  var c = this.c, l = this.src,
+      e = l.length, r = -1;
+
+  var c0 = c, li0 = this.li, col0 = this.col, li = -1, col = -1;
+
+  L:
+  while ( c < e )
+    switch (r = l.charCodeAt(c++ ) ) {
+    case CH_CARRIAGE_RETURN:
+      if (CH_LINE_FEED === l.charCodeAt(c))
+        c++;
+    case CH_LINE_FEED :
+    case 0x2028:
+    case 0x2029 :
+      col = this.col;
+      li = this.li;
+      this.col = 0 ;
+      this.li++;
+      break L;
+    
+//  default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
+    }
+
+   this.c=c;
+
+   if (this.onComment_ !== null) {
+     if (li === -1) { li = this.li; col = this.col; }
+     this.onComment(false,c0,{line:li0,column:col0},
+       this.c,{line:li,column:col+(c-c0)});
+   }
+
+   return;
+};
+
+},
+function(){
+this.parseCond = function(cond, context) {
+  this.next();
+  var seq =
+    this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE);
+
+  if (!this.expectType_soft(':'))
+    this.err('cond.colon',{extra:[cond,seq,context]});
+
+  var alt =
+    this.parseNonSeqExpr(PREC_WITH_NO_OP, context & CTX_FOR);
+
+  return {
+    type: 'ConditionalExpression', test: core(cond),
+    start: cond.start, end: alt.end,
+    loc: {
+      start: cond.loc.start,
+      end: alt.loc.end
+    }, consequent: core(seq),
+    alternate: core(alt)  ,y:-1
+  };
+};
+
+
+
+},
+function(){
+this.parseContinueStatement = function () {
+   if ( ! this.ensureStmt_soft   () &&
+          this.err('not.stmt') )
+     return this.errorHandlerOutput ;
+
+   this.fixupLabels(false);
+   if (!(this.scopeFlags & SCOPE_FLAG_CONTINUE) &&
+         this.err('continue.not.in.loop') )
+     return this.errorHandlerOutput  ;
+
+   var startc = this.c0, startLoc = this.locBegin();
+   var c = this.c, li = this.li, col = this.col;
+
+   this.next() ;
+
+   var name = null, label = null, semi = 0;
+
+   var semiLoc = null;
+
+   if ( !this.nl && this.lttype === 'Identifier' ) {
+       label = this.validateID("");
+       name = this.findLabel(label.name + '%');
+       if (!name) this.err('continue.no.such.label',{tn:label,extra:{c0:startc,loc0:startLoc}}) ;
+
+       // TODO: tell what it is labeling
+       if (!name.loop) this.err('continue.not.a.loop.label',{tn:label,extra:{c0:startc,loc0:startLoc}});
+
+       semi = this.semiI();
+       semiLoc = this.semiLoc_soft();
+       if ( !semiLoc && !this.nl &&
+             this.err('no.semi') )
+         return this.errorHandlerOutput;
+
+       this.foundStatement = true;
+       return { type: 'ContinueStatement', label: label, start: startc, end: semi || label.end,
+           loc: { start: startLoc, end: semiLoc || label.loc.end } };
+   }
+   semi = this.semiI();
+   semiLoc = this.semiLoc_soft();
+   if ( !semiLoc && !this.nl &&
+         this.err('no.semi') )
+     return this.errorHandlerOutput;
+
+   this.foundStatement = true;
+   return { type: 'ContinueStatement', label: null, start: startc, end: semi || c,
+           loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
+};
+
+},
+function(){
+this . prseDbg = function () {
+  if (! this.ensureStmt_soft () &&
+        this.err('not.stmt') )
+    return this.errorHandlerOutput ;
+
+  this.fixupLabels(false);
+
+  var startc = this.c0,
+      startLoc = this.locBegin();
+  var c = this.c, li = this.li, col = this.col;
+
+  this.next() ;
+  if ( this. lttype ===  ';' ) {
+    c = this.c;
+    li = this.li;
+    col = this.col;
+    this.next();
+  } 
+  else if ( !this.nl &&
+     this.err('no.semi') )
+     return this.errorHandlerOutput;
+
+  this.foundStatement = true;
+  return {
+     type: 'DebuggerStatement',
+      loc: { start: startLoc, end: { line: li, column: col } } ,
+     start: startc,
+     end: c
+   };
+};
+
+},
+function(){
+this. parseBlockStatement_dependent = function(name) {
+    var startc = this.c - 1,
+        startLoc = this.locOn(1);
+
+    if (!this.expectType_soft ('{'))
+      this.err('block.dependent.no.opening.curly',{extra:{name:name}});
+    var scopeFlags = this.scopeFlags;
+    this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
+
+    var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
+        loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/ };
+    if ( ! this.expectType_soft ('}') &&
+         this.err('block.dependent.is.unfinished',{tn:n, extra:{delim:'}'}})  )
+      return this.errorHandlerOutput;
+
+    this.scopeFlags = scopeFlags;
+    return n;
+};
+
+},
+function(){
+this.parseDoWhileStatement = function () {
+  if ( !this.ensureStmt_soft () &&
+        this.err('not.stmt') )
+    return this.errorHandlerOutput ;
+
+  this.enterLexicalScope(true); 
+  this.fixupLabels(true);
+
+  var startc = this.c0,
+      startLoc = this.locBegin() ;
+  this.next() ;
+  var scopeFlags = this.scopeFlags;
+  this.scopeFlags &= CLEAR_IB;
+  this.scopeFlags |= (SCOPE_FLAG_BREAK| SCOPE_FLAG_CONTINUE);
+  var nbody = this.parseStatement (true) ;
+  this.scopeFlags = scopeFlags;
+  if (this.lttype === 'Identifier' && this.ltval === 'while') {
+    this.kw(); this.next();
+  }
+  else
+    this.err('do.has.no.while',{extra:[startc,startLoc,nbody]});
+
+  if ( !this.expectType_soft('(') &&
+        this.err('do.has.no.opening.paren',{extra:[startc,startLoc,nbody]}) )
+    return this.errorHandlerOutput;
+
+  var cond = core(this.parseExpr(CTX_NONE|CTX_TOP));
+  var c = this.c, li = this.li, col = this.col;
+  if ( !this.expectType_soft (')') &&
+        this.err('do.has.no.closing.paren',{extra:[startc,startLoc,nbody,cond]}) )
+    return this.errorHandlerOutput;
+
+  if (this.lttype === ';' ) {
+     c = this.c;
+     li = this.li ;
+     col = this.col;
+     this.next();
+  }
+
+ this.foundStatement = true;
+
+ this.exitScope(); 
+ return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
+          body: nbody, loc: { start: startLoc, end: { line: li, column: col } }  ,y:-1} ;
+};
+
+},
+function(){
+this .parseEmptyStatement = function() {
+  var n = { type: 'EmptyStatement',
+           start: this.c - 1,
+           loc: { start: this.locOn(1), end: this.loc() },
+            end: this.c };
+  this.next();
+  return n;
+};
+
+},
+function(){
+this.readEsc = function ()  {
+  var src = this.src, b0 = 0, b = 0, start = this.c;
+  switch ( src.charCodeAt ( ++this.c ) ) {
+   case CH_BACK_SLASH: return '\\';
+   case CH_MULTI_QUOTE: return'\"' ;
+   case CH_SINGLE_QUOTE: return '\'' ;
+   case CH_b: return '\b' ;
+   case CH_v: return '\v' ;
+   case CH_f: return '\f' ;
+   case CH_t: return '\t' ;
+   case CH_r: return '\r' ;
+   case CH_n: return '\n' ;
+   case CH_u:
+      b0 = this.peekUSeq();
+      if ( b0 >= 0x0D800 && b0 <= 0x0DBFF ) {
+        this.c++;
+        return String.fromCharCode(b0, this.peekTheSecondByte());
+      }
+      return fromcode(b0);
+
+   case CH_x :
+      b0 = toNum(this.src.charCodeAt(++this.c));
+      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
+        return this.errorHandlerOutput;
+      b = toNum(this.src.charCodeAt(++this.c));
+      if ( b === -1 && this.err('hex.esc.byte.not.hex') )
+        return this.errorHandlerOutput;
+      return String.fromCharCode((b0<<4)|b);
+
+   case CH_0: case CH_1: case CH_2:
+   case CH_3:
+       b0 = src.charCodeAt(this.c);
+       if ( this.tight ) {
+          if ( b0 === CH_0 ) {
+               b0 = src.charCodeAt(this.c +  1);
+               if ( b0 < CH_0 || b0 >= CH_8 )
+                 return '\0';
+          }
+          if ( this.err('strict.oct.str.esc') )
+            return this.errorHandlerOutput
+       }
+       else if (this.directive !== DIR_NONE) {
+         if (this.esct === ERR_NONE_YET) {
+           this.eloc.c0 = this.c;
+           this.eloc.li0 = this.li;
+           this.eloc.col0 = this.col + (this.c-start);
+           this.esct = ERR_PIN_OCTAL_IN_STRICT;
+         }
+       }
+
+       b = b0 - CH_0;
+       b0 = src.charCodeAt(this.c + 1 );
+       if ( b0 >= CH_0 && b0 < CH_8 ) {
+          this.c++;
+          b <<= 3;
+          b += (b0-CH_0);
+          b0 = src.charCodeAt(this.c+1);
+          if ( b0 >= CH_0 && b0 < CH_8 ) {
+             this.c++;
+             b <<= 3;
+             b += (b0-CH_0);
+          }
+       }
+       return String.fromCharCode(b)  ;
+
+    case CH_4: case CH_5: case CH_6: case CH_7:
+       if (this.tight)
+         this.err('strict.oct.str.esc');
+       else if (this.directive !== DIR_NONE) {
+         if (this.esct === ERR_NONE_YET) {
+           this.eloc.c0 = this.c;
+           this.eloc.li0 = this.li;
+           this.eloc.col0 = this.col + (this.c-start);
+           this.esct = ERR_PIN_OCTAL_IN_STRICT;
+         }
+       }
+
+       b0 = src.charCodeAt(this.c);
+       b  = b0 - CH_0;
+       b0 = src.charCodeAt(this.c + 1 );
+       if ( b0 >= CH_0 && b0 < CH_8 ) {
+          this.c++; 
+          b <<= 3; 
+          b += (b0-CH_0);
+       }
+       return String.fromCharCode(b)  ;
+
+   case CH_8:
+   case CH_9:
+       if ( this.err('esc.8.or.9') ) 
+         return this.errorHandlerOutput ;
+       return '';
+
+   case CH_CARRIAGE_RETURN:
+      if ( src.charCodeAt(this.c + 1) === CH_LINE_FEED ) this.c++;
+   case CH_LINE_FEED:
+   case 0x2028:
+   case 0x2029:
+      start = this.c;
+      this.col = 0;
+      this.li++;
+      return '';
+
+   default:
+      return src.charAt(this.c) ;
+  }
+};
+
+this.readStrictEsc = function ()  {
+  var src = this.src, b0 = 0, b = 0;
+  switch ( src.charCodeAt ( ++this.c ) ) {
+   case CH_BACK_SLASH: return '\\';
+   case CH_MULTI_QUOTE: return'\"' ;
+   case CH_SINGLE_QUOTE: return '\'' ;
+   case CH_b: return '\b' ;
+   case CH_v: return '\v' ;
+   case CH_f: return '\f' ;
+   case CH_t: return '\t' ;
+   case CH_r: return '\r' ;
+   case CH_n: return '\n' ;
+   case CH_u:
+      b0 = this.peekUSeq();
+      if ( b0 >= 0x0D800 && b0 <= 0x0DBFF ) {
+        this.c++;
+        return String.fromCharCode(b0, this.peekTheSecondByte());
+      }
+      return fromcode(b0);
+
+   case CH_x :
+      b0 = toNum(this.src.charCodeAt(++this.c));
+      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
+        return this.errorHandlerOutput;
+      b = toNum(this.src.charCodeAt(++this.c));
+      if ( b0 === -1 && this.err('hex.esc.byte.not.hex') )
+        return this.errorHandlerOutput;
+      return String.fromCharCode((b0<<4)|b);
+
+   case CH_0: case CH_1: case CH_2:
+   case CH_3:
+       b0 = src.charCodeAt(this.c);
+       if ( b0 === CH_0 ) {
+            b0 = src.charCodeAt(this.c +  1);
+            if ( b0 < CH_0 || b0 >= CH_8 )
+              return '\0';
+       }
+       if ( this.err('strict.oct.str.esc.templ') )
+         return this.errorHandlerOutput
+
+    case CH_4: case CH_5: case CH_6: case CH_7:
+       if (this.err('strict.oct.str.esc.templ') )
+         return this.errorHandlerOutput  ;
+
+   case CH_8:
+   case CH_9:
+       if ( this.err('esc.8.or.9') ) 
+         return this.errorHandlerOutput ;
+
+   case CH_CARRIAGE_RETURN:
+      if ( src.charCodeAt(this.c + 1) === CH_LINE_FEED ) this.c++;
+   case CH_LINE_FEED:
+   case 0x2028:
+   case 0x2029:
+      this.col = 0;
+      this.li++;
+      return '';
+
+   default:
+      return src.charAt(this.c) ;
+  }
+};
+
+
+
+},
+function(){
+
+this.peekTheSecondByte = function () {
+  var e = this.src.charCodeAt(this.c), start = this.c;
+  if (CH_BACK_SLASH === e) {
+    if (CH_u !== this.src.charCodeAt(++this.c) &&
+        this.err('u.second.esc.not.u') )
+      return this.errorHandlerOutput ;
+
+    e = (this.peekUSeq());
+  }
+//  else this.col--;
+  if ( (e < 0x0DC00 || e > 0x0DFFF) && this.err('u.second.not.in.range',{extra:start}) )
+    return this.errorHandlerOutput;
+
+  return e;
+};
+
+this.peekUSeq = function () {
+  var c = ++this.c, l = this.src, e = l.length;
+  var byteVal = 0;
+  var n = l.charCodeAt(c);
+  if (CH_LCURLY === n) { // u{ 
+    ++c;
+    n = l.charCodeAt(c);
+    do {
+      n = toNum(n);
+      if ( n === - 1 && this.err('u.esc.hex',{c0:c}) )
+        return this.errorHandlerOutput ;
+
+      byteVal <<= 4;
+      byteVal += n;
+      if (byteVal > 0x010FFFF && this.err('u.curly.not.in.range',{c0:c}) )
+        return this.errorHandler ;
+
+      n = l.charCodeAt( ++ c);
+    } while (c < e && n !== CH_RCURLY);
+
+    if ( n !== CH_RCURLY && this.err('u.curly.is.unfinished',{c0:c}) ) 
+      return this.errorHandlerOutput ;
+
+    this.c = c;
+    return byteVal;
+  }
+ 
+  n = toNum(l.charCodeAt(c));
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
+    return this.errorHandlerOutput;
+  byteVal = n;
+  c++ ;
+  n = toNum(l.charCodeAt(c));
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
+    return this.errorHandlerOutput;
+  byteVal <<= 4; byteVal += n;
+  c++ ;
+  n = toNum(l.charCodeAt(c));
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
+    return this.errorHandlerOutput;
+  byteVal <<= 4; byteVal += n;
+  c++ ;
+  n = toNum(l.charCodeAt(c));
+  if ( n === -1 && this.err('u.esc.hex',{c0:c}) )
+    return this.errorHandlerOutput;
+  byteVal <<= 4; byteVal += n;
+
+  this.c = c;
+
+  return byteVal;
+};
+
+
+
+},
+function(){
+this.parseExport = function() {
+  if (this.v <= 5) this.err('ver.exim');
+
+  if ( !this.canBeStatement && this.err('not.stmt') )
+    return this.errorHandlerOutput ;
+
+  this.canBeStatement = false;
+
+  var startc = this.c0, startLoc = this.locBegin();
+  this.next();
+
+  var list = [], local = null, src = null ;
+  var endI = 0;
+  var ex = null;
+
+  var semiLoc = null;
+  switch ( this.lttype ) {
+  case 'op':
+    if (this.ltraw !== '*' &&
+        this.err('export.all.not.*',{extra:[startc,startLoc]}) )
+      return this.errorHandlerOutput;
+ 
+    this.next();
+    if ( !this.expectID_soft('from') &&
+          this.err('export.all.no.from',{extra:[startc,startLoc]}) )
+      return this.errorHandlerOutput;
+
+    if (!(this.lttype === 'Literal' &&
+         typeof this.ltval === STRING_TYPE ) && 
+         this.err('export.all.source.not.str',{extra:[startc,startLoc]}) )
+      return this.errorHandlerOutput;
+
+    src = this.numstr();
+    
+    endI = this.semiI();
+    semiLoc = this.semiLoc_soft();
+    if ( !semiLoc && !this.newlineBeforeLookAhead &&
+         this.err('no.semi') )
+      return this.errorHandlerOutput;
+
+    this.foundStatement = true;
+    
+    return  { type: 'ExportAllDeclaration',
+               start: startc,
+               loc: { start: startLoc, end: semiLoc || src.loc.end },
+                end: endI || src.end,
+               source: src };
+
+   case '{':
+     this.next();
+     var firstReserved = null;
+
+     while ( this.lttype === 'Identifier' ) {
+       local = this.id();
+       if ( !firstReserved ) {
+         this.throwReserved = false;
+         this.validateID(local.name);
+         if ( this.throwReserved )
+           firstReserved = local;
+         else
+           this.throwReserved = true;
+       }
+       ex = local;
+       if ( this.lttype === 'Identifier' ) {
+         if ( this.ltval !== 'as' && 
+              this.err('export.specifier.not.as',{extra:[startc,startLoc,local,list]}) )
+           return this.errorHandlerOutput ;
+
+         this.next();
+         if ( this.lttype !== 'Identifier' ) { 
+            if (  this.err('export.specifier.after.as.id',{extra:[startc,startLoc,local,list]}) )
+           return this.errorHandlerOutput;
+         }
+         else
+            ex = this.id();
+       }
+       list.push({ type: 'ExportSpecifier',
+                  start: local.start,
+                  loc: { start: local.loc.start, end: ex.loc.end }, 
+                   end: ex.end, exported: ex,
+                  local: local }) ;
+
+       if ( this.lttype === ',' )
+         this.next();
+       else
+         break;
+     }
+
+     endI = this.c;
+     var li = this.li, col = this.col;
+  
+     if ( !this.expectType_soft('}') && 
+           this.err('export.named.list.not.finished',{extra:[startc,startLoc,list,endI,li,col]}) )
+       return this.errorHandlerOutput  ;
+
+     if ( this.lttype === 'Identifier' ) {
+       if ( this.ltval !== 'from' &&
+            this.err('export.named.not.id.from',{extra:[startc,startLoc,list,endI,li,col]}) )
+          return this.errorHandlerOutput;
+
+       else this.next();
+       if ( !( this.lttype === 'Literal' &&
+              typeof this.ltval ===  STRING_TYPE) &&
+            this.err('export.named.source.not.str', {extra:[startc,startloc,list,endI,li,col]}) )
+         return this.errorHandlerOutput ;
+
+       else {
+          src = this.numstr();
+          endI = src.end;
+       }
+     }
+     else
+        if (firstReserved && this.err('export.named.has.reserved',{tn:firstReserved,extra:[startc,startLoc,list,endI,li,col]}) )
+          return this.errorHandlerOutput ;
+
+     endI = this.semiI() || endI;
+     semiLoc = this.semiLoc_soft();
+     if ( !semiLoc && !this.nl &&
+          this.err('no.semi'))
+       return this.errorHandlerOutput; 
+
+     this.foundStatement = true;
+     return { type: 'ExportNamedDeclaration',
+             start: startc,
+             loc: { start: startLoc, end: semiLoc || ( src && src.loc.end ) ||
+                                          { line: li, column: col } },
+              end: endI, declaration: null,
+               specifiers: list,
+              source: src };
+
+  }
+
+  var context = CTX_NONE;
+
+  if ( this.lttype === 'Identifier' && 
+       this.ltval === 'default' ) {
+    context = CTX_DEFAULT;
+    if (this.onToken_ !== null)
+      this.lttype = 'Keyword';
+    this.next();
+  }
+  
+  if ( this.lttype === 'Identifier' ) {
+      switch ( this.ltval ) {
+         case 'let':
+         case 'const':
+            if (context === CTX_DEFAULT && 
+                this.err('export.default.const.let',{extra:[startc,startLoc]}) )
+              return this.errorHandlerOutput;
+                
+            this.canBeStatement = true;
+            ex = this.parseVariableDeclaration(CTX_NONE);
+            break;
+              
+         case 'class':
+            this.canBeStatement = true;
+            ex = this.parseClass(context);
+            break;
+  
+         case 'var':
+            this.canBeStatement = true;
+            ex = this.parseVariableDeclaration(CTX_NONE ) ;
+            break ;
+
+         case 'function':
+            this.canBeStatement = true;
+            ex = this.parseFunc( context, 0 );
+            break ;
+
+         case 'async':
+           this.canBeStatement = true;
+           if (context & CTX_DEFAULT) {
+             ex = this.parseAsync(context);
+             if (this.foundStatement)
+               this.foundStatement = false;
+             else {
+               this.pendingExprHead = ex;
+               ex = null;
+             }
+             break;
+           }
+
+           ex = this.parseAsync(context|CTX_ASYNC_NO_NEWLINE_FN);
+           if (ex === null) {
+             if (this.lttype === 'Identifier' && this.ltval === 'function') {
+               ASSERT.call(this, this.nl, 'no newline before the "function" thing and still errors? -- impossible!');
+               this.err('export.newline.before.the.function', {extra:[startc,startLoc]});
+             } 
+             else
+               this.err('export.async.but.no.function',{extra:[startc,startLoc]});
+           }
+       }
+  }
+
+  if ( context !== CTX_DEFAULT ) {
+
+    if (!ex && this.err('export.named.no.exports',{extra:[startc,startLoc]}) )
+      return this.errorHandlerOutput ;
+    
+    this.foundStatement = true;
+    return { type: 'ExportNamedDeclaration',
+           start: startc,
+           loc: { start: startLoc, end: ex.loc.end },
+            end: ex.end , declaration: ex,
+             specifiers: list ,
+            source: null };
+  }
+
+  var endLoc = null;
+
+  if ( ex === null ) {
+    // TODO: this can exclusively happen as a result of calling `parseAsync` for parsing an async declaration;
+    // eliminate
+    if (this.canBeStatement)
+      this.canBeStatement = false
+
+    ex = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT );
+    endI = this.semiI();
+    endLoc = this.semiLoc_soft(); // TODO: semiLoc rather than endLoc
+    if ( !endLoc && !this.nl &&
+         this.err('no.semi') )
+      return this.errorHandlerOutput;
+  }
+
+  this.foundStatement = true;
+  return { type: 'ExportDefaultDeclaration',    
+          start: startc,
+          loc: { start: startLoc, end: endLoc || ex.loc.end },
+           end: endI || ex.end, declaration: core( ex ) };
+}; 
+
+},
+function(){
+this.parseExprHead = function (context) {
+  var head = null, inner = null, elem = null;
+
+  if (this.pendingExprHead) {
+    head = this.pendingExprHead;
+    this.pendingExprHead = null;
+  }
+  else
+    switch (this.lttype)  {
+    case 'Identifier':
+      if (head = this.parseIdStatementOrId(context))
+        break;
+
+      return null;
+
+    case '[' :
+      head = this.parseArrayExpression(context);
+      break;
+
+    case '(' :
+      head = this.parseParen(context);
+      break;
+
+    case '{' :
+      head = this.parseObjectExpression(context) ;
+      break;
+
+    case '/' :
+      head = this.parseRegExpLiteral() ;
+      break;
+
+    case '`' :
+        head = this.parseTemplateLiteral() ;
+        break;
+
+    case 'Literal':
+      head = this.numstr();
+      break;
+
+    case '-':
+      this.prec = PREC_U;
+      return null;
+
+    default:
+      return null;
+   
+    }
+    
+  if (head.type === 'Identifier')
+    this.scope.reference(head.name);
+
+  switch (this.lttype) {
+  case '.':
+  case '[':
+  case '(':
+  case '`':
+    this.currentExprIsSimple();
+  }
+
+  inner = core( head ) ;
+
+  LOOP:
+  while ( true ) {
+    switch (this.lttype ) {
+    case '.':
+      this.next();
+      if (this.lttype !== 'Identifier')
+        this.err('mem.name.not.id');
+
+      // TODO: null?
+      elem  = this.memberID();
+      if (elem === null)
+        this.err('mem.id.is.null');
+
+      head = { 
+        type: 'MemberExpression', property: elem,
+        start: head.start, end: elem.end,
+        loc: {
+          start: head.loc.start,
+          end: elem.loc.end 
+        }, object: inner,
+        computed: false  ,y:-1
+      };
+
+      inner = head ;
+      continue;
+
+    case '[':
+      this.next() ;
+      elem = this.parseExpr(PREC_WITH_NO_OP,CTX_NONE);
+      head = {
+        type: 'MemberExpression', property: core(elem),
+        start: head.start, end: this.c,
+        loc : {
+          start: head.loc.start,
+          end: this.loc()
+        }, object: inner,
+        computed: true  ,y:-1
+      };
+      inner  = head ;
+      if (!this.expectType_soft (']'))
+        this.err('mem.unfinished');
+      continue;
+
+    case '(':
+      elem = this.parseArgList();
+      head = {
+        type: 'CallExpression', callee: inner,
+        start: head.start, end: this.c, arguments: elem,
+        loc: {
+          start: head.loc.start,
+          end: this.loc()
+        }  ,y:-1
+      };
+
+      if (!this.expectType_soft (')'))
+        this.err('call.args.is.unfinished', {tn:elem,extra:{delim:')'}});
+
+      inner = head  ;
+      continue;
+
+    case '`' :
+      elem = this. parseTemplateLiteral();
+      head = {
+        type : 'TaggedTemplateExpression', quasi : elem,
+        start: head.start, end: elem.end,
+        loc : {
+          start: head.loc.start,
+          end: elem.loc.end
+        }, tag : inner ,y:-1
+      };
+      inner = head;
+      continue ;
+
+    default: break LOOP;
+    }
+
+  }
+
+  return head ;
+};
+
+
+
+},
+function(){
+this.parseFor = function() {
+  if (!this.ensureStmt_soft())
+    this.err('not.stmt');
+
+  this.fixupLabels(true) ;
+
+  var startc = this.c0,
+      startLoc = this.locBegin();
+
+  this.next () ;
+  if (!this.expectType_soft ('('))
+    this.err('for.with.no.opening.paren',{extra:[startc,startLoc]});
+
+  var head = null, headIsExpr = false;
+
+  var scopeFlags = this.scopeFlags;
+
+  // inside a for statement's init is like a block
+  this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
+
+  this.enterLexicalScope(true);
+
+  this.missingInit = false;
+  if ( this.lttype === 'Identifier' ) {
+    switch ( this.ltval ) {
+    case 'var':
+      this.canBeStatement = true;
+      head = this.parseVariableDeclaration(CTX_FOR);
+      break;
+
+    case 'let':
+      if ( this.v > 5 ) {
+        this.canBeStatement = true;
+        head = this.parseLet(CTX_FOR);
+      }
+      break;
+
+    case 'const' :
+      if (this.v < 5)
+        this.err('for.const.not.in.v5',{extra:[startc,startLoc,scopeFlags]});
+
+      this.canBeStatement = true;
+      head = this. parseVariableDeclaration(CTX_FOR);
+         break ;
+
+    }
+  }
+
+  this.scopeFlags = scopeFlags;
+
+  if (head === null) {
+    headIsExpr = true;
+    head = this.parseExpr( CTX_NULLABLE|CTX_PAT|CTX_FOR ) ;
+  }
+  else 
+    this.foundStatement = false;
+
+  var nbody = null;
+  var afterHead = null;
+
+  if (head !== null && this.lttype === 'Identifier') {
+    var kind = 'ForInStatement';
+    switch ( this.ltval ) {
+    case 'of':
+       kind = 'ForOfStatement';
+       this.ensureVarsAreNotResolvingToCatchParams();
+
+    case 'in':
+      if (this.ltval === 'in')
+        this.kw(), this.resvchk();
+
+      if (headIsExpr) {
+        if (head.type === 'AssignmentExpression') { // TODO: not in the spec
+          // TODO: squash with the `else if (head.init)` below
+        //if (this.tight || kind === 'ForOfStatement' || this.v < 7)
+            this.err('for.in.has.init.assig',{tn:head,extra:[startc,startLoc,kind]});
+        }
+        this.adjustErrors()
+        this.toAssig(head, CTX_FOR|CTX_PAT);
+        this.currentExprIsAssig();
+      }
+      else if (head.declarations.length !== 1)
+        this.err('for.decl.multi',{tn:head,extra:[startc,startLoc,kind]});
+      else if (this.missingInit)
+        this.missingInit = false;
+      else if (head.declarations[0].init) {
+        if (this.tight || kind === 'ForOfStatement' ||
+            this.v < 7 || head.declarations[0].id.type !== 'Identifier' || head.kind !== 'var')
+          this.err('for.in.has.decl.init',{tn:head,extra:[startc,startLoc,kind]});
+      }
+
+      this.next();
+      afterHead = kind === 'ForOfStatement' ? 
+        this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR) :
+        this.parseExpr(CTX_NONE|CTX_TOP);
+
+      if (!this.expectType_soft(')'))
+        this.err('for.iter.no.end.paren',{extra:[head,startc,startLoc,afterHead,kind]});
+
+      this.scopeFlags &= CLEAR_IB;
+      this.scopeFlags |= ( SCOPE_FLAG_BREAK|SCOPE_FLAG_CONTINUE );
+
+      nbody = this.parseStatement(true);
+      if (!nbody)
+        this.err('null.stmt');
+
+      this.scopeFlags = scopeFlags;
+      this.foundStatement = true;
+      this.exitScope();
+
+      return {
+        type: kind, loc: { start: startLoc, end: nbody.loc.end },
+        start: startc, end: nbody.end,
+        right: core(afterHead), left: head,
+        body: nbody ,y:-1
+      };
+
+    default:
+      this.err('for.iter.not.of.in',{extra:[startc,startLoc,head]});
+
+    }
+  }
+
+  if (headIsExpr)
+    this.currentExprIsSimple();
+  else if (head && this.missingInit)
+    this.err('for.decl.no.init',{extra:[startc,startLoc,head]});
+
+  if (!this.expectType_soft (';'))
+    this.err('for.simple.no.init.semi',{extra:[startc,startLoc,head]});
+
+  afterHead = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+  if (!this.expectType_soft (';'))
+    this.err('for.simple.no.test.semi',{extra:[startc,startLoc,head,afterHead]});
+
+  var tail = this.parseExpr(CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
+  if (!this.expectType_soft (')'))
+    this.err('for.simple.no.end.paren',{extra:[startc,startLoc,head,afterHead,tail]});
+
+  this.scopeFlags &= CLEAR_IB;
+  this.scopeFlags |= ( SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
+
+  nbody = this.parseStatement(true);
+  if (!nbody)
+    this.err('null.stmt');
+
+  this.scopeFlags = scopeFlags;
+  this.foundStatement = true;
+  this.exitScope();
+
+  return {
+    type: 'ForStatement', init: head && core(head), 
+    start : startc, end: nbody.end,
+    test: afterHead && core(afterHead),
+    loc: { start: startLoc, end: nbody.loc.end },
+    update: tail && core(tail), body: nbody ,y:-1
+  };
+};
+
+// TODO: exsureVarsAreNotResolvingToCatchParams_soft
+this.ensureVarsAreNotResolvingToCatchParams = function() {
+  var list = this.scope.nameList, e = 0;
+  while (e < list.length) {
+    if (list[e].type & DECL_MODE_CATCH_PARAMS)
+      this.err('for.of.var.overrides.catch',{tn:this.idNames[list[e].id.name+'%']});
+    e++;
+  }
+};
+
+},
+function(){
+this.parseFunc = function(context, st) {
+  var prevLabels = this.labels,
+      prevDeclMode = this.declMode; 
+
+  var isStmt = false,
+      startc = this.c0,
+      startLoc = this.locBegin();
+
+  if (this.canBeStatement) {
+    isStmt = true;
+    this.canBeStatement = false;
+  }
+
+  var isGen = false,
+      isMeth = st & (ST_CLSMEM|ST_OBJMEM);
+
+  var fnName = null,
+      argLen = !(st & ST_ACCESSOR) ? ARGLEN_ANY :
+        (st & ST_SETTER) ? ARGLEN_SET : ARGLEN_GET;
+
+  // it is not a meth -- so the next token is `function`
+  if (!isMeth) {
+    this.kw(); this.next();
+    st |= isStmt ? ST_DECL : ST_EXPR;
+    if (this.lttype === 'op' && this.ltraw === '*') {
+      if (this.v <= 5)
+        this.err('ver.gen');
+      if (isStmt) {
+        if (st & ST_ASYNC)
+          this.err('async.gen.not.yet.supported');
+        if (this.unsatisfiedlLabel)
+          this.err('gen.label.notAllowed');
+        if (this.scope.isBody())
+          this.err('gen.decl.not.allowed');
+      }
+      isGen = true;
+      st |= ST_GEN;
+      this.enterScope(this.scope.genScope(st));
+      this.next();
+    }
+    else {
+      if (isStmt) {
+        var isAsync = st & ST_ASYNC;
+        if (this.scope.isBody()) {
+          if (isAsync)
+            this.err('async.decl.not.allowed');
+          if (!this.scope.insideIf())
+            this.err('async.decl.not.allowed');
+          if (this.unsatisfiedLabel)
+            this.fixupLabels(false);
+        }
+
+        if (this.unsatisfiedLabel)
+          this.err('func.label.not.allowed');
+      }
+      this.enterScope(this.scope.fnScope(st));
+    }
+
+    if (isStmt) {
+      if (this.lttype === 'Identifier') {
+        fnName = this.parsePattern();
+      } else if (!(context & CTX_DEFAULT)) {
+        this.err('func.decl.has.no.name');
+      }
+    }
+    else {
+      if (this.lttype === 'Identifier') {
+        fnName = this.validateID(null);
+      }
+    }
+  }
+  else
+    this.enterScope(this.scope.fnScope(st));
+
+  this.scope.enterFuncArgs();
+  var argList = this.parseArgs(argLen);
+  this.scope.exitFuncArgs();
+
+  this.labels = {};
+
+  var body = this.parseFuncBody(context & CTX_FOR);
+
+  var n = {
+    type: isStmt ? 'FunctionDeclaration' : 'FunctionExpression',
+    id: fnName,
+    start: startc,
+    end: body.end,
+    generator: (st & ST_GEN) !== 0,
+    body: body,
+    loc: { start: startLoc, end: body.loc.end },
+    expression: body.type !== 'BlockStatement', params: argList,
+    async: (st & ST_ASYNC) !== 0
+  };
+
+  if (isStmt)
+    this.foundStatement = true;
+
+  this.labels = prevLabels;
+  this.declMode = prevDeclMode;
+
+  return n;
+};
+
+},
+function(){
+this.parseFuncBody = function(context) {
+  var elem = null;
+  
+  if ( this.lttype !== '{' ) {
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_NULLABLE|CTX_PAT);
+    if ( elem === null )
+      return this.err('func.body.is.empty.expr');
+    return elem;
+  }
+
+  var startc= this.c - 1, startLoc = this.locOn(1);
+
+  this.directive = DIR_FUNC;
+  this.clearAllStrictErrors();
+
+  this.next() ;
+
+  var list = this.blck();
+
+  var n = { type : 'BlockStatement', body: list, start: startc, end: this.c,
+           loc: { start: startLoc, end: this.loc() }/* ,scope: this.scope ,y:-1*/ };
+
+  if ( ! this.expectType_soft ( '}' ) &&
+         this.err('func.body.is.unfinished') )
+    return this.errorHandlerOutput ;
+
+  return  n;
+};
+
+
+
+},
+function(){
+this.parseArgs = function (argLen) {
+  var c0 = -1, li0 = -1, col0 = -1, tail = true,
+      list = [], elem = null;
+
+  if (!this.expectType_soft('('))
+    this.err('func.args.no.opening.paren');
+
+  var firstNonSimpArg = null;
+  while (list.length !== argLen) {
+    elem = this.parsePattern();
+    if (elem) {
+      if (this.lttype === 'op' && this.ltraw === '=') {
+        elem = this.parseAssig(elem);
+        this.makeComplex();
+      }
+      if (!firstNonSimpArg && elem.type !== 'Identifier')
+        firstNonSimpArg =  elem;
+      list.push(elem);
+    }
+    else {
+      if (list.length !== 0) {
+        if (this.v < 7)
+          this.err('arg.non.tail.in.func',
+            {c0:c0,li0:li0,col0:col0,extra:{list:list}});
+      }
+      break ;
+    }
+
+    if (this.lttype === ',' ) {
+      c0 = this.c0, li0 = this.li0, col0 = this.col0;
+      this.next();
+    }
+    else { tail = false; break; }
+  }
+  if (argLen === ARGLEN_ANY) {
+    if (tail && this.lttype === '...') {
+      this.makeComplex();
+      elem = this.parseRestElement();
+      list.push( elem  );
+      if ( !firstNonSimpArg )
+        firstNonSimpArg = elem;
+    }
+  }
+  else if (list.length !== argLen)
+    this.err('func.args.not.enough');
+
+  if (!this.expectType_soft (')'))
+    this.err('func.args.no.end.paren');
+
+  if (firstNonSimpArg)
+    this.firstNonSimpArg = firstNonSimpArg;
+ 
+  return list;
+};
+
+
+
+},
+function(){
+this . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
+this. parseIdStatementOrId = function ( context ) {
+  var id = this.ltval ;
+  var pendingExprHead = null;
+
+  SWITCH:
+  switch (id.length) {
+  case 1:
+    pendingExprHead = this.id(); break SWITCH ;
+
+  case 2:
+    switch (id) {
+    case 'do':
+      this.resvchk(); this.kw();
+      return this.parseDoWhileStatement();
+    case 'if':
+      this.resvchk(); this.kw();
+      return this.parseIfStatement();
+    case 'in':
+      this.resvchk(); this.kw();
+      // TODO: is it actually needed anymore?
+      if ( context & CTX_FOR )
+        return null;
+ 
+       this.notId() ;
+    default: pendingExprHead = this.id(); break SWITCH ;
+    }
+
+  case 3:
+    switch (id) {
+    case 'new':
+      this.resvchk(); this.kw();
+      if ( this.canBeStatement ) {
+        this.canBeStatement = false ;
+        this.pendingExprHead = this.parseNewHead();
+        return null;
+      }
+      return this.parseNewHead();
+
+    case 'for':
+      this.resvchk(); this.kw();
+      return this.parseFor();
+    case 'try':
+      this.resvchk(); this.kw();
+      return this.parseTryStatement();
+    case 'let':
+      if ( this.canBeStatement && this.v > 5 )
+        return this.parseLet(CTX_NONE);
+
+      if (this.tight) this.err('strict.let.is.id');
+
+      pendingExprHead = this.id();
+      break SWITCH;
+
+    case 'var':
+      this.resvchk();
+      return this.parseVariableDeclaration( context & CTX_FOR );
+    case 'int':
+      if (this.v <= 5) {
+        this.errorReservedID();
+      }
+
+    default: pendingExprHead = this.id(); break SWITCH  ;
+    }
+
+  case 4:
+    switch (id) {
+    case 'null':
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Null';
+      pendingExprHead = this.parseNull();
+      break SWITCH;
+    case 'void':
+      this.resvchk(); this.kw();
+      if ( this.canBeStatement )
+         this.canBeStatement = false;
+      this.lttype = 'u'; 
+      this.isVDT = VDT_VOID;
+      return null;
+    case 'this':
+      this.resvchk(); this.kw();
+      pendingExprHead = this. parseThis();
+      break SWITCH;
+    case 'true':
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
+      pendingExprHead = this.parseTrue();
+      break SWITCH;
+    case 'case':
+      this.resvchk();
+      if ( this.canBeStatement ) {
+        this.foundStatement = true;
+        this.canBeStatement = false ;
+        return null;
+      }
+
+    case 'else':
+      this.resvchk(); this.kw();
+      this.notId();
+    case 'with':
+      this.resvchk(); this.kw();
+      return this.parseWithStatement();
+    case 'enum': case 'byte': case 'char':
+    case 'goto': case 'long':
+      if (this. v <= 5 ) this.errorReservedID();
+
+    default: pendingExprHead = this.id(); break SWITCH  ;
+  }
+
+  case 5:
+    switch (id) {
+    case 'super':
+      this.resvchk(); this.kw();
+      pendingExprHead = this.parseSuper();
+      break SWITCH;
+    case 'break':
+      this.resvchk(); this.kw();
+      return this.parseBreakStatement();
+    case 'catch':
+      this.resvchk(); this.kw();
+      this.notId();
+    case 'class':
+      this.resvchk(); this.kw();
+      return this.parseClass(CTX_NONE ) ;
+    case 'const':
+      this.resvchk();
+      if (this.v<5) this.err('const.not.in.v5') ;
+      return this.parseVariableDeclaration(CTX_NONE);
+
+    case 'throw':
+      this.resvchk(); this.kw();
+      return this.parseThrowStatement();
+    case 'while':
+      this.resvchk(); this.kw();
+      return this.parseWhileStatement();
+    case 'yield': 
+      if ( this.scopeFlags & SCOPE_FLAG_GEN ) {
+        this.resvchk(); this.kw();
+        if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
+          this.err('yield.args');
+
+        if ( this.canBeStatement )
+          this.canBeStatement = false;
+
+        this.lttype = 'yield';
+        return null;
+      }
+      else if (this.tight) this.errorReservedID(null);
+
+      pendingExprHead = this.id();
+      break SWITCH;
+          
+    case 'false':
+      this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
+      pendingExprHead = this.parseFalse();
+      break SWITCH;
+
+    case 'await':
+      if (this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) {
+        this.resvchk(); this.kw();
+        if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
+          this.err('await.args');
+        if (this.canBeStatement)
+          this.canBeStatement = false;
+        this.isVDT = VDT_AWAIT;
+        this.lttype = 'u';
+        return null;
+      }
+      if (!this.isScript) {
+        this.resvchk(); this.kw();
+        this.err('await.in.strict');
+      }
+
+      pendingExprHead = this.suspys = this.id(); // async(e=await)=>l ;
+      break SWITCH;
+
+    case 'async':
+      pendingExprHead = this.parseAsync(context);
+      break SWITCH;
+
+    case 'final':
+    case 'float':
+    case 'short':
+      if ( this. v <= 5 ) this.errorReservedID() ;
+    default: pendingExprHead = this.id(); break SWITCH ;
+    }
+
+  case 6: switch (id) {
+    case 'static':
+      if (this.tight || this.v <= 5)
+        this.errorReservedID();
+
+    case 'delete':
+    case 'typeof':
+      this.resvchk(); this.kw();
+      if ( this.canBeStatement )
+        this.canBeStatement = false ;
+      this.lttype = 'u'; 
+      this.isVDT = id === 'delete' ? VDT_DELETE : VDT_VOID;
+      return null;
+
+    case 'export': 
+      this.resvchk(); this.kw();
+      if ( this.isScript && this.err('export.not.in.module') )
+        return this.errorHandlerOutput;
+
+      return this.parseExport() ;
+
+    case 'import':
+      this.resvchk(); this.kw();
+      if ( this.isScript && this.err('import.not.in.module') )
+        return this.errorHandlerOutput;
+
+      return this.parseImport();
+
+    case 'return':
+      this.resvchk(); this.kw();
+      return this.parseReturnStatement();
+    case 'switch':
+      this.resvchk(); this.kw();
+      return this.parseSwitchStatement();
+    case 'public':
+      if (this.tight) this.errorReservedID();
+    case 'double': case 'native': case 'throws':
+      if ( this. v <= 5 ) this.errorReservedID();
+
+    default: pendingExprHead = this.id(); break SWITCH ;
+    }
+
+  case 7:
+    switch (id) {
+    case 'default':
+      this.resvchk();
+      if ( this.canBeStatement ) this.canBeStatement = false ;
+      return null;
+
+    case 'extends': case 'finally':
+      this.resvchk(); this.kw();
+      this.notId();
+
+    case 'package': case 'private':
+      if (this.tight)
+        this.errorReservedID();
+
+    case 'boolean':
+      if (this.v <= 5)
+        this.errorReservedID();
+
+    default: pendingExprHead = this.id(); break SWITCH  ;
+    }
+
+  case 8:
+    switch (id) {
+    case 'function':
+      this.resvchk(); this.kw();
+      return this.parseFunc(context&CTX_FOR, 0 );
+    case 'debugger':
+      this.resvchk(); this.kw();
+      return this.prseDbg();
+    case 'continue':
+      this.resvchk(); this.kw();
+      return this.parseContinueStatement();
+    case 'abstract': case 'volatile':
+      if ( this. v <= 5 ) this.errorReservedID();
+
+    default: pendingExprHead = this.id(); break SWITCH  ;
+    }
+
+  case 9:
+    switch (id ) {
+    case 'interface': case 'protected':
+      if (this.tight) this.errorReservedID() ;
+
+    case 'transient':
+      if (this.v <= 5) this.errorReservedID();
+
+    default: pendingExprHead = this.id(); break SWITCH  ;
+    }
+
+  case 10:
+    switch ( id ) {
+    case 'instanceof':
+       this.resvchk(); this.kw();
+       this.notId();
+    case 'implements':
+      if ( this.v <= 5 || this.tight )
+        this.errorReservedID(id);
+
+    default: pendingExprHead = this.id(); break SWITCH ;
+    }
+
+  case 12:
+     if ( this.v <= 5 && id === 'synchronized' ) this.errorReservedID();
+
+  default: pendingExprHead = this.id();
+
+  }
+
+  if ( this.canBeStatement ) {
+    this.canBeStatement = false;
+    this.pendingExprHead = pendingExprHead;
+    return null;
+  }
+
+  return pendingExprHead;
+};
+ 
+this.resvchk = function() {
+  if (this.esct !== ERR_NONE_YET) {
+    ASSERT.call(this.esct === ERR_PIN_UNICODE_IN_RESV,
+      'the error in this.esct is something other than ERR_PIN_UNICODE_IN_RESV: ' + this.esct);
+    this.err('resv.unicode');
+  }
+};
+
+
+},
+function(){
+this.id = function() {
+  var id = {
+    type: 'Identifier', name: this.ltval,
+    start: this.c0, end: this.c,
+    loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw
+  };
+  this.next() ;
+  return id;
+};
+
+
+
+},
+function(){
+this.readAnIdentifierToken = function (v) {
+  var c = this.c, src = this.src, len = src.length, peek, start = c;
+  c++; // start reading the body
+
+  var byte2, startSlice = c; // the head is already supplied in v
+
+  while ( c < len ) {
+    peek = src.charCodeAt(c); 
+    if ( isIDBody(peek) ) {
+      c++;
+      continue;
+    }
+
+    if ( peek === CH_BACK_SLASH ) {
+      if (this.esct === ERR_NONE_YET) {
+        this.esct = ERR_PIN_UNICODE_IN_RESV;
+        this.eloc.c0 = c;
+        this.eloc.li0 = this.li;
+        this.eloc.col0 = this.col + (c-start);
+      }
+      if ( !v ) // if all previous characters have been non-u characters 
+        v = src.charAt (startSlice-1); // v = IDHead
+
+      if ( startSlice < c ) // if there are any non-u characters behind the current '\'
+        v += src.slice(startSlice,c) ; // v = v + those characters
+
+      this.c = ++c;
+      (CH_u !== src.charCodeAt(c) && this.err('id.u.not.after.slash'));
+
+      peek = this. peekUSeq() ;
+      if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
+        this.c++;
+        byte2 = this.peekTheSecondByte();
+        if (!isIDBody(((peek-0x0D800)<<10) + (byte2-0x0DC00) + 0x010000) &&
+             this.err('id.multi.must.be.idbody',{extra:[peek,byte2]}) )
+          return this.errorHandlerOutput ;
+
+        v += String.fromCharCode(peek, byte2);
+      }
+      else {
+         if ( !isIDBody(peek) &&
+               this.err('id.esc.must.be.idbody',{extra:peek}) )
+           return this.errorHandlerOutput;
+     
+         v += fromcode(peek);
+      }
+      c = this.c;
+      c++;
+      startSlice = c;
+    }
+    else if (peek >= 0x0D800 && peek <= 0x0DBFF ) {
+       if ( !v ) { v = src.charAt(startSlice-1); }
+       if ( startSlice < c ) v += src.slice(startSlice,c) ;
+       c++;
+       this.c = c; 
+       byte2 = this.peekTheSecondByte() ;
+       if (!isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000) &&
+            this.err('id.multi.must.be.idbody') )
+         return this.errorHandlerOutput ;
+
+       v += String.fromCharCode(peek, byte2);
+       c = this.c ;
+       c++;
+       startSlice = c;
+    }
+    else { break ; } 
+   }
+   if ( v ) { // if we have come across at least one u character
+      if ( startSlice < c ) // but all others that came after the last u-character have not been u-characters
+        v += src.slice(startSlice,c); // then append all those characters
+
+      this.ltraw = src.slice(this.c0,c);
+      this.ltval = v  ;
+   }
+   else {
+      this.ltval = this.ltraw = v = src.slice(startSlice-1,c);
+   }
+   this.c = c;
+   this.lttype= 'Identifier';
+};
+
+
+
+},
+function(){
+this.parseIfStatement = function () {
+  if ( !this.ensureStmt_soft () && this.err('not.stmt') )
+    return this.errorHandlerOutput;
+
+  this.fixupLabels(false);
+  this.enterLexicalScope(false); 
+
+  var startc = this.c0,
+      startLoc  = this.locBegin();
+  this.next () ;
+  !this.expectType_soft('(') &&
+  this.err('if.has.no.opening.paren');
+
+  var cond = core(this.parseExpr(CTX_NONE|CTX_TOP));
+
+  !this.expectType_soft (')') &&
+  this.err('if.has.no.closing.paren');
+
+  var scopeFlags = this.scopeFlags ;
+  this.scopeFlags &= CLEAR_IB;
+  this.scopeFlags |= SCOPE_FLAG_IN_IF;
+  var nbody = this. parseStatement (false);
+  var alt = null;
+  if ( this.lttype === 'Identifier' && this.ltval === 'else') {
+     this.kw(), this.next() ;
+     alt = this.parseStatement(false);
+  }
+  this.scopeFlags = scopeFlags ;
+
+  var scope = this.exitScope(); 
+
+  this.foundStatement = true;
+  return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,
+     loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt/*,scope:  scope  ,y:-1*/};
+};
+
+},
+function(){
+// TODO: needs a thorough simplification
+this.parseImport = function() {
+  if (this.v <= 5)
+    this.err('ver.exim');
+
+  if (!this.canBeStatement)
+    this.err('not.stmt');
+
+  this.canBeStatement = false;
+
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      hasList = false;
+
+  this.next();
+
+  var hasMore = true, list = [], local = null;
+  if ( this.lttype === 'Identifier' ) {
+    local = this.validateID("");
+    list.push({
+      type: 'ImportDefaultSpecifier',
+      start: local.start,
+      loc: local.loc,
+      end: local.end,
+      local: local
+    });
+    if (this.lttype === ',')
+      this.next();
+    else
+      hasMore = false;
+  }
+
+  var spStartc = 0, spStartLoc = null;
+  
+  if (hasMore) switch (this.lttype) {   
+  case 'op':
+    if (this.ltraw !== '*')
+      this.err('import.namespace.specifier.not.*');
+    else {
+      spStartc = this.c - 1;
+      spStartLoc = this.locOn(1);
+  
+      this.next();
+      if (!this.expectID_soft('as'))
+        this.err('import.namespace.specifier.no.as');
+      if (this.lttype !== 'Identifier')
+        this.err('import.namespace.specifier.local.not.id');
+ 
+      local = this.validateID("");
+      list.push({
+        type: 'ImportNamespaceSpecifier',
+        start: spStartc,
+        loc: { start: spStartLoc, end: local.loc.end },
+        end: local.end,
+        local: local
+      });
+    }
+    break;
+  
+  case '{':
+    hasList = true;
+    this.next();
+    while ( this.lttype === 'Identifier' ) {
+      local = this.id();
+      var im = local; 
+      if ( this.lttype === 'Identifier' ) {
+        if ( this.ltval !== 'as' && 
+             this.err('import.specifier.no.as') )
+          return this.errorHandlerOutput ;
+ 
+        this.next();
+        if ( this.lttype !== 'Identifier' &&
+             this.err('import.specifier.local.not.id') )
+          return this.errorHandlerOutput ;
+ 
+        local = this.validateID("");
+      }
+      else this.validateID(local.name);
+ 
+      list.push({
+        type: 'ImportSpecifier',
+        start: im.start,
+        loc: { start: im.loc.start, end: local.loc.end },
+        end: local.end, imported: im,
+        local: local
+      });
+ 
+      if ( this.lttype === ',' )
+         this.next();
+      else
+         break ;                                  
+    }
+ 
+    if (!this.expectType_soft('}')) 
+      this.err('import.specifier.list.unfinished');
+ 
+    break ;
+
+  default:
+    if (list.length) {
+      ASSERT.call(this, list.length === 1,
+        'how come has more than a single specifier been parsed before the comma was reached?!');
+      this.err('import.invalid.specifier.after.comma');
+    }
+  }
+
+   if (list.length || hasList) {
+     if (!this.expectID_soft('from'))
+       this.err('import.from');
+   }
+
+   // TODO: even though it's working the way it should, errors might be misleading for cases like:
+   // `import , from "a"`
+   if (!(this.lttype === 'Literal' &&
+        typeof this.ltval === STRING_TYPE))
+     this.err('import.source.is.not.str');
+
+   var src = this.numstr();
+   var endI = this.semiI() || src.end, 
+       semiLoc = this.semiLoc_soft();
+
+   if (!semiLoc && !this.nl)
+     this.err('no.semi');
+   
+   this.foundStatement = true;
+
+   return {
+     type: 'ImportDeclaration',
+     start: startc,
+     loc: {
+       start: startLoc,
+       end: semiLoc || src.loc.end
+     },
+     end:  endI , specifiers: list,
+     source: src
+   };
+}; 
+
+},
+function(){
+this .parseLabeledStatement = function(label, allowNull) {
+   this.next();
+   var l = label.name;
+   l += '%';
+   var ex = this.findLabel(l); // existing label
+   if ( ex && this.err('label.is.a.dup',{tn:label,extra:ex}) )
+     return this.errorHandlerOutput ;
+
+   this.labels[l] =
+        this.unsatisfiedLabel ?
+        this.unsatisfiedLabel :
+        this.unsatisfiedLabel = { loop: false };
+
+   var stmt  = this.parseStatement(allowNull);
+   this.labels[l] = null;
+
+   return { type: 'LabeledStatement', label: label, start: label.start, end: stmt.end,
+            loc: { start: label.loc.start, end: stmt.loc.end }, body: stmt };
+};
+
+},
+function(){
+
+this.parseLet = function(context) {
+
+// this function is only calld when we have a 'let' at the start of a statement,
+// or else when we have a 'let' at the start of a for's init; so, CTX_FOR means "at the start of a for's init ",
+// not 'in for'
+
+  var startc = this.c0, startLoc = this.locBegin();
+  var c = this.c, li = this.li, col = this.col, raw = this.ltraw;
+
+  var letDecl = this.parseVariableDeclaration(context);
+
+  if ( letDecl )
+    return letDecl;
+
+  if (this.tight && this.err('strict.let.is.id',{c0:startc,loc:startLoc}) )
+    return this.errorHandlerOutput ;
+
+  this.canBeStatement = false;
+  this.pendingExprHead = {
+     type: 'Identifier',
+     name: 'let',
+     start: startc,
+     end: c,
+     loc: { start: startLoc, end: { line: li, column: col }, raw: raw }
+  };
+
+  if (this.onToken_ !== null)
+    this.onToken({type: 'Identifier', value: raw, start: startc, end: c, loc:this.pendingExprHead.loc });
+
+  return null ;
+};
+
+this.hasDeclarator = function() {
+
+  switch (this.lttype) {
+  case '[':
+  case '{':
+  case 'Identifier':
+    return true;
+  
   default:
     return false;
 
   }
 };
 
+},
+function(){
+this.numstr = function () {
+  var n = {
+    type: 'Literal', value: this.ltval,
+    start: this.c0, end: this.c,
+    loc: { start: this.locBegin(), end: this.loc() },
+    raw: this.ltraw
+  };
+  this.next();
+  return n;
+};
+
+this.parseTrue = function() {
+  var n = {
+    type: 'Literal', value: true,
+    start: this.c0, end: this.c,
+    loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw
+  };
+  this.next();
+  return n;
+};
+
+this.parseNull = function() {
+  var n = {
+    type: 'Literal', value: null,
+    start: this.c0, end: this.c,
+    loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw
+  };
+  this.next();
+  return n;
+};
+
+this.parseFalse = function() {
+  var n = {
+    type: 'Literal', value: false,
+    start: this.c0, end: this.c,
+    loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw
+  };
+  this.next();
+  return n;
+};
+
+
+
+},
+function(){
+// TODO: the values for li, col, and c can be calculated
+// by adding the value of raw.length to li0, col0, and c0, respectively,
+// but this holds only in a limited use case where the
+// value of the `raw` param is known to be either 'static', 'get', or 'set';
+// but if this is going to be called for any value of raw containing surrogates, it may not work correctly.
+function assembleID(c0, li0, col0, raw, val) {
+  return { 
+    type: 'Identifier', raw: raw,
+    name: val, end: c0 + raw.length,
+    start: c0, 
+    loc: {
+      start: { line: li0, column: col0 },
+      end: { line: li0, column: col0 + raw.length }
+    }
+  }
+}
+
+this.parseMem = function(context, flags) {
+  var c0 = 0, li0 = 0, col0 = 0, nmod = 0,
+      nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "", latestFlag = 0;
+
+  var asyncNewLine = false;
+  if (this.v > 5 && this.lttype === 'Identifier') {
+    LOOP:  
+    // TODO: check version number when parsing get/set
+    do {
+      if (nmod === 0) {
+        c0 = this.c0; li0 = this.li; col0 = this.col0;
+      }
+      switch (this.ltval) {
+      case 'static':
+        if (!(flags & MEM_CLASS)) break LOOP;
+        if (flags & MEM_STATIC) break LOOP;
+        if (flags & MEM_ASYNC) break LOOP;
+
+        nc0 = this.c0; nli0 = this.li0;
+        ncol0 = this.col0; nraw = this.ltraw;
+        nval = this.ltval;
+
+        flags |= latestFlag = MEM_STATIC;
+        nmod++;
+
+        if (this.onToken_ !== null) {
+          this.lttype = "";
+          this.next();
+          if (this.lttype !== '(')
+            this.onToken_kw(nc0,{line:nli0,column:ncol0},nraw);
+          else
+            this.onToken({ type: 'Identifier', value: nraw, start: nc0, end: nc0+nraw.length,
+              loc: {
+                start: { line: nli0, column: ncol0 },
+                end: { line: nli0, column: ncol0+nraw.length }
+              }
+            });
+        }
+        else
+          this.next();
+
+        break;
+
+      case 'get':
+      case 'set':
+        if (flags & MEM_ACCESSOR) break LOOP;
+        if (flags & MEM_ASYNC) break LOOP;
+
+        nc0 = this.c0; nli0 = this.li0;
+        ncol0 = this.col0; nraw = this.ltraw;
+        nval = this.ltval;
+        
+        flags |= latestFlag = this.ltval === 'get' ? MEM_GET : MEM_SET;
+        nmod++;
+        this.next();
+        break;
+
+      case 'async':
+        if (flags & MEM_ACCESSOR) break LOOP;
+        if (flags & MEM_ASYNC) break LOOP;
+
+        nc0 = this.c0; nli0 = this.li0;
+        ncol0 = this.col0; nraw = this.ltraw;
+        nval = this.ltval;
+
+        flags |= latestFlag = MEM_ASYNC;
+        nmod++;
+        this.next();
+        if (this.nl) {
+          asyncNewLine = true;
+          break;
+        }
+
+        break;
+
+      default:
+        break LOOP;
+
+      }
+    } while (this.lttype === 'Identifier');
+  }
+  
+  if (this.lttype === 'op' && this.ltraw === '*') {
+    if (this.v <= 5)
+      this.err('ver.mem.gen');
+    if (flags & MEM_ASYNC)
+      this.err('async.gen.not.yet.supported');
+
+    if (!c0) { c0 = this.c-1; li0 = this.li; col0 = this.col-1; }
+
+    flags |= latestFlag = MEM_GEN;
+    nmod++;
+    this.next();
+  }
+
+  var nmem = null;
+  switch (this.lttype) {
+  case 'Identifier':
+    if (asyncNewLine)
+      this.err('async.newline');
+
+    if ((flags & MEM_CLASS)) {
+      if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
+      if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
+    }
+    else if (this.ltval === '__proto__')
+      flags |= MEM_PROTO;
+
+    nmem = this.memberID();
+    break;
+  case 'Literal':
+    if (asyncNewLine)
+      this.err('async.newline');
+
+    if ((flags & MEM_CLASS)) {
+      if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
+      if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
+    }
+    else if (this.v > 5 && this.ltval === '__proto__')
+      flags |= MEM_PROTO;
+
+    nmem = this.numstr();
+    break;
+  case '[':
+    if (asyncNewLine)
+      this.err('async.newline');
+
+    nmem = this.memberExpr();
+    break;
+  default:
+    if (nmod && latestFlag !== MEM_GEN) {
+      nmem = assembleID(nc0, nli0, ncol0, nraw, nval);
+      flags &= ~latestFlag; // it's found out to be a name, not a modifier
+      nmod--;
+    }
+  }
+
+  if (nmem === null) {
+    if (flags & MEM_GEN)
+      this.err('mem.gen.has.no.name');
+    return null;
+  } 
+
+  if (this.lttype === '(') {
+    if (this.v <= 5) this.err('ver.mem.meth');
+    var mem = this.parseMeth(nmem, flags);
+    if (c0 && c0 !== mem.start) {
+      mem.start = c0;
+      mem.loc.start = { line: li0, column: col0 };
+    }
+    return mem;
+  }
+
+  if (flags & MEM_CLASS)
+    this.err('meth.paren');
+
+  if (nmod)
+    this.err('obj.meth.no.paren');
+
+  // TODO: it is not strictly needed -- this.parseObjElem itself can verify if the name passed to it is
+  // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad
+  // faster
+  if (flags & MEM_PROTO)
+    context |= CTX_HASPROTO;
+
+  return this.parseObjElem(nmem, context|(flags & MEM_PROTO));
+};
+ 
+this.parseObjElem = function(name, context) {
+  var hasProto = context & CTX_HASPROTO, firstProto = this.first__proto__;
+  var val = null;
+  context &= ~CTX_HASPROTO;
+
+  switch (this.lttype) {
+  case ':':
+    if (hasProto && firstProto)
+      this.err('obj.proto.has.dup',{tn:name});
+
+    this.next();
+    val = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+
+    if (context & CTX_PARPAT) {
+      if (val.type === PAREN_NODE) {
+        if ((context & CTX_PARAM) &&
+           !(context & CTX_HAS_A_PARAM_ERR) &&
+           this.pt === ERR_NONE_YET) {
+          this.pt = ERR_PAREN_UNBINDABLE; this.pe = val;
+        }
+        if ((context & CTX_PAT) &&
+           !(context & CTX_HAS_A_PARAM_ERR) &&
+           this.at === ERR_NONE_YET &&
+           !this.ensureSimpAssig_soft(val.expr)) {
+          this.at = ERR_PAREN_UNBINDABLE; this.pe = val;
+        }
+      }
+    }
+
+    val = {
+      type: 'Property', start: name.start,
+      key: core(name), end: val.end,
+      kind: 'init',
+      loc: { start: name.loc.start, end: val.loc.end },
+      computed: name.type === PAREN,
+      method: false, shorthand: false, value: core(val) ,y:-1
+    };
+
+    if (hasProto)
+      this.first__proto__ = val;
+
+    return val;
+ 
+  case 'op':
+    if (this.v <= 5)
+      this.err('mem.short.assig');
+    if (name.type !== 'Identifier')
+      this.err('obj.prop.assig.not.id',{tn:name});
+    if (this.ltraw !== '=')
+      this.err('obj.prop.assig.not.assigop');
+    if (context & CTX_NO_SIMPLE_ERR)
+      this.err('obj.prop.assig.not.allowed');
+
+    val = this.parseAssignment(name, context);
+    if (!(context & CTX_HAS_A_SIMPLE_ERR) &&
+       this.st === ERR_NONE_YET) {
+      this.st = ERR_SHORTHAND_UNASSIGNED; this.se = val;
+    }
+ 
+    break;
+
+  default:
+    if (this.v <= 5)
+      this.err('mem.short');
+    if (name.type !== 'Identifier')
+      this.err('obj.prop.assig.not.id',{tn:name});
+    this.validateID(name.name);
+    val = name;
+    break;
+  }
+  
+  return {
+    type: 'Property', key: name,
+    start: val.start, end: val.end,
+    loc: val.loc, kind: 'init',
+    shorthand: true, method: false,
+    value: val, computed: false ,y:-1
+  };
+};
+
+
+
+},
+function(){
+this .memberID = function() { return this.v > 5 ? this.id() : this.validateID("") ; };
+this .memberExpr = function() {
+  if (this.v <= 5)
+    this.err('ver.mem.comp');
+
+  var startc = this.c - 1,
+      startLoc = this.locOn(1);
+  this.next() ;
+  
+  // none of the modifications memberExpr may make to this.pt, this.at, and this.st
+  // overwrite some other unrecorded this.pt, this.at, or this.st -- an unrecorded value of <pt:at:st>
+  // means a whole elem was just parsed, and <pt:at:st> is immediately recorded after that whole
+  // potpat element is parsed, so if a memberExpr overwrites <pt:at:st>, that <pt:at:st> is not an
+  // unrecorded one.
+  
+  // TODO: it is not necessary to reset <pt:at>
+  this.pt = this.at = this.st = 0;
+  var e = this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR); // TODO: should be CTX_NULLABLE, or else the next line is in vain 
+  if (!e && this.err('prop.dyna.no.expr') ) // 
+    return this.errorHandlerOutput ;
+
+  var n = { type: PAREN, expr: e, start: startc, end: this.c, loc: { start: startLoc, end: this.loc() } } ;
+  if ( !this.expectType_soft (']') &&
+        this.err('prop.dyna.is.unfinished') )
+    return this.errorHandlerOutput ;
+ 
+  return n;
+};
+
+
+
+},
+function(){
+// TODO: new_raw
+this.parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
+  if (this.ltval !== 'target')
+    this.err('meta.new.has.unknown.prop');
+  
+  if (!(this.scopeFlags & SCOPE_FLAG_FN))
+    this.err('meta.new.not.in.function',{c0:startc,loc:startLoc});
+
+  var prop = this.id();
+
+  return {
+    type: 'MetaProperty',
+    meta: {
+      type: 'Identifier', name : 'new',
+      start: startc, end: end,
+      loc: { start : startLoc, end: endLoc }, raw: new_raw  
+    },
+    start : startc,
+    property: prop, end: prop.end,
+    loc : { start: startLoc, end: prop.loc.end }
+  };
+};
+
+
+
+},
+function(){
+this.parseMeth = function(name, context, st) {
+  if (this.lttype !== '(')
+    this.err('meth.paren');
+  var val = null;
+  if (st & ST_CLS) {
+    // all modifiers come at the beginning
+    if (st & ST_STATICMEM) {
+      if (context & CTX_PROTOTYPE_NOT_ALLOWED)
+        this.err('class.prototype.is.static.mem',{tn:name,extra:flags});
+
+      st &= ~ST_CTOR;
+    }
+
+    if (st & ST_CTOR) {
+      if (st & ST_SPECIAL)
+        this.err('class.constructor.is.special.mem',{tn:name, extra:{flags:flags}});
+      if (context & CTX_CTOR_NOT_ALLOWED)
+        this.err('class.constructor.is.a.dup',{tn:name});
+    }
+
+    val = this.parseFunc(CTX_NONE, st);
+
+    return {
+      type: 'MethodDefinition', key: core(name),
+      start: name.start, end: val.end,
+      kind: (st & ST_CTOR) ? 'constructor' : (flags & ST_GETTER) ? 'get' :
+            (ST & ST_SETTER) ? 'set' : 'method',
+      computed: name.type === PAREN,
+      loc: { start: name.loc.start, end: val.loc.end },
+      value: val, 'static': !!(st & ST_STATICMEM) ,y:-1
+    }
+  }
+   
+  val = this.parseFunc(CTX_NONE, st);
+
+  return {
+    type: 'Property', key: core(name),
+    start: name.start, end: val.end,
+    kind:
+     !(st & ST_ACCESSOR) ? 'init' :
+      (st & ST_SETTER) ? 'set' : 'get',
+    computed: name.type === PAREN,
+    loc: { start: name.loc.start, end : val.loc.end },
+    method: (st & ST_ACCESSOR) === 0, shorthand: false,
+    value : val ,y:-1
+  }
+};
+
+
+},
+function(){
+this.parseNewHead = function () {
+  var startc = this.c0, end = this.c,
+      startLoc = this.locBegin(), li = this.li,
+      col = this.col, raw = this.ltraw ;
+
+  this.next();
+  if (this.lttype === '.') {
+    this.next();
+    return this.parseMeta(startc, end, startLoc, {line:li,column:col}, raw);
+  }
+
+  var head, elem, inner;
+  switch (this  .lttype) {
+  case 'Identifier':
+    head = this.parseIdStatementOrId (CTX_NONE);
+    break;
+
+  case '[':
+    head = this. parseArrayExpression(CTX_NONE);
+    break;
+
+  case '(':
+    head = this. parseParen();
+    break;
+
+  case '{':
+    head = this. parseObjectExpression(CTX_NONE) ;
+    break;
+
+  case '/':
+    head = this. parseRegExpLiteral () ;
+    break;
+
+  case '`':
+    head = this. parseTemplateLiteral () ;
+    break;
+
+  case 'Literal':
+    head = this.numstr ();
+    break;
+
+  default:
+    this.err('new.head.is.not.valid');
+
+  }
+
+  if (head.type === 'Identifier')
+    this.scope.reference(head.name);
+
+  var inner = core( head ) ;
+  while ( true ) {
+    switch (this. lttype) {
+    case '.':
+      this.next();
+      if (this.lttype !== 'Identifier')
+        this.err('mem.name.not.id');
+
+      elem = this.memberID();
+      head = { type: 'MemberExpression', property: elem, start: head.start, end: elem.end,
+        loc: { start: head.loc.start, end: elem.loc.end }, object: inner, computed: false ,y:-1 };
+      inner = head;
+      continue;
+
+    case '[':
+      this.next() ;
+      elem = this.parseExpr(CTX_NONE) ;
+      head = { type: 'MemberExpression', property: core(elem), start: head.start, end: this.c,
+        loc: { start : head.loc.start, end: this.loc() }, object: inner, computed: true ,y:-1 };
+      inner = head ;
+      if ( !this.expectType_soft (']') ) {
+        this.err('mem.unfinished')  ;
+      }
+ 
+      continue;
+
+    case '(':
+      elem = this. parseArgList();
+      inner = { type: 'NewExpression', callee: inner, start: startc, end: this.c,
+        loc: { start: startLoc, end: this.loc() }, arguments: elem  ,y:-1};
+      if ( !this. expectType_soft (')') ) {
+        this.err('new.args.is.unfinished') ;
+      }
+
+      return inner;
+
+    case '`' :
+      elem = this.parseTemplateLiteral () ;
+      head = {
+        type : 'TaggedTemplateExpression' ,
+        quasi :elem ,
+        start: head.start,
+         end: elem.end,
+        loc : { start: head.loc.start, end: elem.loc.end },
+        tag : inner  ,y:-1
+      };
+
+      inner = head;
+      continue ;
+
+    default: return { type: 'NewExpression', callee: inner, start: startc, end: head.end,
+      loc: { start: startLoc, end: head.loc.end }, arguments : []  ,y:-1};
+
+    }
+  }
+};
+
+
+},
+function(){
 this.parseNonSeqExpr = function (prec, context) {
   var head = this.parseExprHead(context);
   if ( head === null ) {
@@ -7601,27 +7700,297 @@ this . frac = function(n) {
 
 },
 function(){
+this.parseObjectExpression = function(context) {
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      elem = null,
+      list = [],
+      first__proto__ = null,
+      elemContext = CTX_NONE,
+      pt = ERR_NONE_YET, pe = null, po = null,
+      at = ERR_NONE_YET, ae = null, ao = null,
+      st = ERR_NONE_YET, se = null, so = null,
+      n = null;
 
-this.parsePattern = function() {
-  switch ( this.lttype ) {
-    case 'Identifier' :
-       var id = this.validateID("");
-       this.declare(id);
-       if (this.tight && arguments_or_eval(id.name))
-         this.err('bind.arguments.or.eval');
-
-       return id;
-
-    case '[':
-       return this.parseArrayPattern();
-    case '{':
-       return this.parseObjectPattern();
-
-    default:
-       return null;
+  if (context & CTX_PAT) {
+    elemContext |= context & CTX_PARPAT;
+    elemContext |= context & CTX_PARPAT_ERR;
   }
+  else 
+    elemContext |= CTX_PAT|CTX_NO_SIMPLE_ERR;
+
+  if (context & CTX_PARPAT) {
+    if ((context & CTX_PARAM) &&
+       !(context & CTX_HAS_A_PARAM_ERR)) {
+      this.pt = ERR_NONE_YET; this.pe = this.po = null;
+    }
+    if ((context & CTX_PAT) &&
+       !(context & CTX_HAS_AN_ASSIG_ERR)) {
+      this.at = ERR_NONE_YET; this.ae = this.ao = null;
+    }
+    if (!(context & CTX_HAS_A_SIMPLE_ERR)) {
+      this.st = ERR_NONE_YET; this.se = this.so = null;
+    }
+  }
+  
+  var pc0 = -1, pli0 = -1, pcol0 = -1;
+  var ac0 = -1, ali0 = -1, acol0 = -1;
+  var sc0 = -1, sli0 = -1, scol0 = -1;
+
+  do {
+    this.next();
+    this.first__proto__ = first__proto__;
+    elem = this.parseMem(elemContext, MEM_OBJ);
+
+    if (elem === null)
+      break;
+
+    if (!first__proto__ && this.first__proto__)
+      first__proto__ = this.first__proto__;
+
+    list.push(core(elem));
+    if (!(elemContext & CTX_PARPAT))
+      continue;
+
+    if ((elemContext & CTX_PARAM) &&
+       !(elemContext & CTX_HAS_A_PARAM_ERR) &&
+       this.pt !== ERR_NONE_YET) {
+      if (pt === ERR_NONE_YET || agtb(this.pt, pt)) {
+        pt = this.pt, pe = this.pe, po = elem;
+        if (pt & ERR_PIN)
+          pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
+        if (pt & ERR_P_SYN)
+          elemContext |= CTX_HAS_A_PARAM_ERR;
+      }
+    }
+    if ((elemContext & CTX_PAT) &&
+       !(elemContext & CTX_HAS_AN_ASSIG_ERR) &&
+       this.at !== ERR_NONE_YET) {
+      if (at === ERR_NONE_YET || agtb(this.at, at)) {
+        at = this.at; ae = this.ae; ao = elem;
+        if (at & ERR_PIN)
+          ac0 = this.aloc.c0, ali0 = this.aloc.li0, acol0 = this.aloc.col0;
+        if (at & ERR_A_SYN)
+          elemContext |= CTX_HAS_AN_ASSIG_ERR;
+      }
+    }
+    // TODO: (elemContext & CTX_PARPAT) maybe?
+    if (!(elemContext & CTX_HAS_A_SIMPLE_ERR) &&
+       this.st !== ERR_NONE_YET) {
+      if (st === ERR_NONE_YET || agtb(this.st, st)) {
+        st = this.st; se = this.se; so = elem;
+        if (st & ERR_PIN)
+          sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
+        if (st & ERR_S_SYN)
+          elemContext |= CTX_HAS_A_SIMPLE_ERR;
+      }
+    }
+  } while (this.lttype === ',');
+
+  n = {
+    properties: list,
+    type: 'ObjectExpression',
+    start: startc,
+    end: this.c,
+    loc: { start: startLoc, end: this.loc() } ,y:-1
+  };
+
+  // TODO: this is a slightly unnecessary work if the parent container already has an err;
+  // (context & CTX_HAS_A(N)_<p:a:s>_ERR) should be also present in the conditions below
+  if ((context & CTX_PARAM) && pt !== ERR_NONE_YET) {
+    this.pt = pt; this.pe = pe; this.po = po;
+    if (pt & ERR_PIN)
+      this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0 = pcol0;
+  }
+  if ((context & CTX_PAT) && at !== ERR_NONE_YET) {
+    this.at = at; this.ae = ae; this.ao = ao;
+    if (at & ERR_PIN)
+      this.aloc.c0 = ac0, this.aloc.li0 = ali0, this.aloc.col0 = acol0;
+  }
+  if ((context & CTX_PARPAT) && st !== ERR_NONE_YET) {
+    this.st = st; this.se = se; this.so = so;
+    if (st & ERR_PIN)
+      this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.col0 = scol0;
+  }
+
+  if (!this.expectType_soft('}'))
+    this.err('obj.unfinished');
+
+  return n;
 };
 
+
+},
+function(){
+this.parseParen = function(context) {
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      elem = null,
+      elemContext = CTX_NULLABLE|CTX_PAT,
+      list = null,
+      prevys = this.suspys,
+      hasRest = false,
+      pc0 = -1, pli0 = -1, pcol0 = -1,
+      sc0 = -1, sli0 = -1, scol0 = -1,
+      st = ERR_NONE_YET, se = null, so = null,
+      pt = ERR_NONE_YET, pe = null, po = null;
+
+  if (context & CTX_PAT) {
+    this.pt = this.st = ERR_NONE_YET;
+    this.pe = this.po =
+    this.se = this.so = null;
+    this.suspys = null;
+    elemContext |= CTX_PARAM;
+  }
+  else
+    elemContext |= CTX_NO_SIMPLE_ERR;
+
+  var lastElem = null, hasTailElem = false;
+  this.next();
+  while (true) {
+    lastElem = elem;
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, elemContext);
+    if (elem === null) {
+      if (this.lttype === '...') {
+        if (!(elemContext & CTX_PARAM)) {
+          this.st = ERR_UNEXPECTED_REST;
+          this.se = this.so = null;
+          this.currentExprIsSimple();
+        }
+        elem = this.parseSpreadElement(elemContext);
+        hasRest = true;
+      }
+      else if (list) {
+        if (this.v < 7)
+          this.err('seq.non.tail.expr');
+        else 
+          hasTailElem = true;
+      } 
+      else break;
+    }
+
+    if (elemContext & CTX_PARAM) {
+      // TODO: could be `pt === ERR_NONE_YET`
+      if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
+        // hasTailElem -> elem === null
+        if (this.pt === ERR_NONE_YET && !hasTailElem) {
+          // TODO: function* l() { ({[yield]: (a)})=>12 }
+          if (elem.type === PAREN_NODE) {
+            this.pt = ERR_PAREN_UNBINDABLE;
+            this.pe = elem;
+          }
+          else if(this.suspys) {
+            this.pt = ERR_YIELD_OR_SUPER;
+            this.pe = this.suspys;
+          }
+        }
+        if (this.pt !== ERR_NONE_YET) {
+          if (pt === ERR_NONE_YET || agtb(this.pt, pt)) {
+            pt = this.pt, pe = this.pe, po = core(elem);
+            if (pt & ERR_PIN)
+              pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
+            if (pt & ERR_P_SYN)
+              elemContext |= CTX_HAS_A_PARAM_ERR;
+          }
+        }
+      }
+
+      // TODO: could be `st === ERR_NONE_YET`
+      if (!(elemContext & CTX_HAS_A_SIMPLE_ERR)) {
+        if (this.st === ERR_NONE_YET) {
+          if (hasRest) {
+            this.st = ERR_UNEXPECTED_REST;
+            this.se = elem;
+          }
+          else if (hasTailElem) {
+            this.st = ERR_NON_TAIL_EXPR;
+            this.se = lastElem;
+          }
+        }
+        if (this.st !== ERR_NONE_YET) {
+          if (st === ERR_NONE_YET || agtb(this.st, st)) {
+            st = this.st, se = this.se, so = elem && core(elem);
+            if (st & ERR_PIN)
+              sc0 = this.eloc.c0, sli0 = this.eloc.li0, scol0 = this.eloc.col0;
+            if (st & ERR_S_SYN)
+              elemContext |= CTX_HAS_A_SIMPLE_ERR;
+          }
+        }
+      }
+    }
+
+    if (hasTailElem)
+      break;
+
+    if (list) list.push(core(elem));
+    if (this.lttype === ',') {
+      if (hasRest)
+        this.err('rest.arg.has.trailing.comma');
+      if (list === null)
+        list = [core(elem)];
+      this.next();
+    }
+    else break;
+  }
+
+  var n = {
+      type: PAREN_NODE,
+      expr: list ? {
+        type: 'SequenceExpression',
+        expressions: list,
+        start: list[0].start,
+        end: list[list.length-1].end,
+        loc: {
+          start: list[0].loc.start,
+          end: list[list.length-1].loc.end
+        } 
+      } : elem && core(elem),
+      start: startc,
+      end: this.c,
+      loc: { start: startLoc, end: this.loc() }
+  };
+
+  if (!this.expectType_soft(')'))
+    this.err('unfinished.paren',{tn:n});
+
+  if (elem === null && list === null) {
+    if (context & CTX_PARPAT) {
+      st = ERR_EMPTY_LIST_MISSING_ARROW;
+      se = so = n;
+    }
+    else {
+      this.st = ERR_EMPTY_LIST_MISSING_ARROW;
+      this.se = n;
+      this.so = n;
+      this.throwTricky('s', this.st);
+    }
+  }
+
+  if (context & CTX_PAT) {
+    if (pt !== ERR_NONE_YET) {
+      this.pt = pt; this.pe = pe; this.po = po;
+      if (pt & ERR_PIN)
+        this.ploc.c0 = pc0, this.ploc.li0 = pli0, this.ploc.col0 = pcol0;
+    }
+    if (st !== ERR_NONE_YET) {
+      this.st = st; this.se = se; this.so = so;
+      if (st & ERR_PIN)
+        this.eloc.c0 = sc0, this.eloc.li0 = sli0, this.eloc.col0 = scol0;
+    }
+    if (list === null && elem !== null &&
+       elem.type === 'Identifier' && elem.name === 'async')
+      this.parenAsync = n;
+  }
+
+  if (prevys !== null)
+    this.suspys = prevys;
+
+  return n;
+};
+
+
+},
+function(){
 this. parseArrayPattern = function() {
   if (this.v <= 5)
     this.err('ver.patarr');
@@ -7667,6 +8036,23 @@ this. parseArrayPattern = function() {
   return elem;
 };
 
+
+
+},
+function(){
+this .parseAssig = function (head) {
+  if (this.v <= 5)
+    this.err('ver.assig');
+  this.next() ;
+  var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CTX_PAT|CTX_NO_SIMPLE_ERR );
+  return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
+         right: core(e), loc: { start: head.loc.start, end: e.loc.end }  ,y:-1};
+};
+
+
+
+},
+function(){
 this.parseObjectPattern  = function() {
     if (this.v <= 5)
       this.err('ver.patobj');
@@ -7746,15 +8132,10 @@ this.parseObjectPattern  = function() {
     return n;
 };
 
-this .parseAssig = function (head) {
-  if (this.v <= 5)
-    this.err('ver.assig');
-  this.next() ;
-  var e = this.parseNonSeqExpr( PREC_WITH_NO_OP, CTX_PAT|CTX_NO_SIMPLE_ERR );
-  return { type: 'AssignmentPattern', start: head.start, left: head, end: e.end,
-         right: core(e), loc: { start: head.loc.start, end: e.loc.end }  ,y:-1};
-};
 
+
+},
+function(){
 // TODO: needs reconsideration,
 this.parseRestElement = function() {
    if (this.v <= 5)
@@ -7781,268 +8162,27 @@ this.parseRestElement = function() {
 
 },
 function(){
-this.parseExprHead = function (context) {
-  var head = null, inner = null, elem = null;
+this.parsePattern = function() {
+  switch ( this.lttype ) {
+    case 'Identifier' :
+       var id = this.validateID("");
+       this.declare(id);
+       if (this.tight && arguments_or_eval(id.name))
+         this.err('bind.arguments.or.eval');
 
-  if (this.pendingExprHead) {
-    head = this.pendingExprHead;
-    this.pendingExprHead = null;
-  }
-  else
-    switch (this.lttype)  {
-    case 'Identifier':
-      if (head = this.parseIdStatementOrId(context))
-        break;
-
-      return null;
-
-    case '[' :
-      head = this.parseArrayExpression(context);
-      break;
-
-    case '(' :
-      head = this.parseParen(context);
-      break;
-
-    case '{' :
-      head = this.parseObjectExpression(context) ;
-      break;
-
-    case '/' :
-      head = this.parseRegExpLiteral() ;
-      break;
-
-    case '`' :
-        head = this.parseTemplateLiteral() ;
-        break;
-
-    case 'Literal':
-      head = this.numstr();
-      break;
-
-    case '-':
-      this.prec = PREC_U;
-      return null;
-
-    default:
-      return null;
-   
-    }
-    
-  if (head.type === 'Identifier')
-    this.scope.reference(head.name);
-
-  switch (this.lttype) {
-  case '.':
-  case '[':
-  case '(':
-  case '`':
-    this.currentExprIsSimple();
-  }
-
-  inner = core( head ) ;
-
-  LOOP:
-  while ( true ) {
-    switch (this.lttype ) {
-    case '.':
-      this.next();
-      if (this.lttype !== 'Identifier')
-        this.err('mem.name.not.id');
-
-      // TODO: null?
-      elem  = this.memberID();
-      if (elem === null)
-        this.err('mem.id.is.null');
-
-      head = { 
-        type: 'MemberExpression', property: elem,
-        start: head.start, end: elem.end,
-        loc: {
-          start: head.loc.start,
-          end: elem.loc.end 
-        }, object: inner,
-        computed: false  ,y:-1
-      };
-
-      inner = head ;
-      continue;
+       return id;
 
     case '[':
-      this.next() ;
-      elem = this.parseExpr(PREC_WITH_NO_OP,CTX_NONE);
-      head = {
-        type: 'MemberExpression', property: core(elem),
-        start: head.start, end: this.c,
-        loc : {
-          start: head.loc.start,
-          end: this.loc()
-        }, object: inner,
-        computed: true  ,y:-1
-      };
-      inner  = head ;
-      if (!this.expectType_soft (']'))
-        this.err('mem.unfinished');
-      continue;
+       return this.parseArrayPattern();
+    case '{':
+       return this.parseObjectPattern();
 
-    case '(':
-      elem = this.parseArgList();
-      head = {
-        type: 'CallExpression', callee: inner,
-        start: head.start, end: this.c, arguments: elem,
-        loc: {
-          start: head.loc.start,
-          end: this.loc()
-        }  ,y:-1
-      };
-
-      if (!this.expectType_soft (')'))
-        this.err('call.args.is.unfinished', {tn:elem,extra:{delim:')'}});
-
-      inner = head  ;
-      continue;
-
-    case '`' :
-      elem = this. parseTemplateLiteral();
-      head = {
-        type : 'TaggedTemplateExpression', quasi : elem,
-        start: head.start, end: elem.end,
-        loc : {
-          start: head.loc.start,
-          end: elem.loc.end
-        }, tag : inner ,y:-1
-      };
-      inner = head;
-      continue ;
-
-    default: break LOOP;
-    }
-
+    default:
+       return null;
   }
-
-  return head ;
 };
 
-// TODO: new_raw
-this.parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
-  if (this.ltval !== 'target')
-    this.err('meta.new.has.unknown.prop');
-  
-  if (!(this.scopeFlags & SCOPE_FLAG_FN))
-    this.err('meta.new.not.in.function',{c0:startc,loc:startLoc});
 
-  var prop = this.id();
-
-  return {
-    type: 'MetaProperty',
-    meta: {
-      type: 'Identifier', name : 'new',
-      start: startc, end: end,
-      loc: { start : startLoc, end: endLoc }, raw: new_raw  
-    },
-    start : startc,
-    property: prop, end: prop.end,
-    loc : { start: startLoc, end: prop.loc.end }
-  };
-};
-
-this.numstr = function () {
-  var n = {
-    type: 'Literal', value: this.ltval,
-    start: this.c0, end: this.c,
-    loc: { start: this.locBegin(), end: this.loc() },
-    raw: this.ltraw
-  };
-  this.next();
-  return n;
-};
-
-this.parseTrue = function() {
-  var n = {
-    type: 'Literal', value: true,
-    start: this.c0, end: this.c,
-    loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw
-  };
-  this.next();
-  return n;
-};
-
-this.parseNull = function() {
-  var n = {
-    type: 'Literal', value: null,
-    start: this.c0, end: this.c,
-    loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw
-  };
-  this.next();
-  return n;
-};
-
-this.parseFalse = function() {
-  var n = {
-    type: 'Literal', value: false,
-    start: this.c0, end: this.c,
-    loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw
-  };
-  this.next();
-  return n;
-};
-
-this.id = function() {
-  var id = {
-    type: 'Identifier', name: this.ltval,
-    start: this.c0, end: this.c,
-    loc: { start: this.locBegin(), end: this.loc() }, raw: this.ltraw
-  };
-  this.next() ;
-  return id;
-};
-
-this.parseThis = function() {
-  var n = {
-    type : 'ThisExpression',
-    loc: { start: this.locBegin(), end: this.loc() },
-    start: this.c0,
-    end : this.c
-  };
-  this.next() ;
-
-  return n;
-};
-
-this.parseArgList = function () {
-  var c0 = -1, li0 = -1, col0 = -1, parenAsync = this.parenAsync,
-      elem = null, list = [];
-
-  do { 
-    this.next();
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR); 
-    if (elem)
-      list.push(core(elem));
-    else if (this.lttype === '...')
-      list.push(this.parseSpreadElement(CTX_NONE));
-    else {
-      if (list.length !== 0) {
-        if (this.v < 7)
-          this.err('arg.non.tail',
-            {c0:c0, li0:li0, col0:col0,
-            extra: {list: list, async: parenAsync}});
-      }
-      break;
-    }
-
-    if (this.lttype === ',') {
-      c0 = this.c0;
-      li0 = this.li0;
-      col0 = this.col0;
-    }
-    else break;
-  } while (true);
-
-  if (parenAsync !== null)
-    this.parenAsync = parenAsync;
-
-  return list ;
-};
 
 },
 function(){
@@ -8059,7 +8199,6 @@ this.parseProgram = function () {
   this.scope = new Scope(globalScope, ST_SCRIPT);
   this.scope.parser = this;
   this.next();
-  this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
 
   var list = this.blck(); 
         
@@ -8307,169 +8446,83 @@ this.parseRegExpLiteral = function() {
 
 },
 function(){
-this.enterFuncScope = function(decl) { this.scope = this.scope.spawnFunc(decl); };
+this.parseReturnStatement = function () {
+  if (! this.ensureStmt_soft () &&
+       this.err('not.stmt') )
+    return this.errorHandlerOutput ;
 
-// TODO: it is no longer needed
-this.enterComplex = function() {
-   if (this.declMode === DECL_MODE_FUNC_PARAMS ||
-       this.declMode & DECL_MODE_CATCH_PARAMS)
-     this.makeComplex();
-};
+  this.fixupLabels(false ) ;
 
-this.enterLexicalScope = function(loop) { this.scope = this.scope.spawnLexical(loop); };
-
-this.setDeclModeByName = function(modeName) {
-  this.declMode = modeName === 'var' ? DECL_MODE_VAR : DECL_MODE_LET;
-};
-
-this.exitScope = function() {
-  var scope = this.scope;
-  this.scope.finish();
-  this.scope = this.scope.parent;
-  if (this.scope.synth)
-    this.scope = this.scope.parent;
-  return scope;
-};
-
-this.declare = function(id) {
-   ASSERT.call(this, this.declMode !== DECL_NONE, 'Unknown declMode');
-   if (this.declMode & DECL_MODE_EITHER) {
-     this.declMode |= this.scope.isConcrete() ?
-       DECL_MODE_VAR : DECL_MODE_LET;
-   }
-   else if (this.declMode & DECL_MODE_FCE)
-     this.declMode = DECL_MODE_FCE;
-
-   if (this.declMode === DECL_MODE_FUNC_PARAMS) {
-     if (!this.addParam(id)) // if it was not added, i.e., it is a duplicate
-       return;
-   }
-   else if (this.declMode === DECL_MODE_LET) {
-     // TODO: eliminate it because it must've been verified in somewhere else,
-     // most probably in parseVariableDeclaration
-     if ( !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK) )
-       this.err('let.decl.not.in.block');
-
-     if ( id.name === 'let' )
-       this.err('lexical.name.is.let',{tn:id});
-   }
-
-   this.scope.declare(id, this.declMode);
-};
-
-this.makeComplex = function() {
-  // complex params are treated as let by the emitter
-  if (this.declMode & DECL_MODE_CATCH_PARAMS) {
-    this.declMode |= DECL_MODE_LET; 
-    return;
+  if (!(this.scopeFlags & SCOPE_FLAG_FN )) {
+    if (!this.misc.allowReturnOutsideFunction &&
+      this.err('return.not.in.a.function'))
+    return this.errorHandlerOutput;
   }
 
-  ASSERT.call(this, this.declMode === DECL_MODE_FUNC_PARAMS);
-  var scope = this.scope;
-  if (scope.mustNotHaveAnyDupeParams()) return;
-  for (var a in scope.definedNames) {
-     if (!HAS.call(scope.definedNames, a)) continue;
-     if (scope.definedNames[a].type & DECL_DUPE)
-       this.err('func.args.has.dup',{tn:this.idNames[a]});
-  }
-  scope.isInComplexArgs = true;
-};
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      retVal = null,
+      li = this.li,
+      c = this.c,
+      col = this.col;
 
-this.addParam = function(id) {
-  ASSERT.call(this, this.declMode === DECL_MODE_FUNC_PARAMS);
-  var name = id.name + '%';
-  var scope = this.scope;
-  if ( HAS.call(scope.definedNames, name) ) {
-    if (scope.mustNotHaveAnyDupeParams())
-      this.err('func.args.has.dup',{tn:id});
+  this.next();
 
-    // TODO: this can be avoided with a dedicated 'dupes' dictionary,
-    // but then again, that might be too much.
-    if (!(scope.definedNames[name].type & DECL_DUPE)) {
-      scope.insertID(id);
-      scope.definedNames[name].type |= DECL_DUPE ;
-    }
+  var semi = 0, semiLoc = null;
 
-    return false;
+  if ( !this.nl )
+     retVal = this.parseExpr(CTX_NULLABLE|CTX_TOP);
+
+  semi = this.semiI();
+  semiLoc = this.semiLoc_soft();
+  if ( !semiLoc && !this.nl &&
+       this.err('no.semi') )
+    return this.errorHandlerOutput;
+
+  if ( retVal ) {
+     this.foundStatement = true;
+     return { type: 'ReturnStatement', argument: core(retVal), start: startc, end: semi || retVal.end,
+        loc: { start: startLoc, end: semiLoc || retVal.loc.end } }
   }
 
-  return true;
+  this.foundStatement = true;
+  return {  type: 'ReturnStatement', argument: retVal, start: startc, end: semi || c,
+     loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
 };
 
-this.ensureParamIsNotDupe = function(id) {
-   var name = id.name + '%';
-   var scope = this.scope;
-   if (HAS.call(scope.idNames, name) && scope.idNames[name])
-     this.err('func.args.has.dup',{tn:id});
-};
-
-// TODO: must check whether we are parsing with v > 5, whether we are in an if, etc.
-this.canDeclareFunctionsInScope = function(isGen) {
-  if (this.scope.isConcrete())
-    return true;
-  if (this.scopeFlags & SCOPE_FLAG_IN_BLOCK)
-    return this.v > 5;
-  if (this.tight)
-    return false;
-  if (this.scopeFlags & SCOPE_FLAG_IN_IF)
-    return !isGen;
-  
-  return false;
-};
-
-this.canDeclareClassInScope = function() {
-  return this.scopeFlags & SCOPE_FLAG_IN_BLOCK ||
-    this.scope.isConcrete();
-};
-
-this.canLabelFunctionsInScope = function(isGen) { 
-  // TODO: add something like a 'compat' option so as to actually allow it for v <= 5;
-  // this is what happens in reality: versions prior to ES2015 don't officially allow it, but it
-  // is supported in most browsers.
-  if (this.v <= 5)
-    return false;
-  if (this.tight)
-    return false;
-  if (isGen)
-    return false;
-
-  return (this.scopeFlag & SCOPE_FLAG_IN_BLOCK) ||
-          this.scope.isConcrete(); 
-};
 
 
 },
 function(){
-this.semiLoc_soft = function () {
-  switch (this.lttype) {
-  case ';':
-     var n = this.loc();
-     this.next();
-     return n;
+this.parseSpreadElement = function(context) {
+  if (this.v <= 5) this.err('ver.spread.rest');
 
-  case 'eof':
-     return this.nl ? null : this.loc();
+  var startc = this.c0;
+  var startLoc = this.locBegin();
 
-  case '}':
-     if ( !this.nl )
-        return this.locOn(1);
+  this.next();
+  var e = this.parseNonSeqExpr(
+    PREC_WITH_NO_OP,
+    context & ~CTX_NULLABLE);
+
+  if (e.type === PAREN_NODE) {
+    if ((context & CTX_PARAM) && !(context & CTX_HAS_A_PARAM_ERR) &&
+       this.pt === ERR_NONE_YET) { 
+      this.pt = ERR_PAREN_UNBINDABLE; this.pe = e;
+    }
+    if ((context & CTX_PAT) && !(context & CTX_HAS_AN_ASSIG_ERR) &&
+       this.at === ERR_NONE_YET && !this.ensureSimpAssig_soft(e.expr)) {
+      this.at = ERR_PAREN_UNBINDABLE; this.ae = e;
+    }
   }
-  
-  return null;
-};
-
-this.semiI = function() {
-  switch (this.lttype) {
-  case ';':
-    return this.c;
-  case '}':
-    return this.nl ? 0 : this.c0;
-  case 'eof':
-    return this.nl ? 0 : this.c;
-  default:
-    return 0;
-
-  }
+    
+  return {
+    type: 'SpreadElement',
+    loc: { start: startLoc, end: e.loc.end },
+    start: startc,
+    end: e.end,
+    argument: core(e)
+  };
 };
 
 },
@@ -8556,688 +8609,7 @@ this.parseStatement = function ( allowNull ) {
   };
 };
 
-this . findLabel = function(name) {
-    return has.call(this.labels, name) ?this.labels[name]:null;
 
-};
-
-this .parseLabeledStatement = function(label, allowNull) {
-   this.next();
-   var l = label.name;
-   l += '%';
-   var ex = this.findLabel(l); // existing label
-   if ( ex && this.err('label.is.a.dup',{tn:label,extra:ex}) )
-     return this.errorHandlerOutput ;
-
-   this.labels[l] =
-        this.unsatisfiedLabel ?
-        this.unsatisfiedLabel :
-        this.unsatisfiedLabel = { loop: false };
-
-   var stmt  = this.parseStatement(allowNull);
-   this.labels[l] = null;
-
-   return { type: 'LabeledStatement', label: label, start: label.start, end: stmt.end,
-            loc: { start: label.loc.start, end: stmt.loc.end }, body: stmt };
-};
-
-this .ensureStmt_soft = function() {
-   if ( this.canBeStatement ) {
-     this.canBeStatement = false;
-     return true;
-   }
-   return false;
-};
-
-this . fixupLabels = function(loop) {
-    if ( this.unsatisfiedLabel ) {
-         this.unsatisfiedLabel.loop = loop;
-         this.unsatisfiedLabel = null;
-    }
-};
-
-this .parseEmptyStatement = function() {
-  var n = { type: 'EmptyStatement',
-           start: this.c - 1,
-           loc: { start: this.locOn(1), end: this.loc() },
-            end: this.c };
-  this.next();
-  return n;
-};
-
-this.parseIfStatement = function () {
-  if ( !this.ensureStmt_soft () && this.err('not.stmt') )
-    return this.errorHandlerOutput;
-
-  this.fixupLabels(false);
-  this.enterLexicalScope(false); 
-
-  var startc = this.c0,
-      startLoc  = this.locBegin();
-  this.next () ;
-  !this.expectType_soft('(') &&
-  this.err('if.has.no.opening.paren');
-
-  var cond = core(this.parseExpr(CTX_NONE|CTX_TOP));
-
-  !this.expectType_soft (')') &&
-  this.err('if.has.no.closing.paren');
-
-  var scopeFlags = this.scopeFlags ;
-  this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= SCOPE_FLAG_IN_IF;
-  var nbody = this. parseStatement (false);
-  var alt = null;
-  if ( this.lttype === 'Identifier' && this.ltval === 'else') {
-     this.kw(), this.next() ;
-     alt = this.parseStatement(false);
-  }
-  this.scopeFlags = scopeFlags ;
-
-  var scope = this.exitScope(); 
-
-  this.foundStatement = true;
-  return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,
-     loc: { start: startLoc, end: (alt||nbody).loc.end }, consequent: nbody, alternate: alt/*,scope:  scope  ,y:-1*/};
-};
-
-this.parseWhileStatement = function () {
-   this.enterLexicalScope(true);
-   if ( ! this.ensureStmt_soft () &&
-          this.err('not.stmt') )
-     return this.errorHandlerOutput;
-
-   this.fixupLabels(true);
-
-   var startc = this.c0,
-       startLoc = this.locBegin();
-   this.next();
-
-   !this.expectType_soft ('(') &&
-   this.err('while.has.no.opening.paren');
- 
-   var cond = core( this.parseExpr(CTX_NONE|CTX_TOP) );
-
-   !this.expectType_soft (')') &&
-   this.err('while.has.no.closing.paren');
-
-   var scopeFlags = this.scopeFlags;
-   this.scopeFlags &= CLEAR_IB;
-   this.scopeFlags |= (SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
-   var nbody = this.parseStatement(false);
-   this.scopeFlags = scopeFlags ;
-   this.foundStatement = true;
-
-   var scope = this.exitScope();
-   return { type: 'WhileStatement', test: cond, start: startc, end: nbody.end,
-       loc: { start: startLoc, end: nbody.loc.end }, body:nbody/*,scope:  scope ,y:-1*/ };
-};
-
-this.parseBlckStatement = function () {
-  this.fixupLabels(false);
-
-  this.enterLexicalScope(false); 
-  var startc = this.c - 1,
-      startLoc = this.locOn(1);
-  this.next();
-  var scopeFlags = this.scopeFlags;
-  this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
-
-  var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/};
-
-  if ( !this.expectType_soft ('}' ) &&
-        this.err('block.unfinished',{tn:n,extra:{delim:'}'}}))
-    return this.errorHandlerOutput ;
-
-  this.exitScope(); 
-  this.scopeFlags = scopeFlags;
-  return n;
-};
-
-this.parseDoWhileStatement = function () {
-  if ( !this.ensureStmt_soft () &&
-        this.err('not.stmt') )
-    return this.errorHandlerOutput ;
-
-  this.enterLexicalScope(true); 
-  this.fixupLabels(true);
-
-  var startc = this.c0,
-      startLoc = this.locBegin() ;
-  this.next() ;
-  var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= (SCOPE_FLAG_BREAK| SCOPE_FLAG_CONTINUE);
-  var nbody = this.parseStatement (true) ;
-  this.scopeFlags = scopeFlags;
-  if (this.lttype === 'Identifier' && this.ltval === 'while') {
-    this.kw(); this.next();
-  }
-  else
-    this.err('do.has.no.while',{extra:[startc,startLoc,nbody]});
-
-  if ( !this.expectType_soft('(') &&
-        this.err('do.has.no.opening.paren',{extra:[startc,startLoc,nbody]}) )
-    return this.errorHandlerOutput;
-
-  var cond = core(this.parseExpr(CTX_NONE|CTX_TOP));
-  var c = this.c, li = this.li, col = this.col;
-  if ( !this.expectType_soft (')') &&
-        this.err('do.has.no.closing.paren',{extra:[startc,startLoc,nbody,cond]}) )
-    return this.errorHandlerOutput;
-
-  if (this.lttype === ';' ) {
-     c = this.c;
-     li = this.li ;
-     col = this.col;
-     this.next();
-  }
-
- this.foundStatement = true;
-
- this.exitScope(); 
- return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
-          body: nbody, loc: { start: startLoc, end: { line: li, column: col } }  ,y:-1} ;
-};
-
-this.parseContinueStatement = function () {
-   if ( ! this.ensureStmt_soft   () &&
-          this.err('not.stmt') )
-     return this.errorHandlerOutput ;
-
-   this.fixupLabels(false);
-   if (!(this.scopeFlags & SCOPE_FLAG_CONTINUE) &&
-         this.err('continue.not.in.loop') )
-     return this.errorHandlerOutput  ;
-
-   var startc = this.c0, startLoc = this.locBegin();
-   var c = this.c, li = this.li, col = this.col;
-
-   this.next() ;
-
-   var name = null, label = null, semi = 0;
-
-   var semiLoc = null;
-
-   if ( !this.nl && this.lttype === 'Identifier' ) {
-       label = this.validateID("");
-       name = this.findLabel(label.name + '%');
-       if (!name) this.err('continue.no.such.label',{tn:label,extra:{c0:startc,loc0:startLoc}}) ;
-
-       // TODO: tell what it is labeling
-       if (!name.loop) this.err('continue.not.a.loop.label',{tn:label,extra:{c0:startc,loc0:startLoc}});
-
-       semi = this.semiI();
-       semiLoc = this.semiLoc_soft();
-       if ( !semiLoc && !this.nl &&
-             this.err('no.semi') )
-         return this.errorHandlerOutput;
-
-       this.foundStatement = true;
-       return { type: 'ContinueStatement', label: label, start: startc, end: semi || label.end,
-           loc: { start: startLoc, end: semiLoc || label.loc.end } };
-   }
-   semi = this.semiI();
-   semiLoc = this.semiLoc_soft();
-   if ( !semiLoc && !this.nl &&
-         this.err('no.semi') )
-     return this.errorHandlerOutput;
-
-   this.foundStatement = true;
-   return { type: 'ContinueStatement', label: null, start: startc, end: semi || c,
-           loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
-};
-
-this.parseBreakStatement = function () {
-   if (! this.ensureStmt_soft   () &&
-         this.err('not.stmt') )
-     return this.errorHandlerOutput ;
-
-   this.fixupLabels(false);
-   var startc = this.c0, startLoc = this.locBegin();
-   var c = this.c, li = this.li, col = this.col;
-
-   this.next() ;
-
-   var name = null, label = null, semi = 0;
-
-   var semiLoc = null;
-
-   if ( !this.nl && this.lttype === 'Identifier' ) {
-       label = this.validateID("");
-       name = this.findLabel(label.name + '%');
-       if (!name) this.err('break.no.such.label',{tn:label});
-       semi = this.semiI();
-       semiLoc = this.semiLoc_soft();
-       if ( !semiLoc && !this.nl &&
-            this.err('no.semi') )
-         return this.errorHandlerOutput;
-
-       this.foundStatement = true;
-       return { type: 'BreakStatement', label: label, start: startc, end: semi || label.end,
-           loc: { start: startLoc, end: semiLoc || label.loc.end } };
-   }
-   else if (!(this.scopeFlags & SCOPE_FLAG_BREAK) &&
-         this.err('break.not.in.breakable', {c0:startc,loc0:startLoc}) )
-     return this.errorHandlerOutput ;
-
-   semi = this.semiI();
-   semiLoc = this.semiLoc_soft();
-   if ( !semiLoc && !this.nl &&
-        this.err('no.semi') )
-     return this.errorHandlerOutput;
-
-   this.foundStatement = true;
-   return { type: 'BreakStatement', label: null, start: startc, end: semi || c,
-           loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
-};
-
-this.parseSwitchStatement = function () {
-  if ( ! this.ensureStmt_soft () &&
-         this.err('not.stmt') )
-    return this.errorHandlerOutput ;
-
-  this.fixupLabels(false) ;
-
-  var startc = this.c0,
-      startLoc = this.locBegin(),
-      cases = [],
-      hasDefault = false ,
-      scopeFlags = this.scopeFlags,
-      elem = null;
-
-  this.next() ;
-  if ( !this.expectType_soft ('(') &&
-       this.err('switch.has.no.opening.paren') )
-    return this.errorHandlerOutput;
-
-  var switchExpr = core(this.parseExpr(CTX_NONE|CTX_TOP));
-  !this.expectType_soft (')') &&
-  this.err('switch.has.no.closing.paren');
-
-  !this.expectType_soft ('{') &&
-  this.err('switch.has.no.opening.curly');
-
-  this.enterLexicalScope(false); 
-  this.scopeFlags |=  (SCOPE_FLAG_BREAK|SCOPE_FLAG_IN_BLOCK);
-  while ( elem = this.parseSwitchCase()) {
-    if (elem.test === null) {
-       if (hasDefault ) this.err('switch.has.a.dup.default');
-       hasDefault = true ;
-    }
-    cases.push(elem);
-  }
-
-  this.scopeFlags = scopeFlags ;
-  this.foundStatement = true;
-
-  var scope = this.exitScope(); 
-  var n = { type: 'SwitchStatement', cases: cases, start: startc, discriminant: switchExpr,
-            end: this.c, loc: { start: startLoc, end: this.loc() }/*,scope:  scope  ,y:-1*/};
-  if ( !this.expectType_soft ('}' ) &&
-        this.err('switch.unfinished') )
-    return this.errorHandlerOutput ;
-
-  return n;
-};
-
-this.parseSwitchCase = function () {
-  var startc,
-      startLoc;
-
-  var nbody = null,
-      cond  = null;
-
-  if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
-     case 'case':
-       startc = this.c0;
-       startLoc = this.locBegin();
-       this.kw();
-       this.next();
-       cond = core(this.parseExpr(CTX_NONE|CTX_TOP)) ;
-       break;
-
-     case 'default':
-       startc = this.c0;
-       startLoc = this.locBegin();
-       this.kw();
-       this.next();
-       break ;
-
-     default: return null;
-  }
-  else
-     return null;
-
-  var c = this.c, li = this.li, col = this.col;
-  if ( ! this.expectType_soft (':') &&
-       this.err('switch.case.has.no.colon') )
-    return this.errorHandlerOutput;
-
-  nbody = this.blck();
-  var last = nbody.length ? nbody[nbody.length-1] : null;
-  return { type: 'SwitchCase', test: cond, start: startc, end: last ? last.end : c,
-     loc: { start: startLoc, end: last ? last.loc.end : { line: li, column: col } }, consequent: nbody ,y:-1 };
-};
-
-this.parseReturnStatement = function () {
-  if (! this.ensureStmt_soft () &&
-       this.err('not.stmt') )
-    return this.errorHandlerOutput ;
-
-  this.fixupLabels(false ) ;
-
-  if (!(this.scopeFlags & SCOPE_FLAG_FN )) {
-    if (!this.misc.allowReturnOutsideFunction &&
-      this.err('return.not.in.a.function'))
-    return this.errorHandlerOutput;
-  }
-
-  var startc = this.c0,
-      startLoc = this.locBegin(),
-      retVal = null,
-      li = this.li,
-      c = this.c,
-      col = this.col;
-
-  this.next();
-
-  var semi = 0, semiLoc = null;
-
-  if ( !this.nl )
-     retVal = this.parseExpr(CTX_NULLABLE|CTX_TOP);
-
-  semi = this.semiI();
-  semiLoc = this.semiLoc_soft();
-  if ( !semiLoc && !this.nl &&
-       this.err('no.semi') )
-    return this.errorHandlerOutput;
-
-  if ( retVal ) {
-     this.foundStatement = true;
-     return { type: 'ReturnStatement', argument: core(retVal), start: startc, end: semi || retVal.end,
-        loc: { start: startLoc, end: semiLoc || retVal.loc.end } }
-  }
-
-  this.foundStatement = true;
-  return {  type: 'ReturnStatement', argument: retVal, start: startc, end: semi || c,
-     loc: { start: startLoc, end: semiLoc || { line: li, column : col } } };
-};
-
-this.parseThrowStatement = function () {
-  if ( ! this.ensureStmt_soft () &&
-         this.err('not.stmt') )
-    return this.errorHandlerOutput ;
-
-  this.fixupLabels(false ) ;
-
-  var startc = this.c0,
-      startLoc = this.locBegin(),
-      retVal = null,
-      li = this.li,
-      c = this.c,
-      col = this.col;
-
-  this.next();
-
-  var semi = 0 , semiLoc = null ;
-  if ( this.nl &&
-       this.err('throw.has.newline') )
-    return this.errorHandlerOutput;
-
-  retVal = this.parseExpr(CTX_NULLABLE|CTX_TOP);
-  if ( retVal === null &&
-       this.err('throw.has.no.argument') )
-     return this.errorHandlerOutput;
-
-  semi = this.semiI();
-  semiLoc = this.semiLoc_soft();
-  if ( !semiLoc && !this.nl &&
-        this.err('no.semi') )
-    return this.errorHandlerOutput;
-
-  this.foundStatement = true;
-  return { type: 'ThrowStatement', argument: core(retVal), start: startc, end: semi || retVal.end,
-     loc: { start: startLoc, end: semiLoc || retVal.loc.end } }
-
-};
-
-this. parseBlockStatement_dependent = function(name) {
-    var startc = this.c - 1,
-        startLoc = this.locOn(1);
-
-    if (!this.expectType_soft ('{'))
-      this.err('block.dependent.no.opening.curly',{extra:{name:name}});
-    var scopeFlags = this.scopeFlags;
-    this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
-
-    var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
-        loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/ };
-    if ( ! this.expectType_soft ('}') &&
-         this.err('block.dependent.is.unfinished',{tn:n, extra:{delim:'}'}})  )
-      return this.errorHandlerOutput;
-
-    this.scopeFlags = scopeFlags;
-    return n;
-};
-
-this.parseTryStatement = function () {
-  if ( ! this.ensureStmt_soft () &&
-         this.err('not.stmt') )
-    return this.errorHandlerOutput ;
-
-  this.fixupLabels(false);
-  var startc = this.c0,
-      startLoc = this.locBegin();
-
-  this.next() ;
-
-  this.enterLexicalScope(false); 
-
-  var tryBlock = this.parseBlockStatement_dependent('try');
-  this.exitScope(); 
-  var finBlock = null, catBlock  = null;
-  if ( this.lttype === 'Identifier' && this.ltval === 'catch')
-    catBlock = this.parseCatchClause();
-
-  if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
-     this.kw();
-     this.next();
-
-     this.enterLexicalScope(false); 
-     finBlock = this.parseBlockStatement_dependent('finally');
-     this.exitScope(); 
-  }
-
-  var finOrCat = finBlock || catBlock;
-  if ( ! finOrCat &&
-       this.err('try.has.no.tail')  )
-    return this.errorHandlerOutput ;
-
-  this.foundStatement = true;
-  return  { type: 'TryStatement', block: tryBlock, start: startc, end: finOrCat.end,
-            handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end }  ,y:-1};
-};
-
-this.enterCatchScope = function() {
-  this.scope = this.scope.spawnCatch();
-};
-
-this. parseCatchClause = function () {
-   var startc = this.c0,
-       startLoc = this.locBegin();
-
-   this.kw();
-   this.next();
-
-   this.enterCatchScope();
-   if ( !this.expectType_soft ('(') &&
-        this.err('catch.has.no.opening.paren',{c0:startc,loc0:startLoc}) )
-     return this.errorHandlerOutput ;
-
-   this.declMode = DECL_MODE_CATCH_PARAMS;
-   var catParam = this.parsePattern();
-   if (this.lttype === 'op' && this.ltraw === '=')
-     this.err('catch.has.an.assig.param',{c0:startc,loc0:startLoc,extra:catParam});
-
-   this.declMode = DECL_NONE;
-   if (catParam === null)
-     this.err('catch.has.no.param',{c0:startc,loc0:startLoc});
-
-   if ( !this.expectType_soft (')') &&
-         this.err('catch.has.no.end.paren',{c0:startc,loc0:startLoc,extra:catParam})  )
-     return this.errorHandlerOutput    ;
-
-   var catBlock = this.parseBlockStatement_dependent('catch');
-
-   this.exitScope();
-   return {
-       type: 'CatchClause',
-        loc: { start: startLoc, end: catBlock.loc.end },
-       start: startc,
-       end: catBlock.end,
-       param: catParam ,
-       body: catBlock ,y:-1
-   };
-};
-
-this . parseWithStatement = function() {
-   if ( !this.ensureStmt_soft () &&
-         this.err('not.stmt') )
-     return this.errorHandlerOutput ;
-
-   if ( this.tight) this.err('with.strict')  ;
-
-   this.enterLexicalScope(false);
-   this.fixupLabels(false);
-
-   var startc = this.c0,
-       startLoc = this.locBegin();
-
-   this.next();
-   ! this.expectType_soft ('(') &&
-   this.err('with.has.no.opening.paren');
-
-   var obj = this.parseExpr(CTX_NONE|CTX_TOP);
-   if (! this.expectType_soft (')' ) &&
-         this.err('with.has.no.end.paren') )
-     return this.errorHandlerOutput ;
-
-   var scopeFlags = this.scopeFlags;
-
-   this.scopeFlags &= CLEAR_IB;
-   var nbody = this.parseStatement(true);
-   this.scopeFlags = scopeFlags;
-   
-   this.foundStatement = true;
-
-   var scope = this.exitScope();
-   return  {
-       type: 'WithStatement',
-       loc: { start: startLoc, end: nbody.loc.end },
-       start: startc,
-       end: nbody.end,
-       object: obj, body: nbody/*,scope:  scope ,y:-1*/
-   };
-};
-
-this . prseDbg = function () {
-  if (! this.ensureStmt_soft () &&
-        this.err('not.stmt') )
-    return this.errorHandlerOutput ;
-
-  this.fixupLabels(false);
-
-  var startc = this.c0,
-      startLoc = this.locBegin();
-  var c = this.c, li = this.li, col = this.col;
-
-  this.next() ;
-  if ( this. lttype ===  ';' ) {
-    c = this.c;
-    li = this.li;
-    col = this.col;
-    this.next();
-  } 
-  else if ( !this.nl &&
-     this.err('no.semi') )
-     return this.errorHandlerOutput;
-
-  this.foundStatement = true;
-  return {
-     type: 'DebuggerStatement',
-      loc: { start: startLoc, end: { line: li, column: col } } ,
-     start: startc,
-     end: c
-   };
-};
-
-this.blck = function () { // blck ([]stmt)
-  var isFunc = false, stmt = null, stmts = [];
-  if (this.directive !== DIR_NONE)
-    this.parseDirectives(stmts);
-
-  while (stmt = this.parseStatement(true))
-    stmts.push(stmt);
-
-  return (stmts);
-};
-
-this.checkForStrictError = function(directive) {
-  if (this.esct !== ERR_NONE_YET)
-    this.err('strict.err.esc.not.valid');
-};
-
-this.parseDirectives = function(list) {
-  if (this.v < 5)
-    return;
-
-  var r = this.directive;
-
-  // TODO: maybe find a way to let `numstr` take over this process (partially, at the very least);
-  // that way, there will no longer be a need to check ltval's type
-  while (this.lttype === 'Literal' && typeof this.ltval === STRING_TYPE) {
-    this.directive = DIR_MAYBE|r;
-    var rv = this.src.substring(this.c0+1, this.c-1);
-
-    // other directives might actually come after "use strict",
-    // but that is the only one we are interested to find; TODO: this behavior ought to change
-    if (rv === 'use strict')
-      this.directive |= DIR_LAST;
-
-    this.dv.value = this.ltval;
-    this.dv.raw = rv;
-
-    var elem = this.parseStatement(true);
-    list.push(elem);
-
-    if (this.directive & DIR_LAST)
-      break;
-
-  }
-
-  this.directive = DIR_NONE;
-};
-
-this.gotDirective = function(dv, flags) {
-  if (dv.raw === 'use strict') {
-    if (flags & DIR_FUNC)
-      this.makeStrict()
-    else {
-      this.tight = true;
-      this.scope.strict = true;
-    }
-
-    this.checkForStrictError(flags);
-  }
-};
- 
-this.clearAllStrictErrors = function() {
-  this.esct = ERR_NONE_YET;
-  this.se = null;
-};
- 
 
 },
 function(){
@@ -9287,6 +8659,100 @@ this.readStrLiteral = function (start) {
   this.lttype = 'Literal'  ;
   this.ltraw =  l.slice (this.c0, this.c);
   this.ltval = v ;
+};
+
+
+
+},
+function(){
+this.parseSwitchCase = function () {
+  var startc,
+      startLoc;
+
+  var nbody = null,
+      cond  = null;
+
+  if ( this.lttype === 'Identifier' ) switch ( this.ltval ) {
+     case 'case':
+       startc = this.c0;
+       startLoc = this.locBegin();
+       this.kw();
+       this.next();
+       cond = core(this.parseExpr(CTX_NONE|CTX_TOP)) ;
+       break;
+
+     case 'default':
+       startc = this.c0;
+       startLoc = this.locBegin();
+       this.kw();
+       this.next();
+       break ;
+
+     default: return null;
+  }
+  else
+     return null;
+
+  var c = this.c, li = this.li, col = this.col;
+  if ( ! this.expectType_soft (':') &&
+       this.err('switch.case.has.no.colon') )
+    return this.errorHandlerOutput;
+
+  nbody = this.blck();
+  var last = nbody.length ? nbody[nbody.length-1] : null;
+  return { type: 'SwitchCase', test: cond, start: startc, end: last ? last.end : c,
+     loc: { start: startLoc, end: last ? last.loc.end : { line: li, column: col } }, consequent: nbody ,y:-1 };
+};
+
+},
+function(){
+this.parseSwitchStatement = function () {
+  if ( ! this.ensureStmt_soft () &&
+         this.err('not.stmt') )
+    return this.errorHandlerOutput ;
+
+  this.fixupLabels(false) ;
+
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      cases = [],
+      hasDefault = false ,
+      scopeFlags = this.scopeFlags,
+      elem = null;
+
+  this.next() ;
+  if ( !this.expectType_soft ('(') &&
+       this.err('switch.has.no.opening.paren') )
+    return this.errorHandlerOutput;
+
+  var switchExpr = core(this.parseExpr(CTX_NONE|CTX_TOP));
+  !this.expectType_soft (')') &&
+  this.err('switch.has.no.closing.paren');
+
+  !this.expectType_soft ('{') &&
+  this.err('switch.has.no.opening.curly');
+
+  this.enterLexicalScope(false); 
+  this.scopeFlags |=  (SCOPE_FLAG_BREAK|SCOPE_FLAG_IN_BLOCK);
+  while ( elem = this.parseSwitchCase()) {
+    if (elem.test === null) {
+       if (hasDefault ) this.err('switch.has.a.dup.default');
+       hasDefault = true ;
+    }
+    cases.push(elem);
+  }
+
+  this.scopeFlags = scopeFlags ;
+  this.foundStatement = true;
+
+  var scope = this.exitScope(); 
+  var n = { type: 'SwitchStatement', cases: cases, start: startc, discriminant: switchExpr,
+            end: this.c, loc: { start: startLoc, end: this.loc() }/*,scope:  scope  ,y:-1*/};
+  if ( !this.expectType_soft ('}' ) &&
+        this.err('switch.unfinished') )
+    return this.errorHandlerOutput ;
+
+  return n;
 };
 
 
@@ -9453,148 +8919,182 @@ this . parseTemplateLiteral = function() {
 
 },
 function(){
-this .validateID  = function (e) {
-  var n = e === "" ? this.ltval : e;
+this.parseThis = function() {
+  var n = {
+    type : 'ThisExpression',
+    loc: { start: this.locBegin(), end: this.loc() },
+    start: this.c0,
+    end : this.c
+  };
+  this.next() ;
 
-  SWITCH:
-  switch (n.length) {
-     case  1:
-         break SWITCH;
-     case  2: switch (n) {
-         case 'do':
-         case 'if':
-         case 'in':
-            
-            return this.errorReservedID(e);
-         default: break SWITCH;
-     }
-     case 3: switch (n) {
-         case 'int' :
-            if ( this.v > 5 )
-                break SWITCH;
-          return  this. errorReservedID(e);
-
-         case 'let' :
-            if ( this.v <= 5 || !this.tight )
-              break SWITCH;
-         case 'for' : case 'try' : case 'var' : case 'new' :
-             return this.errorReservedID(e);
-
-         default: break SWITCH;
-     }
-     case 4: switch (n) {
-         case 'byte': case 'char': case 'goto': case 'long':
-            if ( this. v > 5 ) break SWITCH;
-         case 'case': case 'else': case 'this': case 'void': case 'true':
-         case 'with': case 'enum':
-         case 'null':
-            return this.errorReservedID(e);
-
-//       case 'eval':
-//          if (this.tight) return this.err('eval.arguments.in.strict');
-
-         default:
-            break SWITCH;
-     }
-     case 5: switch (n) {
-         case 'await':
-            if (this.isScript &&
-               !(this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR))
-              break SWITCH;
-            else
-              this.errorReservedID(e);
-         case 'final':
-         case 'float':
-         case 'short':
-            if ( this. v > 5 ) break SWITCH;
-            return this.errorReservedID(e);
-    
-         case 'yield': 
-            if (!this.tight && !(this.scopeFlags & SCOPE_FLAG_GEN)) {
-              break SWITCH;
-            }
-
-         case 'break': case 'catch': case 'class': case 'const': case 'false':
-         case 'super': case 'throw': case 'while': 
-            return this.errorReservedID(e);
-
-         default: break SWITCH;
-     }
-     case 6: switch (n) {
-         case 'double': case 'native': case 'throws':
-             if ( this. v > 5 )
-                break SWITCH;
-             return this.errorReservedID(e); 
-         case 'public':
-         case 'static':
-             if ( this.v > 5 && !this.tight )
-               break SWITCH;
-         case 'delete': case 'export': case 'import': case 'return':
-         case 'switch': case 'typeof':
-            return this.errorReservedID(e) ;
-
-         default: break SWITCH;
-     }
-     case 7:  switch (n) {
-         case 'package':
-         case 'private':
-            if ( this.tight ) return this.errorReservedID(e);
-         case 'boolean':
-            if ( this.v > 5 ) break;
-         case 'default': case 'extends': case 'finally':
-             return this.errorReservedID(e);
-
-         default: break SWITCH;
-     }
-     case 8: switch (n) {
-         case 'abstract': case 'volatile':
-            if ( this.v > 5 ) break;
-         case 'continue': case 'debugger': case 'function':
-            return this.errorReservedID (e) ;
-
-         default: break SWITCH;
-     }
-     case 9: switch (n) {
-         case 'protected':
-         case 'interface':
-            if ( this.tight )
-              return this.errorReservedID (e);
-         case 'transient':
-            if ( this.v <= 5 )
-              return this.errorReservedID(e) ;
-//       case 'arguments':
-//          if (this.tight) return this.err('eval.arguments.in.strict');
-
-         default: break SWITCH;
-     }
-     case 10: switch (n) {
-         case 'implements':
-            if ( this.v > 5 && !this.tight ) break ;
-         case 'instanceof':
-            return this.errorReservedID(e) ;
-
-         default: break SWITCH;
-    }
-    case 12: switch (n) {
-      case 'synchronized':
-         if ( this. v <= 5 )
-           return this.errorReservedID(e) ;
-
-      default: break SWITCH;
-    }
-  }
-
-  return e ? null : this.id();
+  return n;
 };
 
-this.errorReservedID = function(id) {
-  this.resvchk();
-  if ( !this.throwReserved ) {
-     this.throwReserved = true;
-     return null;
+
+
+},
+function(){
+this.parseThrowStatement = function () {
+  if ( ! this.ensureStmt_soft () &&
+         this.err('not.stmt') )
+    return this.errorHandlerOutput ;
+
+  this.fixupLabels(false ) ;
+
+  var startc = this.c0,
+      startLoc = this.locBegin(),
+      retVal = null,
+      li = this.li,
+      c = this.c,
+      col = this.col;
+
+  this.next();
+
+  var semi = 0 , semiLoc = null ;
+  if ( this.nl &&
+       this.err('throw.has.newline') )
+    return this.errorHandlerOutput;
+
+  retVal = this.parseExpr(CTX_NULLABLE|CTX_TOP);
+  if ( retVal === null &&
+       this.err('throw.has.no.argument') )
+     return this.errorHandlerOutput;
+
+  semi = this.semiI();
+  semiLoc = this.semiLoc_soft();
+  if ( !semiLoc && !this.nl &&
+        this.err('no.semi') )
+    return this.errorHandlerOutput;
+
+  this.foundStatement = true;
+  return { type: 'ThrowStatement', argument: core(retVal), start: startc, end: semi || retVal.end,
+     loc: { start: startLoc, end: semiLoc || retVal.loc.end } }
+
+};
+
+
+
+},
+function(){
+this.parseExpr = function (context) {
+  var head = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+  var lastExpr = null;
+
+  if ( this.lttype !== ',' )
+    return head;
+
+  // TODO: abide to the original context by using `context = context|(CTX_FOR|CTX_PARPAT)` rather than the
+  // assignment below
+  context = (context & CTX_FOR)|CTX_PARPAT;
+
+  var e = [core(head)];
+  do {
+    this.next() ;
+    lastExpr = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+    e.push(core(lastExpr));
+  } while (this.lttype === ',' );
+
+  return {
+    type: 'SequenceExpression', expressions: e,
+    start: head.start, end: lastExpr.end,
+    loc: { start : head.loc.start, end : lastExpr.loc.end} ,y:-1
+  };
+};
+
+
+
+},
+function(){
+this.parseTryStatement = function () {
+  if ( ! this.ensureStmt_soft () &&
+         this.err('not.stmt') )
+    return this.errorHandlerOutput ;
+
+  this.fixupLabels(false);
+  var startc = this.c0,
+      startLoc = this.locBegin();
+
+  this.next() ;
+
+  this.enterLexicalScope(false); 
+
+  var tryBlock = this.parseBlockStatement_dependent('try');
+  this.exitScope(); 
+  var finBlock = null, catBlock  = null;
+  if ( this.lttype === 'Identifier' && this.ltval === 'catch')
+    catBlock = this.parseCatchClause();
+
+  if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
+     this.kw();
+     this.next();
+
+     this.enterLexicalScope(false); 
+     finBlock = this.parseBlockStatement_dependent('finally');
+     this.exitScope(); 
   }
-  if ( this.err('reserved.id',{tn:id}) ) return this.errorHandlerOutput;
-}
+
+  var finOrCat = finBlock || catBlock;
+  if ( ! finOrCat &&
+       this.err('try.has.no.tail')  )
+    return this.errorHandlerOutput ;
+
+  this.foundStatement = true;
+  return  { type: 'TryStatement', block: tryBlock, start: startc, end: finOrCat.end,
+            handler: catBlock, finalizer: finBlock, loc: { start: startLoc, end: finOrCat.loc.end }  ,y:-1};
+};
+
+
+
+},
+function(){
+this.parseUnaryExpression = function(context) {
+  var u = null,
+      startLoc = null,  
+      startc = 0,
+      isVDT = this.isVDT;
+
+  if (isVDT) {
+    this.kw();
+    this.isVDT = VDT_NONE;
+    u = this.ltval;
+    startLoc = this.locBegin();
+    startc = this.c0;
+  }
+  else {
+    u = this.ltraw;
+    startLoc = this.locOn(1);
+    startc = this.c - 1;
+  }
+
+  this.next();
+  var arg = this.parseNonSeqExpr(PREC_U, context & CTX_FOR);
+
+  if (this.tight &&
+      isVDT === VDT_DELETE &&
+      core(arg).type !== 'MemberExpression')
+    this.err('delete.arg.not.a.mem',{tn:arg,extra:{c0:startc,loc0:startLoc,context:context}});
+
+  if (isVDT === VDT_AWAIT) {
+    var n = {
+      type: 'AwaitExpression', argument: core(arg),
+      start: startc, end: arg.end,
+      loc: { start: startLoc, end: arg.loc.end }
+    };
+    this.suspys = n;
+    return n;
+  }
+  
+  return {
+    type: 'UnaryExpression', operator: u,
+    start: startc, end: arg.end,
+    loc: {
+      start: startLoc,
+      end: arg.loc.end
+    }, argument: core(arg),
+    prefix: true
+  };
+};
 
 
 
@@ -9747,6 +9247,84 @@ this.parseVariableDeclarator = function(context) {
 
 },
 function(){
+this.parseWhileStatement = function () {
+   this.enterLexicalScope(true);
+   if ( ! this.ensureStmt_soft () &&
+          this.err('not.stmt') )
+     return this.errorHandlerOutput;
+
+   this.fixupLabels(true);
+
+   var startc = this.c0,
+       startLoc = this.locBegin();
+   this.next();
+
+   !this.expectType_soft ('(') &&
+   this.err('while.has.no.opening.paren');
+ 
+   var cond = core( this.parseExpr(CTX_NONE|CTX_TOP) );
+
+   !this.expectType_soft (')') &&
+   this.err('while.has.no.closing.paren');
+
+   var scopeFlags = this.scopeFlags;
+   this.scopeFlags &= CLEAR_IB;
+   this.scopeFlags |= (SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
+   var nbody = this.parseStatement(false);
+   this.scopeFlags = scopeFlags ;
+   this.foundStatement = true;
+
+   var scope = this.exitScope();
+   return { type: 'WhileStatement', test: cond, start: startc, end: nbody.end,
+       loc: { start: startLoc, end: nbody.loc.end }, body:nbody/*,scope:  scope ,y:-1*/ };
+};
+
+},
+function(){
+this . parseWithStatement = function() {
+   if ( !this.ensureStmt_soft () &&
+         this.err('not.stmt') )
+     return this.errorHandlerOutput ;
+
+   if ( this.tight) this.err('with.strict')  ;
+
+   this.enterLexicalScope(false);
+   this.fixupLabels(false);
+
+   var startc = this.c0,
+       startLoc = this.locBegin();
+
+   this.next();
+   ! this.expectType_soft ('(') &&
+   this.err('with.has.no.opening.paren');
+
+   var obj = this.parseExpr(CTX_NONE|CTX_TOP);
+   if (! this.expectType_soft (')' ) &&
+         this.err('with.has.no.end.paren') )
+     return this.errorHandlerOutput ;
+
+   var scopeFlags = this.scopeFlags;
+
+   this.scopeFlags &= CLEAR_IB;
+   var nbody = this.parseStatement(true);
+   this.scopeFlags = scopeFlags;
+   
+   this.foundStatement = true;
+
+   var scope = this.exitScope();
+   return  {
+       type: 'WithStatement',
+       loc: { start: startLoc, end: nbody.loc.end },
+       start: startc,
+       end: nbody.end,
+       object: obj, body: nbody/*,scope:  scope ,y:-1*/
+   };
+};
+
+
+
+},
+function(){
 
 this.parseYield = function(context) {
   var arg = null,
@@ -9785,6 +9363,469 @@ this.parseYield = function(context) {
 
 
 
+},
+function(){
+this .parseO = function(context ) {
+  switch ( this. lttype ) {
+  case 'op': return true;
+  case '--': return true;
+  case '-': this.prec = PREC_ADD_MIN; return true;
+  case '/':
+    if ( this.src.charCodeAt(this.c) === CH_EQUALITY_SIGN ) {
+      this.c++ ;
+      this.prec = PREC_OP_ASSIG;
+      this.ltraw = '/=';
+      this.col++; 
+    }
+    else
+      this.prec = PREC_MUL ; 
+
+    return true;
+
+  case 'Identifier':
+    switch ( this. ltval ) {
+    case 'in':
+      this.resvchk();
+    case 'of':
+      if (context & CTX_FOR)
+        break ;
+
+      this.prec = PREC_COMP ;
+      this.ltraw = this.ltval;
+      return true;
+
+    case 'instanceof':
+      this.resvchk();
+      this.prec = PREC_COMP  ;
+      this.ltraw = this.ltval ;
+      return true;
+
+    }
+    break;
+
+  case '?':
+    this .prec = PREC_COND;
+    return true;
+
+  default:
+    return false;
+
+  }
+};
+
+},
+function(){
+this.enterFuncScope = function(decl) { this.scope = this.scope.spawnFunc(decl); };
+
+// TODO: it is no longer needed
+this.enterComplex = function() {
+   if (this.declMode === DECL_MODE_FUNC_PARAMS ||
+       this.declMode & DECL_MODE_CATCH_PARAMS)
+     this.makeComplex();
+};
+
+this.enterLexicalScope = function(loop) { this.scope = this.scope.spawnLexical(loop); };
+
+this.setDeclModeByName = function(modeName) {
+  this.declMode = modeName === 'var' ? DECL_MODE_VAR : DECL_MODE_LET;
+};
+
+this.exitScope = function() {
+  var scope = this.scope;
+  this.scope.finish();
+  this.scope = this.scope.parent;
+  if (this.scope.synth)
+    this.scope = this.scope.parent;
+  return scope;
+};
+
+this.declare = function(id) {
+   ASSERT.call(this, this.declMode !== DECL_NONE, 'Unknown declMode');
+   if (this.declMode & DECL_MODE_EITHER) {
+     this.declMode |= this.scope.isConcrete() ?
+       DECL_MODE_VAR : DECL_MODE_LET;
+   }
+   else if (this.declMode & DECL_MODE_FCE)
+     this.declMode = DECL_MODE_FCE;
+
+   if (this.declMode === DECL_MODE_FUNC_PARAMS) {
+     if (!this.addParam(id)) // if it was not added, i.e., it is a duplicate
+       return;
+   }
+   else if (this.declMode === DECL_MODE_LET) {
+     // TODO: eliminate it because it must've been verified in somewhere else,
+     // most probably in parseVariableDeclaration
+     if ( !(this.scopeFlags & SCOPE_FLAG_IN_BLOCK) )
+       this.err('let.decl.not.in.block');
+
+     if ( id.name === 'let' )
+       this.err('lexical.name.is.let',{tn:id});
+   }
+
+   this.scope.declare(id, this.declMode);
+};
+
+this.makeComplex = function() {
+  // complex params are treated as let by the emitter
+  if (this.declMode & DECL_MODE_CATCH_PARAMS) {
+    this.declMode |= DECL_MODE_LET; 
+    return;
+  }
+
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNC_PARAMS);
+  var scope = this.scope;
+  if (scope.mustNotHaveAnyDupeParams()) return;
+  for (var a in scope.definedNames) {
+     if (!HAS.call(scope.definedNames, a)) continue;
+     if (scope.definedNames[a].type & DECL_DUPE)
+       this.err('func.args.has.dup',{tn:this.idNames[a]});
+  }
+  scope.isInComplexArgs = true;
+};
+
+this.addParam = function(id) {
+  ASSERT.call(this, this.declMode === DECL_MODE_FUNC_PARAMS);
+  var name = id.name + '%';
+  var scope = this.scope;
+  if ( HAS.call(scope.definedNames, name) ) {
+    if (scope.mustNotHaveAnyDupeParams())
+      this.err('func.args.has.dup',{tn:id});
+
+    // TODO: this can be avoided with a dedicated 'dupes' dictionary,
+    // but then again, that might be too much.
+    if (!(scope.definedNames[name].type & DECL_DUPE)) {
+      scope.insertID(id);
+      scope.definedNames[name].type |= DECL_DUPE ;
+    }
+
+    return false;
+  }
+
+  return true;
+};
+
+this.ensureParamIsNotDupe = function(id) {
+   var name = id.name + '%';
+   var scope = this.scope;
+   if (HAS.call(scope.idNames, name) && scope.idNames[name])
+     this.err('func.args.has.dup',{tn:id});
+};
+
+// TODO: must check whether we are parsing with v > 5, whether we are in an if, etc.
+this.canDeclareFunctionsInScope = function(isGen) {
+  if (this.scope.isConcrete())
+    return true;
+  if (this.scopeFlags & SCOPE_FLAG_IN_BLOCK)
+    return this.v > 5;
+  if (this.tight)
+    return false;
+  if (this.scopeFlags & SCOPE_FLAG_IN_IF)
+    return !isGen;
+  
+  return false;
+};
+
+this.canDeclareClassInScope = function() {
+  return this.scopeFlags & SCOPE_FLAG_IN_BLOCK ||
+    this.scope.isConcrete();
+};
+
+this.canLabelFunctionsInScope = function(isGen) { 
+  // TODO: add something like a 'compat' option so as to actually allow it for v <= 5;
+  // this is what happens in reality: versions prior to ES2015 don't officially allow it, but it
+  // is supported in most browsers.
+  if (this.v <= 5)
+    return false;
+  if (this.tight)
+    return false;
+  if (isGen)
+    return false;
+
+  return (this.scopeFlag & SCOPE_FLAG_IN_BLOCK) ||
+          this.scope.isConcrete(); 
+};
+
+this.enterScope = function(scope) {
+  this.scope = scope;
+};
+
+this.exitScope = function() {
+  this.scope = this.scope.parent;
+};
+
+},
+function(){
+this.semiLoc_soft = function () {
+  switch (this.lttype) {
+  case ';':
+     var n = this.loc();
+     this.next();
+     return n;
+
+  case 'eof':
+     return this.nl ? null : this.loc();
+
+  case '}':
+     if ( !this.nl )
+        return this.locOn(1);
+  }
+  
+  return null;
+};
+
+this.semiI = function() {
+  switch (this.lttype) {
+  case ';':
+    return this.c;
+  case '}':
+    return this.nl ? 0 : this.c0;
+  case 'eof':
+    return this.nl ? 0 : this.c;
+  default:
+    return 0;
+
+  }
+};
+
+},
+function(){
+this . findLabel = function(name) {
+    return has.call(this.labels, name) ?this.labels[name]:null;
+
+};
+
+this .ensureStmt_soft = function() {
+   if ( this.canBeStatement ) {
+     this.canBeStatement = false;
+     return true;
+   }
+   return false;
+};
+
+this . fixupLabels = function(loop) {
+    if ( this.unsatisfiedLabel ) {
+         this.unsatisfiedLabel.loop = loop;
+         this.unsatisfiedLabel = null;
+    }
+};
+
+this.enterCatchScope = function() {
+  this.scope = this.scope.spawnCatch();
+};
+
+this.blck = function () { // blck ([]stmt)
+  var isFunc = false, stmt = null, stmts = [];
+  if (this.directive !== DIR_NONE)
+    this.parseDirectives(stmts);
+
+  while (stmt = this.parseStatement(true))
+    stmts.push(stmt);
+
+  return (stmts);
+};
+
+this.checkForStrictError = function(directive) {
+  if (this.esct !== ERR_NONE_YET)
+    this.err('strict.err.esc.not.valid');
+};
+
+this.parseDirectives = function(list) {
+  if (this.v < 5)
+    return;
+
+  var r = this.directive;
+
+  // TODO: maybe find a way to let `numstr` take over this process (partially, at the very least);
+  // that way, there will no longer be a need to check ltval's type
+  while (this.lttype === 'Literal' && typeof this.ltval === STRING_TYPE) {
+    this.directive = DIR_MAYBE|r;
+    var rv = this.src.substring(this.c0+1, this.c-1);
+
+    // other directives might actually come after "use strict",
+    // but that is the only one we are interested to find; TODO: this behavior ought to change
+    if (rv === 'use strict')
+      this.directive |= DIR_LAST;
+
+    this.dv.value = this.ltval;
+    this.dv.raw = rv;
+
+    var elem = this.parseStatement(true);
+    list.push(elem);
+
+    if (this.directive & DIR_LAST)
+      break;
+
+  }
+
+  this.directive = DIR_NONE;
+};
+
+this.gotDirective = function(dv, flags) {
+  if (dv.raw === 'use strict') {
+    if (flags & DIR_FUNC)
+      this.makeStrict()
+    else {
+      this.tight = true;
+      this.scope.strict = true;
+    }
+
+    this.checkForStrictError(flags);
+  }
+};
+ 
+this.clearAllStrictErrors = function() {
+  this.esct = ERR_NONE_YET;
+  this.se = null;
+};
+ 
+
+},
+function(){
+this .validateID  = function (e) {
+  var n = e === "" ? this.ltval : e;
+
+  SWITCH:
+  switch (n.length) {
+     case  1:
+         break SWITCH;
+     case  2: switch (n) {
+         case 'do':
+         case 'if':
+         case 'in':
+            
+            return this.errorReservedID(e);
+         default: break SWITCH;
+     }
+     case 3: switch (n) {
+         case 'int' :
+            if ( this.v > 5 )
+                break SWITCH;
+          return  this. errorReservedID(e);
+
+         case 'let' :
+            if ( this.v <= 5 || !this.tight )
+              break SWITCH;
+         case 'for' : case 'try' : case 'var' : case 'new' :
+             return this.errorReservedID(e);
+
+         default: break SWITCH;
+     }
+     case 4: switch (n) {
+         case 'byte': case 'char': case 'goto': case 'long':
+            if ( this. v > 5 ) break SWITCH;
+         case 'case': case 'else': case 'this': case 'void': case 'true':
+         case 'with': case 'enum':
+         case 'null':
+            return this.errorReservedID(e);
+
+//       case 'eval':
+//          if (this.tight) return this.err('eval.arguments.in.strict');
+
+         default:
+            break SWITCH;
+     }
+     case 5: switch (n) {
+         case 'await':
+            if (this.isScript &&
+               !(this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR))
+              break SWITCH;
+            else
+              this.errorReservedID(e);
+         case 'final':
+         case 'float':
+         case 'short':
+            if ( this. v > 5 ) break SWITCH;
+            return this.errorReservedID(e);
+    
+         case 'yield': 
+            if (!this.tight && !(this.scopeFlags & SCOPE_FLAG_GEN)) {
+              break SWITCH;
+            }
+
+         case 'break': case 'catch': case 'class': case 'const': case 'false':
+         case 'super': case 'throw': case 'while': 
+            return this.errorReservedID(e);
+
+         default: break SWITCH;
+     }
+     case 6: switch (n) {
+         case 'double': case 'native': case 'throws':
+             if ( this. v > 5 )
+                break SWITCH;
+             return this.errorReservedID(e); 
+         case 'public':
+         case 'static':
+             if ( this.v > 5 && !this.tight )
+               break SWITCH;
+         case 'delete': case 'export': case 'import': case 'return':
+         case 'switch': case 'typeof':
+            return this.errorReservedID(e) ;
+
+         default: break SWITCH;
+     }
+     case 7:  switch (n) {
+         case 'package':
+         case 'private':
+            if ( this.tight ) return this.errorReservedID(e);
+         case 'boolean':
+            if ( this.v > 5 ) break;
+         case 'default': case 'extends': case 'finally':
+             return this.errorReservedID(e);
+
+         default: break SWITCH;
+     }
+     case 8: switch (n) {
+         case 'abstract': case 'volatile':
+            if ( this.v > 5 ) break;
+         case 'continue': case 'debugger': case 'function':
+            return this.errorReservedID (e) ;
+
+         default: break SWITCH;
+     }
+     case 9: switch (n) {
+         case 'protected':
+         case 'interface':
+            if ( this.tight )
+              return this.errorReservedID (e);
+         case 'transient':
+            if ( this.v <= 5 )
+              return this.errorReservedID(e) ;
+//       case 'arguments':
+//          if (this.tight) return this.err('eval.arguments.in.strict');
+
+         default: break SWITCH;
+     }
+     case 10: switch (n) {
+         case 'implements':
+            if ( this.v > 5 && !this.tight ) break ;
+         case 'instanceof':
+            return this.errorReservedID(e) ;
+
+         default: break SWITCH;
+    }
+    case 12: switch (n) {
+      case 'synchronized':
+         if ( this. v <= 5 )
+           return this.errorReservedID(e) ;
+
+      default: break SWITCH;
+    }
+  }
+
+  return e ? null : this.id();
+};
+
+this.errorReservedID = function(id) {
+  this.resvchk();
+  if ( !this.throwReserved ) {
+     this.throwReserved = true;
+     return null;
+  }
+  if ( this.err('reserved.id',{tn:id}) ) return this.errorHandlerOutput;
+}
+
+
+
 }]  ],
 [Ref.prototype, [function(){
 this.total = function() {
@@ -9817,9 +9858,9 @@ this.total = function() {
 [Scope.prototype, [function(){
 this.calculateAllowedActions = function() {
   var a = SA_NONE;
-  if (this.isLexical() || this.isBare())
+  if (this.isLexical() || this.isBody())
     a |= this.parent.allowed;
-  else if (this.isFunc()) {
+  else if (this.isAnyFunc()) {
     a |= SA_RETURN;
     if (this.isCtor())
       a |= (SA_CALLSUP|SA_MEMSUP);
@@ -10024,6 +10065,46 @@ this.reference_m = function(mname, prevRef) {
 
 },
 function(){
+this.clsScope = function(t) {
+  return new ClassScope(this, ST_CLS|t);
+};
+
+this.genScope = function(t) {
+  return new FunctionScope(this, ST_GEN|t);
+};
+
+this.fnScope = function(t) {
+  return new FunctionScope(this, ST_FN|t);
+};
+
+this.blockScope = function() {
+  ASSERT.call(this, !this.isBody(),
+    'a body scope must not have a descendant '+
+    'lock scope; rather, it should be converted '+
+    'to an actual block scope');
+  return new LexicalScope(this, ST_BLOCK);
+};
+
+this.bodyScope = function() {
+  return new LexicalScope(this, ST_BODY);
+};
+
+this.catchScope = function() {
+  return new CatchScope(this, ST_CATCH);
+};
+
+this.arrowScope = function() {
+  return new FunctionScope(this, ST_ARROW);
+};
+
+this.ctorScope = function() {
+  ASSERT.call(this, this.isClass(),
+    'only class scopes');
+  return new FunctionScope(this, ST_CTOR);
+};
+
+},
+function(){
 this.isGlobal = function() { return this.type & ST_GLOBAL; };
 this.isModule = function() { return this.type & ST_MODULE; };
 this.isScript = function() { return this.type & ST_SCRIPT; };
@@ -10054,6 +10135,8 @@ this.isCatch = function() { return this.type & ST_CATCH; };
 this.isBody = function() { return this.type & ST_BODY; };
 this.isMeth = function() { return this.type & ST_METH; };
 this.isExpr = function() { return this.type & ST_EXPR; };
+this.isGen = function() { return this.type & ST_GEN; };
+this.isAsync = function() { return this.type & ST_ASYNC; };
 this.isAccessor = function() {
   return this.type & ST_ACCESSOR;
 };

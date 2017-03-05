@@ -10,3 +10,5 @@ function LexicalScope(sParent, sType) {
       sParent.isLexical() ?                                sParent.surroundingCatch :
         null;
 }
+
+LexicalScope.prototype = createObj(Scope.prototype);
