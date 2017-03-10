@@ -1,24 +1,30 @@
 this.calculateAllowedActions = function() {
+  if (this.isParen())
+    return this.parent.allowed;
+
   var a = SA_NONE;
-  if (this.isLexical() || this.isBody())
+  if (this.isLexical() || this.isClass() || this.isCatchHead())
     a |= this.parent.allowed;
-  else if (this.isAnyFunc()) {
+  else if (this.isAnyFnComp()) {
     a |= SA_RETURN;
-    if (this.isCtor())
+    if (this.isCtorComp())
       a |= (SA_CALLSUP|SA_MEMSUP);
-    else if (this.isGen())
+    else if (this.isGenComp())
       a |= SA_YIELD;
-    else {
+    else if (this.isMethComp()) 
       a |= SA_MEMSUP;
-      if (this.isAsync())
-        a |= SA_AWAIT;
-    }
+
+    if (this.isAsyncComp())
+      a |= SA_AWAIT;
   }
 
   return a;
 };
 
 this.calculateScopeMode = function() {
+  if (this.isParen())
+    return this.parent.mode;
+
   var m = SM_NONE;
   if (!this.parent) {
     ASSERT.call(this, this.isGlobal(),
@@ -34,6 +40,10 @@ this.calculateScopeMode = function() {
   if (this.isLexical() && this.parent.insideLoop())
     m |= SM_LOOP;
 
+  // catch-heads and non-simple fn-heads
+  if (!this.isExpr() && !this.isDecl() && this.isHead())
+    m |= SM_UNIQUE;
+
   return m;
 };
 
@@ -44,3 +54,4 @@ this.setName = function(name) {
     'the current scope has already got a name');
   this.exprName = name;
 };
+

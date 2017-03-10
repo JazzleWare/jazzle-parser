@@ -26,16 +26,13 @@ this.parseVariableDeclaration = function(context) {
   this.next();
   if (kind !== 'var') {
     if (this.hasDeclarator()) {
-      if (!(this.scopeFlags & SCOPE_FLAG_IN_BLOCK))
+      if (!(this.scope.canDeclareLetOrClass()))
         this.err('lexical.decl.not.in.block',{c0:startc,loc0:startLoc,extra:kind});
-      if (kind === 'let' && this.onToken_ !== null &&
-         (this.lttype !== 'Identifier' || this.ltval !== 'in'))
-        this.onToken_kw(startc,startLoc,'let');
     }
   }
 
   this.declMode = kind === 'var' ? 
-    DECL_MODE_VAR : DECL_MODE_LET;
+    DM_VAR : DM_LET;
   
   if (kind === 'let' &&
       this.lttype === 'Identifier' &&

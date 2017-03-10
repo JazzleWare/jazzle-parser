@@ -1,7 +1,6 @@
 this.parseBreakStatement = function () {
-   if (! this.ensureStmt_soft   () &&
-         this.err('not.stmt') )
-     return this.errorHandlerOutput ;
+   if (!this.ensureStmt_soft())
+     this.err('not.stmt');
 
    this.fixupLabels(false);
    var startc = this.c0, startLoc = this.locBegin();
@@ -27,9 +26,8 @@ this.parseBreakStatement = function () {
        return { type: 'BreakStatement', label: label, start: startc, end: semi || label.end,
            loc: { start: startLoc, end: semiLoc || label.loc.end } };
    }
-   else if (!(this.scopeFlags & SCOPE_FLAG_BREAK) &&
-         this.err('break.not.in.breakable', {c0:startc,loc0:startLoc}) )
-     return this.errorHandlerOutput ;
+   else if (!this.scope.canBreak())
+     this.err('break.not.in.breakable', {c0:startc,loc0:startLoc});
 
    semi = this.semiI();
    semiLoc = this.semiLoc_soft();

@@ -231,4 +231,7 @@ class a {} // CLS|FNVAR
 function a() {} // FUNCTION|FNVAR
 (function a() {}) // SCOPENAME; not an actual declType -- rather, it sets the scope name
 
+if (false) LEXICAL|BODY
+(function /*FN|EXPR|HEAD*/a(FN|EXPR) { FN|EXPR|BODY })
+function a /*FN|DECL|HEAD*/() { FN|DECL|BODY })
 

@@ -7,7 +7,8 @@ this. parseArrayPattern = function() {
       elem = null,
       list = [];
 
-  this.enterComplex();
+  if (this.scope.isAnyFnHead())
+    this.scope.enterUniqueArgs();
 
   this.next();
   while ( true ) {

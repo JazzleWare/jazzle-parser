@@ -37,8 +37,10 @@ this.parseNonSeqExpr = function (prec, context) {
   }
 
   if ((context & CTX_PAT) &&
-     (context & CTX_NO_SIMPLE_ERR))
+     (context & CTX_NO_SIMPLE_ERR)) {
       this.currentExprIsSimple();
+      this.dissolveParen();
+  }
   
   if (!op || assig)
     return head;

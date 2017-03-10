@@ -15,7 +15,7 @@ function assembleID(c0, li0, col0, raw, val) {
   }
 }
 
-this.parseMem = function(context, flags) {
+this.parseMem = function(context, st) {
   var c0 = 0, li0 = 0, col0 = 0, nmod = 0,
       nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "", latestFlag = 0;
 
@@ -29,58 +29,44 @@ this.parseMem = function(context, flags) {
       }
       switch (this.ltval) {
       case 'static':
-        if (!(flags & MEM_CLASS)) break LOOP;
-        if (flags & MEM_STATIC) break LOOP;
-        if (flags & MEM_ASYNC) break LOOP;
+        if (!(st & ST_CLSMEM)) break LOOP;
+        if (st & ST_STATICMEM) break LOOP;
+        if (st & ST_ASYNC) break LOOP;
 
         nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
 
-        flags |= latestFlag = MEM_STATIC;
+        st |= latestFlag = ST_STATICMEM;
         nmod++;
 
-        if (this.onToken_ !== null) {
-          this.lttype = "";
-          this.next();
-          if (this.lttype !== '(')
-            this.onToken_kw(nc0,{line:nli0,column:ncol0},nraw);
-          else
-            this.onToken({ type: 'Identifier', value: nraw, start: nc0, end: nc0+nraw.length,
-              loc: {
-                start: { line: nli0, column: ncol0 },
-                end: { line: nli0, column: ncol0+nraw.length }
-              }
-            });
-        }
-        else
-          this.next();
+        this.next();
 
         break;
 
       case 'get':
       case 'set':
-        if (flags & MEM_ACCESSOR) break LOOP;
-        if (flags & MEM_ASYNC) break LOOP;
+        if (st & ST_ACCESSOR) break LOOP;
+        if (st & ST_ASYNC) break LOOP;
 
         nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
         
-        flags |= latestFlag = this.ltval === 'get' ? MEM_GET : MEM_SET;
+        st |= latestFlag = this.ltval === 'get' ? ST_GETTER : ST_SETTER;
         nmod++;
         this.next();
         break;
 
       case 'async':
-        if (flags & MEM_ACCESSOR) break LOOP;
-        if (flags & MEM_ASYNC) break LOOP;
+        if (st & ST_ACCESSOR) break LOOP;
+        if (st & ST_ASYNC) break LOOP;
 
         nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
 
-        flags |= latestFlag = MEM_ASYNC;
+        st |= latestFlag = ST_ASYNC;
         nmod++;
         this.next();
         if (this.nl) {
@@ -100,12 +86,12 @@ this.parseMem = function(context, flags) {
   if (this.lttype === 'op' && this.ltraw === '*') {
     if (this.v <= 5)
       this.err('ver.mem.gen');
-    if (flags & MEM_ASYNC)
+    if (st & ST_ASYNC)
       this.err('async.gen.not.yet.supported');
 
     if (!c0) { c0 = this.c-1; li0 = this.li; col0 = this.col-1; }
 
-    flags |= latestFlag = MEM_GEN;
+    st |= latestFlag = ST_GEN;
     nmod++;
     this.next();
   }
@@ -116,12 +102,12 @@ this.parseMem = function(context, flags) {
     if (asyncNewLine)
       this.err('async.newline');
 
-    if ((flags & MEM_CLASS)) {
-      if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
-      if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
+    if ((st & ST_CLSMEM)) {
+      if (this.ltval === 'constructor') st |= ST_CTOR;
+      if (this.ltval === 'prototype') context |= CTX_HASPROTOTYPE;
     }
     else if (this.ltval === '__proto__')
-      flags |= MEM_PROTO;
+      context |= CTX_HASPROTO;
 
     nmem = this.memberID();
     break;
@@ -129,12 +115,12 @@ this.parseMem = function(context, flags) {
     if (asyncNewLine)
       this.err('async.newline');
 
-    if ((flags & MEM_CLASS)) {
-      if (this.ltval === 'constructor') flags |= MEM_CONSTRUCTOR;
-      if (this.ltval === 'prototype') flags |= MEM_PROTOTYPE;
+    if (st & ST_CLSMEM) {
+      if (this.ltval === 'constructor') st |= ST_CTOR;
+      if (this.ltval === 'prototype') context |= CTX_HASPROTOTYPE;
     }
     else if (this.v > 5 && this.ltval === '__proto__')
-      flags |= MEM_PROTO;
+      context |= CTX_HASPROTO;
 
     nmem = this.numstr();
     break;
@@ -145,22 +131,22 @@ this.parseMem = function(context, flags) {
     nmem = this.memberExpr();
     break;
   default:
-    if (nmod && latestFlag !== MEM_GEN) {
+    if (nmod && latestFlag !== ST_GEN) {
       nmem = assembleID(nc0, nli0, ncol0, nraw, nval);
-      flags &= ~latestFlag; // it's found out to be a name, not a modifier
+      st &= ~latestFlag; // it's found out to be a name, not a modifier
       nmod--;
     }
   }
 
   if (nmem === null) {
-    if (flags & MEM_GEN)
+    if (st & ST_GEN)
       this.err('mem.gen.has.no.name');
     return null;
   } 
 
   if (this.lttype === '(') {
     if (this.v <= 5) this.err('ver.mem.meth');
-    var mem = this.parseMeth(nmem, flags);
+    var mem = this.parseMeth(nmem, context, st);
     if (c0 && c0 !== mem.start) {
       mem.start = c0;
       mem.loc.start = { line: li0, column: col0 };
@@ -168,7 +154,7 @@ this.parseMem = function(context, flags) {
     return mem;
   }
 
-  if (flags & MEM_CLASS)
+  if (st & ST_CLSMEM)
     this.err('meth.paren');
 
   if (nmod)
@@ -177,10 +163,8 @@ this.parseMem = function(context, flags) {
   // TODO: it is not strictly needed -- this.parseObjElem itself can verify if the name passed to it is
   // a in fact a non-computed value equal to '__proto__'; but with the approach below, things might get tad
   // faster
-  if (flags & MEM_PROTO)
-    context |= CTX_HASPROTO;
 
-  return this.parseObjElem(nmem, context|(flags & MEM_PROTO));
+  return this.parseObjElem(nmem, context);
 };
  
 this.parseObjElem = function(name, context) {

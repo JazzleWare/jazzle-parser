@@ -147,6 +147,11 @@ var exports = {};
 
 console.log("BUILD STARTED");
 builder.build();
+
+console.log("<WRITING FIRST>");
+builder.write(fs .openSync(dist+'.js', 'w+'));
+console.log("<WRITING COMPLETE>");
+
 console.log("TESTING.....");
 
 try {
@@ -160,6 +165,6 @@ catch (e) {
 // builder.write(fs .openSync(dist+'.js', 'w+'));
 }
 
-builder.write(fs .openSync(dist+'.js', 'w+'));
+// builder.write(fs .openSync(dist+'.js', 'w+'));
 console.log("BUILDING COMPLETE.");
 

@@ -1,5 +1,5 @@
 this . findLabel = function(name) {
-    return has.call(this.labels, name) ?this.labels[name]:null;
+    return HAS.call(this.labels, name) ?this.labels[name]:null;
 
 };
 
@@ -72,11 +72,8 @@ this.parseDirectives = function(list) {
 this.gotDirective = function(dv, flags) {
   if (dv.raw === 'use strict') {
     if (flags & DIR_FUNC)
-      this.makeStrict()
-    else {
-      this.tight = true;
-      this.scope.strict = true;
-    }
+      this.scope.funcHead.verifyForStrictness();
+    this.scope.enterStrict();
 
     this.checkForStrictError(flags);
   }

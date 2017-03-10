@@ -7,7 +7,7 @@ var util = require('../common/util.js');
 var listener = {
   on: function(mode, submode, test) {
     console.error(mode, submode, test.uri, '['+test.getSettings()+']');
-    if (mode === 'pass' && submode === 'incompatible') {
+    if (submode === 'contrary') {
       console.error('<result>', util.obj2str(test.result), '\n');
       console.error('<comp>', util.obj2str(test.comp), '\n');
       throw new Error(test);
@@ -29,10 +29,10 @@ function runTests(parserFactory, testRoot) {
   testSuite.listener = listener;
 
   testSuite.ignore('.tolerant', function(test) { return test.uri.indexOf('tolerant') !== -1 });
-//testSuite.ignore('.comments', function(test) { return test.json.comments });
+  testSuite.ignore('.comments', function(test) { return test.json.comments });
   testSuite.ignore('.lineNumber', function(test) { return false && test.json.hasOwnProperty('lineNumber') });
   testSuite.ignore('.js.xml', function(test) { return test.uri.indexOf('JSX') !== -1 });
-//testSuite.ignore('.tokens',function(test) { return test.jsonMode === 'token' });
+  testSuite.ignore('.tokens',function(test) { return test.jsonMode === 'token' });
 
   fs.readFileSync('.ignore').toString().split('\n')
     .forEach(function(line) {

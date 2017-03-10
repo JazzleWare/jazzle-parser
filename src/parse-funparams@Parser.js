@@ -36,7 +36,7 @@ this.parseArgs = function (argLen) {
   }
   if (argLen === ARGLEN_ANY) {
     if (tail && this.lttype === '...') {
-      this.enterUniqueArgs();
+      this.scope.enterUniqueArgs();
       elem = this.parseRestElement();
       list.push(elem);
       if (!gotNonSimple) {

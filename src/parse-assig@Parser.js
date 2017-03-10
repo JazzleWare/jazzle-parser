@@ -3,10 +3,14 @@ this.parseAssignment = function(head, context) {
   if (o === '=>')
     return this.parseArrowFunctionExpression(head);
 
-  if (head.type === PAREN_NODE && !this.ensureSimpAssig_soft(head.expr)) {
-    this.at = ERR_PAREN_UNBINDABLE;
-    this.ae = this.ao = head;
-    this.throwTricky('a', this.at, this.ae);
+  if (head.type === PAREN_NODE) {
+    if (!this.ensureSimpAssig_soft(head.expr)) {
+      this.at = ERR_PAREN_UNBINDABLE;
+      this.ae = this.ao = head;
+      this.throwTricky('a', this.at, this.ae);
+    }
+    else
+      this.dissolveParen();
   }
 
   var right = null;

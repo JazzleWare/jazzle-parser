@@ -9,7 +9,9 @@ this.parseParen = function(context) {
       pc0 = -1, pli0 = -1, pcol0 = -1,
       sc0 = -1, sli0 = -1, scol0 = -1,
       st = ERR_NONE_YET, se = null, so = null,
-      pt = ERR_NONE_YET, pe = null, po = null;
+      pt = ERR_NONE_YET, pe = null, po = null,
+      insideParen = false,
+      parenScope = null;
 
   if (context & CTX_PAT) {
     this.pt = this.st = ERR_NONE_YET;
@@ -17,6 +19,8 @@ this.parseParen = function(context) {
     this.se = this.so = null;
     this.suspys = null;
     elemContext |= CTX_PARAM;
+    this.enterScope(this.scope.parenScope());
+    insideParen = true;
   }
   else
     elemContext |= CTX_NO_SIMPLE_ERR;
@@ -161,6 +165,17 @@ this.parseParen = function(context) {
   if (prevys !== null)
     this.suspys = prevys;
 
+  if (insideParen)
+    parenScope = this.exitScope();
+
+  this.parenScope = parenScope;
+
   return n;
 };
 
+this.dissolveParen = function() {
+  if (this.parenScope) {
+    this.parenScope.dissolve();
+    this.parenScope = null;
+  }
+};

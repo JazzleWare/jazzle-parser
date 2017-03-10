@@ -9,21 +9,19 @@ this.parseTryStatement = function () {
 
   this.next() ;
 
-  this.enterLexicalScope(false); 
-
+  this.enterScope(this.scope.blockScope()); 
   var tryBlock = this.parseBlockStatement_dependent('try');
   this.exitScope(); 
+
   var finBlock = null, catBlock  = null;
-  if ( this.lttype === 'Identifier' && this.ltval === 'catch')
+  if (this.lttype === 'Identifier' && this.ltval === 'catch')
     catBlock = this.parseCatchClause();
 
-  if ( this.lttype === 'Identifier' && this.ltval === 'finally') {
-     this.kw();
-     this.next();
-
-     this.enterLexicalScope(false); 
-     finBlock = this.parseBlockStatement_dependent('finally');
-     this.exitScope(); 
+  if (this.lttype === 'Identifier' && this.ltval === 'finally') {
+    this.next();
+    this.enterScope(this.scope.blockScope()); 
+    finBlock = this.parseBlockStatement_dependent('finally');
+    this.exitScope(); 
   }
 
   var finOrCat = finBlock || catBlock;

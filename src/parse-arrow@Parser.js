@@ -3,26 +3,21 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     this.err('ver.arrow');
   var tight = this.tight, async = false;
 
-  this.enterFuncScope(false);
-  this.declMode = DECL_MODE_FUNC_PARAMS;
-  this.enterComplex();
-
-  var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= INHERITED_SCOPE_FLAGS;
-
   if (this.pt === ERR_ASYNC_NEWLINE_BEFORE_PAREN) {
-    ASSERT.call(this, arg === this.pe, 'how can an error core not be equal to the erroneous argument?!');
+    ASSERT.call(this, arg === this.pe,
+      'how can an error core not be equal to the erroneous argument?!');
     this.err('arrow.newline.before.paren.async');
   }
 
+  this.enterScope(this.scope.fnHeadScope(ST_ARROW));
   switch ( arg.type ) {
   case 'Identifier':
-    this.firstNonSimpArg = null;
     this.asArrowFuncArg(arg);
     break;
 
   case PAREN_NODE:
-    this.firstNonSimpArg = null;
+    this.scope.refs = this.parenScope.refs;
+    this.parenScope = null;
     if (arg.expr) {
       if (arg.expr.type === 'SequenceExpression')
         this.asArrowFuncArgList(arg.expr.expressions);
@@ -41,7 +36,9 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 //    this.err('ver.async');
 
     async = true;
-    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+
+    this.scope.ref = this.parenScope.refs;
+    this.parenScope = null;
     this.asArrowFuncArgList(arg.arguments);
     break;
 
@@ -56,7 +53,10 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   }
 
+  this.exitScope();
   this.currentExprIsParams();
+
+  this.enterScope(this.scope.fnBodyScope(ST_ARROW));
 
   if (this.nl)
     this.err('arrow.newline');
@@ -69,7 +69,6 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     var prevLabels = this.labels;
     this.labels = {};
     isExpr = false;
-    this.scopeFlags |= SCOPE_FLAG_FN;
     nbody = this.parseFuncBody(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
     this.labels = prevLabels;
   }
@@ -77,9 +76,6 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_PAT) ;
 
   this.exitScope();
-  this.tight = tight;
-
-  this.scopeFlags = scopeFlags;
 
   var params = core(arg);
   if (params === null)

@@ -20,7 +20,7 @@ this.parseFunc = function(context, st) {
 
   // it is not a meth -- so the next token is `function`
   if (!isMeth) {
-    this.kw(); this.next();
+    this.next();
     st |= isStmt ? ST_DECL : ST_EXPR;
     if (this.lttype === 'op' && this.ltraw === '*') {
       if (this.v <= 5)
@@ -38,6 +38,7 @@ this.parseFunc = function(context, st) {
       this.next();
     }
     else {
+      st |= ST_FN;
       if (isStmt) {
         var isAsync = st & ST_ASYNC;
         if (this.scope.isBody()) {
@@ -56,31 +57,35 @@ this.parseFunc = function(context, st) {
 
     if (isStmt) {
       if (this.lttype === 'Identifier') {
+        this.declMode = DM_FUNCTION;
         fnName = this.parsePattern();
       } else if (!(context & CTX_DEFAULT)) {
         this.err('func.decl.has.no.name');
       }
       // get the name and enter the scope
-      this.enterScope(this.scope.genScope(st));
     }
     else {
       // enter the scope and get the name
-      this.enterScope(this.scope.genScope(st));
       if (this.lttype === 'Identifier') {
         fnName = this.validateID(null);
       }
     }
   }
-  else
-    this.enterScope(this.scope.fnScope(st));
 
-  this.scope.enterFuncArgs();
+  this.enterScope(this.scope.fnHeadScope(st));
+  if (fnName && this.scope.isExpr())
+    this.scope.setName(fnName);
+
+  this.declMode = DM_FNARG;
   var argList = this.parseArgs(argLen);
-  this.scope.exitFuncArgs();
+  var fnHeadScope = this.exitScope();
 
   this.labels = {};
 
+  this.enterScope(this.scope.fnBodyScope(st));
+  this.scope.funcHead = fnHeadScope;
   var body = this.parseFuncBody(context & CTX_FOR);
+  this.exitScope();
 
   var n = {
     type: isStmt ? 'FunctionDeclaration' : 'FunctionExpression',

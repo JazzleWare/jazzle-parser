@@ -86,6 +86,7 @@ var Parser = function (src, o) {
   };
   this.program = null;
 
+  this.parenScope = null;
   this.setOptions(o);
 };
 

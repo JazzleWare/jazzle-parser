@@ -10,7 +10,7 @@ this.parseStatement = function ( allowNull ) {
   }
 
   switch (this.lttype) {
-    case '{': return this.parseBlckStatement();
+    case '{': return this.parseBlockStatement();
     case ';': return this.parseEmptyStatement() ;
     case 'Identifier':
        this.canBeStatement = true;

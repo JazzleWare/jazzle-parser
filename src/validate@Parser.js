@@ -44,7 +44,7 @@ this .validateID  = function (e) {
      case 5: switch (n) {
          case 'await':
             if (this.isScript &&
-               !(this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR))
+               !this.scope.canAwait() && !this.scope.awaitIsKW())
               break SWITCH;
             else
               this.errorReservedID(e);
@@ -55,7 +55,7 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
     
          case 'yield': 
-            if (!this.tight && !(this.scopeFlags & SCOPE_FLAG_GEN)) {
+            if (!this.scope.insideStrict() && !this.scope.canYield() && !this.scope.yieldIsKW()) {
               break SWITCH;
             }
 

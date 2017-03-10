@@ -9,8 +9,9 @@ this.parseObjectPattern  = function() {
     var val = null;
     var name = null;
 
-    this.enterComplex();
-    
+    if (this.scope.isAnyFnHead())
+      this.scope.enterUniqueArgs();
+
     LOOP:
     do {
       sh = false;

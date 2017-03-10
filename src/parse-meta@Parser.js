@@ -3,7 +3,7 @@ this.parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
   if (this.ltval !== 'target')
     this.err('meta.new.has.unknown.prop');
   
-  if (!(this.scopeFlags & SCOPE_FLAG_FN))
+  if (!this.scope.canHaveNewTarget())
     this.err('meta.new.not.in.function',{c0:startc,loc:startLoc});
 
   var prop = this.id();

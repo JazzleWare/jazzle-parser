@@ -7,4 +7,3 @@ function ClassScope(sParent, sType) {
   this.exprName = "";
 }
 
-ClassScope.prototype = createObj(Scope.prototype);

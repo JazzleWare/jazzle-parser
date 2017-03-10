@@ -13,43 +13,41 @@ this. parseClass = function(context) {
     this.canBeStatement = false;
   }
 
-  if (this.onToken_ !== null)
-    this.lttype = 'Keyword';
-
   this.next(); // 'class'
-
-  var prevStrict = this.tight;
-
-  this.tight = true;
 
   // TODO: this is highly unnecessary, and prone to many errors if missed
 //this.scope.strict = true;
 
+  var st = ST_NONE;
   if (isStmt) {
-    if (!this.canDeclareClassInScope())
+    st = ST_DECL;
+    if (!this.scope.canDeclareLetOrClass())
       this.err('class.decl.not.in.block',{c0:startc,loc0:startLoc});
     if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
-      this.declMode = DECL_MODE_CLASS_STMT;
+      this.declMode = DM_CLS;
       name = this.parsePattern();
     }
     else if (!(context & CTX_DEFAULT))
       this.err('class.decl.has.no.name', {c0:startc,loc0:startLoc});
   }
   else if (this.lttype === 'Identifier' && this.ltval !== 'extends') {
-    this.enterLexicalScope(false);
-    this.scope.synth = true;
-    this.declMode = DECL_MODE_CLASS_EXPR;
-    name = this.parsePattern();
+    st = ST_EXPR;
+    name = this.validateID("");
   }
 
-  var memParseFlags = MEM_CLASS;
   var superClass = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'extends' ) {
-     this.kw();
      this.next();
      superClass = this.parseExprHead(CTX_NONE);
-     memParseFlags |= MEM_SUPER;
   }
+
+  var memParseFlags = ST_CLSMEM, memParseContext = CTX_NONE;
+  this.enterScope(this.scope.clsScope(st));
+  if (this.scope.isExpr() && name)
+    this.scope.setName(name);
+
+  if (superClass)
+    this.scope.mode |= SM_CLS_WITH_SUPER;
 
   var list = [];
   var startcBody = this.c - 1, startLocBody = this.locOn(1);
@@ -64,11 +62,11 @@ this. parseClass = function(context) {
       this.next();
       continue;
     }
-    elem = this.parseMem(CTX_NONE, memParseFlags);
+    elem = this.parseMem(memParseContext, memParseFlags);
     if (elem !== null) {
       list.push(elem);
       if (elem.kind === 'constructor')
-        memParseFlags |= MEM_HAS_CONSTRUCTOR;
+        memParseFlags |= CTX_CTOR_NOT_ALLOWED;
     }
     else break;
   }
@@ -85,10 +83,10 @@ this. parseClass = function(context) {
     }/* ,y:-1*/ 
   };
 
-  this.tight = prevStrict;
-
   if (!this.expectType_soft('}'))
     this.err('class.unfinished',{tn:n, extra:{delim:'}'}});
+
+  this.exitScope();
 
   if (isStmt)
     this.foundStatement = true;
@@ -107,15 +105,14 @@ this.parseSuper = function() {
   this.next();
   switch ( this.lttype ) {
   case '(':
-    if ((this.scopeFlags & SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER) !==
-      SCOPE_FLAG_CONSTRUCTOR_WITH_SUPER)
+    if (!this.scope.canSupCall())
       this.err('class.super.call',{tn:n});
  
     break;
  
   case '.':
   case '[':
-    if (!(this.scopeFlags & SCOPE_FLAG_ALLOW_SUPER))
+    if (!this.scope.canSupMem())
       this.err('class.super.mem',{tn:n});
  
     break ;

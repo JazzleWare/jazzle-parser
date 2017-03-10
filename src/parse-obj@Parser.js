@@ -38,7 +38,7 @@ this.parseObjectExpression = function(context) {
   do {
     this.next();
     this.first__proto__ = first__proto__;
-    elem = this.parseMem(elemContext, MEM_OBJ);
+    elem = this.parseMem(elemContext, ST_OBJMEM);
 
     if (elem === null)
       break;

@@ -1,37 +1,35 @@
 this.clsScope = function(t) {
-  return new ClassScope(this, ST_CLS|t);
+  return new ClassScope(this, t);
 };
 
-this.genScope = function(t) {
-  return new FunctionScope(this, ST_GEN|t);
+this.fnHeadScope = function(t) {
+  return new FuncHeadScope(this, t);
 };
 
-this.fnScope = function(t) {
-  return new FunctionScope(this, ST_FN|t);
+this.fnBodyScope = function(t) {
+  return new FuncBodyScope(this, t);
 };
 
 this.blockScope = function() {
-  ASSERT.call(this, !this.isBody(),
+  ASSERT.call(this, !this.isBare(),
     'a body scope must not have a descendant '+
-    'lock scope; rather, it should be converted '+
+    'block scope; rather, it should be converted '+
     'to an actual block scope');
   return new LexicalScope(this, ST_BLOCK);
+};
+
+this.catchBodyScope = function() {
+  return new CatchBodyScope(this);
+};
+
+this.catchHeadScope = function() {
+  return new CatchHeadScope(this);
 };
 
 this.bodyScope = function() {
   return new LexicalScope(this, ST_BODY);
 };
 
-this.catchScope = function() {
-  return new CatchScope(this, ST_CATCH);
-};
-
-this.arrowScope = function() {
-  return new FunctionScope(this, ST_ARROW);
-};
-
-this.ctorScope = function() {
-  ASSERT.call(this, this.isClass(),
-    'only class scopes');
-  return new FunctionScope(this, ST_CTOR);
+this.parenScope = function() {
+  return new ParenScope(this);
 };

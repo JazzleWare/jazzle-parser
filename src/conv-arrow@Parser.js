@@ -15,7 +15,7 @@ this.asArrowFuncArg = function(arg) {
 
   switch  ( arg.type ) {
   case 'Identifier':
-    if ((this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) &&
+    if (this.scope.canAwait() &&
        arg.name === 'await')
       this.err('arrow.param.is.await.in.an.async',{tn:arg});
      
@@ -23,7 +23,7 @@ this.asArrowFuncArg = function(arg) {
     if (this.tight && arguments_or_eval(arg.name))
       this.err('binding.to.arguments.or.eval',{tn:arg});
 
-    this.declare(arg);
+    this.scope.declare(arg.name, DM_FNARG);
     return;
 
   case 'ArrayExpression':

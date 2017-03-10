@@ -4,8 +4,6 @@ this. parseBlockStatement_dependent = function(name) {
 
     if (!this.expectType_soft ('{'))
       this.err('block.dependent.no.opening.curly',{extra:{name:name}});
-    var scopeFlags = this.scopeFlags;
-    this.scopeFlags |= SCOPE_FLAG_IN_BLOCK;
 
     var n = { type: 'BlockStatement', body: this.blck(), start: startc, end: this.c,
         loc: { start: startLoc, end: this.loc() }/*,scope:  this.scope  ,y:-1*/ };
@@ -13,6 +11,5 @@ this. parseBlockStatement_dependent = function(name) {
          this.err('block.dependent.is.unfinished',{tn:n, extra:{delim:'}'}})  )
       return this.errorHandlerOutput;
 
-    this.scopeFlags = scopeFlags;
     return n;
 };

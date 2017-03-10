@@ -47,7 +47,7 @@ this. parseIdStatementOrId = function ( context ) {
       if ( this.canBeStatement && this.v > 5 )
         return this.parseLet(CTX_NONE);
 
-      if (this.tight) this.err('strict.let.is.id');
+      if (this.scope.insideStrict()) this.err('strict.let.is.id');
 
       pendingExprHead = this.id();
       break SWITCH;
@@ -132,9 +132,9 @@ this. parseIdStatementOrId = function ( context ) {
       this.resvchk(); this.kw();
       return this.parseWhileStatement();
     case 'yield': 
-      if ( this.scopeFlags & SCOPE_FLAG_GEN ) {
-        this.resvchk(); this.kw();
-        if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
+      if (this.scope.canYield()) {
+        this.resvchk();
+        if (this.scope.isAnyFnHead())
           this.err('yield.args');
 
         if ( this.canBeStatement )
@@ -154,9 +154,9 @@ this. parseIdStatementOrId = function ( context ) {
       break SWITCH;
 
     case 'await':
-      if (this.scopeFlags & SCOPE_FLAG_ALLOW_AWAIT_EXPR) {
-        this.resvchk(); this.kw();
-        if (this.scopeFlags & SCOPE_FLAG_ARG_LIST)
+      if (this.scope.canAwait()) {
+        this.resvchk();
+        if (this.scope.isAnyFnHead())
           this.err('await.args');
         if (this.canBeStatement)
           this.canBeStatement = false;

@@ -13,8 +13,8 @@ this.parseLet = function(context) {
   if ( letDecl )
     return letDecl;
 
-  if (this.tight && this.err('strict.let.is.id',{c0:startc,loc:startLoc}) )
-    return this.errorHandlerOutput ;
+  if (this.scope.insideStrict())
+    this.err('strict.let.is.id',{c0:startc,loc:startLoc});
 
   this.canBeStatement = false;
   this.pendingExprHead = {

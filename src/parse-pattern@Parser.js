@@ -3,7 +3,7 @@ this.parsePattern = function() {
     case 'Identifier' :
        var id = this.validateID("");
        this.declare(id);
-       if (this.tight && arguments_or_eval(id.name))
+       if (this.scope.insideStrict() && arguments_or_eval(id.name))
          this.err('bind.arguments.or.eval');
 
        return id;

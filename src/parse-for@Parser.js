@@ -11,16 +11,11 @@ this.parseFor = function() {
   if (!this.expectType_soft ('('))
     this.err('for.with.no.opening.paren',{extra:[startc,startLoc]});
 
+  this.enterScope(this.scope.bodyScope());
+  this.scope.enterForInit();
   var head = null, headIsExpr = false;
-
-  var scopeFlags = this.scopeFlags;
-
-  // inside a for statement's init is like a block
-  this.scopeFlags = SCOPE_FLAG_IN_BLOCK;
-
-  this.enterLexicalScope(true);
-
   this.missingInit = false;
+
   if ( this.lttype === 'Identifier' ) {
     switch ( this.ltval ) {
     case 'var':
@@ -46,14 +41,14 @@ this.parseFor = function() {
     }
   }
 
-  this.scopeFlags = scopeFlags;
-
   if (head === null) {
     headIsExpr = true;
     head = this.parseExpr( CTX_NULLABLE|CTX_PAT|CTX_FOR ) ;
   }
   else 
     this.foundStatement = false;
+
+  this.scope.exitForInit();
 
   var nbody = null;
   var afterHead = null;
@@ -67,7 +62,7 @@ this.parseFor = function() {
 
     case 'in':
       if (this.ltval === 'in')
-        this.kw(), this.resvchk();
+        this.resvchk();
 
       if (headIsExpr) {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec
@@ -97,14 +92,10 @@ this.parseFor = function() {
       if (!this.expectType_soft(')'))
         this.err('for.iter.no.end.paren',{extra:[head,startc,startLoc,afterHead,kind]});
 
-      this.scopeFlags &= CLEAR_IB;
-      this.scopeFlags |= ( SCOPE_FLAG_BREAK|SCOPE_FLAG_CONTINUE );
-
       nbody = this.parseStatement(true);
       if (!nbody)
         this.err('null.stmt');
 
-      this.scopeFlags = scopeFlags;
       this.foundStatement = true;
       this.exitScope();
 
@@ -137,14 +128,9 @@ this.parseFor = function() {
   if (!this.expectType_soft (')'))
     this.err('for.simple.no.end.paren',{extra:[startc,startLoc,head,afterHead,tail]});
 
-  this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= ( SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
-
   nbody = this.parseStatement(true);
   if (!nbody)
     this.err('null.stmt');
-
-  this.scopeFlags = scopeFlags;
   this.foundStatement = true;
   this.exitScope();
 
@@ -159,6 +145,7 @@ this.parseFor = function() {
 
 // TODO: exsureVarsAreNotResolvingToCatchParams_soft
 this.ensureVarsAreNotResolvingToCatchParams = function() {
+  return;
 // #if V
   var list = this.scope.nameList, e = 0;
   while (e < list.length) {
