@@ -266,10 +266,10 @@ mex.adjustTokens = function(tokens) {
 };
 
 mex.ej_adjust = function(e, j, name) {
-// delete e.tokens;
+  delete e.tokens;
   delete e. directive;
   delete e.trailingComments; delete e.leadingComments;
-// delete e.comments;
+  delete e.comments;
   delete e.innerComments;
   if (!e.hasOwnProperty('raw')) {
 //  console.error('raw in name: <'+name+'>');
@@ -283,7 +283,7 @@ mex.ej_adjust = function(e, j, name) {
   delete e.errors; 
 
   delete j.y; delete j.scope;
-// delete j.tokens;
+  delete j.tokens;
 
   if (e.tokens) {
     e.tokens = mex.clearComments(e.tokens);
