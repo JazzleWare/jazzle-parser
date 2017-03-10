@@ -1,3 +1,10 @@
+this.calculateParent = function() {
+  if (this.parent.isParen())
+    this.parent = this.parent.calculateParen();
+
+  return this.parent;
+};
+
 this.calculateAllowedActions = function() {
   if (this.isParen())
     return this.parent.allowed;

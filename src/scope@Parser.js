@@ -14,6 +14,7 @@ this.enterScope = function(scope) {
 
 this.exitScope = function() {
   var scope = this.scope;
+  scope.finish();
   this.scope = this.scope.parent;
   return scope;
 };

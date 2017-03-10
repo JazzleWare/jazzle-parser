@@ -58,7 +58,7 @@ this.isName = function() {
 };
 
 this.absorbRef = function(otherRef) {
-  ASSERT.call(this, otherRef.unresolved,
+  ASSERT.call(this, !otherRef.resolved,
     'a resolved reference must not be absorbed by a declref');
 
   var fromScope = otherRef.scope;
@@ -89,6 +89,7 @@ this.r = function(ref) {
   ASSERT.call(this, this.ref === null,
     'can not change ref');
   this.ref = ref;
+  this.idx = this.ref.scope.ch++;
   return this;
 };
 

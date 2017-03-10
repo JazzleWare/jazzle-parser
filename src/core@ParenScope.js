@@ -16,9 +16,4 @@ this.dissolve = function() {
   }
 };
 
-this.calculateParent = function() {
-  if (this.parent.isParen())
-    this.parent = this.parent.calculateParen();
-
-  return this.parent;
-};
+this.finish = function() {};

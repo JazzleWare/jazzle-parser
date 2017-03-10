@@ -7,7 +7,7 @@ var util = require('../common/util.js');
 var listener = {
   on: function(mode, submode, test) {
     console.error(mode, submode, test.uri, '['+test.getSettings()+']');
-    if (mode === 'pass' && submode !== 'ignore' && submode !== 'as-expected') {
+    if (submode === 'contrary') {
       console.error('<result>', util.obj2str(test.result), '\n');
       console.error('<comp>', util.obj2str(test.comp), '\n');
       throw new Error(test);

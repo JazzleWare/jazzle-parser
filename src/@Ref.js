@@ -3,5 +3,5 @@ function Ref(scope) {
   this.indirect = new RefCount();
   this.scope = scope;
   this.direct = new RefCount();
-  this.unresolved = true;
+  this.resolved = false;
 }

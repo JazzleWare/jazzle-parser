@@ -56,7 +56,7 @@ this.catchArg_m = function(mname, mode) {
     this.parser.err('var.catch.is.dup');
 
   var newDecl = null;
-  var ref = this.findRef_m(mname, true);
+  var ref = this.findRef_m(mname, true).resolve();
 
   newDecl = new Decl().m(mode).n(_u(mname)).r(ref);
   this.insertDecl_m(mname, newDecl);
@@ -89,6 +89,7 @@ this.fnArg_m = function(mname, mode) {
       if (!this.firstEvalOrArguments)
         this.firstEvalOrArguments = newDecl;
     }
+    ref.resolve();
     this.paramMap[mname] = newDecl;
   }
 
@@ -98,11 +99,14 @@ this.fnArg_m = function(mname, mode) {
 
 this.declareLexical_m = function(mname, mode) {
   var existing = this.findDecl_m(mname);
+  if (!existing && this.isAnyFnBody())
+    existing = this.funcHead.findDecl_m(mname);
+
   if (existing)
     this.err('lexical.can.not.override.existing');
 
   
-  var newDecl = null, ref = this.findRef_m(mname, true);
+  var newDecl = null, ref = this.findRef_m(mname, true).resolve();
   newDecl = new Decl().m(mode).n(_u(mname)).r(ref);
 
   this.insertDecl_m(mname, newDecl);
@@ -153,7 +157,7 @@ this.declareVarLike_m = function(mname, mode) {
   }
 
   if (!varDecl) {
-    var ref = dest.findRef_m(mname, true);
+    var ref = dest.findRef_m(mname, true).resolve();
     newDecl.r(ref);
     dest.insertDecl_m(mname, newDecl);
   }
