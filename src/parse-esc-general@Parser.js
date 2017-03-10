@@ -30,7 +30,7 @@ this.readEsc = function ()  {
    case CH_0: case CH_1: case CH_2:
    case CH_3:
        b0 = src.charCodeAt(this.c);
-       if ( this.tight ) {
+       if ( this.scope.insideStrict() ) {
           if ( b0 === CH_0 ) {
                b0 = src.charCodeAt(this.c +  1);
                if ( b0 < CH_0 || b0 >= CH_8 )
@@ -64,7 +64,7 @@ this.readEsc = function ()  {
        return String.fromCharCode(b)  ;
 
     case CH_4: case CH_5: case CH_6: case CH_7:
-       if (this.tight)
+       if (this.scope.insideStrict())
          this.err('strict.oct.str.esc');
        else if (this.directive !== DIR_NONE) {
          if (this.esct === ERR_NONE_YET) {

@@ -12,6 +12,9 @@ this.parseProgram = function () {
 
   this.scope = new Scope(globalScope, ST_SCRIPT);
   this.scope.parser = this;
+  if (!this.isScript)
+    this.scope.enterStrict();
+
   this.next();
 
   var list = this.blck(); 

@@ -1,7 +1,7 @@
 this.parseArrowFunctionExpression = function(arg, context)   {
   if (this.v <= 5)
     this.err('ver.arrow');
-  var tight = this.tight, async = false;
+  var tight = this.scope.insideStrict(), async = false;
 
   if (this.pt === ERR_ASYNC_NEWLINE_BEFORE_PAREN) {
     ASSERT.call(this, arg === this.pe,
@@ -9,13 +9,15 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     this.err('arrow.newline.before.paren.async');
   }
 
-  this.enterScope(this.scope.fnHeadScope(ST_ARROW));
+  var st = ST_ARROW;
   switch ( arg.type ) {
   case 'Identifier':
+    this.enterScope(this.scope.fnHeadScope(st));
     this.asArrowFuncArg(arg);
     break;
 
   case PAREN_NODE:
+    this.enterScope(this.scope.fnHeadScope(st));
     this.scope.refs = this.parenScope.refs;
     this.parenScope = null;
     if (arg.expr) {
@@ -36,7 +38,8 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 //    this.err('ver.async');
 
     async = true;
-
+    st |= ST_ASYNC;
+    this.enterScope(this.scope.fnHeadScope(st));
     this.scope.ref = this.parenScope.refs;
     this.parenScope = null;
     this.asArrowFuncArgList(arg.arguments);
@@ -44,7 +47,8 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   case INTERMEDIATE_ASYNC:
     async = true;
-    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+    st |= ST_ASYNC;
+    this.enterScope(this.scope.fnHeadScope(st));
     this.asArrowFuncArg(arg.id);
     break;
 
@@ -56,7 +60,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   this.exitScope();
   this.currentExprIsParams();
 
-  this.enterScope(this.scope.fnBodyScope(ST_ARROW));
+  this.enterScope(this.scope.fnBodyScope(st));
 
   if (this.nl)
     this.err('arrow.newline');
@@ -66,11 +70,11 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   var isExpr = true, nbody = null;
 
   if ( this.lttype === '{' ) {
-    var prevLabels = this.labels;
+    var prevLabels = this.labels, prevDeclMode = this.declMode;
     this.labels = {};
     isExpr = false;
     nbody = this.parseFuncBody(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
-    this.labels = prevLabels;
+    this.labels = prevLabels; this.declMode = prevDeclMode;
   }
   else
     nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_PAT) ;

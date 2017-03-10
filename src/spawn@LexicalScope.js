@@ -5,5 +5,7 @@ this.toBlock = function() {
 //  'only body scopes without children ' +
 //  'are converible to blocks');
   this.type |= ST_BLOCK;
+  if (this.insideIf())
+    this.mode &= ~SM_INSIDE_IF;
   return this;
 };

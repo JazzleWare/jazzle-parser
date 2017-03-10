@@ -3,9 +3,10 @@ this . parseWithStatement = function() {
          this.err('not.stmt') )
      return this.errorHandlerOutput ;
 
-   if ( this.tight) this.err('with.strict')  ;
+   if (this.scope.insideStrict())
+     this.err('with.strict')  ;
 
-   this.enterLexicalScope(false);
+   this.enterScope(this.scope.bodyScope());
    this.fixupLabels(false);
 
    var startc = this.c0,
@@ -20,12 +21,8 @@ this . parseWithStatement = function() {
          this.err('with.has.no.end.paren') )
      return this.errorHandlerOutput ;
 
-   var scopeFlags = this.scopeFlags;
 
-   this.scopeFlags &= CLEAR_IB;
    var nbody = this.parseStatement(true);
-   this.scopeFlags = scopeFlags;
-   
    this.foundStatement = true;
 
    var scope = this.exitScope();

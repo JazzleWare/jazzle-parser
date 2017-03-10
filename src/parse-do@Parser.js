@@ -1,19 +1,15 @@
 this.parseDoWhileStatement = function () {
-  if ( !this.ensureStmt_soft () &&
-        this.err('not.stmt') )
-    return this.errorHandlerOutput ;
+  if (!this.ensureStmt_soft())
+    this.err('not.stmt');
 
-  this.enterLexicalScope(true); 
+  this.enterScope(this.scope.bodyScope());
+  this.allow(SA_BREAK|SA_CONTINUE);
   this.fixupLabels(true);
 
   var startc = this.c0,
       startLoc = this.locBegin() ;
   this.next() ;
-  var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= (SCOPE_FLAG_BREAK| SCOPE_FLAG_CONTINUE);
   var nbody = this.parseStatement (true) ;
-  this.scopeFlags = scopeFlags;
   if (this.lttype === 'Identifier' && this.ltval === 'while') {
     this.kw(); this.next();
   }
@@ -38,8 +34,8 @@ this.parseDoWhileStatement = function () {
   }
 
  this.foundStatement = true;
-
  this.exitScope(); 
+
  return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
           body: nbody, loc: { start: startLoc, end: { line: li, column: col } } /* ,y:-1*/} ;
 };

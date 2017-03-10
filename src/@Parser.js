@@ -25,9 +25,6 @@ var Parser = function (src, o) {
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
-  this.tight = false;
-
-  this.firstNonSimpArg = null;
 
   this.isScript = false;
   this.v = 7;

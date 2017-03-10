@@ -66,7 +66,7 @@ this. parseClass = function(context) {
     if (elem !== null) {
       list.push(elem);
       if (elem.kind === 'constructor')
-        memParseFlags |= CTX_CTOR_NOT_ALLOWED;
+        memParseContext |= CTX_CTOR_NOT_ALLOWED;
     }
     else break;
   }

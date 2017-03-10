@@ -24,7 +24,7 @@ function ClassScope(sParent, sType) {
   this.synthCLSPName = "";
   this.synthSuperName = "";
   this.synthCLSName = "";
-  this.exprName = "";
+  this.scopeName = "";
 }
 
 ;
@@ -104,10 +104,10 @@ function FuncHeadScope(sParent, st) {
   this.paramList = [];
   this.firstNonSimple = null;
   this.scopeName = "";
-  this.paramMap = {};
   this.firstDup = null;
-
+  this.firstEvalOrArguments = null;
   this.mode |= SM_INARGS;
+  this.paramMap = {};
 }
 
 ;
@@ -193,9 +193,6 @@ var Parser = function (src, o) {
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
-  this.tight = false;
-
-  this.firstNonSimpArg = null;
 
   this.isScript = false;
   this.v = 7;
@@ -944,7 +941,7 @@ var ST_GLOBAL = 1,
     ST_ARROW = ST_OBJMEM << 1,
     ST_BLOCK = ST_ARROW << 1,
     ST_CATCH = ST_BLOCK << 1,
-    ST_ASYNC = ST_CATCH,
+    ST_ASYNC = ST_CATCH << 1,
     ST_BODY = ST_ASYNC << 1,
     ST_METH = ST_BODY << 1,
     ST_EXPR = ST_METH << 1,
@@ -953,7 +950,7 @@ var ST_GLOBAL = 1,
     ST_PAREN = ST_HEAD << 1,
 
     ST_ACCESSOR = ST_GETTER|ST_SETTER,
-    ST_SPECIAL = ST_ACCESSOR|ST_GEN,
+    ST_SPECIAL = ST_ACCESSOR|ST_ASYNC|ST_GEN,
     ST_MEM_FN = ST_CTOR|ST_METH|ST_SPECIAL,
     ST_TOP = ST_GLOBAL|ST_MODULE|ST_SCRIPT,
     ST_LEXICAL = ST_BLOCK|ST_CATCH,
@@ -970,6 +967,8 @@ var SM_LOOP = 1,
     SM_INSIDE_IF = SM_INBLOCK << 1,
     SM_CLS_WITH_SUPER = SM_INSIDE_IF << 1,
     SM_FOR_INIT = SM_CLS_WITH_SUPER << 1,
+    SM_YIELD_KW = SM_FOR_INIT << 1,
+    SM_AWAIT_KW = SM_YIELD_KW << 1,
     SM_NONE = 0;
 
 var SA_THROW = 1,
@@ -2419,6 +2418,15 @@ this.verifyForStrictness = function() {
     this.parser.err('argsdup');
   if (this.firstNonSimple)
     this.parser.err('non.simple');
+
+  var list = this.paramList, i = 0;
+  while (i < list.length) {
+    var elem = list[i];
+    if (arguments_or_eval(elem.name))
+      this.err('binding.eval.or.arguments.name');
+    this.validateID(elem.name);
+    i++ ;
+  }
 };
 
 this.exitUniqueArgs = function() {
@@ -2570,6 +2578,8 @@ this.toBlock = function() {
 //  'only body scopes without children ' +
 //  'are converible to blocks');
   this.type |= ST_BLOCK;
+  if (this.insideIf())
+    this.mode &= ~SM_INSIDE_IF;
   return this;
 };
 
@@ -2605,7 +2615,7 @@ this.calculateParent = function() {
 this .ensureSimpAssig_soft = function(head) {
   switch(head.type) {
   case 'Identifier':
-    if ( this.tight && arguments_or_eval(head.name) )
+    if ( this.scope.insideStrict() && arguments_or_eval(head.name) )
       this.err('assig.to.arguments.or.eval');
 
   case 'MemberExpression':
@@ -2706,7 +2716,7 @@ this.onToken = function(token) {
       tval = this.ltraw;
       switch (tval) {
       case 'static':
-        if (!this.tight) 
+        if (!this.scope.insideStrict()) 
           break;
       case 'in':
       case 'instanceof':
@@ -2784,7 +2794,7 @@ this.asArrowFuncArg = function(arg) {
       this.err('arrow.param.is.await.in.an.async',{tn:arg});
      
     // TODO: this can also get checked in the scope manager rather than below
-    if (this.tight && arguments_or_eval(arg.name))
+    if (this.scope.insideStrict() && arguments_or_eval(arg.name))
       this.err('binding.to.arguments.or.eval',{tn:arg});
 
     this.scope.declare(arg.name, DM_FNARG);
@@ -2866,7 +2876,7 @@ this.toAssig = function(head, context) {
   var i = 0, list = null;
   switch (head.type) {
   case 'Identifier':
-    if (this.tight && arguments_or_eval(head.name)) {
+    if (this.scope.insideStrict() && arguments_or_eval(head.name)) {
       if (this.st === ERR_ARGUMENTS_OR_EVAL_DEFAULT)
         this.st = ERR_NONE_YET;
       if (this.st === ERR_NONE_YET) {
@@ -3668,7 +3678,7 @@ this.setOptions = function(o) {
       var sourceType = get(o, cur, 'script');
       switch (sourceType) {
       case 'script': this.isScript = true; break;
-      case 'module': this.isScript = false; this.tight = true; break;
+      case 'module': this.isScript = false; break;
       default:
         ASSERT.call(this, false,
           'Unknown option for sourceType: '+sourceType);
@@ -4510,7 +4520,7 @@ function(){
 this.parseArrowFunctionExpression = function(arg, context)   {
   if (this.v <= 5)
     this.err('ver.arrow');
-  var tight = this.tight, async = false;
+  var tight = this.scope.insideStrict(), async = false;
 
   if (this.pt === ERR_ASYNC_NEWLINE_BEFORE_PAREN) {
     ASSERT.call(this, arg === this.pe,
@@ -4518,13 +4528,15 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     this.err('arrow.newline.before.paren.async');
   }
 
-  this.enterScope(this.scope.fnHeadScope(ST_ARROW));
+  var st = ST_ARROW;
   switch ( arg.type ) {
   case 'Identifier':
+    this.enterScope(this.scope.fnHeadScope(st));
     this.asArrowFuncArg(arg);
     break;
 
   case PAREN_NODE:
+    this.enterScope(this.scope.fnHeadScope(st));
     this.scope.refs = this.parenScope.refs;
     this.parenScope = null;
     if (arg.expr) {
@@ -4545,7 +4557,8 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 //    this.err('ver.async');
 
     async = true;
-
+    st |= ST_ASYNC;
+    this.enterScope(this.scope.fnHeadScope(st));
     this.scope.ref = this.parenScope.refs;
     this.parenScope = null;
     this.asArrowFuncArgList(arg.arguments);
@@ -4553,7 +4566,8 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   case INTERMEDIATE_ASYNC:
     async = true;
-    this.scopeFlags |= SCOPE_FLAG_ALLOW_AWAIT_EXPR;
+    st |= ST_ASYNC;
+    this.enterScope(this.scope.fnHeadScope(st));
     this.asArrowFuncArg(arg.id);
     break;
 
@@ -4565,7 +4579,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   this.exitScope();
   this.currentExprIsParams();
 
-  this.enterScope(this.scope.fnBodyScope(ST_ARROW));
+  this.enterScope(this.scope.fnBodyScope(st));
 
   if (this.nl)
     this.err('arrow.newline');
@@ -4575,11 +4589,11 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   var isExpr = true, nbody = null;
 
   if ( this.lttype === '{' ) {
-    var prevLabels = this.labels;
+    var prevLabels = this.labels, prevDeclMode = this.declMode;
     this.labels = {};
     isExpr = false;
     nbody = this.parseFuncBody(CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR);
-    this.labels = prevLabels;
+    this.labels = prevLabels; this.declMode = prevDeclMode;
   }
   else
     nbody = this. parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_PAT) ;
@@ -4756,13 +4770,13 @@ this.parseAsync = function(context) {
         this.canBeStatement = stmt;
         if (this.unsatisfiedLabel)
           this.err('async.label.not.allowed',{c0:c0,li0:li0,col0:col0});
-        if (!this.canDeclareFunctionsInScope(true))
+        if (this.scope.isBare())
           this.err('async.is.not.allowed',{c0:c0,li0:li0,col0:col0});
 
         stmt = false;
       }
 
-      n = this.parseFunc(context, MEM_ASYNC);
+      n = this.parseFunc(context, ST_ASYNC);
       n.start = c0;
       n.loc.start.line = li0;
       n.loc.start.column = col0;
@@ -5016,7 +5030,7 @@ this. parseClass = function(context) {
     if (elem !== null) {
       list.push(elem);
       if (elem.kind === 'constructor')
-        memParseFlags |= CTX_CTOR_NOT_ALLOWED;
+        memParseContext |= CTX_CTOR_NOT_ALLOWED;
     }
     else break;
   }
@@ -5186,14 +5200,13 @@ this.parseCond = function(cond, context) {
 },
 function(){
 this.parseContinueStatement = function () {
-   if ( ! this.ensureStmt_soft   () &&
-          this.err('not.stmt') )
-     return this.errorHandlerOutput ;
+   if (!this.ensureStmt_soft())
+     this.err('not.stmt');
 
    this.fixupLabels(false);
-   if (!(this.scopeFlags & SCOPE_FLAG_CONTINUE) &&
-         this.err('continue.not.in.loop') )
-     return this.errorHandlerOutput  ;
+
+   if (!this.scope.canContinue())
+     this.err('continue.not.in.loop');
 
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;
@@ -5287,21 +5300,17 @@ this. parseBlockStatement_dependent = function(name) {
 },
 function(){
 this.parseDoWhileStatement = function () {
-  if ( !this.ensureStmt_soft () &&
-        this.err('not.stmt') )
-    return this.errorHandlerOutput ;
+  if (!this.ensureStmt_soft())
+    this.err('not.stmt');
 
-  this.enterLexicalScope(true); 
+  this.enterScope(this.scope.bodyScope());
+  this.allow(SA_BREAK|SA_CONTINUE);
   this.fixupLabels(true);
 
   var startc = this.c0,
       startLoc = this.locBegin() ;
   this.next() ;
-  var scopeFlags = this.scopeFlags;
-  this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= (SCOPE_FLAG_BREAK| SCOPE_FLAG_CONTINUE);
   var nbody = this.parseStatement (true) ;
-  this.scopeFlags = scopeFlags;
   if (this.lttype === 'Identifier' && this.ltval === 'while') {
     this.kw(); this.next();
   }
@@ -5326,8 +5335,8 @@ this.parseDoWhileStatement = function () {
   }
 
  this.foundStatement = true;
-
  this.exitScope(); 
+
  return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
           body: nbody, loc: { start: startLoc, end: { line: li, column: col } }  ,y:-1} ;
 };
@@ -5377,7 +5386,7 @@ this.readEsc = function ()  {
    case CH_0: case CH_1: case CH_2:
    case CH_3:
        b0 = src.charCodeAt(this.c);
-       if ( this.tight ) {
+       if ( this.scope.insideStrict() ) {
           if ( b0 === CH_0 ) {
                b0 = src.charCodeAt(this.c +  1);
                if ( b0 < CH_0 || b0 >= CH_8 )
@@ -5411,7 +5420,7 @@ this.readEsc = function ()  {
        return String.fromCharCode(b)  ;
 
     case CH_4: case CH_5: case CH_6: case CH_7:
-       if (this.tight)
+       if (this.scope.insideStrict())
          this.err('strict.oct.str.esc');
        else if (this.directive !== DIR_NONE) {
          if (this.esct === ERR_NONE_YET) {
@@ -6041,7 +6050,7 @@ this.parseFor = function() {
       if (headIsExpr) {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec
           // TODO: squash with the `else if (head.init)` below
-        //if (this.tight || kind === 'ForOfStatement' || this.v < 7)
+        //if (this.scope.insideStrict() || kind === 'ForOfStatement' || this.v < 7)
             this.err('for.in.has.init.assig',{tn:head,extra:[startc,startLoc,kind]});
         }
         this.adjustErrors()
@@ -6053,7 +6062,7 @@ this.parseFor = function() {
       else if (this.missingInit)
         this.missingInit = false;
       else if (head.declarations[0].init) {
-        if (this.tight || kind === 'ForOfStatement' ||
+        if (this.scope.insideStrict() || kind === 'ForOfStatement' ||
             this.v < 7 || head.declarations[0].id.type !== 'Identifier' || head.kind !== 'var')
           this.err('for.in.has.decl.init',{tn:head,extra:[startc,startLoc,kind]});
       }
@@ -6173,17 +6182,19 @@ this.parseFunc = function(context, st) {
       st |= ST_FN;
       if (isStmt) {
         var isAsync = st & ST_ASYNC;
-        if (this.scope.isBody()) {
+        if (this.scope.isBare()) {
           if (isAsync)
             this.err('async.decl.not.allowed');
-          if (!this.scope.insideIf())
-            this.err('async.decl.not.allowed');
+          if (!this.scope.insideIf() || this.scope.insideStrict())
+            this.err('func.decl.not.allowed');
           if (this.unsatisfiedLabel)
             this.fixupLabels(false);
         }
 
-        if (this.unsatisfiedLabel)
-          this.err('func.label.not.allowed');
+        if (this.unsatisfiedLabel) {
+          if (this.scope.insideStrict() | (st & (ST_ASYNC|ST_GEN)))
+            this.err('func.label.not.allowed');
+        }
       }
     }
 
@@ -6191,6 +6202,7 @@ this.parseFunc = function(context, st) {
       if (this.lttype === 'Identifier') {
         this.declMode = DM_FUNCTION;
         fnName = this.parsePattern();
+
       } else if (!(context & CTX_DEFAULT)) {
         this.err('func.decl.has.no.name');
       }
@@ -6199,7 +6211,19 @@ this.parseFunc = function(context, st) {
     else {
       // enter the scope and get the name
       if (this.lttype === 'Identifier') {
-        fnName = this.validateID(null);
+        var temp = 0;
+        if (st & ST_GEN) {
+          temp = this.scop.mode;
+          this.scope.mode |= SM_YIELD_KW;
+          fnName = this.parseFuncExprName();
+          this.scope.mode = temp;
+        }
+        else {
+          temp = this.scope.allowed;
+          this.scope.allowed &= ~SA_YIELD;
+          fnName = this.parseFuncExprName();
+          this.scope.allowed = temp;
+        }
       }
     }
   }
@@ -6238,6 +6262,13 @@ this.parseFunc = function(context, st) {
   this.declMode = prevDeclMode;
 
   return n;
+};
+
+this.parseFuncExprName = function() {
+  var name = this.validateID("");
+  if (this.scope.insideStrict() && arguments_or_eval(fnName.name))
+    this.err('bind.eval.or.arguments');
+  return name;
 };
 
 },
@@ -6483,7 +6514,7 @@ this. parseIdStatementOrId = function ( context ) {
         this.lttype = 'yield';
         return null;
       }
-      else if (this.tight) this.errorReservedID(null);
+      else if (this.scope.insideStrict()) this.errorReservedID(null);
 
       pendingExprHead = this.id();
       break SWITCH;
@@ -6525,7 +6556,7 @@ this. parseIdStatementOrId = function ( context ) {
 
   case 6: switch (id) {
     case 'static':
-      if (this.tight || this.v <= 5)
+      if (this.scope.insideStrict() || this.v <= 5)
         this.errorReservedID();
 
     case 'delete':
@@ -6558,7 +6589,7 @@ this. parseIdStatementOrId = function ( context ) {
       this.resvchk(); this.kw();
       return this.parseSwitchStatement();
     case 'public':
-      if (this.tight) this.errorReservedID();
+      if (this.scope.insideStrict()) this.errorReservedID();
     case 'double': case 'native': case 'throws':
       if ( this. v <= 5 ) this.errorReservedID();
 
@@ -6577,7 +6608,7 @@ this. parseIdStatementOrId = function ( context ) {
       this.notId();
 
     case 'package': case 'private':
-      if (this.tight)
+      if (this.scope.insideStrict())
         this.errorReservedID();
 
     case 'boolean':
@@ -6607,7 +6638,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 9:
     switch (id ) {
     case 'interface': case 'protected':
-      if (this.tight) this.errorReservedID() ;
+      if (this.scope.insideStrict()) this.errorReservedID() ;
 
     case 'transient':
       if (this.v <= 5) this.errorReservedID();
@@ -6621,7 +6652,7 @@ this. parseIdStatementOrId = function ( context ) {
        this.resvchk(); this.kw();
        this.notId();
     case 'implements':
-      if ( this.v <= 5 || this.tight )
+      if ( this.v <= 5 || this.scope.insideStrict() )
         this.errorReservedID(id);
 
     default: pendingExprHead = this.id(); break SWITCH ;
@@ -6758,7 +6789,8 @@ this.parseIfStatement = function () {
     return this.errorHandlerOutput;
 
   this.fixupLabels(false);
-  this.enterLexicalScope(false); 
+  this.enterScope(this.scope.bodyScope());
+  this.scope.mode |= SM_INSIDE_IF;
 
   var startc = this.c0,
       startLoc  = this.locBegin();
@@ -6771,18 +6803,16 @@ this.parseIfStatement = function () {
   !this.expectType_soft (')') &&
   this.err('if.has.no.closing.paren');
 
-  var scopeFlags = this.scopeFlags ;
-  this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= SCOPE_FLAG_IN_IF;
   var nbody = this. parseStatement (false);
+  var scope = this.exitScope(); 
+
   var alt = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'else') {
      this.kw(), this.next() ;
+     this.enterScope(this.scope.bodyScope());
      alt = this.parseStatement(false);
+     this.exitScope();
   }
-  this.scopeFlags = scopeFlags ;
-
-  var scope = this.exitScope(); 
 
   this.foundStatement = true;
   return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,
@@ -7692,7 +7722,7 @@ this.readNumberLiteral = function (peek) {
 
       default:
         if ( b >= CH_0 && b <= CH_9 ) {
-          if ( this.tight ) this.err('num.legacy.oct');
+          if ( this.scope.insideStrict() ) this.err('num.legacy.oct');
           var base = 8;
           do {
             if ( b >= CH_8 && base === 8 ) base = 10 ;
@@ -8280,6 +8310,9 @@ this.parseProgram = function () {
 
   this.scope = new Scope(globalScope, ST_SCRIPT);
   this.scope.parser = this;
+  if (!this.isScript)
+    this.scope.enterStrict();
+
   this.next();
 
   var list = this.blck(); 
@@ -9148,7 +9181,7 @@ this.parseUnaryExpression = function(context) {
   this.next();
   var arg = this.parseNonSeqExpr(PREC_U, context & CTX_FOR);
 
-  if (this.tight &&
+  if (this.scope.insideStrict() &&
       isVDT === VDT_DELETE &&
       core(arg).type !== 'MemberExpression')
     this.err('delete.arg.not.a.mem',{tn:arg,extra:{c0:startc,loc0:startLoc,context:context}});
@@ -9296,7 +9329,7 @@ this.parseVariableDeclarator = function(context) {
   if (this.lttype === 'op') {
     if (this.ltraw === '=')  {
        this.next();
-       init = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+       init = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_TOP);
     }
     else 
       this.err('var.decl.not.=',{extra:[context,head]});
@@ -9323,10 +9356,10 @@ this.parseVariableDeclarator = function(context) {
 },
 function(){
 this.parseWhileStatement = function () {
-   this.enterLexicalScope(true);
-   if ( ! this.ensureStmt_soft () &&
-          this.err('not.stmt') )
-     return this.errorHandlerOutput;
+   this.enterScope(this.scope.bodyScope());
+   this.allow(SA_BREAK|SA_CONTINUE);
+   if (!this.ensureStmt_soft())
+     this.err('not.stmt');
 
    this.fixupLabels(true);
 
@@ -9342,11 +9375,7 @@ this.parseWhileStatement = function () {
    !this.expectType_soft (')') &&
    this.err('while.has.no.closing.paren');
 
-   var scopeFlags = this.scopeFlags;
-   this.scopeFlags &= CLEAR_IB;
-   this.scopeFlags |= (SCOPE_FLAG_CONTINUE|SCOPE_FLAG_BREAK );
    var nbody = this.parseStatement(false);
-   this.scopeFlags = scopeFlags ;
    this.foundStatement = true;
 
    var scope = this.exitScope();
@@ -9361,9 +9390,10 @@ this . parseWithStatement = function() {
          this.err('not.stmt') )
      return this.errorHandlerOutput ;
 
-   if ( this.tight) this.err('with.strict')  ;
+   if (this.scope.insideStrict())
+     this.err('with.strict')  ;
 
-   this.enterLexicalScope(false);
+   this.enterScope(this.scope.bodyScope());
    this.fixupLabels(false);
 
    var startc = this.c0,
@@ -9378,12 +9408,8 @@ this . parseWithStatement = function() {
          this.err('with.has.no.end.paren') )
      return this.errorHandlerOutput ;
 
-   var scopeFlags = this.scopeFlags;
 
-   this.scopeFlags &= CLEAR_IB;
    var nbody = this.parseStatement(true);
-   this.scopeFlags = scopeFlags;
-   
    this.foundStatement = true;
 
    var scope = this.exitScope();
@@ -9661,7 +9687,7 @@ this .validateID  = function (e) {
           return  this. errorReservedID(e);
 
          case 'let' :
-            if ( this.v <= 5 || !this.tight )
+            if ( this.v <= 5 || !this.scope.insideStrict() )
               break SWITCH;
          case 'for' : case 'try' : case 'var' : case 'new' :
              return this.errorReservedID(e);
@@ -9677,7 +9703,7 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
 
 //       case 'eval':
-//          if (this.tight) return this.err('eval.arguments.in.strict');
+//          if (this.scope.insideStrict()) return this.err('eval.arguments.in.strict');
 
          default:
             break SWITCH;
@@ -9685,7 +9711,7 @@ this .validateID  = function (e) {
      case 5: switch (n) {
          case 'await':
             if (this.isScript &&
-               !this.scope.canAwait())
+               !this.scope.canAwait() && !this.scope.awaitIsKW())
               break SWITCH;
             else
               this.errorReservedID(e);
@@ -9696,7 +9722,7 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
     
          case 'yield': 
-            if (!this.scope.insideStrict() && !this.scope.canYield()) {
+            if (!this.scope.insideStrict() && !this.scope.canYield() && !this.scope.yieldIsKW()) {
               break SWITCH;
             }
 
@@ -9713,7 +9739,7 @@ this .validateID  = function (e) {
              return this.errorReservedID(e); 
          case 'public':
          case 'static':
-             if ( this.v > 5 && !this.tight )
+             if ( this.v > 5 && !this.scope.insideStrict() )
                break SWITCH;
          case 'delete': case 'export': case 'import': case 'return':
          case 'switch': case 'typeof':
@@ -9724,7 +9750,7 @@ this .validateID  = function (e) {
      case 7:  switch (n) {
          case 'package':
          case 'private':
-            if ( this.tight ) return this.errorReservedID(e);
+            if ( this.scope.insideStrict() ) return this.errorReservedID(e);
          case 'boolean':
             if ( this.v > 5 ) break;
          case 'default': case 'extends': case 'finally':
@@ -9743,19 +9769,19 @@ this .validateID  = function (e) {
      case 9: switch (n) {
          case 'protected':
          case 'interface':
-            if ( this.tight )
+            if ( this.scope.insideStrict() )
               return this.errorReservedID (e);
          case 'transient':
             if ( this.v <= 5 )
               return this.errorReservedID(e) ;
 //       case 'arguments':
-//          if (this.tight) return this.err('eval.arguments.in.strict');
+//          if (this.scope.insideStrict()) return this.err('eval.arguments.in.strict');
 
          default: break SWITCH;
      }
      case 10: switch (n) {
          case 'implements':
-            if ( this.v > 5 && !this.tight ) break ;
+            if ( this.v > 5 && !this.scope.insideStrict() ) break ;
          case 'instanceof':
             return this.errorReservedID(e) ;
 
@@ -9819,19 +9845,18 @@ this.calculateAllowedActions = function() {
     return this.parent.allowed;
 
   var a = SA_NONE;
-  if (this.isLexical() || this.isClass() || this.isCatchHead())
+  if (this.isLexical() || this.isClass() || this.isCatchHead() || this.isBare())
     a |= this.parent.allowed;
   else if (this.isAnyFnComp()) {
     a |= SA_RETURN;
     if (this.isCtorComp())
-      a |= (SA_CALLSUP|SA_MEMSUP);
-    else if (this.isGenComp())
+      a |= SA_CALLSUP;
+    if (this.isGenComp())
       a |= SA_YIELD;
-    else if (this.isMethComp()) 
-      a |= SA_MEMSUP;
-
     if (this.isAsyncComp())
       a |= SA_AWAIT;
+    if (this.isMem())
+      a |= SA_MEMSUP;
   }
 
   return a;
@@ -9866,9 +9891,9 @@ this.calculateScopeMode = function() {
 this.setName = function(name) {
   ASSERT.call(this, this.isExpr(),
     'the current scope is not an expr scope, and can not have a name');
-  ASSERT.call(this, this.exprName === "",
+  ASSERT.call(this, this.scopeName === "",
     'the current scope has already got a name');
-  this.exprName = name;
+  this.scopeName = name;
 };
 
 
@@ -9952,14 +9977,21 @@ this.fnArg_m = function(mname, mode) {
     existing = this.paramMap[mname];
   
   if (existing) {
-    if (!this.canHaveDup())
+    if (!this.canDup())
       this.parser.err('var.fn.is.dup.arg');
 
     if (!this.firstDup)
       this.firstDup = newDecl;
   }
-  else
+  else {
+    switch (_u(mname)) {
+    case 'eval':
+    case 'arguments':
+      if (!this.firstEvalOrArguments)
+        this.firstEvalOrArguments = newDecl;
+    }
     this.paramMap[mname] = newDecl;
+  }
 
   this.paramList.push(newDecl);
   return newDecl;
@@ -10144,7 +10176,7 @@ this.isCatchComp = function() { return this.type & ST_CATCH; };
 this.isBody = function() { return this.type & ST_BODY; };
 this.isMethComp = function() { return this.type & ST_METH; };
 this.isExpr = function() { return this.type & ST_EXPR; };
-this.isMem = function() { return this.isStaticMem() || this.isClassMEm() || this.isObjMem(); };
+this.isMem = function() { return this.isStaticMem() || this.isClassMem() || this.isObjMem(); };
 this.isGenComp = function() { return this.type & ST_GEN; };
 this.isAsyncComp = function() { return this.type & ST_ASYNC; };
 this.isAccessorComp = function() { return this.isGetterComp() || this.isSetterComp(); };
@@ -10210,7 +10242,7 @@ this.canDup = function() {
     'it has no meaning to call canDup when not ' +
     'in func-arguments');
   return !this.insideStrict() &&
-         !this.insideUnique();
+         !this.insideUniqueArgs();
 };
 
 this.enterForInit = function() {
@@ -10236,6 +10268,9 @@ this.exitStrict = function() {
     'can not unset strict when it is not set');
   this.mode &= ~SM_STRICT;
 };
+
+this.yieldIsKW = function() { return this.mode & SM_YIELD_KW; };
+this.awaitIsKW = function() { return this.mode & SM_AWAIT_KW; };
 
 this.hasHeritage = function() {
   ASSERT.call(this, this.isClass(),

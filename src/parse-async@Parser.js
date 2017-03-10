@@ -41,13 +41,13 @@ this.parseAsync = function(context) {
         this.canBeStatement = stmt;
         if (this.unsatisfiedLabel)
           this.err('async.label.not.allowed',{c0:c0,li0:li0,col0:col0});
-        if (!this.canDeclareFunctionsInScope(true))
+        if (this.scope.isBare())
           this.err('async.is.not.allowed',{c0:c0,li0:li0,col0:col0});
 
         stmt = false;
       }
 
-      n = this.parseFunc(context, MEM_ASYNC);
+      n = this.parseFunc(context, ST_ASYNC);
       n.start = c0;
       n.loc.start.line = li0;
       n.loc.start.column = col0;

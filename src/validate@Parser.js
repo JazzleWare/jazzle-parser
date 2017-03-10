@@ -20,7 +20,7 @@ this .validateID  = function (e) {
           return  this. errorReservedID(e);
 
          case 'let' :
-            if ( this.v <= 5 || !this.tight )
+            if ( this.v <= 5 || !this.scope.insideStrict() )
               break SWITCH;
          case 'for' : case 'try' : case 'var' : case 'new' :
              return this.errorReservedID(e);
@@ -36,7 +36,7 @@ this .validateID  = function (e) {
             return this.errorReservedID(e);
 
 //       case 'eval':
-//          if (this.tight) return this.err('eval.arguments.in.strict');
+//          if (this.scope.insideStrict()) return this.err('eval.arguments.in.strict');
 
          default:
             break SWITCH;
@@ -72,7 +72,7 @@ this .validateID  = function (e) {
              return this.errorReservedID(e); 
          case 'public':
          case 'static':
-             if ( this.v > 5 && !this.tight )
+             if ( this.v > 5 && !this.scope.insideStrict() )
                break SWITCH;
          case 'delete': case 'export': case 'import': case 'return':
          case 'switch': case 'typeof':
@@ -83,7 +83,7 @@ this .validateID  = function (e) {
      case 7:  switch (n) {
          case 'package':
          case 'private':
-            if ( this.tight ) return this.errorReservedID(e);
+            if ( this.scope.insideStrict() ) return this.errorReservedID(e);
          case 'boolean':
             if ( this.v > 5 ) break;
          case 'default': case 'extends': case 'finally':
@@ -102,19 +102,19 @@ this .validateID  = function (e) {
      case 9: switch (n) {
          case 'protected':
          case 'interface':
-            if ( this.tight )
+            if ( this.scope.insideStrict() )
               return this.errorReservedID (e);
          case 'transient':
             if ( this.v <= 5 )
               return this.errorReservedID(e) ;
 //       case 'arguments':
-//          if (this.tight) return this.err('eval.arguments.in.strict');
+//          if (this.scope.insideStrict()) return this.err('eval.arguments.in.strict');
 
          default: break SWITCH;
      }
      case 10: switch (n) {
          case 'implements':
-            if ( this.v > 5 && !this.tight ) break ;
+            if ( this.v > 5 && !this.scope.insideStrict() ) break ;
          case 'instanceof':
             return this.errorReservedID(e) ;
 

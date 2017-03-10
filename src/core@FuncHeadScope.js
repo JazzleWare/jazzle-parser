@@ -3,6 +3,15 @@ this.verifyForStrictness = function() {
     this.parser.err('argsdup');
   if (this.firstNonSimple)
     this.parser.err('non.simple');
+
+  var list = this.paramList, i = 0;
+  while (i < list.length) {
+    var elem = list[i];
+    if (arguments_or_eval(elem.name))
+      this.err('binding.eval.or.arguments.name');
+    this.validateID(elem.name);
+    i++ ;
+  }
 };
 
 this.exitUniqueArgs = function() {

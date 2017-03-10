@@ -3,9 +3,9 @@ function FuncHeadScope(sParent, st) {
   this.paramList = [];
   this.firstNonSimple = null;
   this.scopeName = "";
-  this.paramMap = {};
   this.firstDup = null;
-
+  this.firstEvalOrArguments = null;
   this.mode |= SM_INARGS;
+  this.paramMap = {};
 }
 

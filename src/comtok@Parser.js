@@ -79,7 +79,7 @@ this.onToken = function(token) {
       tval = this.ltraw;
       switch (tval) {
       case 'static':
-        if (!this.tight) 
+        if (!this.scope.insideStrict()) 
           break;
       case 'in':
       case 'instanceof':

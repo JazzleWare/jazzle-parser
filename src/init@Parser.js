@@ -29,7 +29,7 @@ this.setOptions = function(o) {
       var sourceType = get(o, cur, 'script');
       switch (sourceType) {
       case 'script': this.isScript = true; break;
-      case 'module': this.isScript = false; this.tight = true; break;
+      case 'module': this.isScript = false; break;
       default:
         ASSERT.call(this, false,
           'Unknown option for sourceType: '+sourceType);

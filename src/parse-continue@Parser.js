@@ -1,12 +1,11 @@
 this.parseContinueStatement = function () {
-   if ( ! this.ensureStmt_soft   () &&
-          this.err('not.stmt') )
-     return this.errorHandlerOutput ;
+   if (!this.ensureStmt_soft())
+     this.err('not.stmt');
 
    this.fixupLabels(false);
-   if (!(this.scopeFlags & SCOPE_FLAG_CONTINUE) &&
-         this.err('continue.not.in.loop') )
-     return this.errorHandlerOutput  ;
+
+   if (!this.scope.canContinue())
+     this.err('continue.not.in.loop');
 
    var startc = this.c0, startLoc = this.locBegin();
    var c = this.c, li = this.li, col = this.col;

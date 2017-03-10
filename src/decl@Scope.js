@@ -76,14 +76,21 @@ this.fnArg_m = function(mname, mode) {
     existing = this.paramMap[mname];
   
   if (existing) {
-    if (!this.canHaveDup())
+    if (!this.canDup())
       this.parser.err('var.fn.is.dup.arg');
 
     if (!this.firstDup)
       this.firstDup = newDecl;
   }
-  else
+  else {
+    switch (_u(mname)) {
+    case 'eval':
+    case 'arguments':
+      if (!this.firstEvalOrArguments)
+        this.firstEvalOrArguments = newDecl;
+    }
     this.paramMap[mname] = newDecl;
+  }
 
   this.paramList.push(newDecl);
   return newDecl;

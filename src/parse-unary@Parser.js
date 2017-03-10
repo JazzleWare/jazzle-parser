@@ -20,7 +20,7 @@ this.parseUnaryExpression = function(context) {
   this.next();
   var arg = this.parseNonSeqExpr(PREC_U, context & CTX_FOR);
 
-  if (this.tight &&
+  if (this.scope.insideStrict() &&
       isVDT === VDT_DELETE &&
       core(arg).type !== 'MemberExpression')
     this.err('delete.arg.not.a.mem',{tn:arg,extra:{c0:startc,loc0:startLoc,context:context}});

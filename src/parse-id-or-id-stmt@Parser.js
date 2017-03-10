@@ -143,7 +143,7 @@ this. parseIdStatementOrId = function ( context ) {
         this.lttype = 'yield';
         return null;
       }
-      else if (this.tight) this.errorReservedID(null);
+      else if (this.scope.insideStrict()) this.errorReservedID(null);
 
       pendingExprHead = this.id();
       break SWITCH;
@@ -185,7 +185,7 @@ this. parseIdStatementOrId = function ( context ) {
 
   case 6: switch (id) {
     case 'static':
-      if (this.tight || this.v <= 5)
+      if (this.scope.insideStrict() || this.v <= 5)
         this.errorReservedID();
 
     case 'delete':
@@ -218,7 +218,7 @@ this. parseIdStatementOrId = function ( context ) {
       this.resvchk(); this.kw();
       return this.parseSwitchStatement();
     case 'public':
-      if (this.tight) this.errorReservedID();
+      if (this.scope.insideStrict()) this.errorReservedID();
     case 'double': case 'native': case 'throws':
       if ( this. v <= 5 ) this.errorReservedID();
 
@@ -237,7 +237,7 @@ this. parseIdStatementOrId = function ( context ) {
       this.notId();
 
     case 'package': case 'private':
-      if (this.tight)
+      if (this.scope.insideStrict())
         this.errorReservedID();
 
     case 'boolean':
@@ -267,7 +267,7 @@ this. parseIdStatementOrId = function ( context ) {
   case 9:
     switch (id ) {
     case 'interface': case 'protected':
-      if (this.tight) this.errorReservedID() ;
+      if (this.scope.insideStrict()) this.errorReservedID() ;
 
     case 'transient':
       if (this.v <= 5) this.errorReservedID();
@@ -281,7 +281,7 @@ this. parseIdStatementOrId = function ( context ) {
        this.resvchk(); this.kw();
        this.notId();
     case 'implements':
-      if ( this.v <= 5 || this.tight )
+      if ( this.v <= 5 || this.scope.insideStrict() )
         this.errorReservedID(id);
 
     default: pendingExprHead = this.id(); break SWITCH ;

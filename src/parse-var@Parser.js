@@ -116,7 +116,7 @@ this.parseVariableDeclarator = function(context) {
   if (this.lttype === 'op') {
     if (this.ltraw === '=')  {
        this.next();
-       init = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
+       init = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_TOP);
     }
     else 
       this.err('var.decl.not.=',{extra:[context,head]});

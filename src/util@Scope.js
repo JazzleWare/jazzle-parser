@@ -23,7 +23,7 @@ this.isCatchComp = function() { return this.type & ST_CATCH; };
 this.isBody = function() { return this.type & ST_BODY; };
 this.isMethComp = function() { return this.type & ST_METH; };
 this.isExpr = function() { return this.type & ST_EXPR; };
-this.isMem = function() { return this.isStaticMem() || this.isClassMEm() || this.isObjMem(); };
+this.isMem = function() { return this.isStaticMem() || this.isClassMem() || this.isObjMem(); };
 this.isGenComp = function() { return this.type & ST_GEN; };
 this.isAsyncComp = function() { return this.type & ST_ASYNC; };
 this.isAccessorComp = function() { return this.isGetterComp() || this.isSetterComp(); };
@@ -89,7 +89,7 @@ this.canDup = function() {
     'it has no meaning to call canDup when not ' +
     'in func-arguments');
   return !this.insideStrict() &&
-         !this.insideUnique();
+         !this.insideUniqueArgs();
 };
 
 this.enterForInit = function() {
@@ -116,8 +116,8 @@ this.exitStrict = function() {
   this.mode &= ~SM_STRICT;
 };
 
-this.yieldAsKW = function() { return this.mode & SM_YIELD_KW; };
-this.awaitAsKW = function() { return this.mode & SM_AWAIT_KW; };
+this.yieldIsKW = function() { return this.mode & SM_YIELD_KW; };
+this.awaitIsKW = function() { return this.mode & SM_AWAIT_KW; };
 
 this.hasHeritage = function() {
   ASSERT.call(this, this.isClass(),

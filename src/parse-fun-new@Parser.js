@@ -41,17 +41,19 @@ this.parseFunc = function(context, st) {
       st |= ST_FN;
       if (isStmt) {
         var isAsync = st & ST_ASYNC;
-        if (this.scope.isBody()) {
+        if (this.scope.isBare()) {
           if (isAsync)
             this.err('async.decl.not.allowed');
-          if (!this.scope.insideIf())
-            this.err('async.decl.not.allowed');
+          if (!this.scope.insideIf() || this.scope.insideStrict())
+            this.err('func.decl.not.allowed');
           if (this.unsatisfiedLabel)
             this.fixupLabels(false);
         }
 
-        if (this.unsatisfiedLabel)
-          this.err('func.label.not.allowed');
+        if (this.unsatisfiedLabel) {
+          if (this.scope.insideStrict() | (st & (ST_ASYNC|ST_GEN)))
+            this.err('func.label.not.allowed');
+        }
       }
     }
 
@@ -59,6 +61,7 @@ this.parseFunc = function(context, st) {
       if (this.lttype === 'Identifier') {
         this.declMode = DM_FUNCTION;
         fnName = this.parsePattern();
+
       } else if (!(context & CTX_DEFAULT)) {
         this.err('func.decl.has.no.name');
       }
@@ -67,7 +70,19 @@ this.parseFunc = function(context, st) {
     else {
       // enter the scope and get the name
       if (this.lttype === 'Identifier') {
-        fnName = this.validateID(null);
+        var temp = 0;
+        if (st & ST_GEN) {
+          temp = this.scop.mode;
+          this.scope.mode |= SM_YIELD_KW;
+          fnName = this.parseFuncExprName();
+          this.scope.mode = temp;
+        }
+        else {
+          temp = this.scope.allowed;
+          this.scope.allowed &= ~SA_YIELD;
+          fnName = this.parseFuncExprName();
+          this.scope.allowed = temp;
+        }
       }
     }
   }
@@ -106,4 +121,11 @@ this.parseFunc = function(context, st) {
   this.declMode = prevDeclMode;
 
   return n;
+};
+
+this.parseFuncExprName = function() {
+  var name = this.validateID("");
+  if (this.scope.insideStrict() && arguments_or_eval(fnName.name))
+    this.err('bind.eval.or.arguments');
+  return name;
 };

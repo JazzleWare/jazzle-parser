@@ -67,7 +67,7 @@ this.parseFor = function() {
       if (headIsExpr) {
         if (head.type === 'AssignmentExpression') { // TODO: not in the spec
           // TODO: squash with the `else if (head.init)` below
-        //if (this.tight || kind === 'ForOfStatement' || this.v < 7)
+        //if (this.scope.insideStrict() || kind === 'ForOfStatement' || this.v < 7)
             this.err('for.in.has.init.assig',{tn:head,extra:[startc,startLoc,kind]});
         }
         this.adjustErrors()
@@ -79,7 +79,7 @@ this.parseFor = function() {
       else if (this.missingInit)
         this.missingInit = false;
       else if (head.declarations[0].init) {
-        if (this.tight || kind === 'ForOfStatement' ||
+        if (this.scope.insideStrict() || kind === 'ForOfStatement' ||
             this.v < 7 || head.declarations[0].id.type !== 'Identifier' || head.kind !== 'var')
           this.err('for.in.has.decl.init',{tn:head,extra:[startc,startLoc,kind]});
       }

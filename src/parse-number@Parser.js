@@ -72,7 +72,7 @@ this.readNumberLiteral = function (peek) {
 
       default:
         if ( b >= CH_0 && b <= CH_9 ) {
-          if ( this.tight ) this.err('num.legacy.oct');
+          if ( this.scope.insideStrict() ) this.err('num.legacy.oct');
           var base = 8;
           do {
             if ( b >= CH_8 && base === 8 ) base = 10 ;

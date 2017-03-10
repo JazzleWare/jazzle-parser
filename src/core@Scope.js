@@ -3,19 +3,18 @@ this.calculateAllowedActions = function() {
     return this.parent.allowed;
 
   var a = SA_NONE;
-  if (this.isLexical() || this.isClass() || this.isCatchHead())
+  if (this.isLexical() || this.isClass() || this.isCatchHead() || this.isBare())
     a |= this.parent.allowed;
   else if (this.isAnyFnComp()) {
     a |= SA_RETURN;
     if (this.isCtorComp())
-      a |= (SA_CALLSUP|SA_MEMSUP);
-    else if (this.isGenComp())
+      a |= SA_CALLSUP;
+    if (this.isGenComp())
       a |= SA_YIELD;
-    else if (this.isMethComp()) 
-      a |= SA_MEMSUP;
-
     if (this.isAsyncComp())
       a |= SA_AWAIT;
+    if (this.isMem())
+      a |= SA_MEMSUP;
   }
 
   return a;
@@ -50,8 +49,8 @@ this.calculateScopeMode = function() {
 this.setName = function(name) {
   ASSERT.call(this, this.isExpr(),
     'the current scope is not an expr scope, and can not have a name');
-  ASSERT.call(this, this.exprName === "",
+  ASSERT.call(this, this.scopeName === "",
     'the current scope has already got a name');
-  this.exprName = name;
+  this.scopeName = name;
 };
 

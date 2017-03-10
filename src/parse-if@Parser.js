@@ -3,7 +3,8 @@ this.parseIfStatement = function () {
     return this.errorHandlerOutput;
 
   this.fixupLabels(false);
-  this.enterLexicalScope(false); 
+  this.enterScope(this.scope.bodyScope());
+  this.scope.mode |= SM_INSIDE_IF;
 
   var startc = this.c0,
       startLoc  = this.locBegin();
@@ -16,18 +17,16 @@ this.parseIfStatement = function () {
   !this.expectType_soft (')') &&
   this.err('if.has.no.closing.paren');
 
-  var scopeFlags = this.scopeFlags ;
-  this.scopeFlags &= CLEAR_IB;
-  this.scopeFlags |= SCOPE_FLAG_IN_IF;
   var nbody = this. parseStatement (false);
+  var scope = this.exitScope(); 
+
   var alt = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'else') {
      this.kw(), this.next() ;
+     this.enterScope(this.scope.bodyScope());
      alt = this.parseStatement(false);
+     this.exitScope();
   }
-  this.scopeFlags = scopeFlags ;
-
-  var scope = this.exitScope(); 
 
   this.foundStatement = true;
   return { type: 'IfStatement', test: cond, start: startc, end: (alt||nbody).end,

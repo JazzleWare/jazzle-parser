@@ -4,6 +4,6 @@ function ClassScope(sParent, sType) {
   this.synthCLSPName = "";
   this.synthSuperName = "";
   this.synthCLSName = "";
-  this.exprName = "";
+  this.scopeName = "";
 }
 
