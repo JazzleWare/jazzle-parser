@@ -16,7 +16,7 @@ this.absorb = function(anotherRef) {
     'absorbing a reference that has been resolved is not a valid action');
   var fromScope = anotherRef.scope;
   if (fromScope.isIndirect()) {
-    if (fromScope.isHoisted())
+    if (fromScope.isHoistable())
       this.indirect.fw += anotherRef.total();
     else {
       this.direct.fw += anotherRef.direct.fw;

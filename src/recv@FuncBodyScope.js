@@ -4,6 +4,7 @@ this.receiveRef_m = function(mname, ref) {
     isCalledSuper(mname) ? this.getCalledSuper() :
     isMemSuper(mname) ? this.getMemSuper() :
     isNewTarget(mname) ? this.getNewTarget() :
+    isLexicalThis(mname) ? this.getLexicalThis() :
     this.funcHead.findDecl_m(mname);
 
   if (decl)

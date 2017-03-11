@@ -3,5 +3,5 @@ function FuncBodyScope(sParent, sType) {
 
   this.prologue = null;
   this.funcHead = null;
+  this.special = { newTarget: null, lexicalThis: null };
 }
-

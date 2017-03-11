@@ -25,8 +25,9 @@ function ClassScope(sParent, sType) {
   this.synthSuperName = "";
   this.synthCLSName = "";
   this.scopeName = "";
-}
 
+  this.special = { scall: null, smem: null };
+}
 ;
 function Decl() {
   this.mode = DM_NONE;
@@ -96,8 +97,8 @@ function FuncBodyScope(sParent, sType) {
 
   this.prologue = null;
   this.funcHead = null;
+  this.special = { newTarget: null, lexicalThis: null };
 }
-
 ;
 function FuncHeadScope(sParent, st) {
   Scope.call(this, sParent, st|ST_HEAD);
@@ -290,8 +291,6 @@ function Scope(sParent, sType) {
     new SortedObj();
 
   this.resolveCache = new SortedObj();
-  this.idx = this.parent ? this.parent.ch++ : 0;
-  this.ch = 0;
 }
 ;
 function SortedObj(obj) {
@@ -928,6 +927,26 @@ function isLeftAssoc(o) {
   return !(bp(o) & 1);
 }
 ;
+function isArguments(mname) {
+  return mname === _m('arguments');
+}
+
+function isCalledSuper(mname) {
+  return mname === _m('special:supermem');
+}
+
+function isMemSuper(mname) {
+  return mname === _m('special:supercall');
+}
+
+function isNewTarget(mname) {
+  return mname === _m('new.target');
+}
+
+function isLexicalThis(mname) {
+  return mname === _m('special:this');
+}
+;
 var ST_GLOBAL = 1,
     ST_MODULE = ST_GLOBAL << 1,
     ST_SCRIPT = ST_MODULE << 1,
@@ -995,10 +1014,11 @@ var DM_CLS = 1,
     DM_FNARG = DM_CATCHARG << 1,
     DM_NONE = 0;
 
-var RS_ARGUMENTS = _m('special:arguments'),
+var RS_ARGUMENTS = _m('arguments'),
     RS_SMEM = _m('special:supermem'),
     RS_SCALL = _m('special:supercall'),
-    RS_NTARGET = _m('special:new-target');
+    RS_NTARGET = _m('new.target'),
+    RS_LTHIS = _m('special:this');
 ;
 function _m(name) { return name+'%'; }
 function _u(name) {
@@ -1513,17 +1533,7 @@ this.recv = function(mname, ref) {
 [ClassScope.prototype, [function(){
 this.receiveRef_m = function(mname, ref) {
   var decl = null;
-  if (ref.scope.isClassMem()) {
-    if (ref.isCalledSuper())
-      decl = this.getCalledSuper();
-    else if (ref.isMemSuper())
-      decl = this.getMemSuper();
-  }
-
-  if (decl !== null)
-    decl.absorbRef(ref);
-  else
-    this.findRef_m(mname, true).absorb(ref);
+  this.findRef_m(mname, true).absorb(ref);
 };
 
 }]  ],
@@ -2460,12 +2470,104 @@ this.receiveRef_m = function(mname, ref) {
     isCalledSuper(mname) ? this.getCalledSuper() :
     isMemSuper(mname) ? this.getMemSuper() :
     isNewTarget(mname) ? this.getNewTarget() :
+    isLexicalThis(mname) ? this.getLexicalThis() :
     this.funcHead.findDecl_m(mname);
 
   if (decl)
     decl.absorbRef(ref);
   else
     this.findRef_m(mname, true).absorb(ref);
+};
+
+},
+function(){
+this.getArguments = function() {
+  if (this.isArrowComp())
+    return null;
+  if (!this.special.arguments) {
+    var decl = new Decl(),
+        ref = this.findRef_m(RS_ARGUMENTS, true);
+    this.special.arguments =
+      decl.r(ref).n(_u(RS_ARGUMENTS));
+  }
+
+  return this.special.arguments;
+};
+
+this.getMemSuper = function() {
+  if (this.isArrowComp())
+    return null;
+
+  // TODO: object must have a scope that intercepts
+  // the references to supermem
+  if (this.isObjMem())
+    return objectSuper();
+
+  ASSERT.call(
+    this,
+    this.isClassMem(),
+    'only methmems can have supmem');
+
+  if (!this.parent.special.calledSuper) {
+    var decl = new Decl(),
+        ref = this.findRef_m(RS_SMEM, true);
+    this.parent.special.smem =
+      decl.r(ref).n(_u(RS_SMEM));
+  }
+
+  return this.parent.special.smem;
+};
+
+this.getCalledSuper = function() {
+  if (this.isArrowComp())
+    return null;
+
+  ASSERT.call(
+    this,
+    this.isCtor(),
+    'only a constructor is allowed to call super');
+
+  ASSERT.call(
+    this,
+    this.parent.isClass(),
+    'a ctor can only have a parent of type class');
+
+  if (!this.parent.special.scall) {
+    var decl = new Decl(),
+        ref = this.findRef_m(RS_SCALL, true);
+    this.parent.special.scall = 
+      decl.r(ref).n(_u(RS_MEM));
+  }
+
+  return this.parent.special.scall;
+};
+
+this.getNewTarget = function() {
+  if (this.isArrowComp())
+    return null;
+
+  if (!this.special.newTarget) {
+    var decl = new Decl(),
+        ref = this.findRef_m(RS_NTARGET, true);
+    this.special.newTarget =
+      decl.r(ref).n(_u(RS_NTARGET));
+  }
+
+  return this.special.newTarget;
+};
+
+this.getLexicalThis = function() {
+  if (this.isArrowComp())
+    return null;
+
+  if (!this.special.lexicalThis) {
+    var decl = new Decl(),
+        ref = this.findRef_m(RS_LTHIS, true);
+    this.special.lexicalThis =
+      decl.r(ref).n(_u(RS_LTHIS));
+  }
+
+  return this.special.lexicalThis;
 };
 
 }]  ],
@@ -9907,7 +10009,7 @@ this.absorb = function(anotherRef) {
     'absorbing a reference that has been resolved is not a valid action');
   var fromScope = anotherRef.scope;
   if (fromScope.isIndirect()) {
-    if (fromScope.isHoisted())
+    if (fromScope.isHoistable())
       this.indirect.fw += anotherRef.total();
     else {
       this.direct.fw += anotherRef.direct.fw;
@@ -10939,6 +11041,7 @@ transform['YieldExpression'] = function(n, list, isVal) {
 
 
 }]  ],
+null,
 null,
 null,
 null,

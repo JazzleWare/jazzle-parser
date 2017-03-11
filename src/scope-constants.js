@@ -65,7 +65,8 @@ var DM_CLS = 1,
     DM_FNARG = DM_CATCHARG << 1,
     DM_NONE = 0;
 
-var RS_ARGUMENTS = _m('special:arguments'),
+var RS_ARGUMENTS = _m('arguments'),
     RS_SMEM = _m('special:supermem'),
     RS_SCALL = _m('special:supercall'),
-    RS_NTARGET = _m('special:new-target');
+    RS_NTARGET = _m('new.target'),
+    RS_LTHIS = _m('special:this');

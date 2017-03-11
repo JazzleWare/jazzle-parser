@@ -19,6 +19,4 @@ function Scope(sParent, sType) {
     new SortedObj();
 
   this.resolveCache = new SortedObj();
-  this.idx = this.parent ? this.parent.ch++ : 0;
-  this.ch = 0;
 }
