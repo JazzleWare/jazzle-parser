@@ -291,6 +291,15 @@ function Scope(sParent, sType) {
     new SortedObj();
 
   this.resolveCache = new SortedObj();
+
+  this.iRef = this.parent ? this.parent.iRef : {v: 0};
+
+  this.headI = this.iRef.v++;
+  this.tailI = -1;
+
+  this.ch = [];
+  if (this.parent)
+    this.parent.ch.push(this);
 }
 ;
 function SortedObj(obj) {
@@ -1629,7 +1638,7 @@ this.r = function(ref) {
   ASSERT.call(this, this.ref === null,
     'can not change ref');
   this.ref = ref;
-  this.idx = this.ref.scope.ch++;
+  this.i = this.ref.scope.iRef.v++;
   return this;
 };
 
@@ -2612,6 +2621,13 @@ this.receiveRef_m = function(mname, ref) {
 
 }]  ],
 [GlobalScope.prototype, [function(){
+this.defineGlobal_m = function(mname, ref) {
+  var newDecl = null, globalRef = this.findRef_m(mname, true);
+  newDecl = new Decl().r(globalRef).n(_u(mname));
+  globalRef.absorb(ref);
+  globalRef.resolve();
+};
+  
 this.receiveRef_m = function(mname, ref) {
   this.defineGlobal_m(mname, ref);
 };
@@ -8481,7 +8497,7 @@ this.parseProgram = function () {
   var endI = this.c , startLoc = null;
   var globalScope = null;
 
-  globalScope = new Scope(null, ST_GLOBAL);
+  globalScope = new GlobalScope();
  
   this.directive = !this.isScipt ? DIR_SCRIPT : DIR_MODULE; 
   this.clearAllStrictErrors();
@@ -8494,8 +8510,10 @@ this.parseProgram = function () {
   this.next();
 
   var list = this.blck(); 
-        
-  alwaysResolveInTheParentScope(this.scope);
+
+  this.scope.finish();
+  globalScope.finish();
+
   var n = {
     type: 'Program',
     body: list,
@@ -8524,22 +8542,6 @@ this.parseProgram = function () {
 
   return n;
 };
-
-function alwaysResolveInTheParentScope(scope) {
-  var decl = null, ref = null, name = "", refName = "";
-  for ( refName in scope.unresolvedNames) {
-    if (!HAS.call(scope.unresolvedNames, refName))
-      continue;
-    ref = scope.unresolvedNames[refName];
-    if (!ref)
-      continue;
-    name = refName.substring(0, refName.length - 1) ;
-    decl = new Decl(DECL_MODE_VAR, name, scope.parent, name);
-    scope.parent.insertDecl0(true, name, decl);
-    decl.refMode.updateExistingRefWith(name, scope);
-  }
-}
-
 
 },
 function(){
@@ -10271,6 +10273,7 @@ this.insertDecl_m = function(mname, decl) {
 },
 function(){
 this.finish = function() {
+  this.tailI = this.iRef.v-1;
   this.handOverRefsToParent();
 };
 

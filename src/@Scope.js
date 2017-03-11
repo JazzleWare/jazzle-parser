@@ -19,4 +19,13 @@ function Scope(sParent, sType) {
     new SortedObj();
 
   this.resolveCache = new SortedObj();
+
+  this.iRef = this.parent ? this.parent.iRef : {v: 0};
+
+  this.headI = this.iRef.v++;
+  this.tailI = -1;
+
+  this.ch = [];
+  if (this.parent)
+    this.parent.ch.push(this);
 }

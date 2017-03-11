@@ -89,7 +89,7 @@ this.r = function(ref) {
   ASSERT.call(this, this.ref === null,
     'can not change ref');
   this.ref = ref;
-  this.idx = this.ref.scope.ch++;
+  this.i = this.ref.scope.iRef.v++;
   return this;
 };
 

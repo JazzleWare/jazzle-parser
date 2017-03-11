@@ -4,7 +4,7 @@ this.parseProgram = function () {
   var globalScope = null;
 
   // #if V
-  globalScope = new Scope(null, ST_GLOBAL);
+  globalScope = new GlobalScope();
   // #end
  
   this.directive = !this.isScipt ? DIR_SCRIPT : DIR_MODULE; 
@@ -18,8 +18,10 @@ this.parseProgram = function () {
   this.next();
 
   var list = this.blck(); 
-        
-  alwaysResolveInTheParentScope(this.scope);
+
+  this.scope.finish();
+  globalScope.finish();
+
   var n = {
     type: 'Program',
     body: list,
@@ -48,21 +50,3 @@ this.parseProgram = function () {
 
   return n;
 };
-
-function alwaysResolveInTheParentScope(scope) {
-  // #if V
-  var decl = null, ref = null, name = "", refName = "";
-  for ( refName in scope.unresolvedNames) {
-    if (!HAS.call(scope.unresolvedNames, refName))
-      continue;
-    ref = scope.unresolvedNames[refName];
-    if (!ref)
-      continue;
-    name = refName.substring(0, refName.length - 1) ;
-    decl = new Decl(DECL_MODE_VAR, name, scope.parent, name);
-    scope.parent.insertDecl0(true, name, decl);
-    decl.refMode.updateExistingRefWith(name, scope);
-  }
-  // #end
-}
-
