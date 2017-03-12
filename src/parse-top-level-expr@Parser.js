@@ -7,7 +7,7 @@ this.parseExpr = function (context) {
 
   // TODO: abide to the original context by using `context = context|(CTX_FOR|CTX_PARPAT)` rather than the
   // assignment below
-  context = (context & CTX_FOR)|CTX_PARPAT;
+  context &= (CTX_FOR|CTX_PARPAT);
 
   var e = [core(head)];
   do {

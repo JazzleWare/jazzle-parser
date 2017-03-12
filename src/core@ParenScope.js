@@ -32,10 +32,10 @@ this.addPossibleArgument = function(argNode) {
 
   if (argNode.type === 'Identifier')
     head = argNode;
-  else if (
-    argNode.type === 'AssignmentExpression' &&
-    argNode.left.type === 'Identifier')
-    head = argNode.left;
+//else if (
+//  argNode.type === 'AssignmentExpression' &&
+//  argNode.left.type === 'Identifier')
+//  head = argNode.left;
   else if (
     argNode.type === 'SpreadElement' &&
     argNode.argument.type === 'Identifier')

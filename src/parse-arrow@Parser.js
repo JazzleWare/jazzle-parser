@@ -12,6 +12,10 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   var st = ST_ARROW;
   switch ( arg.type ) {
   case 'Identifier':
+    var decl = this.scope.findDecl(arg.name);
+    if (decl) this.ref.direct.ex--;
+    else this.scope.findRef(arg.name).direct.fw--;
+
     this.enterScope(this.scope.fnHeadScope(st));
     this.asArrowFuncArg(arg);
     this.scope.declare(arg.name, DM_FNARG);

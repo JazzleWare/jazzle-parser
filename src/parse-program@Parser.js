@@ -31,7 +31,7 @@ this.parseProgram = function () {
     loc: {
       start: {line: li, column: col},
       end: {line: this.li, column: this.col}
-    }
+    }, scope: this.scope
   };
 
   if (this.onToken_ !== null) {

@@ -1662,6 +1662,33 @@ this.s = function(site) {
   return this;
 };
 
+},
+function(){
+this.str = function() {
+  return this.i+':<decl type="'+
+         this.typeString()+'">'+this.name+'</decl>';
+};
+
+this.typeString = function() {
+  var str = "";
+
+  if (this.mode & DM_CLS) str += ":class";
+  if (this.mode & DM_FUNCTION) str += ":func";
+  if (this.mode & DM_LET) str += ":let";
+  if (this.mode & DM_TEMP) str += ":temp";
+  if (this.mode & DM_VAR) str += ":var";
+  if (this.mode & DM_CONST) str += ":const";
+  if (this.mode & DM_SCOPENAME) str += ":scopename";
+  if (this.mode & DM_CATCHARG) str += ":catcharg"; 
+  if (this.mode & DM_FNARG) str += ":fnarg";  
+
+  return str;
+};
+
+this.writeTo = function(emitter) {
+  emitter.w(this.str());
+};
+
 }]  ],
 [Emitter.prototype, [function(){
 this.indent = function() {
@@ -2644,6 +2671,20 @@ this.absorb = function(parenScope) {
     list[i++].ref.direct.fw--; // one ref is a decls
 };
 
+this.writeTo = function(emitter) {
+  var list = this.paramList, i = 0;
+  emitter.w(this.headI+':<arglist type="'+this.typeString()+'">');
+  if (list.length !== 0) {
+    emitter.i();
+    while (i < list.length) {
+      emitter.l();
+      list[i++].writeTo(emitter);
+    }
+    emitter.u().l();
+  }
+  emitter.w(this.tailI+':</arglist>');
+};
+
 },
 function(){
 this.receiveRef_m = function(mname, ref) {
@@ -2833,10 +2874,10 @@ this.addPossibleArgument = function(argNode) {
 
   if (argNode.type === 'Identifier')
     head = argNode;
-  else if (
-    argNode.type === 'AssignmentExpression' &&
-    argNode.left.type === 'Identifier')
-    head = argNode.left;
+//else if (
+//  argNode.type === 'AssignmentExpression' &&
+//  argNode.left.type === 'Identifier')
+//  head = argNode.left;
   else if (
     argNode.type === 'SpreadElement' &&
     argNode.argument.type === 'Identifier')
@@ -4801,6 +4842,10 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   var st = ST_ARROW;
   switch ( arg.type ) {
   case 'Identifier':
+    var decl = this.scope.findDecl(arg.name);
+    if (decl) this.ref.direct.ex--;
+    else this.scope.findRef(arg.name).direct.fw--;
+
     this.enterScope(this.scope.fnHeadScope(st));
     this.asArrowFuncArg(arg);
     this.scope.declare(arg.name, DM_FNARG);
@@ -4919,6 +4964,10 @@ this.parseAssignment = function(head, context) {
 
   var right = null;
   if (o === '=') {
+    if (context & CTX_PARAM) {
+      if (head.type === 'Identifier')
+        this.scope.addPossibleArgument(head);
+    }
     if (context & CTX_PARPAT)
       this.adjustErrors();
 
@@ -8604,7 +8653,7 @@ this.parseProgram = function () {
     loc: {
       start: {line: li, column: col},
       end: {line: this.li, column: this.col}
-    }
+    }, scope: this.scope
   };
 
   if (this.onToken_ !== null) {
@@ -9363,7 +9412,7 @@ this.parseExpr = function (context) {
 
   // TODO: abide to the original context by using `context = context|(CTX_FOR|CTX_PARPAT)` rather than the
   // assignment below
-  context = (context & CTX_FOR)|CTX_PARPAT;
+  context &= (CTX_FOR|CTX_PARPAT);
 
   var e = [core(head)];
   do {
@@ -10424,6 +10473,78 @@ this.reference_m = function(mname, prevRef) {
   else ref.direct.fw++;
 
   return ref;
+};
+
+},
+function(){
+this.str = function() {
+  var emitter = new Emitter();
+  this.writeTo(emitter);
+  return emitter.code;
+};
+
+this.typeString = function() {
+  var str = "";
+
+  if (this.type & ST_GLOBAL) str += ":global"; 
+  if (this.type & ST_MODULE) str += ":module"; 
+  if (this.type & ST_SCRIPT) str += ":script";
+  if (this.type & ST_DECL) str += ":decl";
+  if (this.type & ST_CLS) str += ":class";
+  if (this.type & ST_FN) str += ":fn";
+  if (this.type & ST_CLSMEM) str += ":clsmem";
+  if (this.type & ST_GETTER) str += ":getter";
+  if (this.type & ST_SETTER) str += ":setter";
+  if (this.type & ST_STATICMEM) str += ":static";
+  if (this.type & ST_CTOR) str += ":ctor";
+  if (this.type & ST_OBJMEM) str += ":objmem";
+  if (this.type & ST_ARROW) str += ":arrow";
+  if (this.type & ST_BLOCK) str += ":block";
+  if (this.type & ST_CATCH) str += ":catch";
+  if (this.type & ST_ASYNC) str += ":async";
+  if (this.type & ST_BARE) str += ":bare";
+  if (this.type & ST_BODY) str += ":body";
+  if (this.type & ST_METH) str += ":meth";
+  if (this.type & ST_EXPR) str += ':expr';
+  if (this.type & ST_GEN) str += ":gen";
+  if (this.type & ST_HEAD) str += ":head";
+  if (this.type & ST_PAREN) str += ":paren";
+
+  return str;
+};
+
+this.writeTo = function(emitter) {
+  var defs = this.defs,
+      scopes = this.ch,
+      si = 0,
+      di = 0;
+
+  emitter.w(this.headI+':<scope type="'+this.typeString()+'">');
+  if (defs.keys.length !== 0 || scopes.length !== 0) {
+    emitter.i();
+    while (true) {
+      var def = null,
+          scope = null;
+      if (di < defs.keys.length)
+        def = defs.at(di);
+      if (si < scopes.length)
+        scope = scopes[si];
+      if (scope === null && def === null)
+        break;
+
+      if (def && (scope === null || def.i < scope.headI)) {
+        emitter.l();
+        def.writeTo(emitter); di++;
+      }
+      else if (scope && (def === null || scope.headI < def.i)) {
+        emitter.l()
+        scope.writeTo(emitter); si++;
+      }
+    }
+    emitter.u().l()
+  }
+
+  emitter.w(this.tailI+':</scope>');
 };
 
 },
