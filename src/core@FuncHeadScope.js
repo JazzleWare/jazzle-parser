@@ -29,3 +29,28 @@ this.enterUniqueArgs = function() {
 
   this.mode |= SM_UNIQUE;
 };
+
+this.absorb = function(parenScope) {
+  ASSERT.call(this, this.isArrowComp() && this.isHead(),
+    'the only scope allowed to take in a paren is an arrow-head');
+  ASSERT.call(this, parenScope.isParen(),
+    'the only scope that can be absorbed into an arrow-head is a paren');
+
+  parenScope.parent = this;
+
+  this.firstNonSimple = parenScope.firstNonSimple;
+  this.firstDup = parenScope.firstDup;
+  this.refs = parenScope.refs;
+  if (this.firstDup)
+    this.parser.err('argsdup');
+
+  this.paramMap = parenScope.paramMap;
+  this.paramList = parenScope.paramList;
+
+  this.headI = parenScope.headI;
+  this.tailI = parenScope.tailI;
+
+  var list = this.paramList, i = 0;
+  while (i < list.length)
+    list[i++].ref.direct.fw--; // one ref is a decls
+};

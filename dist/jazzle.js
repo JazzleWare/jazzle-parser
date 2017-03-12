@@ -162,7 +162,11 @@ function LexicalScope(sParent, sType) {
 ;
 function ParenScope(sParent) {
   Scope.call(this, sParent, ST_PAREN);
-  this.target = sParent;
+
+  this.paramList = [];
+  this.firstDup = null;
+  this.firstNonSimple = null;
+  this.paramMap = {};
 }
 
 ParenScope.prototype = createObj(Scope.prototype);
@@ -2613,6 +2617,31 @@ this.enterUniqueArgs = function() {
   this.mode |= SM_UNIQUE;
 };
 
+this.absorb = function(parenScope) {
+  ASSERT.call(this, this.isArrowComp() && this.isHead(),
+    'the only scope allowed to take in a paren is an arrow-head');
+  ASSERT.call(this, parenScope.isParen(),
+    'the only scope that can be absorbed into an arrow-head is a paren');
+
+  parenScope.parent = this;
+
+  this.firstNonSimple = parenScope.firstNonSimple;
+  this.firstDup = parenScope.firstDup;
+  this.refs = parenScope.refs;
+  if (this.firstDup)
+    this.parser.err('argsdup');
+
+  this.paramMap = parenScope.paramMap;
+  this.paramList = parenScope.paramList;
+
+  this.headI = parenScope.headI;
+  this.tailI = parenScope.tailI;
+
+  var list = this.paramList, i = 0;
+  while (i < list.length)
+    list[i++].ref.direct.fw--; // one ref is a decls
+};
+
 },
 function(){
 this.receiveRef_m = function(mname, ref) {
@@ -2764,27 +2793,25 @@ this.receiveRef_m = function(mname, ref) {
 
 },
 function(){
-this.toBlock = function() {
-  ASSERT.call(this, this.isBody(),
-    'only body scopes are convertible to blocks');
-//ASSERT.call(this, this.children.length === 0,
-//  'only body scopes without children ' +
-//  'are converible to blocks');
-  this.type |= ST_BLOCK;
-  if (this.insideIf())
-    this.mode &= ~SM_INSIDE_IF;
-  return this;
-};
+
 
 }]  ],
 [ParenScope.prototype, [function(){
 this.dissolve = function() {
+  var list = this.paramList,
+      i = 0,
+      ref = null,
+      elem = null;
+
   var refs = this.refs, parent = this.parent;
-  var list = refs.keys, i = 0;
+  list = refs.keys, i = 0;
   while (i < list.length) {
-    var mname = list[i],
-        elem = refs.get(mname),
-        ref = parent.findRef_m(mname, true);
+    var mname = list[i];
+    elem = refs.get(mname),
+    ref = parent.findRef_m(mname, true);
+
+    if (ref.resolved)
+      ref.resolved = false;
 
     ref.direct.fw += elem.direct.fw; 
     ref.direct.ex += elem.direct.ex;
@@ -2794,6 +2821,48 @@ this.dissolve = function() {
 
     i++;
   }
+};
+
+this.addPossibleArgument = function(argNode) {
+  var head = null;
+
+  if (argNode.type === 'Property')
+    argNode = argNode.value;
+
+  if (argNode.type === 'Identifier')
+    head = argNode;
+  else if (
+    argNode.type === 'AssignmentExpression' &&
+    argNode.left.type === 'Identifier')
+    head = argNode.left;
+  else if (
+    argNode.type === 'SpreadElement' &&
+    argNode.argument.type === 'Identifier')
+    head = argNode.argument;
+
+  if (!head)
+    return;
+
+  var name = head.name;
+  var mname = _m(name);
+
+  var existing = HAS.call(this.paramMap, mname) ?
+    this.paramMap[mname] : null;
+
+  var newDecl = new Decl().m(DM_FNARG).n(name);
+
+  if (existing) {
+    if (!this.firstDup)
+      this.firstDup = newDecl;
+  }
+  else {
+    var ref = this.findRef_m(mname, true);
+    newDecl.r(ref);
+    ref.resolve();
+    this.paramMap[mname] = newDecl;
+  }
+
+  this.paramList.push(newDecl);
 };
 
 this.finish = function() {};
@@ -2991,7 +3060,7 @@ this.asArrowFuncArg = function(arg) {
     if (this.scope.insideStrict() && arguments_or_eval(arg.name))
       this.err('binding.to.arguments.or.eval',{tn:arg});
 
-    this.scope.declare(arg.name, DM_FNARG);
+//  this.scope.declare(arg.name, DM_FNARG);
     return;
 
   case 'ArrayExpression':
@@ -4619,6 +4688,9 @@ this.parseArrayExpression = function(context) {
       else break;
     }
  
+    if (elemContext & CTX_PARAM)
+      elem && this.scope.addPossibleArgument(elem);
+
     if (elem && (elemContext & CTX_PARPAT)) {
       var elemCore = elem;
       // TODO: [...(a),] = 12
@@ -4731,7 +4803,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   case PAREN_NODE:
     this.enterScope(this.scope.fnHeadScope(st));
-    this.scope.refs = this.parenScope.refs;
+    this.scope.absorb(this.parenScope);
     this.parenScope = null;
     if (arg.expr) {
       if (arg.expr.type === 'SequenceExpression')
@@ -4753,7 +4825,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     async = true;
     st |= ST_ASYNC;
     this.enterScope(this.scope.fnHeadScope(st));
-    this.scope.ref = this.parenScope.refs;
+    this.scope.absorb(this.parenScope);
     this.parenScope = null;
     this.asArrowFuncArgList(arg.arguments);
     break;
@@ -5044,13 +5116,7 @@ function(){
 this.parseBlockStatement = function () {
   this.fixupLabels(false);
 
-  var scopeCreated = true;
-  if (this.scope.isBare()) {
-    scopeCreated = false;
-    this.scope.toBlock();
-  }
-  else
-    this.enterScope(this.scope.blockScope()); 
+  this.enterScope(this.scope.blockScope()); 
 
   var startc = this.c - 1,
       startLoc = this.locOn(1);
@@ -5063,8 +5129,7 @@ this.parseBlockStatement = function () {
         this.err('block.unfinished',{tn:n,extra:{delim:'}'}}))
     return this.errorHandlerOutput ;
 
-  if (scopeCreated)
-    this.exitScope(); 
+  this.exitScope(); 
 
   return n;
 };
@@ -8041,6 +8106,9 @@ this.parseObjectExpression = function(context) {
     if (!(elemContext & CTX_PARPAT))
       continue;
 
+    if (elemContext & CTX_PARAM)
+      this.scope.addPossibleArgument(elem);
+
     if ((elemContext & CTX_PARAM) &&
        !(elemContext & CTX_HAS_A_PARAM_ERR) &&
        this.pt !== ERR_NONE_YET) {
@@ -8163,6 +8231,7 @@ this.parseParen = function(context) {
     }
 
     if (elemContext & CTX_PARAM) {
+      elem && this.scope.addPossibleArgument(elem);
       // TODO: could be `pt === ERR_NONE_YET`
       if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
         // hasTailElem -> elem === null
@@ -9220,6 +9289,9 @@ this.parseThis = function() {
     end : this.c
   };
   this.next() ;
+
+  if (this.scope.scs.isArrowComp())
+    this.scope.reference_m(RS_LTHIS);
 
   return n;
 };
@@ -10357,10 +10429,6 @@ this.fnBodyScope = function(t) {
 };
 
 this.blockScope = function() {
-  ASSERT.call(this, !this.isBare(),
-    'a body scope must not have a descendant '+
-    'block scope; rather, it should be converted '+
-    'to an actual block scope');
   return new LexicalScope(this, ST_BLOCK);
 };
 

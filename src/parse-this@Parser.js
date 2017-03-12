@@ -7,6 +7,9 @@ this.parseThis = function() {
   };
   this.next() ;
 
+  if (this.scope.scs.isArrowComp())
+    this.scope.reference_m(RS_LTHIS);
+
   return n;
 };
 

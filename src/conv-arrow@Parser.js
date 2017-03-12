@@ -23,7 +23,7 @@ this.asArrowFuncArg = function(arg) {
     if (this.scope.insideStrict() && arguments_or_eval(arg.name))
       this.err('binding.to.arguments.or.eval',{tn:arg});
 
-    this.scope.declare(arg.name, DM_FNARG);
+//  this.scope.declare(arg.name, DM_FNARG);
     return;
 
   case 'ArrayExpression':

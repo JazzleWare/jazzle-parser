@@ -18,7 +18,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   case PAREN_NODE:
     this.enterScope(this.scope.fnHeadScope(st));
-    this.scope.refs = this.parenScope.refs;
+    this.scope.absorb(this.parenScope);
     this.parenScope = null;
     if (arg.expr) {
       if (arg.expr.type === 'SequenceExpression')
@@ -40,7 +40,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     async = true;
     st |= ST_ASYNC;
     this.enterScope(this.scope.fnHeadScope(st));
-    this.scope.ref = this.parenScope.refs;
+    this.scope.absorb(this.parenScope);
     this.parenScope = null;
     this.asArrowFuncArgList(arg.arguments);
     break;

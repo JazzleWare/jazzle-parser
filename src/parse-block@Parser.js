@@ -1,13 +1,7 @@
 this.parseBlockStatement = function () {
   this.fixupLabels(false);
 
-  var scopeCreated = true;
-  if (this.scope.isBare()) {
-    scopeCreated = false;
-    this.scope.toBlock();
-  }
-  else
-    this.enterScope(this.scope.blockScope()); 
+  this.enterScope(this.scope.blockScope()); 
 
   var startc = this.c - 1,
       startLoc = this.locOn(1);
@@ -20,8 +14,7 @@ this.parseBlockStatement = function () {
         this.err('block.unfinished',{tn:n,extra:{delim:'}'}}))
     return this.errorHandlerOutput ;
 
-  if (scopeCreated)
-    this.exitScope(); 
+  this.exitScope(); 
 
   return n;
 };

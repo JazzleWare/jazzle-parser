@@ -11,10 +11,6 @@ this.fnBodyScope = function(t) {
 };
 
 this.blockScope = function() {
-  ASSERT.call(this, !this.isBare(),
-    'a body scope must not have a descendant '+
-    'block scope; rather, it should be converted '+
-    'to an actual block scope');
   return new LexicalScope(this, ST_BLOCK);
 };
 
