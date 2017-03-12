@@ -71,9 +71,9 @@ this.parseDirectives = function(list) {
 
 this.gotDirective = function(dv, flags) {
   if (dv.raw === 'use strict') {
+    this.scope.enterStrict();
     if (flags & DIR_FUNC)
       this.scope.funcHead.verifyForStrictness();
-    this.scope.enterStrict();
 
     this.checkForStrictError(flags);
   }

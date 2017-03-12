@@ -58,6 +58,12 @@ this.addPossibleArgument = function(argNode) {
   }
   else {
     var ref = this.findRef_m(mname, true);
+    switch (name) {
+    case 'arguments':
+    case 'eval':
+      if (!this.firstNonSimple)
+        this.firstNonSimple = newDecl;
+    }
     newDecl.r(ref);
     ref.resolve();
     this.paramMap[mname] = newDecl;

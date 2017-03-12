@@ -14,6 +14,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   case 'Identifier':
     this.enterScope(this.scope.fnHeadScope(st));
     this.asArrowFuncArg(arg);
+    this.scope.declare(arg.name, DM_FNARG);
     break;
 
   case PAREN_NODE:
@@ -50,6 +51,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     st |= ST_ASYNC;
     this.enterScope(this.scope.fnHeadScope(st));
     this.asArrowFuncArg(arg.id);
+    this.scope.declare(arg.name, DM_FNARG);
     break;
 
   default:
@@ -57,10 +59,11 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   }
 
-  this.exitScope();
+  var funcHead = this.exitScope();
   this.currentExprIsParams();
 
   this.enterScope(this.scope.fnBodyScope(st));
+  this.scope.funcHead = funcHead;
 
   if (this.nl)
     this.err('arrow.newline');

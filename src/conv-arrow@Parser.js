@@ -6,10 +6,6 @@ this.asArrowFuncArgList = function(argList) {
 
 this.asArrowFuncArg = function(arg) {
   var i = 0, list = null;
-
-  if (this.firstNonSimpArg === null && arg.type !== 'Identifier')
-    this.firstNonSimpArg = arg;
-
   if (arg === this.po)
     this.throwTricky('p', this.pt);
 

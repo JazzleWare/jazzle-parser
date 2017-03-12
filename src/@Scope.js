@@ -28,4 +28,6 @@ function Scope(sParent, sType) {
   this.ch = [];
   if (this.parent)
     this.parent.ch.push(this);
+
+  this.parser = this.parent ? this.parent.parser : null;
 }

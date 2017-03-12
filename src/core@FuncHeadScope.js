@@ -9,7 +9,7 @@ this.verifyForStrictness = function() {
     var elem = list[i];
     if (arguments_or_eval(elem.name))
       this.err('binding.eval.or.arguments.name');
-    this.validateID(elem.name);
+    this.parser.validateID(elem.name);
     i++ ;
   }
 };

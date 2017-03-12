@@ -50,7 +50,12 @@ this.parseParen = function(context) {
     }
 
     if (elemContext & CTX_PARAM) {
-      elem && this.scope.addPossibleArgument(elem);
+      if (elem) {
+        this.scope.addPossibleArgument(elem);
+        if (!this.scope.firstNonSimple && elem.type !== 'Identifier')
+          this.scope.firstNonSimple = elem;
+      }
+
       // TODO: could be `pt === ERR_NONE_YET`
       if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
         // hasTailElem -> elem === null

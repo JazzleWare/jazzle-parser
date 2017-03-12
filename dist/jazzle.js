@@ -304,6 +304,8 @@ function Scope(sParent, sType) {
   this.ch = [];
   if (this.parent)
     this.parent.ch.push(this);
+
+  this.parser = this.parent ? this.parent.parser : null;
 }
 ;
 function SortedObj(obj) {
@@ -2596,7 +2598,7 @@ this.verifyForStrictness = function() {
     var elem = list[i];
     if (arguments_or_eval(elem.name))
       this.err('binding.eval.or.arguments.name');
-    this.validateID(elem.name);
+    this.parser.validateID(elem.name);
     i++ ;
   }
 };
@@ -2857,6 +2859,12 @@ this.addPossibleArgument = function(argNode) {
   }
   else {
     var ref = this.findRef_m(mname, true);
+    switch (name) {
+    case 'arguments':
+    case 'eval':
+      if (!this.firstNonSimple)
+        this.firstNonSimple = newDecl;
+    }
     newDecl.r(ref);
     ref.resolve();
     this.paramMap[mname] = newDecl;
@@ -3043,10 +3051,6 @@ this.asArrowFuncArgList = function(argList) {
 
 this.asArrowFuncArg = function(arg) {
   var i = 0, list = null;
-
-  if (this.firstNonSimpArg === null && arg.type !== 'Identifier')
-    this.firstNonSimpArg = arg;
-
   if (arg === this.po)
     this.throwTricky('p', this.pt);
 
@@ -4799,6 +4803,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   case 'Identifier':
     this.enterScope(this.scope.fnHeadScope(st));
     this.asArrowFuncArg(arg);
+    this.scope.declare(arg.name, DM_FNARG);
     break;
 
   case PAREN_NODE:
@@ -4835,6 +4840,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     st |= ST_ASYNC;
     this.enterScope(this.scope.fnHeadScope(st));
     this.asArrowFuncArg(arg.id);
+    this.scope.declare(arg.name, DM_FNARG);
     break;
 
   default:
@@ -4842,10 +4848,11 @@ this.parseArrowFunctionExpression = function(arg, context)   {
 
   }
 
-  this.exitScope();
+  var funcHead = this.exitScope();
   this.currentExprIsParams();
 
   this.enterScope(this.scope.fnBodyScope(st));
+  this.scope.funcHead = funcHead;
 
   if (this.nl)
     this.err('arrow.newline');
@@ -8231,7 +8238,12 @@ this.parseParen = function(context) {
     }
 
     if (elemContext & CTX_PARAM) {
-      elem && this.scope.addPossibleArgument(elem);
+      if (elem) {
+        this.scope.addPossibleArgument(elem);
+        if (!this.scope.firstNonSimple && elem.type !== 'Identifier')
+          this.scope.firstNonSimple = elem;
+      }
+
       // TODO: could be `pt === ERR_NONE_YET`
       if (!(elemContext & CTX_HAS_A_PARAM_ERR)) {
         // hasTailElem -> elem === null
@@ -9902,9 +9914,9 @@ this.parseDirectives = function(list) {
 
 this.gotDirective = function(dv, flags) {
   if (dv.raw === 'use strict') {
+    this.scope.enterStrict();
     if (flags & DIR_FUNC)
       this.scope.funcHead.verifyForStrictness();
-    this.scope.enterStrict();
 
     this.checkForStrictError(flags);
   }
