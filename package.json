@@ -47,5 +47,8 @@
     "esprima": "^2.7.2",
     "benchmark": "^2.1.0",
     "microtime": "^2.1.1"
+  },
+  "files": {
+    "dist/jazzle.js"
   }
 }
