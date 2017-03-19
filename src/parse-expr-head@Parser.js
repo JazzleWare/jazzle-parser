@@ -1,4 +1,4 @@
-this.parseExprHead = function (context) {
+Parser.prototype.parseExprHead = function (context) {
   var head = null, inner = null, elem = null;
 
   if (this.pendingExprHead) {

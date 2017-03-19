@@ -1,4 +1,4 @@
-this.readNumberLiteral = function (peek) {
+Parser.prototype.readNumberLiteral = function (peek) {
   var c = this.c, src = this.src, len = src.length;
   var b = 10 , val = 0;
   this.lttype  = 'Literal' ;
@@ -112,7 +112,7 @@ this.readNumberLiteral = function (peek) {
   if ( ( this.c < len && isIDHead(src.charCodeAt(this.c))) ) this.err('num.idhead.tail') ;
 };
 
-this . frac = function(n) {
+Parser.prototype. frac = function(n) {
   var c = this.c,
       l = this.src,
       e = l.length ;

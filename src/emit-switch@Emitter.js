@@ -11,7 +11,7 @@ Emitters['SwitchStatement'] = function(n, prec, flags) {
   this.w('}');
 };
 
-this.emitCase = function(c) {
+Emitter.prototype.emitCase = function(c) {
   if (c.test) {
     this.wm('case',' ')
         .eA(c.test, PREC_NONE, EC_NONE)

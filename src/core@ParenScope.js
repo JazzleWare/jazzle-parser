@@ -1,4 +1,4 @@
-this.dissolve = function() {
+ParenScope.prototype.dissolve = function() {
   var list = this.paramList,
       i = 0,
       ref = null,
@@ -24,7 +24,7 @@ this.dissolve = function() {
   }
 };
 
-this.addPossibleArgument = function(argNode) {
+ParenScope.prototype.addPossibleArgument = function(argNode) {
   var head = null;
 
   if (argNode.type === 'Property')
@@ -72,4 +72,4 @@ this.addPossibleArgument = function(argNode) {
   this.paramList.push(newDecl);
 };
 
-this.finish = function() {};
+ParenScope.prototype.finish = function() {};

@@ -1,4 +1,4 @@
-this.parseBreakStatement = function () {
+Parser.prototype.parseBreakStatement = function () {
    if (!this.ensureStmt_soft())
      this.err('not.stmt');
 

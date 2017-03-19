@@ -1,4 +1,4 @@
-this. parseArrayPattern = function() {
+Parser.prototype. parseArrayPattern = function() {
   if (this.v <= 5)
     this.err('ver.patarr');
 

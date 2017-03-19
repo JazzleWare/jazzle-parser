@@ -1,5 +1,5 @@
 Emitters['Literal'] =
-this.emitLiteral = function(n, prec, flags) {
+Emitter.prototype.emitLiteral = function(n, prec, flags) {
   switch (n.value) {
   case true: return this.write('true');
   case false: return this.write('false');
@@ -16,12 +16,12 @@ this.emitLiteral = function(n, prec, flags) {
   }
 };
 
-this.emitNumberLiteralWithValue =
+Emitter.prototype.emitNumberLiteralWithValue =
 function(nv) {
   this.write(""+nv);
 };
 
-this.emitStringLiteralWithRawValue =
+Emitter.prototype.emitStringLiteralWithRawValue =
 function(svRaw) {
   this.write(svRaw);
 };

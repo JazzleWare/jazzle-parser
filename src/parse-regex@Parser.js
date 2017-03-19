@@ -52,7 +52,7 @@ function verifyRegex_soft (regex, flags) {
 
 }
 
-this.parseRegExpLiteral = function() {
+Parser.prototype.parseRegExpLiteral = function() {
   if (this.v < 2)
     this.err('ver.regex');
      var startc = this.c - 1, startLoc = this.locOn(1),

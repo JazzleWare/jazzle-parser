@@ -1,17 +1,17 @@
-this.y = function(n) {
+Transformer.prototype.y = function(n) {
   return this.inGen ? y(n) : 0;
 };
 
-this.allocTemp = function() {
+Transformer.prototype.allocTemp = function() {
   var id = newTemp(this.currentScope.allocateTemp());
   return id;
 };
 
-this.releaseTemp = this.rl = function(id) {
+Transformer.prototype.releaseTemp = this.rl = function(id) {
   this.currentScope.releaseTemp(id.name);
 };
 
-this.transform = this.tr = function(n, list, isVal) {
+Transformer.prototype.transform = this.tr = function(n, list, isVal) {
   var ntype = n.type;
   switch (ntype) {
     case 'Identifier':
@@ -29,9 +29,9 @@ this.transform = this.tr = function(n, list, isVal) {
   }
 };
 
-this.rlit = function(id) { isTemp(id) && this.rl(id); };
+Transformer.prototype.rlit = function(id) { isTemp(id) && this.rl(id); };
 
-this.save = function(n, list) {
+Transformer.prototype.save = function(n, list) {
   var temp = this.allocTemp();
   push_checked(synth_assig(temp, n), list);
   return temp;

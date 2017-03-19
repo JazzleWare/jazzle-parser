@@ -1,4 +1,4 @@
-this.parseDoWhileStatement = function () {
+Parser.prototype.parseDoWhileStatement = function () {
   if (!this.ensureStmt_soft())
     this.err('not.stmt');
 

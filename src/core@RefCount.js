@@ -1,3 +1,3 @@
-this.total = function() {
+RefCount.prototype.total = function() {
   return this.fw + this.ex;
 };

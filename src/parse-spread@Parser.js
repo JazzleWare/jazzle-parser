@@ -1,4 +1,4 @@
-this.parseSpreadElement = function(context) {
+Parser.prototype.parseSpreadElement = function(context) {
   if (this.v <= 5) this.err('ver.spread.rest');
 
   var startc = this.c0;

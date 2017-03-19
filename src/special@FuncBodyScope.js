@@ -1,4 +1,4 @@
-this.getArguments = function() {
+FuncBodyScope.prototype.getArguments = function() {
   if (this.isArrowComp())
     return null;
   if (!this.special.arguments) {
@@ -11,7 +11,7 @@ this.getArguments = function() {
   return this.special.arguments;
 };
 
-this.getMemSuper = function() {
+FuncBodyScope.prototype.getMemSuper = function() {
   if (this.isArrowComp())
     return null;
 
@@ -35,7 +35,7 @@ this.getMemSuper = function() {
   return this.parent.special.smem;
 };
 
-this.getCalledSuper = function() {
+FuncBodyScope.prototype.getCalledSuper = function() {
   if (this.isArrowComp())
     return null;
 
@@ -59,7 +59,7 @@ this.getCalledSuper = function() {
   return this.parent.special.scall;
 };
 
-this.getNewTarget = function() {
+FuncBodyScope.prototype.getNewTarget = function() {
   if (this.isArrowComp())
     return null;
 
@@ -73,7 +73,7 @@ this.getNewTarget = function() {
   return this.special.newTarget;
 };
 
-this.getLexicalThis = function() {
+FuncBodyScope.prototype.getLexicalThis = function() {
   if (this.isArrowComp())
     return null;
 

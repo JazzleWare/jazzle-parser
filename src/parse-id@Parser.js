@@ -1,4 +1,4 @@
-this.id = function() {
+Parser.prototype.id = function() {
   var id = {
     type: 'Identifier', name: this.ltval,
     start: this.c0, end: this.c,

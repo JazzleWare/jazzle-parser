@@ -1,4 +1,4 @@
-this.parseNewHead = function () {
+Parser.prototype.parseNewHead = function () {
   var startc = this.c0, end = this.c,
       startLoc = this.locBegin(), li = this.li,
       col = this.col, raw = this.ltraw ;

@@ -1,4 +1,4 @@
-this.parseParen = function(context) {
+Parser.prototype.parseParen = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin(),
       elem = null,
@@ -179,7 +179,7 @@ this.parseParen = function(context) {
   return n;
 };
 
-this.dissolveParen = function() {
+Parser.prototype.dissolveParen = function() {
   if (this.parenScope) {
     this.parenScope.dissolve();
     this.parenScope = null;

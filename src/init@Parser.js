@@ -16,7 +16,7 @@ function get(obj, name, value) {
   }
 }
 
-this.setOptions = function(o) {
+Parser.prototype.setOptions = function(o) {
   var list = OPTIONS, e = 0;
   while (e < list.length) {
     var cur = list[e++];

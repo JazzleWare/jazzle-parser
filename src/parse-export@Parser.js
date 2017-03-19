@@ -1,4 +1,4 @@
-this.parseExport = function() {
+Parser.prototype.parseExport = function() {
   if (this.v <= 5) this.err('ver.exim');
 
   if ( !this.canBeStatement && this.err('not.stmt') )

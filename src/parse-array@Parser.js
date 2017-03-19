@@ -1,4 +1,4 @@
-this.parseArrayExpression = function(context) {
+Parser.prototype.parseArrayExpression = function(context) {
 
   var startc = this.c - 1,
       startLoc = this.locOn(1);

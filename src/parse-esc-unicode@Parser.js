@@ -1,5 +1,5 @@
 
-this.peekTheSecondByte = function () {
+Parser.prototype.peekTheSecondByte = function () {
   var e = this.src.charCodeAt(this.c), start = this.c;
   if (CH_BACK_SLASH === e) {
     if (CH_u !== this.src.charCodeAt(++this.c) &&
@@ -15,7 +15,7 @@ this.peekTheSecondByte = function () {
   return e;
 };
 
-this.peekUSeq = function () {
+Parser.prototype.peekUSeq = function () {
   var c = ++this.c, l = this.src, e = l.length;
   var byteVal = 0;
   var n = l.charCodeAt(c);

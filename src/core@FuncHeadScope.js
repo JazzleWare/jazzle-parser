@@ -1,4 +1,4 @@
-this.verifyForStrictness = function() {
+FuncHeadScope.prototype.verifyForStrictness = function() {
   if (this.firstDup)
     this.parser.err('argsdup');
   if (this.firstNonSimple)
@@ -14,14 +14,14 @@ this.verifyForStrictness = function() {
   }
 };
 
-this.exitUniqueArgs = function() {
+FuncHeadScope.prototype.exitUniqueArgs = function() {
   ASSERT.call(this, this.insideUniqueArgs(),
     'can not unset unique when it has not been set');
 
   this.mode &= ~SM_UNIQUE;
 };
 
-this.enterUniqueArgs = function() {
+FuncHeadScope.prototype.enterUniqueArgs = function() {
   if (this.firstDup)
     this.parser.err('argsdup');
   if (this.insideUniqueArgs())
@@ -30,7 +30,7 @@ this.enterUniqueArgs = function() {
   this.mode |= SM_UNIQUE;
 };
 
-this.absorb = function(parenScope) {
+FuncHeadScope.prototype.absorb = function(parenScope) {
   ASSERT.call(this, this.isArrowComp() && this.isHead(),
     'the only scope allowed to take in a paren is an arrow-head');
   ASSERT.call(this, parenScope.isParen(),
@@ -55,7 +55,7 @@ this.absorb = function(parenScope) {
     list[i++].ref.direct.fw--; // one ref is a decls
 };
 
-this.writeTo = function(emitter) {
+FuncHeadScope.prototype.writeTo = function(emitter) {
   var list = this.paramList, i = 0;
   emitter.w(this.headI+':<arglist type="'+this.typeString()+'">');
   if (list.length !== 0) {

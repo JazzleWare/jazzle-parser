@@ -1,4 +1,4 @@
-this.parseArrowFunctionExpression = function(arg, context)   {
+Parser.prototype.parseArrowFunctionExpression = function(arg, context)   {
   if (this.v <= 5)
     this.err('ver.arrow');
   var tight = this.scope.insideStrict(), async = false;

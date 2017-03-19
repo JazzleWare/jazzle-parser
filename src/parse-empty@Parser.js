@@ -1,4 +1,4 @@
-this .parseEmptyStatement = function() {
+Parser.prototype.parseEmptyStatement = function() {
   var n = { type: 'EmptyStatement',
            start: this.c - 1,
            loc: { start: this.locOn(1), end: this.loc() },

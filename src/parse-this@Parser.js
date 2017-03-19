@@ -1,4 +1,4 @@
-this.parseThis = function() {
+Parser.prototype.parseThis = function() {
   var n = {
     type : 'ThisExpression',
     loc: { start: this.locBegin(), end: this.loc() },

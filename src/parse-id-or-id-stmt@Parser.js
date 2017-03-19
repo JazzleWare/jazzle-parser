@@ -1,5 +1,5 @@
-this . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
-this. parseIdStatementOrId = function ( context ) {
+Parser.prototype. notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
+Parser.prototype. parseIdStatementOrId = function ( context ) {
   var id = this.ltval ;
   var pendingExprHead = null;
 
@@ -303,7 +303,7 @@ this. parseIdStatementOrId = function ( context ) {
   return pendingExprHead;
 };
 
-this.resvchk = function() {
+Parser.prototype.resvchk = function() {
   if (this.esct !== ERR_NONE_YET) {
     ASSERT.call(this.esct === ERR_PIN_UNICODE_IN_RESV,
       'the error in this.esct is something other than ERR_PIN_UNICODE_IN_RESV: ' + this.esct);

@@ -1,7 +1,7 @@
-this.moduleScope = function() {
+GlobalScope.prototype.moduleScope = function() {
   return new Scope(this, ST_MODULE);
 };
 
-this.scriptScope = function() {
+GlobalScope.prototype.scriptScope = function() {
   return new Scope(this, ST_SCRIPT);
 };

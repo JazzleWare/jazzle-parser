@@ -4,7 +4,7 @@ Emitters['NewExpression'] = function(n, prec, flags) {
   this.w(')');
 };
 
-this.emitArgList = function(argList) {
+Emitter.prototype.emitArgList = function(argList) {
   var i = 0;
   while (i < argList.length) {
     if (i>0) this.w(',',' ');

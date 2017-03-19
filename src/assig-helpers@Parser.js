@@ -1,4 +1,4 @@
-this .ensureSimpAssig_soft = function(head) {
+Parser.prototype.ensureSimpAssig_soft = function(head) {
   switch(head.type) {
   case 'Identifier':
     if ( this.scope.insideStrict() && arguments_or_eval(head.name) )
@@ -13,7 +13,7 @@ this .ensureSimpAssig_soft = function(head) {
   }
 };
 
-this.ensureSpreadToRestArgument_soft = function(head) {
+Parser.prototype.ensureSpreadToRestArgument_soft = function(head) {
   return head.type !== 'AssignmentExpression';
 };
 

@@ -1,7 +1,7 @@
 // TODO: add a mechanism to react to cases where latestVal does not have a property (own or inherited)
 // whose name has the same value as idx
 
-this.applyTo = function(obj, noErrIfUndefNull) {
+Template.prototype.applyTo = function(obj, noErrIfUndefNull) {
   var latestVal = obj, latestIdx = "", list = this.idxList, e = 0;
   while (e < list.length) {
     var idx = list[e];

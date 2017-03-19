@@ -1,9 +1,9 @@
-this.str = function() {
+Decl.prototype.str = function() {
   return this.i+':<decl type="'+
          this.typeString()+'">'+this.name+'</decl>';
 };
 
-this.typeString = function() {
+Decl.prototype.typeString = function() {
   var str = "";
 
   if (this.mode & DM_CLS) str += ":class";
@@ -19,6 +19,6 @@ this.typeString = function() {
   return str;
 };
 
-this.writeTo = function(emitter) {
+Decl.prototype.writeTo = function(emitter) {
   emitter.w(this.str());
 };

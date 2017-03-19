@@ -1,4 +1,4 @@
-this.numstr = function () {
+Parser.prototype.numstr = function () {
   var n = {
     type: 'Literal', value: this.ltval,
     start: this.c0, end: this.c,
@@ -9,7 +9,7 @@ this.numstr = function () {
   return n;
 };
 
-this.parseTrue = function() {
+Parser.prototype.parseTrue = function() {
   var n = {
     type: 'Literal', value: true,
     start: this.c0, end: this.c,
@@ -19,7 +19,7 @@ this.parseTrue = function() {
   return n;
 };
 
-this.parseNull = function() {
+Parser.prototype.parseNull = function() {
   var n = {
     type: 'Literal', value: null,
     start: this.c0, end: this.c,
@@ -29,7 +29,7 @@ this.parseNull = function() {
   return n;
 };
 
-this.parseFalse = function() {
+Parser.prototype.parseFalse = function() {
   var n = {
     type: 'Literal', value: false,
     start: this.c0, end: this.c,

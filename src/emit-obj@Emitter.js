@@ -12,7 +12,7 @@ Emitters['ObjectExpression'] = function(n, prec, flags) {
   if (paren) this.w(')');
 };
 
-this.emitObjectChunk = function(list, from, to) {
+Emitter.prototype.emitObjectChunk = function(list, from, to) {
   var i = from;
   while (i <= to) {
     if (i > from) this.wm(',',' ');
@@ -22,7 +22,7 @@ this.emitObjectChunk = function(list, from, to) {
 };
 
 // mi -> member idx
-this.emitObjectWithComputed = function(n, prec, flags, mi) {
+Emitter.prototype.emitObjectWithComputed = function(n, prec, flags, mi) {
   var paren = flags & EC_NEW_HEAD;
   if (paren) this.w('(');
   this.wm('jz','.','obj','(','{');
@@ -44,14 +44,14 @@ this.emitObjectWithComputed = function(n, prec, flags, mi) {
   if (paren) this.w(')');
 };
 
-this.emitProp = function(prop) {
+Emitter.prototype.emitProp = function(prop) {
   ASSERT.call(this, !prop.computed,
     'computed prop is not emittable by this function');
   this.emitNonComputed(prop.key);
   this.wm(':',' ').eN(prop.value);
 };
 
-this.emitNonComputed = function(name) {
+Emitter.prototype.emitNonComputed = function(name) {
   switch (name.type) {
   case 'Identifier':
     if (this.isReserved(name.name))
@@ -70,7 +70,7 @@ this.emitNonComputed = function(name) {
   }
 };
 
-this.emitNonComputedAsString = function(name) {
+Emitter.prototype.emitNonComputedAsString = function(name) {
   switch (name.type) {
   case 'Identifier':
     return this.emitStringLiteralWithRawValue("'"+name.name+"'");

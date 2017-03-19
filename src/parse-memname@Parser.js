@@ -1,5 +1,5 @@
-this .memberID = function() { return this.v > 5 ? this.id() : this.validateID("") ; };
-this .memberExpr = function() {
+Parser.prototype.memberID = function() { return this.v > 5 ? this.id() : this.validateID("") ; };
+Parser.prototype.memberExpr = function() {
   if (this.v <= 5)
     this.err('ver.mem.comp');
 

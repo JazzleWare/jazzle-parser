@@ -1,11 +1,11 @@
-this.calculateParent = function() {
+Scope.prototype.calculateParent = function() {
   if (this.parent.isParen())
     this.parent = this.parent.calculateParen();
 
   return this.parent;
 };
 
-this.calculateAllowedActions = function() {
+Scope.prototype.calculateAllowedActions = function() {
   if (this.isParen())
     return this.parent.allowed;
 
@@ -27,7 +27,7 @@ this.calculateAllowedActions = function() {
   return a;
 };
 
-this.calculateScopeMode = function() {
+Scope.prototype.calculateScopeMode = function() {
   if (this.isParen())
     return this.parent.mode;
 
@@ -53,7 +53,7 @@ this.calculateScopeMode = function() {
   return m;
 };
 
-this.setName = function(name) {
+Scope.prototype.setName = function(name) {
   ASSERT.call(this, this.isExpr(),
     'the current scope is not an expr scope, and can not have a name');
   ASSERT.call(this, this.scopeName === "",

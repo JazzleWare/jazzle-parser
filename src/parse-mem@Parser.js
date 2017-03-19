@@ -15,7 +15,7 @@ function assembleID(c0, li0, col0, raw, val) {
   }
 }
 
-this.parseMem = function(context, st) {
+Parser.prototype.parseMem = function(context, st) {
   var c0 = 0, li0 = 0, col0 = 0, nmod = 0,
       nli0 = 0, nc0 = 0, ncol0 = 0, nraw = "", nval = "", latestFlag = 0;
 
@@ -167,7 +167,7 @@ this.parseMem = function(context, st) {
   return this.parseObjElem(nmem, context);
 };
 
-this.parseObjElem = function(name, context) {
+Parser.prototype.parseObjElem = function(name, context) {
   var hasProto = context & CTX_HASPROTO, firstProto = this.first__proto__;
   var val = null;
   context &= ~CTX_HASPROTO;

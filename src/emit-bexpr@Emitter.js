@@ -1,6 +1,6 @@
 Emitters['BinaryExpression'] =
 Emitters['LogicalExpression'] =
-this.emitBinary = function(n, prec, flags) {
+Emitter.prototype.emitBinary = function(n, prec, flags) {
   var o = n.operator;
   if (o === '**')
     return this.emitPow(n, flags);
@@ -29,14 +29,14 @@ function isBinaryExpression(n) {
   }
 }
 
-this.emitBinaryExpressionComponent = function(n, flags) {
+Emitter.prototype.emitBinaryExpressionComponent = function(n, flags) {
   if (n.type === 'UnaryExpression' || n.type === 'UpdateExpression')
     return this.emitAny(n, PREC_NONE, flags);
 
   return this.emitHead(n, PREC_NONE, flags);
 };
 
-this.emitRight = function(n, ownerO, flags) {
+Emitter.prototype.emitRight = function(n, ownerO, flags) {
   var childO = n.operator, paren = false;
 
   // previous op has higher prec because it has higher prec
@@ -52,7 +52,7 @@ this.emitRight = function(n, ownerO, flags) {
   if (paren) this.w(')');
 };
 
-this.emitLeft = function(n, childO, flags) {
+Emitter.prototype.emitLeft = function(n, childO, flags) {
   var ownerO = n.operator, paren = false;
 
   if (bp(childO) > bp(ownerO))
@@ -65,7 +65,7 @@ this.emitLeft = function(n, childO, flags) {
   if (paren) this.w(')');
 };
 
-this.emitPow = function(n, flags) {
+Emitter.prototype.emitPow = function(n, flags) {
   var paren = flags & EC_NEW_HEAD;
   if (paren) this.w('(');
   this.wm('jz','.','e','(')

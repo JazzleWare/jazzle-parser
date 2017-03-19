@@ -1,10 +1,10 @@
-this.str = function() {
+Scope.prototype.str = function() {
   var emitter = new Emitter();
   this.writeTo(emitter);
   return emitter.code;
 };
 
-this.typeString = function() {
+Scope.prototype.typeString = function() {
   var str = "";
 
   if (this.type & ST_GLOBAL) str += ":global";
@@ -34,7 +34,7 @@ this.typeString = function() {
   return str;
 };
 
-this.writeTo = function(emitter) {
+Scope.prototype.writeTo = function(emitter) {
   var defs = this.defs,
       scopes = this.ch,
       si = 0,

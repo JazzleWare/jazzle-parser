@@ -1,5 +1,5 @@
 Emitters['IfStatement'] =
-this.emitIf = function(n, prec, flags) {
+Emitter.prototype.emitIf = function(n, prec, flags) {
   this
     .wm('if',' ','(')
     .eA(n.test, PREC_NONE, EC_NONE)

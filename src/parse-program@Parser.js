@@ -1,4 +1,4 @@
-this.parseProgram = function () {
+Parser.prototype.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
   var globalScope = null;

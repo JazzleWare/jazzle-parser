@@ -1,4 +1,4 @@
-this .parseO = function(context ) {
+Parser.prototype.parseO = function(context ) {
   switch ( this. lttype ) {
   case 'op': return true;
   case '--': return true;

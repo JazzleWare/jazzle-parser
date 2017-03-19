@@ -4,7 +4,7 @@ Emitters['ConditionalExpression'] = function(n, prec, flags) {
   this.wm(' ',':',' ').eN(n.alternate, PREC_NONE, EC_NONE);
 };
 
-this.emitCondTest = function(n, prec, flags) {
+Emitter.prototype.emitCondTest = function(n, prec, flags) {
   var paren = false;
   switch (n.type) {
   case 'AssignmentExpression':

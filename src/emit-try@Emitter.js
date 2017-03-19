@@ -6,7 +6,7 @@ Emitters['TryStatement'] = function(n, prec, flags) {
     this.l().w('finally').emitDependentStmt(n.finalizer);
 };
 
-this.emitCatchClause = function(c) {
+Emitter.prototype.emitCatchClause = function(c) {
   this.wm('catch',' ','(').emitIdentifierWithValue('err');
   this.w(')').emitDependentStmt(c.body);
 };

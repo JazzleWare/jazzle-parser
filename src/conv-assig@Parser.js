@@ -1,4 +1,4 @@
-this.toAssig = function(head, context) {
+Parser.prototype.toAssig = function(head, context) {
   if (head === this.ao)
     this.throwTricky('a', this.at, this.ae)
 

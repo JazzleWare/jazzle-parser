@@ -21,7 +21,7 @@ Emitters['CallExpression'] = function(n, prec, flags) {
   if (paren) this.w(')');
 };
 
-this.emitCallWithSpread =
+Emitter.prototype.emitCallWithSpread =
 function(n, flags, ri) {
   var paren = flags & EC_NEW_HEAD;
   if (paren) {

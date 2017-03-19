@@ -1,4 +1,4 @@
-this.readEsc = function ()  {
+Parser.prototype.readEsc = function ()  {
   var src = this.src, b0 = 0, b = 0, start = this.c;
   switch ( src.charCodeAt ( ++this.c ) ) {
    case CH_BACK_SLASH: return '\\';
@@ -106,7 +106,7 @@ this.readEsc = function ()  {
   }
 };
 
-this.readStrictEsc = function ()  {
+Parser.prototype.readStrictEsc = function ()  {
   var src = this.src, b0 = 0, b = 0;
   switch ( src.charCodeAt ( ++this.c ) ) {
    case CH_BACK_SLASH: return '\\';

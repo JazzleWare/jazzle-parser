@@ -1,4 +1,4 @@
-this . parseTemplateLiteral = function() {
+Parser.prototype. parseTemplateLiteral = function() {
   if (this.v <= 5)
     this.err('ver.temp');
 

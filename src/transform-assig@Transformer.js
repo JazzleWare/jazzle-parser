@@ -38,7 +38,7 @@ transform['AssignmentExpression'] = function(n, list, isVal) {
 // the temp it is saved in.
 // observation: if there are no temps needed for its right, the element need not be saved
 var evalLeft = {};
-this.evalLeft = function(left, right, list) {
+Transformer.prototype.evalLeft = function(left, right, list) {
   return evalLeft[left.type].call(this, left, right, list);
 };
 
@@ -73,11 +73,11 @@ transformAssig['MemberExpression'] = function(n, list, isVal) {
 };
 
 var assigPattern = {};
-this.assigPattern = function(left, right, list) {
+Transformer.prototype.assigPattern = function(left, right, list) {
   return assigPattern[left.type].call(this, left, right, list);
 };
 
-this.evalProp = function(elem, list) {
+Transformer.prototype.evalProp = function(elem, list) {
   if (elem.computed) {
     elem.key = this.tr(elem.key, list, true);
     elem.key = this.save(elem.key, list);

@@ -1,4 +1,4 @@
-this.parsePattern = function() {
+Parser.prototype.parsePattern = function() {
   switch ( this.lttype ) {
     case 'Identifier' :
        var id = this.validateID("");

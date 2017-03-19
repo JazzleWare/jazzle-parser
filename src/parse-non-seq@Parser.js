@@ -1,4 +1,4 @@
-this.parseNonSeqExpr = function (prec, context) {
+Parser.prototype.parseNonSeqExpr = function (prec, context) {
   var head = this.parseExprHead(context);
   if ( head === null ) {
     switch ( this.lttype ) {

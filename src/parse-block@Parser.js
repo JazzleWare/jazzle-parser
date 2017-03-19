@@ -1,4 +1,4 @@
-this.parseBlockStatement = function () {
+Parser.prototype.parseBlockStatement = function () {
   this.fixupLabels(false);
 
   this.enterScope(this.scope.blockScope());

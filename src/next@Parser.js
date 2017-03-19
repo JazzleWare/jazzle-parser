@@ -1,4 +1,4 @@
-this.next = function () {
+Parser.prototype.next = function () {
   if (this.onToken_ !== null) {
     switch (this.lttype) {
     case "eof":
@@ -220,7 +220,7 @@ this.next = function () {
   this.col += ( this.c - start );
 };
 
-this . opEq = function()  {
+Parser.prototype. opEq = function()  {
     var c = this.c;
     var l = this.src;
     this.lttype = 'op';
@@ -247,7 +247,7 @@ this . opEq = function()  {
     this.c=c;
 };
 
-this . opMin = function() {
+Parser.prototype. opMin = function() {
    var c = this.c;
    var l = this.src;
    c++;
@@ -273,7 +273,7 @@ this . opMin = function() {
    this.c=c;
 };
 
-this . opLess = function () {
+Parser.prototype. opLess = function () {
   var c = this.c;
   var l = this.src;
   this.lttype = 'op';
@@ -303,7 +303,7 @@ this . opLess = function () {
   this.c=c;
 };
 
-this . opAdd = function() {
+Parser.prototype. opAdd = function() {
    var c = this.c;
    var l = this.src;
    c++ ;
@@ -329,7 +329,7 @@ this . opAdd = function() {
    this.c=c;
 };
 
-this . opGrea = function()   {
+Parser.prototype. opGrea = function()   {
   var c = this.c;
   var l = this.src;
   this.lttype = 'op';
@@ -370,7 +370,7 @@ this . opGrea = function()   {
   this.c=c;
 };
 
-this.skipS = function() {
+Parser.prototype.skipS = function() {
   var noNewLine = true,
       startOffset = this.c,
       c = this.c,
@@ -483,7 +483,7 @@ this.skipS = function() {
   this.nl = !noNewLine ;
 };
 
-this.readDot = function() {
+Parser.prototype.readDot = function() {
    ++this.c;
    if( this.src.charCodeAt(this.c)===CH_SINGLEDOT) {
      if (this.src.charCodeAt(++ this.c) === CH_SINGLEDOT) { this.lttype = '...' ;   ++this.c; return ; }
@@ -501,9 +501,9 @@ this.readDot = function() {
    this. ltraw = this.lttype = '.' ;
 };
 
-this.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
+Parser.prototype.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  )    ; };
 
-this.expectID = function (n) {
+Parser.prototype.expectID = function (n) {
   if (this.lttype === 'Identifier' && this.ltval === n)
     return this.next();
 
@@ -513,7 +513,7 @@ this.expectID = function (n) {
   this.err('unexpected.id',{extra:n});
 };
 
-this.expectType_soft = function (n)  {
+Parser.prototype.expectType_soft = function (n)  {
   if (this.lttype === n ) {
       this.next();
       return true;
@@ -522,7 +522,7 @@ this.expectType_soft = function (n)  {
   return false;
 };
 
-this.expectID_soft = function (n) {
+Parser.prototype.expectID_soft = function (n) {
   if (this.lttype === 'Identifier' && this.ltval === n) {
      this.next();
      return true;
@@ -531,7 +531,7 @@ this.expectID_soft = function (n) {
   return false;
 };
 
-this.kw = function() {
+Parser.prototype.kw = function() {
   if (this.onToken_)
     this.lttype = 'Keyword';
 };

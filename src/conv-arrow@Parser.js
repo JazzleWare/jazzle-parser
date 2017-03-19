@@ -1,10 +1,10 @@
-this.asArrowFuncArgList = function(argList) {
+Parser.prototype.asArrowFuncArgList = function(argList) {
   var i = 0, list = argList;
   while (i < list.length)
     this.asArrowFuncArg(list[i++]);
 };
 
-this.asArrowFuncArg = function(arg) {
+Parser.prototype.asArrowFuncArg = function(arg) {
   var i = 0, list = null;
   if (arg === this.po)
     this.throwTricky('p', this.pt);

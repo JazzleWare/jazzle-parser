@@ -1,4 +1,4 @@
-this .validateID  = function (e) {
+Parser.prototype.validateID  = function (e) {
   var n = e === "" ? this.ltval : e;
 
   SWITCH:
@@ -132,7 +132,7 @@ this .validateID  = function (e) {
   return e ? null : this.id();
 };
 
-this.errorReservedID = function(id) {
+Parser.prototype.errorReservedID = function(id) {
   this.resvchk();
   if ( !this.throwReserved ) {
      this.throwReserved = true;

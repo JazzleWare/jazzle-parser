@@ -1,4 +1,4 @@
-this.parseObjectExpression = function(context) {
+Parser.prototype.parseObjectExpression = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin(),
       elem = null,

@@ -1,4 +1,4 @@
-this . prseDbg = function () {
+Parser.prototype. prseDbg = function () {
   if (! this.ensureStmt_soft () &&
         this.err('not.stmt') )
     return this.errorHandlerOutput ;

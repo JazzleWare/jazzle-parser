@@ -1,4 +1,4 @@
-this.readAnIdentifierToken = function (v) {
+Parser.prototype.readAnIdentifierToken = function (v) {
   var c = this.c, src = this.src, len = src.length, peek, start = c;
   c++; // start reading the body
 

@@ -1,4 +1,4 @@
-this.parseWhileStatement = function () {
+Parser.prototype.parseWhileStatement = function () {
    this.enterScope(this.scope.bodyScope());
    this.allow(SA_BREAK|SA_CONTINUE);
    if (!this.ensureStmt_soft())

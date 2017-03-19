@@ -1,12 +1,12 @@
-this.currentExprIsParams = function() {
+Parser.prototype.currentExprIsParams = function() {
   this.st = this.pt = this.at = this.st = ERR_NONE_YET;
 };
 
-this.currentExprIsAssig = function() {
+Parser.prototype.currentExprIsAssig = function() {
   this.st = this.pt = this.at = ERR_NONE_YET;
 };
 
-this.currentExprIsSimple = function() {
+Parser.prototype.currentExprIsSimple = function() {
   this.pt = this.at = ERR_NONE_YET;
   if (this.st !== ERR_NONE_YET) {
     var st = this.st;
@@ -31,7 +31,7 @@ tm[ERR_ASYNC_NEWLINE_BEFORE_PAREN] = 'async.newline.before.paren';
 tm[ERR_PIN_NOT_AN_EQ] = 'complex.assig.not.pattern';
 
 // TODO: trickyContainer
-this.throwTricky = function(source, trickyType) {
+Parser.prototype.throwTricky = function(source, trickyType) {
   if (!HAS.call(tm, trickyType))
     throw new Error("Unknown error value: "+trickyType);
 
@@ -51,7 +51,7 @@ this.throwTricky = function(source, trickyType) {
   this.err(tm[trickyType], errParams);
 };
 
-this.adjustErrors = function() {
+Parser.prototype.adjustErrors = function() {
   if (this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
     this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
   else

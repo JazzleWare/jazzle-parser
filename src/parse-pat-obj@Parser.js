@@ -1,4 +1,4 @@
-this.parseObjectPattern  = function() {
+Parser.prototype.parseObjectPattern  = function() {
     if (this.v <= 5)
       this.err('ver.patobj');
 

@@ -9,7 +9,7 @@ Emitters['ArrayExpression'] = function(n, prec, flags) {
   this.w(']');
 };
 
-this.emitArrayWithSpread = function(list, flags, si) {
+Emitter.prototype.emitArrayWithSpread = function(list, flags, si) {
   var paren = flags & EC_NEW_HEAD;
   if (paren) this.w('(');
   this.wm('jz','.','concat','(')
@@ -35,7 +35,7 @@ this.emitArrayWithSpread = function(list, flags, si) {
   if (paren) this.w(')');
 };
 
-this.emitArrayChunk = function(list, from, to) {
+Emitter.prototype.emitArrayChunk = function(list, from, to) {
   var i = from;
   while (i <= to) {
     if (i !== from) this.wm(',',' ');

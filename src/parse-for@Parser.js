@@ -1,4 +1,4 @@
-this.parseFor = function() {
+Parser.prototype.parseFor = function() {
   if (!this.ensureStmt_soft())
     this.err('not.stmt');
 
@@ -144,7 +144,7 @@ this.parseFor = function() {
 };
 
 // TODO: exsureVarsAreNotResolvingToCatchParams_soft
-this.ensureVarsAreNotResolvingToCatchParams = function() {
+Parser.prototype.ensureVarsAreNotResolvingToCatchParams = function() {
   return;
 // #if V
   var list = this.scope.nameList, e = 0;

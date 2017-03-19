@@ -1,4 +1,4 @@
-this.readMultiComment = function () {
+Parser.prototype.readMultiComment = function () {
   var c = this.c, l = this.src, e = l.length,
       r = -1, n = true, start = c;
 
@@ -43,7 +43,7 @@ this.readMultiComment = function () {
   this.err( 'comment.multi.unfinished',{extra:{c0:c0,li0:li0,col0:col0}});
 };
 
-this.readLineComment = function() {
+Parser.prototype.readLineComment = function() {
   var c = this.c, l = this.src,
       e = l.length, r = -1;
 

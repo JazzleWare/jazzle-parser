@@ -1,4 +1,4 @@
-this.parseFuncBody = function(context) {
+Parser.prototype.parseFuncBody = function(context) {
   var elem = null;
 
   if ( this.lttype !== '{' ) {

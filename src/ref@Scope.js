@@ -1,4 +1,4 @@
-this.findRef_m = function(mname, createIfNone) {
+Scope.prototype.findRef_m = function(mname, createIfNone) {
   return (
     this.refs.has(mname) ?
     this.refs.get(mname) :
@@ -9,15 +9,15 @@ this.findRef_m = function(mname, createIfNone) {
 
 };
 
-this.findRef = function(name, createIfNone) {
+Scope.prototype.findRef = function(name, createIfNone) {
   return this.findRef_m(_m(name), createIfNone);
 };
 
-this.reference = function(name, prevRef) {
+Scope.prototype.reference = function(name, prevRef) {
   return this.reference_m(_m(name), prevRef);
 };
 
-this.reference_m = function(mname, prevRef) {
+Scope.prototype.reference_m = function(mname, prevRef) {
   var decl = this.findDecl_m(mname);
   if (decl) {
     if (prevRef)

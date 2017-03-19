@@ -1,4 +1,4 @@
-this.parseContinueStatement = function () {
+Parser.prototype.parseContinueStatement = function () {
    if (!this.ensureStmt_soft())
      this.err('not.stmt');
 

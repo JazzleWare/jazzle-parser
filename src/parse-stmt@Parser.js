@@ -1,4 +1,4 @@
-this.parseStatement = function ( allowNull ) {
+Parser.prototype.parseStatement = function ( allowNull ) {
   var head = null,
       l,
       e ,

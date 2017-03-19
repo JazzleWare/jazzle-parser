@@ -9,7 +9,7 @@ Emitters['UnaryExpression'] = function(n, prec, flags) {
   this.emitUnaryArgument(n.argument);
 };
 
-this.emitUnaryArgument = function(n) {
+Emitter.prototype.emitUnaryArgument = function(n) {
   if (n.type === 'UnaryExpression' || n.type === 'UpdateExpression')
     this.emitAny(n, PREC_NONE, EC_NONE);
   else

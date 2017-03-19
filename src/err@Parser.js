@@ -1,9 +1,9 @@
-this.err = function(errorType, errParams) {
+Parser.prototype.err = function(errorType, errParams) {
   errParams = this.normalize(errParams);
   return this.errorListener.onErr(errorType, errParams);
 };
 
-this.normalize = function(err) {
+Parser.prototype.normalize = function(err) {
   // normalized err
   var loc0 = { li: this.li0, col: this.col0 },
       loc = { li: this.li, col: this.col };

@@ -8,7 +8,7 @@ transform['ConditionalExpression'] = function(n, list, isVal) {
   return n;
 };
 
-this.transformConditionalExpressionWithYield = function(n, list, isVal) {
+Transformer.prototype.transformConditionalExpressionWithYield = function(n, list, isVal) {
   n.test = this.transform(n.test, list, true);
   var ifBody = [], elseBody = [];
       t = null;

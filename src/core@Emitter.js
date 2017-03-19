@@ -1,18 +1,18 @@
-this.indent = function() {
+Emitter.prototype.indent = function() {
   this.indentLevel++;
 };
 
-this.i = function() {
+Emitter.prototype.i = function() {
   this.indent();
   return this;
 };
 
-this.l = function() {
+Emitter.prototype.l = function() {
   this.startLine();
   return this;
 };
 
-this.emitHead =
+Emitter.prototype.emitHead =
 function(n, prec, flags) {
   switch (n.type) {
   case 'ConditionalExpression':
@@ -33,23 +33,23 @@ function(n, prec, flags) {
   }
 };
 
-this.eH = function(n, prec, flags) {
+Emitter.prototype.eH = function(n, prec, flags) {
   this.emitHead(n, prec, flags);
   return this;
 };
 
-this.emitAny = function(n, prec, startStmt) {
+Emitter.prototype.emitAny = function(n, prec, startStmt) {
   if (HAS.call(Emitters, n.type))
     return Emitters[n.type].call(this, n, prec, startStmt);
   this.err('unknow.node');
 };
 
-this.eA = function(n, prec, startStmt) {
+Emitter.prototype.eA = function(n, prec, startStmt) {
   this.emitAny(n, prec, startStmt);
   return this;
 };
 
-this.emitNonSeq = function(n, prec, flags) {
+Emitter.prototype.emitNonSeq = function(n, prec, flags) {
   var paren =
     n.type === 'SequenceExpression' ||
     n.type === 'SynthSequenceExpression';
@@ -58,12 +58,12 @@ this.emitNonSeq = function(n, prec, flags) {
   if (paren) this.w(')');
 };
 
-this.eN = function(n, prec, flags) {
+Emitter.prototype.eN = function(n, prec, flags) {
   this.emitNonSeq(n, prec, flags);
   return this;
 };
 
-this.write = function(rawStr) {
+Emitter.prototype.write = function(rawStr) {
   if (this.lineStarted) {
     this.code += this.getOrCreateIndent(this.indentLevel);
     this.lineStarted = false;
@@ -71,25 +71,25 @@ this.write = function(rawStr) {
   this.code += rawStr;
 };
 
-this.w = function(rawStr) {
+Emitter.prototype.w = function(rawStr) {
   this.write(rawStr);
   return this;
 };
 
-this.space = function() {
+Emitter.prototype.space = function() {
   if (this.lineStarted)
     this.err('useless.space');
 
   this.write(' ');
 };
 
-this.s = function() {
+Emitter.prototype.s = function() {
   this.space();
   return this;
 };
 
-this.writeMulti =
-this.wm = function() {
+Emitter.prototype.writeMulti =
+Emitter.prototype.wm = function() {
   var i = 0;
   while (i < arguments.length) {
     var str = arguments[i++];
@@ -102,19 +102,19 @@ this.wm = function() {
   return this;
 };
 
-this.unindent = function() {
+Emitter.prototype.unindent = function() {
   if (this.indentLevel <= 0)
     this.err('unindent.nowidth');
 
   this.indentLevel--;
 };
 
-this.u = function() {
+Emitter.prototype.u = function() {
   this.unindent();
   return this;
 };
 
-this.getOrCreateIndent = function(indentLen) {
+Emitter.prototype.getOrCreateIndent = function(indentLen) {
   var cache = this.indentCache;
   if (indentLen >= cache.length) {
     if (indentLen !== cache.length)
@@ -124,16 +124,16 @@ this.getOrCreateIndent = function(indentLen) {
   return cache[indentLen];
 };
 
-this.startLine = function() {
+Emitter.prototype.startLine = function() {
   this.insertNL();
   this.lineStarted = true;
 };
 
-this.insertNL = function() {
+Emitter.prototype.insertNL = function() {
   this.code += '\n';
 };
 
-this.noWrap = function() {
+Emitter.prototype.noWrap = function() {
   this.noWrap_ = true;
   return this;
 };

@@ -1,4 +1,4 @@
-this.parseUpdateExpression = function(arg, context) {
+Parser.prototype.parseUpdateExpression = function(arg, context) {
   var c = 0, loc = null, u = this.ltraw;
   if (arg === null) {
     c = this.c-2;

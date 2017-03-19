@@ -1,4 +1,4 @@
-this.readStrLiteral = function (start) {
+Parser.prototype.readStrLiteral = function (start) {
   var c = this.c += 1,
       l = this.src,
       e = l.length,

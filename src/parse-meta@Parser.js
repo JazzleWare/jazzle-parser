@@ -1,5 +1,5 @@
 // TODO: new_raw
-this.parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
+Parser.prototype.parseMeta = function(startc,end,startLoc,endLoc,new_raw ) {
   if (this.ltval !== 'target')
     this.err('meta.new.has.unknown.prop');
 

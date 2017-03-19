@@ -9,7 +9,7 @@ function idAsync(c0,li0,col0,raw) {
   };
 }
 
-this.parseAsync = function(context) {
+Parser.prototype.parseAsync = function(context) {
   if (this.v < 7)
     return this.id();
 
@@ -103,7 +103,7 @@ this.parseAsync = function(context) {
   return n;
 };
 
-this.parseAsync_intermediate = function(c0, li0, col0) {
+Parser.prototype.parseAsync_intermediate = function(c0, li0, col0) {
   var id = this.validateID("");
   return {
     type: INTERMEDIATE_ASYNC,

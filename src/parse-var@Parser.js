@@ -1,4 +1,4 @@
-this.parseVariableDeclaration = function(context) {
+Parser.prototype.parseVariableDeclaration = function(context) {
   if (!this.canBeStatement)
     this.err('not.stmt');
 
@@ -108,7 +108,7 @@ this.parseVariableDeclaration = function(context) {
   };
 };
 
-this.parseVariableDeclarator = function(context) {
+Parser.prototype.parseVariableDeclarator = function(context) {
   var head = this.parsePattern(), init = null;
   if (!head)
     return null;

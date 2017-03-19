@@ -1,5 +1,5 @@
 
-this.parseYield = function(context) {
+Parser.prototype.parseYield = function(context) {
   var arg = null,
       deleg = false;
 

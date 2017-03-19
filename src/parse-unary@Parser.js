@@ -1,4 +1,4 @@
-this.parseUnaryExpression = function(context) {
+Parser.prototype.parseUnaryExpression = function(context) {
   var u = null,
       startLoc = null,
       startc = 0,

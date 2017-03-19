@@ -1,4 +1,4 @@
-this.onComment = function(isBlock,c0,loc0,c,loc) {
+Parser.prototype.onComment = function(isBlock,c0,loc0,c,loc) {
   var start_comment = -1, end_comment = -1;
   var start_val = -1, end_val = -1;
   if (isBlock) {
@@ -45,7 +45,7 @@ this.onComment = function(isBlock,c0,loc0,c,loc) {
   }
 };
 
-this.onToken = function(token) {
+Parser.prototype.onToken = function(token) {
   if (token === null) {
     var ttype = "", tval = "";
     switch (this.lttype) {
@@ -119,7 +119,7 @@ this.onToken = function(token) {
 
 };
 
-this.onToken_kw = function(c0,loc0,val) {
+Parser.prototype.onToken_kw = function(c0,loc0,val) {
   // TODO: val must=== raw
   this.onToken({
     type: 'Keyword',

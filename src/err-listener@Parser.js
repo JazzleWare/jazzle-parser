@@ -1,4 +1,4 @@
-this.onErr = function(errorType, errParams) {
+Parser.prototype.onErr = function(errorType, errParams) {
    var message = "";
    if (!HAS.call(ErrorBuilders, errorType))
      message = "Error: " + errorType + "\n" +
@@ -25,7 +25,7 @@ this.onErr = function(errorType, errParams) {
 };
 
 // TODO: find a way to squash it with normalize
-this.buildErrorInfo = function(builder, params) {
+Parser.prototype.buildErrorInfo = function(builder, params) {
   if (builder.preprocessor !== null)
     builder.preprocessor.call(params);
 

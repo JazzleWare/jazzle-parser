@@ -1,4 +1,4 @@
-this.parseMeth = function(name, context, st) {
+Parser.prototype.parseMeth = function(name, context, st) {
   if (this.lttype !== '(')
     this.err('meth.paren');
   var val = null;

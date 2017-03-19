@@ -1,4 +1,4 @@
-this .parseAssig = function (head) {
+Parser.prototype.parseAssig = function (head) {
   if (this.v <= 5)
     this.err('ver.assig');
   this.next() ;
