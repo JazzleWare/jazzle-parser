@@ -124,7 +124,7 @@ var CTX_NONE = 0,
     CTX_PARPAT_ERR = CTX_HAS_A_PARAM_ERR|CTX_HAS_AN_ASSIG_ERR|CTX_HAS_A_SIMPLE_ERR,
     CTX_TOP = CTX_PAT|CTX_NO_SIMPLE_ERR;
 
-// TODO: order matters in the first few declarations below, mostly due to a 
+// TODO: order matters in the first few declarations below, mostly due to a
 // slight performance gain in parseFunc, where MEM_CONSTRUCTOR and MEM_SUPER in `flags` are
 // getting added to the current scope flags.
 // the ordering is also to make the relevant value sets (i.e., SCOPE_FLAG_* and MEM_*)
@@ -140,7 +140,7 @@ var ARGLEN_GET = 0,
     ARGLEN_ANY = -1;
 
 var DECL_NONE = 0;
-var DECL_NOT_FOUND = 
+var DECL_NOT_FOUND =
   // #if V
   null;
   // #else

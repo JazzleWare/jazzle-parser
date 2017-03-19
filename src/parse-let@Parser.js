@@ -38,7 +38,7 @@ this.hasDeclarator = function() {
   case '{':
   case 'Identifier':
     return true;
-  
+
   default:
     return false;
 

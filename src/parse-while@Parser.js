@@ -12,7 +12,7 @@ this.parseWhileStatement = function () {
 
    !this.expectType_soft ('(') &&
    this.err('while.has.no.opening.paren');
- 
+
    var cond = core( this.parseExpr(CTX_NONE|CTX_TOP) );
 
    !this.expectType_soft (')') &&

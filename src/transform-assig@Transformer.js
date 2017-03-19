@@ -24,7 +24,7 @@ transform['AssignmentExpression'] = function(n, list, isVal) {
     else push_if_assig(tr, list);
     return synth_seq(list, isVal);
   }
-  
+
   return tr;
 };
 
@@ -35,7 +35,7 @@ transform['AssignmentExpression'] = function(n, list, isVal) {
 // generally speaking, an 'occupySent' should exist, and should be used by any expression
 // that makes use of sent; each call to this hypothetical 'occupySent' will then return 'sent',
 // saving the current expression that is using 'sent' in a temp, and further replacing that expression with
-// the temp it is saved in. 
+// the temp it is saved in.
 // observation: if there are no temps needed for its right, the element need not be saved
 var evalLeft = {};
 this.evalLeft = function(left, right, list) {
@@ -65,7 +65,7 @@ evalLeft['MemberExpression'] = function(left, right, list) {
 transformAssig['MemberExpression'] = function(n, list, isVal) {
   var left = n.left;
   n.right = this.tr(n.right, list, true);
-  
+
   // `a()[b()] = (yield a()) * (yield)`, you know
   this.rlit(left.property);
   this.rlit(left.object);
@@ -84,13 +84,13 @@ this.evalProp = function(elem, list) {
   }
   this.evalLeft(elem.value, null, list);
 };
- 
+
 evalLeft['ObjectPattern'] = function(left, right, list) {
   var elems = left.properties, e = 0;
   while (e < elems.length)
     this.evalProp(elems[e++], list);
 };
- 
+
 assigPattern['ObjectPattern'] = function(left, right, list) {
   var elems = left.properties, e = 0;
   while (e < elems.length) {
@@ -142,7 +142,7 @@ transformAssig['ArrayPattern'] = function(n, list, isVal) {
   this.assigPattern(n.left, iter, list);
   this.rl(iter);
   return isVal ? iterVal(iter) : NOEXPR;
-}; 
+};
 
 evalLeft['AssignmentPattern'] = function(left, right, list) {
   return this.evalLeft(left.left, right, list);

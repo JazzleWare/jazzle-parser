@@ -1,12 +1,12 @@
 this.findRef_m = function(mname, createIfNone) {
   return (
-    this.refs.has(mname) ? 
+    this.refs.has(mname) ?
     this.refs.get(mname) :
     createIfNone ?
       this.refs.set(mname, new Ref(this)) :
       null
   );
-  
+
 };
 
 this.findRef = function(name, createIfNone) {
@@ -29,7 +29,7 @@ this.reference_m = function(mname, prevRef) {
   }
 
   var ref = this.findRef_m(mname, true);
-  
+
   if (prevRef) ref.absorb(prevRef);
   else ref.direct.fw++;
 

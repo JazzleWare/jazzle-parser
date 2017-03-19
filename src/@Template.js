@@ -12,12 +12,12 @@ function readParen(str, i, eof) {
     case CH_LESS_THAN: elem += '('; break;
     case CH_RPAREN: return elem;
     default:
-      ASSERT.call(this, false, 
+      ASSERT.call(this, false,
         'invalid character at index '+i+' -- "'+str.charAt(i)+'"');
     }
     i++;
   }
-  ASSERT.call(this, false, 
+  ASSERT.call(this, false,
     'reached eof before any ")" was found');
 }
 
@@ -52,8 +52,8 @@ Template.from = function(str, i, eof) {
       i++;
       elem += readParen(str, i, eof);
       if (elem.length === 0)
-        needDot = true; 
-      
+        needDot = true;
+
       i += elem.length + 1; // length + ')'.length
       continue;
     }
@@ -63,7 +63,7 @@ Template.from = function(str, i, eof) {
     i++;
   }
 
-  pendingDot && ASSERT.call(this, false, 
+  pendingDot && ASSERT.call(this, false,
     'unexpected ' + (!eof(str, i) ? 'dot (index='+i+')' : 'eof'));
 
   if (needDot || elem.length > 0)

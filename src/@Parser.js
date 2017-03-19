@@ -21,7 +21,7 @@ var Parser = function (src, o) {
   this.li = 1;
   this.col = 0;
   this.c = 0;
-  
+
   this.canBeStatement = false;
   this.foundStatement = false;
   this.scopeFlags = 0;
@@ -35,9 +35,9 @@ var Parser = function (src, o) {
 
   this.scope = null;
   this.directive = DIR_NONE;
-  
+
   this.declMode = DECL_NONE;
- 
+
   // TODO:eliminate
   this.pendingExprHead = null;
 
@@ -54,7 +54,7 @@ var Parser = function (src, o) {
   // "pin" location; for errors that might not have been precisely cause by a syntax node, like:
   // function l() { '\12'; 'use strict' }
   //                 ^
-  // 
+  //
   // for (a i\u0074 e) break;
   //         ^
   //

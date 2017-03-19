@@ -14,7 +14,7 @@ this.parseObjectExpression = function(context) {
     elemContext |= context & CTX_PARPAT;
     elemContext |= context & CTX_PARPAT_ERR;
   }
-  else 
+  else
     elemContext |= CTX_PAT|CTX_NO_SIMPLE_ERR;
 
   if (context & CTX_PARPAT) {
@@ -30,7 +30,7 @@ this.parseObjectExpression = function(context) {
       this.st = ERR_NONE_YET; this.se = this.so = null;
     }
   }
-  
+
   var pc0 = -1, pli0 = -1, pcol0 = -1;
   var ac0 = -1, ali0 = -1, acol0 = -1;
   var sc0 = -1, sli0 = -1, scol0 = -1;

@@ -15,7 +15,7 @@ this.applyTo = function(obj, noErrIfUndefNull) {
         'is ' + (latestVal !== null ? 'undefined' : 'null')
       );
     }
-    
+
     latestVal = latestVal[idx];
     latestIdx = e;
 

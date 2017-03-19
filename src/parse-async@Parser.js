@@ -3,14 +3,14 @@ function idAsync(c0,li0,col0,raw) {
     type: 'Identifier', name: 'async',
     start: c0, end: c0 + raw.length,
     loc: {
-      start: { line: li0, column: col0 }, 
+      start: { line: li0, column: col0 },
       end: { line: li0, column: col0 + raw.length }
     }, raw: raw
   };
 }
 
 this.parseAsync = function(context) {
-  if (this.v < 7) 
+  if (this.v < 7)
     return this.id();
 
   var c0 = this.c0,
@@ -65,7 +65,7 @@ this.parseAsync = function(context) {
   case '(':
     if (context & CTX_ASYNC_NO_NEWLINE_FN) {
       n = null;
-      break; 
+      break;
     }
     var hasNewLineBeforeParen = this.nl;
     var args = this.parseParen(context & CTX_PAT), async = idAsync(c0,li0,col0,raw);
@@ -81,7 +81,7 @@ this.parseAsync = function(context) {
           [args.expr] :
         []
     };
-    
+
     if ((context & CTX_PAT) && hasNewLineBeforeParen) {
       this.pt = ERR_ASYNC_NEWLINE_BEFORE_PAREN;
       this.pe = n;
@@ -109,7 +109,7 @@ this.parseAsync_intermediate = function(c0, li0, col0) {
     type: INTERMEDIATE_ASYNC,
     id: id,
     start: c0,
-    loc: { 
+    loc: {
       start: { line: li0, column: col0 }
     }
   };

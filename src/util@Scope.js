@@ -69,7 +69,7 @@ this.canAwait = function() { return this.allowed & SA_AWAIT; };
 this.canSupCall = function() {
   return this.isArrowComp() ?
     this.parent.canSupCall() :
-    this.allowed & SA_CALLSUP 
+    this.allowed & SA_CALLSUP
 };
 
 this.canSupMem = function() {
@@ -95,7 +95,7 @@ this.canDup = function() {
 this.enterForInit = function() {
   ASSERT.call(this, this.isBare(),
     'to enter for init mode, the scope has to be a bare one');
-  
+
   this.mode |= SM_FOR_INIT;
 };
 

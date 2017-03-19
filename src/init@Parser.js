@@ -9,7 +9,7 @@ function get(obj, name, value) {
     case NUMBER_TYPE:
     case BOOL_TYPE:
     case STRING_TYPE:
-      if (typeof obj[name] !== t) 
+      if (typeof obj[name] !== t)
         return value;
     default:
       return obj[name];
@@ -58,7 +58,7 @@ this.setOptions = function(o) {
       break;
 
     case 'sourceFile':
-      this.misc.sourceFile = 
+      this.misc.sourceFile =
         get(o, cur, "");
       break;
 

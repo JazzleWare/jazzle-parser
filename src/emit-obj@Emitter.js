@@ -7,7 +7,7 @@ Emitters['ObjectExpression'] = function(n, prec, flags) {
   var paren = flags & EC_START_STMT;
 
   if (paren) this.w('(');
-  this.w('{').emitObjectChunk(list, 0, list.length-1); 
+  this.w('{').emitObjectChunk(list, 0, list.length-1);
   this.w('}')
   if (paren) this.w(')');
 };
@@ -35,17 +35,17 @@ this.emitObjectWithComputed = function(n, prec, flags, mi) {
     this.wm(',',' ');
     if (prop.computed) this.eN(prop.key);
     else this.emitNonComputedAsString(prop.key);
-    
+
     this.wm(',',' ').eN(prop.value);
-    
+
     ++mi;
   }
   this.w(')');
   if (paren) this.w(')');
-};  
+};
 
 this.emitProp = function(prop) {
-  ASSERT.call(this, !prop.computed, 
+  ASSERT.call(this, !prop.computed,
     'computed prop is not emittable by this function');
   this.emitNonComputed(prop.key);
   this.wm(':',' ').eN(prop.value);
@@ -59,7 +59,7 @@ this.emitNonComputed = function(name) {
     else
       this.emitIdentifierWithValue(name.name);
     break;
-  
+
   case 'Literal':
     this.emitLiteral(name);
     break;

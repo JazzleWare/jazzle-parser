@@ -50,7 +50,7 @@ this.class_m = function(mname, mode) {
 this.catchArg_m = function(mname, mode) {
   ASSERT.call(this, this.isCatchHead(),
     'only catch heads are allowed to declare catch-args');
-  
+
   var existing = this.findDecl_m(mname);
   if (existing)
     this.parser.err('var.catch.is.dup');
@@ -74,7 +74,7 @@ this.fnArg_m = function(mname, mode) {
   var existing = null;
   if (HAS.call(this.paramMap, mname))
     existing = this.paramMap[mname];
-  
+
   if (existing) {
     if (!this.canDup())
       this.parser.err('var.fn.is.dup.arg');
@@ -105,7 +105,7 @@ this.declareLexical_m = function(mname, mode) {
   if (existing)
     this.err('lexical.can.not.override.existing');
 
-  
+
   var newDecl = null, ref = this.findRef_m(mname, true).resolve();
   newDecl = new Decl().m(mode).n(_u(mname)).r(ref);
 

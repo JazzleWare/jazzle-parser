@@ -21,18 +21,18 @@ this. parseArrayPattern = function() {
          if ( this.lttype === '...' ) {
            list.push(this.parseRestElement());
            break ;
-         }  
+         }
       }
-    
+
       if ( this.lttype === ',' ) {
          list.push(elem);
          this.next();
-      }       
+      }
       else  {
          if ( elem ) list.push(elem);
          break ;
       }
-  } 
+  }
 
   elem = { type: 'ArrayPattern', loc: { start: startLoc, end: this.loc() },
            start: startc, end: this.c, elements : list/* ,y:-1*/};

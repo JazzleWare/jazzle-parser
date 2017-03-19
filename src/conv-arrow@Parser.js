@@ -14,7 +14,7 @@ this.asArrowFuncArg = function(arg) {
     if (this.scope.canAwait() &&
        arg.name === 'await')
       this.err('arrow.param.is.await.in.an.async',{tn:arg});
-     
+
     // TODO: this can also get checked in the scope manager rather than below
     if (this.scope.insideStrict() && arguments_or_eval(arg.name))
       this.err('binding.to.arguments.or.eval',{tn:arg});

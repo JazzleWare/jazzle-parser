@@ -32,7 +32,7 @@ function isBinaryExpression(n) {
 this.emitBinaryExpressionComponent = function(n, flags) {
   if (n.type === 'UnaryExpression' || n.type === 'UpdateExpression')
     return this.emitAny(n, PREC_NONE, flags);
-    
+
   return this.emitHead(n, PREC_NONE, flags);
 };
 
@@ -54,7 +54,7 @@ this.emitRight = function(n, ownerO, flags) {
 
 this.emitLeft = function(n, childO, flags) {
   var ownerO = n.operator, paren = false;
-  
+
   if (bp(childO) > bp(ownerO))
     paren = true;
   else if (bp(childO) === bp(ownerO))

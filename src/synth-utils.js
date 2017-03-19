@@ -1,5 +1,5 @@
-function synth_id(name) { 
-  return { type: 'Identifier', name: name }; 
+function synth_id(name) {
+  return { type: 'Identifier', name: name };
 }
 
 function synth_assig(left, right, o) {
@@ -28,7 +28,7 @@ function synth_call(callee, args) {
 function synth_stmt(stmts) {
   return stmts.lenght === 1 ? stmts[0] : synth_block_stmt(stmts);
 }
- 
+
 function synth_block_stmt(body) {
   return { type: 'BlockStatement', body: body, y: -1 };
 }
@@ -37,7 +37,7 @@ function synth_block_stmt(body) {
 function synth_if(cond, c, a) {
   return { type: 'IfStatement', consequent: synth_stmt(c), y: -1, test: cond, alternate: a && a.length ? synth_stmt(a) : null };
 }
- 
+
 function synth_cond(cond, c, a) {
   return { type: 'ConditionalExpression', consequent: c, y: -1, test: cond, alternate: a };
 }

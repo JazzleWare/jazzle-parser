@@ -83,7 +83,7 @@ this.parseAssignment = function(head, context) {
       this.at = ERR_PIN_NOT_AN_EQ;
     }
   }
- 
+
   return {
     type: 'AssignmentExpression',
     operator: o,

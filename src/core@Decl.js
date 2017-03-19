@@ -63,7 +63,7 @@ this.absorbRef = function(otherRef) {
 
   var fromScope = otherRef.scope;
   var cur = this.ref;
-  
+
   if (fromScope.isIndirect()) {
     if (fromScope.isHoisted() &&
         !this.isTopmostInItsScope())

@@ -72,7 +72,7 @@ this.toAssig = function(head, context) {
 
   default:
     this.err('not.assignable',{tn:core(head)});
- 
+
   }
 };
 

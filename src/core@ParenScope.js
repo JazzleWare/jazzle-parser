@@ -14,7 +14,7 @@ this.dissolve = function() {
     if (ref.resolved)
       ref.resolved = false;
 
-    ref.direct.fw += elem.direct.fw; 
+    ref.direct.fw += elem.direct.fw;
     ref.direct.ex += elem.direct.ex;
 
     ref.indirect.fw += elem.indirect.fw;

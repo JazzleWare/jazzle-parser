@@ -31,21 +31,21 @@ this.parseImport = function() {
   }
 
   var spStartc = 0, spStartLoc = null;
-  
-  if (hasMore) switch (this.lttype) {   
+
+  if (hasMore) switch (this.lttype) {
   case 'op':
     if (this.ltraw !== '*')
       this.err('import.namespace.specifier.not.*');
     else {
       spStartc = this.c - 1;
       spStartLoc = this.locOn(1);
-  
+
       this.next();
       if (!this.expectID_soft('as'))
         this.err('import.namespace.specifier.no.as');
       if (this.lttype !== 'Identifier')
         this.err('import.namespace.specifier.local.not.id');
- 
+
       local = this.validateID("");
       list.push({
         type: 'ImportNamespaceSpecifier',
@@ -56,27 +56,27 @@ this.parseImport = function() {
       });
     }
     break;
-  
+
   case '{':
     hasList = true;
     this.next();
     while ( this.lttype === 'Identifier' ) {
       local = this.id();
-      var im = local; 
+      var im = local;
       if ( this.lttype === 'Identifier' ) {
-        if ( this.ltval !== 'as' && 
+        if ( this.ltval !== 'as' &&
              this.err('import.specifier.no.as') )
           return this.errorHandlerOutput ;
- 
+
         this.next();
         if ( this.lttype !== 'Identifier' &&
              this.err('import.specifier.local.not.id') )
           return this.errorHandlerOutput ;
- 
+
         local = this.validateID("");
       }
       else this.validateID(local.name);
- 
+
       list.push({
         type: 'ImportSpecifier',
         start: im.start,
@@ -84,16 +84,16 @@ this.parseImport = function() {
         end: local.end, imported: im,
         local: local
       });
- 
+
       if ( this.lttype === ',' )
          this.next();
       else
-         break ;                                  
+         break ;
     }
- 
-    if (!this.expectType_soft('}')) 
+
+    if (!this.expectType_soft('}'))
       this.err('import.specifier.list.unfinished');
- 
+
     break ;
 
   default:
@@ -116,12 +116,12 @@ this.parseImport = function() {
      this.err('import.source.is.not.str');
 
    var src = this.numstr();
-   var endI = this.semiI() || src.end, 
+   var endI = this.semiI() || src.end,
        semiLoc = this.semiLoc_soft();
 
    if (!semiLoc && !this.nl)
      this.err('no.semi');
-   
+
    this.foundStatement = true;
 
    return {
@@ -134,4 +134,4 @@ this.parseImport = function() {
      end:  endI , specifiers: list,
      source: src
    };
-}; 
+};

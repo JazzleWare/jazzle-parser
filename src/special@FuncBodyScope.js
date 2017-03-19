@@ -52,7 +52,7 @@ this.getCalledSuper = function() {
   if (!this.parent.special.scall) {
     var decl = new Decl(),
         ref = this.findRef_m(RS_SCALL, true);
-    this.parent.special.scall = 
+    this.parent.special.scall =
       decl.r(ref).n(_u(RS_MEM));
   }
 

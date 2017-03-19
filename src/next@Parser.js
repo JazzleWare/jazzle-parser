@@ -185,7 +185,7 @@ this.next = function () {
           peek = l.charCodeAt(++ this.c);
           if (peek !== CH_u )
               return this.err('id.u.not.after.slash');
-          
+
           else
              peek = this.peekUSeq();
 
@@ -203,13 +203,13 @@ this.next = function () {
             if ( mustBeAnID === 1 ) return this.err('id.esc.must.be.idhead',{extra:peek});
             else return this.err('id.multi.must.be.idhead',{extra:[peek,r]});
           }
- 
+
           this.readAnIdentifierToken( mustBeAnID === 2 ?
               String.fromCharCode( peek, r ) :
               fromcode( peek )
           );
         }
-        else 
+        else
           this.readMisc();
     }
 
@@ -393,7 +393,7 @@ this.skipS = function() {
 
     case CH_VTAB:
     case CH_TAB:
-    case CH_FORM_FEED: c++ ; continue ;  
+    case CH_FORM_FEED: c++ ; continue ;
 
     case CH_DIV:
       switch ( l.charCodeAt ( c + ( 1) ) ) {
@@ -458,7 +458,7 @@ this.skipS = function() {
       this.c=c;
       this.nl = !noNewLine ;
       return ;
- 
+
     case CH_MIN:
       if (this.v > 5 && (!noNewLine || startOffset === 0) &&
            this.isScript &&
@@ -469,7 +469,7 @@ this.skipS = function() {
         c = this.c;
         continue;
       }
-  
+
     default :
       this.col += (c-start ) ;
       this.c=c;
@@ -506,10 +506,10 @@ this.readMisc = function () { this.lttype = this.  src.   charAt (   this.c ++  
 this.expectID = function (n) {
   if (this.lttype === 'Identifier' && this.ltval === n)
     return this.next();
-  
+
   if (this.lttype !== 'Identifier')
     this.err('an.id.was.expected',{extra:n});
- 
+
   this.err('unexpected.id',{extra:n});
 };
 

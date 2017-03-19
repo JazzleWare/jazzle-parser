@@ -28,7 +28,7 @@ this.emitArrayWithSpread = function(list, flags, si) {
   }
   if (startChunk < list.length) {
     if (startChunk > 0) this.wm(',',' ');
-    this.w('[').emitArrayChunk(list, startChunk, list.length-1); 
+    this.w('[').emitArrayChunk(list, startChunk, list.length-1);
     this.w(']');
   }
   this.w(')');

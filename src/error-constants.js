@@ -48,7 +48,7 @@ var ERR_NONE_YET = 0,
     ERR_ASYNC_NEWLINE_BEFORE_PAREN = newErr(ERR_P_SYN),
 
     ERR_ARGUMENTS_OR_EVAL_DEFAULT = newErr(ERR_S_SYN),
- 
+
     // function l() { '\12'; 'use strict'; }
     ERR_PIN_OCTAL_IN_STRICT = newErr(ERR_S_SYN|ERR_PIN),
 

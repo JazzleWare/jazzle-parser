@@ -80,7 +80,7 @@ this. parseClass = function(context) {
       type: 'ClassBody', loc: { start: startLocBody, end: endLoc },
       start: startcBody, end: this.c,
       body: list/* ,y:-1*/
-    }/* ,y:-1*/ 
+    }/* ,y:-1*/
   };
 
   if (!this.expectType_soft('}'))
@@ -101,26 +101,26 @@ this.parseSuper = function() {
     type: 'Super', loc: { start: this.locBegin(), end: this.loc() },
     start: this.c0, end: this.c
   };
- 
+
   this.next();
   switch ( this.lttype ) {
   case '(':
     if (!this.scope.canSupCall())
       this.err('class.super.call',{tn:n});
- 
+
     break;
- 
+
   case '.':
   case '[':
     if (!this.scope.canSupMem())
       this.err('class.super.mem',{tn:n});
- 
+
     break ;
-  
+
   default:
-    this.err('class.super.lone',{tn:n}); 
+    this.err('class.super.lone',{tn:n});
 
   }
- 
+
   return n;
 };

@@ -9,9 +9,9 @@ this.parseTryStatement = function () {
 
   this.next() ;
 
-  this.enterScope(this.scope.blockScope()); 
+  this.enterScope(this.scope.blockScope());
   var tryBlock = this.parseBlockStatement_dependent('try');
-  this.exitScope(); 
+  this.exitScope();
 
   var finBlock = null, catBlock  = null;
   if (this.lttype === 'Identifier' && this.ltval === 'catch')
@@ -19,9 +19,9 @@ this.parseTryStatement = function () {
 
   if (this.lttype === 'Identifier' && this.ltval === 'finally') {
     this.next();
-    this.enterScope(this.scope.blockScope()); 
+    this.enterScope(this.scope.blockScope());
     finBlock = this.parseBlockStatement_dependent('finally');
-    this.exitScope(); 
+    this.exitScope();
   }
 
   var finOrCat = finBlock || catBlock;

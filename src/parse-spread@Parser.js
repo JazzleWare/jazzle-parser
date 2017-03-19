@@ -11,7 +11,7 @@ this.parseSpreadElement = function(context) {
 
   if (e.type === PAREN_NODE) {
     if ((context & CTX_PARAM) && !(context & CTX_HAS_A_PARAM_ERR) &&
-       this.pt === ERR_NONE_YET) { 
+       this.pt === ERR_NONE_YET) {
       this.pt = ERR_PAREN_UNBINDABLE; this.pe = e;
     }
     if ((context & CTX_PAT) && !(context & CTX_HAS_AN_ASSIG_ERR) &&
@@ -19,7 +19,7 @@ this.parseSpreadElement = function(context) {
       this.at = ERR_PAREN_UNBINDABLE; this.ae = e;
     }
   }
-    
+
   return {
     type: 'SpreadElement',
     loc: { start: startLoc, end: e.loc.end },

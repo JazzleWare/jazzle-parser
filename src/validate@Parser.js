@@ -9,7 +9,7 @@ this .validateID  = function (e) {
          case 'do':
          case 'if':
          case 'in':
-            
+
             return this.errorReservedID(e);
          default: break SWITCH;
      }
@@ -53,14 +53,14 @@ this .validateID  = function (e) {
          case 'short':
             if ( this. v > 5 ) break SWITCH;
             return this.errorReservedID(e);
-    
-         case 'yield': 
+
+         case 'yield':
             if (!this.scope.insideStrict() && !this.scope.canYield() && !this.scope.yieldIsKW()) {
               break SWITCH;
             }
 
          case 'break': case 'catch': case 'class': case 'const': case 'false':
-         case 'super': case 'throw': case 'while': 
+         case 'super': case 'throw': case 'while':
             return this.errorReservedID(e);
 
          default: break SWITCH;
@@ -69,7 +69,7 @@ this .validateID  = function (e) {
          case 'double': case 'native': case 'throws':
              if ( this. v > 5 )
                 break SWITCH;
-             return this.errorReservedID(e); 
+             return this.errorReservedID(e);
          case 'public':
          case 'static':
              if ( this.v > 5 && !this.scope.insideStrict() )

@@ -12,7 +12,7 @@ this.semiLoc_soft = function () {
      if ( !this.nl )
         return this.locOn(1);
   }
-  
+
   return null;
 };
 

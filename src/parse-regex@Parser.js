@@ -27,12 +27,12 @@ function regexReplace(matchedString, b, noB, matchIndex, wholeString) {
   var c = parseInt('0x' + ( b || noB ) ) ;
   if (c > 0x010FFFF )
     this.err('regex.val.not.in.range');
-  
+
   if ( c <= 0xFFFF ) return String.fromCharCode(c) ;
 
   c -= 0x010000;
   return '\uFFFF';
-} 
+}
 
 function verifyRegex(regex, flags) {
   var regexVal = null;
@@ -71,7 +71,7 @@ this.parseRegExpLiteral = function() {
          case CH_BACK_SLASH:
             ++c;
             if (c < len) switch(src.charCodeAt(c)) {
-               case CH_CARRIAGE_RETURN: 
+               case CH_CARRIAGE_RETURN:
                   if ( l.charCodeAt(c + 1) === CH_LINE_FEED ) c++;
                case CH_LINE_FEED :
                case 0x2028 :
@@ -107,7 +107,7 @@ this.parseRegExpLiteral = function() {
        c++ ;
      }
 
-     if ( src.charCodeAt(c) !== CH_DIV && 
+     if ( src.charCodeAt(c) !== CH_DIV &&
           this.err('regex.unfinished') )
        return this.errorHandlerOutput ;
 
@@ -150,12 +150,12 @@ this.parseRegExpLiteral = function() {
      // those that contain a 'u' flag need special treatment when RegExp constructor they get sent to
      // doesn't support the 'u' flag: since they can have surrogate pair sequences (which are not allowed without the 'u' flag),
      // they must be checked for having such surrogate pairs, and should replace them with a character that is valid even
-     // without being in the context of a 'u' 
+     // without being in the context of a 'u'
      if ( (flags & uRegexFlag) && !(regexFlagsSupported & uRegexFlag) )
           normalizedRegex = normalizedRegex.replace( /\\u\{([A-F0-9a-f]+)\}/g, curlyReplace) // normalize curlies
              .replace( /\\u([A-F0-9a-f][A-F0-9a-f][A-F0-9a-f][A-F0-9a-f])/g, regexReplace ) // convert u
              .replace( /[\ud800-\udbff][\udc00-\udfff]/g, '\uFFFF' );
-       
+
 
      // all of the 1 bits in flags must also be 1 in the same bit index in regexsupportedFlags;
      // flags ^ rsf returns a bit set in which the 1 bits mean "this flag is either not used in flags, or yt is not supported";
@@ -174,7 +174,7 @@ this.parseRegExpLiteral = function() {
      this.col += (c-this.c);
      var regex = { type: 'Literal', regex: { pattern: patternString, flags: flagsString },
                    start: startc, end: c,
-                   value: val, loc: { start: startLoc, end: this.loc() }, 
+                   value: val, loc: { start: startLoc, end: this.loc() },
                    raw: this.src.substring(startc, c) };
      this.c = c;
 

@@ -3,7 +3,7 @@ this.isValidName = function(name) {
 };
 
 this.isValidName_m = function(mname) {
-  return this.validNames === null ? true : 
+  return this.validNames === null ? true :
     this.validNames.has(mname);
 };
 

@@ -9,7 +9,7 @@ this.at = function(i) {
 };
 
 this.get = function(name) {
-  return this.obj[name]; 
+  return this.obj[name];
 };
 
 this.remove = function(name) {

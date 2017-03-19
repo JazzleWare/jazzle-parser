@@ -72,7 +72,7 @@ this.parseNewHead = function () {
       if ( !this.expectType_soft (']') ) {
         this.err('mem.unfinished')  ;
       }
- 
+
       continue;
 
     case '(':

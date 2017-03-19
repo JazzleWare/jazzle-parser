@@ -1,6 +1,6 @@
 this.parseFunc = function(context, st) {
   var prevLabels = this.labels,
-      prevDeclMode = this.declMode; 
+      prevDeclMode = this.declMode;
 
   var isStmt = false,
       startc = this.c0,

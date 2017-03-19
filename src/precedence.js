@@ -22,7 +22,7 @@ var PREC_EQUAL = binPrec['==='] =
                  binPrec['!=='] =
                  binPrec['=='] =
                  binPrec['!='] = PREC_BIT_AND + 2;
-var PREC_COMP = binPrec['>'] = 
+var PREC_COMP = binPrec['>'] =
                 binPrec['<='] =
                 binPrec['<'] =
                 binPrec['>='] =

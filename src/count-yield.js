@@ -32,8 +32,8 @@ yList['DoWhileStatement'] =
   function() { return this.y !== -1 ? this.y : this.y = y(this.test) + y(this.body); };
 yList['ForStatement'] =
   function() { return this.y !== -1 ? this.y : this.y = y(this.init) + y(this.test) + y(this.update) + y(this.body); };
-yList['IfStatement'] = 
-yList['ConditionalExpression'] = 
+yList['IfStatement'] =
+yList['ConditionalExpression'] =
   function() { return this.y !== -1 ? this.y : this.y = y(this.test) + y(this.consequent) + y(this.alternate); };
 yList['CallExpression'] =
 yList['NewExpression'] =
@@ -41,9 +41,9 @@ yList['NewExpression'] =
 yList['ClassDeclaration'] =
 yList['ClassExpression'] =
   function() { return this.y !== -1 ? this.y : this.y = y(this.superClass) + y(this.body); };
-yList['CatchClause'] = 
+yList['CatchClause'] =
   function() { return this.y !== -1 ? this.y : this.y = y(this.param) + y(this.body); };
-yList['BlockStatement'] = 
+yList['BlockStatement'] =
 yList['ClassBody'] =
   function() { return this.y !== -1 ? this.y : this.y = yArray(this.body); };
 yList['ThrowStatement'] =
@@ -56,16 +56,16 @@ yList['UpdateExpression'] =
 yList['ObjectExpression'] =
 yList['ObjectPattern'] =
   function() { return this.y !== -1 ? this.y : this.y = yArray(this.properties); };
-yList['BreakStatement'] = 
-yList['EmptyStatement'] = 
-yList['ContinueStatement'] = 
+yList['BreakStatement'] =
+yList['EmptyStatement'] =
+yList['ContinueStatement'] =
 yList['DebuggerStatement'] =
-yList['Identifier'] = 
-yList['Literal'] = 
+yList['Identifier'] =
+yList['Literal'] =
 yList['FunctionDeclaration'] =
 yList['FunctionExpression'] =
 yList['ArrowFunctionExpression'] =
-yList['ThisExpression'] = 
+yList['ThisExpression'] =
 yList['Super'] =
 yList['TemplateElement'] =
   function() { return -1; };
@@ -81,24 +81,24 @@ yList['ImportDefaultSpecifier'] =
 yList['ImportNamespaceSpecifier'] =
 yList['ImportSpecifier'] =
   function() { return -1; };
-yList['SwitchCase'] = 
+yList['SwitchCase'] =
   function() { return this.y !== -1 ? this.y : this.y = y(this.test) + yArray(this.consequent); };
-yList['SwitchStatement'] = 
+yList['SwitchStatement'] =
   function() { return this.y !== -1 ? this.y : this.y = y(this.discriminant) + yArray(this.cases); };
 yList['LabeledStatement'] =
   function() { return y(this.body); };
-yList['MemberExpression'] = 
+yList['MemberExpression'] =
   function() { return this.y !== -1 ? this.y : this.y = this.computed ? y(this.object) + y(this.property) : y(this.object); };
 yList['MetaProperty'] =
   function() { return -1; };
-yList['Program'] = yList['BlockStatement']; 
+yList['Program'] = yList['BlockStatement'];
 
-function kv() { return this.y !== -1 ? this.y : this.y = this.computed ? y(this.key) + y(this.value) : y(this.value); }; 
+function kv() { return this.y !== -1 ? this.y : this.y = this.computed ? y(this.key) + y(this.value) : y(this.value); };
 
 yList['Property'] =
 yList['AssignmentProperty'] = kv;
 yList['MethodDefinition'] = kv;
-yList['SequenceExpression'] = 
+yList['SequenceExpression'] =
 yList['TemplateLiteral'] =
   function() { return this.y !== -1 ? this.y : this.y = yArray(this.expressions); };
 yList['TaggedTemplateExpression'] =
@@ -110,8 +110,8 @@ yList['VariableDeclaration'] =
 yList['VariableDeclarator'] =
   function() { return this.y !== -1 ? this.y : this.y = y(this.id) + y(this.init); };
 yList['WithStatement'] =
-  function() { return this.y !== -1 ? this.y : this.y = y(this.object) + y(this.body); }; 
-yList['YieldExpression'] = 
+  function() { return this.y !== -1 ? this.y : this.y = y(this.object) + y(this.body); };
+yList['YieldExpression'] =
   function() { return this.y !== -1 ? this.y : this.y = 1 + y(this.argument); };
 yList['WhileStatement'] =
   function() { return this.y !== -1 ? this.y : this.y = y(this.test) + y(this.body); };

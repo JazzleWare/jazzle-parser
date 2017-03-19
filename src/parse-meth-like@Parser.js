@@ -34,7 +34,7 @@ this.parseMeth = function(name, context, st) {
       value: val, 'static': !!(st & ST_STATICMEM)/* ,y:-1*/
     }
   }
-   
+
   val = this.parseFunc(CTX_NONE, st);
 
   return {

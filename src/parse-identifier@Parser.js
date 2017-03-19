@@ -5,7 +5,7 @@ this.readAnIdentifierToken = function (v) {
   var byte2, startSlice = c; // the head is already supplied in v
 
   while ( c < len ) {
-    peek = src.charCodeAt(c); 
+    peek = src.charCodeAt(c);
     if ( isIDBody(peek) ) {
       c++;
       continue;
@@ -18,7 +18,7 @@ this.readAnIdentifierToken = function (v) {
         this.eloc.li0 = this.li;
         this.eloc.col0 = this.col + (c-start);
       }
-      if ( !v ) // if all previous characters have been non-u characters 
+      if ( !v ) // if all previous characters have been non-u characters
         v = src.charAt (startSlice-1); // v = IDHead
 
       if ( startSlice < c ) // if there are any non-u characters behind the current '\'
@@ -41,7 +41,7 @@ this.readAnIdentifierToken = function (v) {
          if ( !isIDBody(peek) &&
                this.err('id.esc.must.be.idbody',{extra:peek}) )
            return this.errorHandlerOutput;
-     
+
          v += fromcode(peek);
       }
       c = this.c;
@@ -52,7 +52,7 @@ this.readAnIdentifierToken = function (v) {
        if ( !v ) { v = src.charAt(startSlice-1); }
        if ( startSlice < c ) v += src.slice(startSlice,c) ;
        c++;
-       this.c = c; 
+       this.c = c;
        byte2 = this.peekTheSecondByte() ;
        if (!isIDBody(((peek-0x0D800 ) << 10) + (byte2-0x0DC00) + 0x010000) &&
             this.err('id.multi.must.be.idbody') )
@@ -63,7 +63,7 @@ this.readAnIdentifierToken = function (v) {
        c++;
        startSlice = c;
     }
-    else { break ; } 
+    else { break ; }
    }
    if ( v ) { // if we have come across at least one u character
       if ( startSlice < c ) // but all others that came after the last u-character have not been u-characters

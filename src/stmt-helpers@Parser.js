@@ -78,9 +78,9 @@ this.gotDirective = function(dv, flags) {
     this.checkForStrictError(flags);
   }
 };
- 
+
 this.clearAllStrictErrors = function() {
   this.esct = ERR_NONE_YET;
   this.se = null;
 };
- 
+

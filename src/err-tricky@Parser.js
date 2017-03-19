@@ -49,9 +49,9 @@ this.throwTricky = function(source, trickyType) {
   }
   errParams.extra = { source: source };
   this.err(tm[trickyType], errParams);
-}; 
+};
 
-this.adjustErrors = function() { 
+this.adjustErrors = function() {
   if (this.st === ERR_ARGUMENTS_OR_EVAL_ASSIGNED)
     this.st = ERR_ARGUMENTS_OR_EVAL_DEFAULT;
   else

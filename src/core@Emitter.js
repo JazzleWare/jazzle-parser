@@ -1,15 +1,15 @@
 this.indent = function() {
-  this.indentLevel++; 
+  this.indentLevel++;
 };
 
 this.i = function() {
   this.indent();
-  return this; 
+  return this;
 };
 
 this.l = function() {
   this.startLine();
-  return this; 
+  return this;
 };
 
 this.emitHead =
@@ -27,7 +27,7 @@ function(n, prec, flags) {
   case 'SynthSequenceExpression':
     this.w('(').eA(n, PREC_NONE, EC_NONE).w(')');
     break;
-  default: 
+  default:
     this.emitAny(n, prec, flags);
     break;
   }
@@ -45,8 +45,8 @@ this.emitAny = function(n, prec, startStmt) {
 };
 
 this.eA = function(n, prec, startStmt) {
-  this.emitAny(n, prec, startStmt); 
-  return this; 
+  this.emitAny(n, prec, startStmt);
+  return this;
 };
 
 this.emitNonSeq = function(n, prec, flags) {

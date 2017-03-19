@@ -3,7 +3,7 @@ function LexicalScope(sParent, sType) {
 
   this.synthName = "";
   this.childBindings = null;
-  
+
   var surroundingCatch =
     sParent.isCatchBody() ?
       sParent :

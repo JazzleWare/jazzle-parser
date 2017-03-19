@@ -79,15 +79,15 @@ this.readEsc = function ()  {
        b  = b0 - CH_0;
        b0 = src.charCodeAt(this.c + 1 );
        if ( b0 >= CH_0 && b0 < CH_8 ) {
-          this.c++; 
-          b <<= 3; 
+          this.c++;
+          b <<= 3;
           b += (b0-CH_0);
        }
        return String.fromCharCode(b)  ;
 
    case CH_8:
    case CH_9:
-       if ( this.err('esc.8.or.9') ) 
+       if ( this.err('esc.8.or.9') )
          return this.errorHandlerOutput ;
        return '';
 
@@ -152,7 +152,7 @@ this.readStrictEsc = function ()  {
 
    case CH_8:
    case CH_9:
-       if ( this.err('esc.8.or.9') ) 
+       if ( this.err('esc.8.or.9') )
          return this.errorHandlerOutput ;
 
    case CH_CARRIAGE_RETURN:

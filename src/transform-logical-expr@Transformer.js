@@ -13,7 +13,7 @@ this.transformLogicalExpressionWithYield = function(n, list, isVal) {
     t = this.allocTemp();
     n.left = synth_assig(t, n.left);
     if (n.operator === '||')
-      n.left = synth_not(n.left); 
+      n.left = synth_not(n.left);
     this.rl(t);
   }
   var tr = this.tr(n.right, ifBody, isVal);

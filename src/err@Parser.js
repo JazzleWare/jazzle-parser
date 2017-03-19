@@ -15,7 +15,7 @@ this.normalize = function(err) {
     parser: this,
     extra: null
   };
-  
+
   if (err) {
     if (err.tn) {
       var tn = err.tn;
@@ -47,11 +47,11 @@ this.normalize = function(err) {
 
     if (HAS.call(err,'c0'))
       e.cur0.c = err.c0;
-    
+
     if (HAS.call(err,'c'))
       e.cur.c = err.c;
 
-    if (HAS.call(err, 'extra')) 
+    if (HAS.call(err, 'extra'))
       e.extra = err.extra;
   }
 

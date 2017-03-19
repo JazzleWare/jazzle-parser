@@ -18,7 +18,7 @@
 // the fact that l([b] = 12) is transformed _after_ `[a = l([b] = 12)] = 120` is done getting transformed, due to the way
 // transformation works:
 //   transform( [a=l([b]=12)]=120 ): #t = arrIter(120), a = unornull(#t1 = #t.get) ? l([b] = 12) : #t1, #t.val
-// 
+//
 // when the above transform is finished, all temps are released, and the transformed assignment is fed into
 // the emitter; when the emitter encounters l([b] = 12),  it reallocate some of the temps previously alloctated, and that is where
 // the clash is going to happen.

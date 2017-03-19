@@ -56,9 +56,9 @@ this.parseStatement = function ( allowNull ) {
         ASSERT.call(this.directive === DIR_NONE,
           'an expression that is going to become a statement must have set a non-null directive to none if it has not handled it');
         this.gotDirective(this.dv, directive);
- 
+
         // so that the escaped octals are recorded if the next token to be extracted is a string literal
-        this.directive = directive; 
+        this.directive = directive;
       }
     }
     if (esct !== ERR_NONE_YET && this.se === null)
@@ -70,7 +70,7 @@ this.parseStatement = function ( allowNull ) {
   if ( !l && !this.nl &&
        this.err('no.semi') )
     return this.errorHandlerOutput;
- 
+
   return {
     type : 'ExpressionStatement',
     expression : core(head),

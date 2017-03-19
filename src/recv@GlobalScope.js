@@ -4,7 +4,7 @@ this.defineGlobal_m = function(mname, ref) {
   globalRef.absorb(ref);
   globalRef.resolve();
 };
-  
+
 this.receiveRef_m = function(mname, ref) {
   this.defineGlobal_m(mname, ref);
 };

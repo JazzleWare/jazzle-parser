@@ -39,12 +39,12 @@ this.exit = function() {
     target.synthLabel = synthName;
     this.containedLabels[0].push([synthName]);
   }
- 
+
   this.parent && this.parent.takeChildLabels();
 };
 
 this.newSynthLabelName = function(baseLabelName) {
-  baseLabelName = baseLabelName || 
+  baseLabelName = baseLabelName ||
     (baseLabelName === "" ? 'label' : baseLabelName);
   var synthName = baseLabelName, num = 0;
 

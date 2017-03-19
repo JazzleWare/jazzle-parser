@@ -9,7 +9,7 @@ this.applyTo = function(obj) {
     e++;
     isString = !isString;
   }
-  
+
   return errorMessage;
 };
 

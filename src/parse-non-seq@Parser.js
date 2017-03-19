@@ -12,17 +12,17 @@ this.parseNonSeqExpr = function (prec, context) {
        break;
 
     case 'yield':
-      // make sure there is no other expression before it 
-      if (prec !== PREC_WITH_NO_OP) 
+      // make sure there is no other expression before it
+      if (prec !== PREC_WITH_NO_OP)
         return this.err('yield.as.an.id');
 
-      // everything that comes belongs to it 
-      return this.parseYield(context); 
- 
+      // everything that comes belongs to it
+      return this.parseYield(context);
+
     default:
       if (!(context & CTX_NULLABLE) )
         return this.err('nexpr.null.head');
-       
+
       return null;
     }
   }
@@ -41,7 +41,7 @@ this.parseNonSeqExpr = function (prec, context) {
       this.currentExprIsSimple();
       this.dissolveParen();
   }
-  
+
   if (!op || assig)
     return head;
 
@@ -57,11 +57,11 @@ this.parseNonSeqExpr = function (prec, context) {
     if ( isMMorAA(currentPrec) ) {
       if (this.nl )
         break;
-    
+
       head = this.parseUpdateExpression(head, context);
       continue;
     }
-    
+
     if (prec === PREC_U && currentPrec === PREC_EX)
       this.err('unary.before.an.exponentiation');
     if (currentPrec < prec)

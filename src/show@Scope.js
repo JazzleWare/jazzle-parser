@@ -7,8 +7,8 @@ this.str = function() {
 this.typeString = function() {
   var str = "";
 
-  if (this.type & ST_GLOBAL) str += ":global"; 
-  if (this.type & ST_MODULE) str += ":module"; 
+  if (this.type & ST_GLOBAL) str += ":global";
+  if (this.type & ST_MODULE) str += ":module";
   if (this.type & ST_SCRIPT) str += ":script";
   if (this.type & ST_DECL) str += ":decl";
   if (this.type & ST_CLS) str += ":class";

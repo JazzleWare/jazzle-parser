@@ -102,7 +102,7 @@ this.parseArrowFunctionExpression = function(arg, context)   {
   }
 
   return {
-    type: 'ArrowFunctionExpression', params: params, 
+    type: 'ArrowFunctionExpression', params: params,
     start: arg.start, end: nbody.end,
     loc: {
       start: arg.loc.start,
@@ -111,6 +111,6 @@ this.parseArrowFunctionExpression = function(arg, context)   {
     generator: false, expression: isExpr,
     body: core(nbody), id : null,
     async: async
-  }; 
+  };
 };
 

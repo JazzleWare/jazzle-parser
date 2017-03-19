@@ -10,7 +10,7 @@ function hex(number) {
   str = hexD[(number>>=4)&0xf] + str ;
   str = hexD[(number>>=4)&0xf] + str ;
   str = hexD[(number>>=4)&0xf] + str ;
-  
+
   return str;
 }
 
@@ -18,7 +18,7 @@ function hex2(number) {
   var str = "";
   str = hexD[number&0xf] + str
   str = hexD[(number>>=4)&0xf] + str ;
-  
+
   return str;
 }
 

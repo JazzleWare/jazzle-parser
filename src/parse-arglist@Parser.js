@@ -2,9 +2,9 @@ this.parseArgList = function () {
   var c0 = -1, li0 = -1, col0 = -1, parenAsync = this.parenAsync,
       elem = null, list = [];
 
-  do { 
+  do {
     this.next();
-    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR); 
+    elem = this.parseNonSeqExpr(PREC_WITH_NO_OP,CTX_NULLABLE|CTX_PAT|CTX_NO_SIMPLE_ERR);
     if (elem)
       list.push(core(elem));
     else if (this.lttype === '...')

@@ -3,7 +3,7 @@ this.parse = function(src, isModule ) {
   return newp.parseProgram();
 };
 
-this.Parser = Parser;  
+this.Parser = Parser;
 this.ErrorString = ErrorString;
 this.Template = Template;
 this.Emitter = Emitter;

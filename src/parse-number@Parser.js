@@ -34,12 +34,12 @@ this.readNumberLiteral = function (peek) {
         b = src.charCodeAt(c);
         if ( b !== CH_0 && b !== CH_1 && this.err('num.with.first.not.valid',{extra:'binary'}) )
           return this.errorHandlerOutput ;
-        val = b - CH_0; 
+        val = b - CH_0;
         ++c;
         while ( c < len &&
               ( b = src.charCodeAt(c), b === CH_0 || b === CH_1 ) ) {
            val <<= 1;
-           val |= b - CH_0; 
+           val |= b - CH_0;
            c++ ;
         }
         this.ltval = val ;
@@ -52,19 +52,19 @@ this.readNumberLiteral = function (peek) {
           this.err('ver.oct');
         ++c;
         if (c >= len && this.err('num.with.no.digits',{extra:'octal'}) )
-          return this.errorHandlerOutput ; 
+          return this.errorHandlerOutput ;
         b = src.charCodeAt(c);
         if ( (b < CH_0 || b >= CH_8) && this.err('num.with.first.not.valid',{extra:'octal'})  )
           return this.errorHandlerOutput ;
 
         val = b - CH_0 ;
-        ++c; 
+        ++c;
         while ( c < len &&
               ( b = src.charCodeAt(c), b >= CH_0 && b < CH_8 ) ) {
            val <<= (1 + 2);
            val |= b - CH_0;
            c++ ;
-        } 
+        }
         this.ltval = val ;
         this.ltraw = src.slice(this.c,c) ;
         this.c = c;
@@ -79,13 +79,13 @@ this.readNumberLiteral = function (peek) {
             c ++;
           } while ( c < len &&
                   ( b = src.charCodeAt(c), b >= CH_0 && b <= CH_9) );
-          
+
           b = this.c;
-          this.c = c; 
-  
+          this.c = c;
+
           if ( !this.frac(b) )
             this.ltval = parseInt (this.ltraw = src.slice(b, c), base);
-          
+
         }
         else {
           b = this.c ;
@@ -109,7 +109,7 @@ this.readNumberLiteral = function (peek) {
     }
   }
   // needless as it will be an error nevertheless, but it is still requir'd
-  if ( ( this.c < len && isIDHead(src.charCodeAt(this.c))) ) this.err('num.idhead.tail') ; 
+  if ( ( this.c < len && isIDHead(src.charCodeAt(this.c))) ) this.err('num.idhead.tail') ;
 };
 
 this . frac = function(n) {

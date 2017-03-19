@@ -4,7 +4,7 @@ function Scope(sParent, sType) {
   this.scs = this.isConcrete() ?
     this :
     this.parent.scs;
-  
+
   this.defs = new SortedObj();
   this.refs = new SortedObj();
 
@@ -14,7 +14,7 @@ function Scope(sParent, sType) {
     this.allowed &= ~SA_CALLSUP;
 
   this.labelTracker = new LabelTracker();
-  this.allNames = this.parent ? 
+  this.allNames = this.parent ?
     this.parent.allNames :
     new SortedObj();
 

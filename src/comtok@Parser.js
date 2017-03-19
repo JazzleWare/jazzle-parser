@@ -25,7 +25,7 @@ this.onComment = function(isBlock,c0,loc0,c,loc) {
     start_val = c0;
     end_val = c;
     loc0.column -= stepBack;
-  
+
   }
 
   var comment = this.onComment_,
@@ -79,7 +79,7 @@ this.onToken = function(token) {
       tval = this.ltraw;
       switch (tval) {
       case 'static':
-        if (!this.scope.insideStrict()) 
+        if (!this.scope.insideStrict())
           break;
       case 'in':
       case 'instanceof':

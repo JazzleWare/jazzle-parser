@@ -63,7 +63,7 @@ this.readLineComment = function() {
       this.col = 0 ;
       this.li++;
       break L;
-    
+
 //  default : if ( r >= 0x0D800 && r <= 0x0DBFF ) this.col-- ;
     }
 

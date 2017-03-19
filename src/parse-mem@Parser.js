@@ -4,10 +4,10 @@
 // value of the `raw` param is known to be either 'static', 'get', or 'set';
 // but if this is going to be called for any value of raw containing surrogates, it may not work correctly.
 function assembleID(c0, li0, col0, raw, val) {
-  return { 
+  return {
     type: 'Identifier', raw: raw,
     name: val, end: c0 + raw.length,
-    start: c0, 
+    start: c0,
     loc: {
       start: { line: li0, column: col0 },
       end: { line: li0, column: col0 + raw.length }
@@ -21,7 +21,7 @@ this.parseMem = function(context, st) {
 
   var asyncNewLine = false;
   if (this.v > 5 && this.lttype === 'Identifier') {
-    LOOP:  
+    LOOP:
     // TODO: check version number when parsing get/set
     do {
       if (nmod === 0) {
@@ -52,7 +52,7 @@ this.parseMem = function(context, st) {
         nc0 = this.c0; nli0 = this.li0;
         ncol0 = this.col0; nraw = this.ltraw;
         nval = this.ltval;
-        
+
         st |= latestFlag = this.ltval === 'get' ? ST_GETTER : ST_SETTER;
         nmod++;
         this.next();
@@ -82,7 +82,7 @@ this.parseMem = function(context, st) {
       }
     } while (this.lttype === 'Identifier');
   }
-  
+
   if (this.lttype === 'op' && this.ltraw === '*') {
     if (this.v <= 5)
       this.err('ver.mem.gen');
@@ -142,7 +142,7 @@ this.parseMem = function(context, st) {
     if (st & ST_GEN)
       this.err('mem.gen.has.no.name');
     return null;
-  } 
+  }
 
   if (this.lttype === '(') {
     if (this.v <= 5) this.err('ver.mem.meth');
@@ -166,7 +166,7 @@ this.parseMem = function(context, st) {
 
   return this.parseObjElem(nmem, context);
 };
- 
+
 this.parseObjElem = function(name, context) {
   var hasProto = context & CTX_HASPROTO, firstProto = this.first__proto__;
   var val = null;
@@ -209,7 +209,7 @@ this.parseObjElem = function(name, context) {
       this.first__proto__ = val;
 
     return val;
- 
+
   case 'op':
     if (this.v <= 5)
       this.err('mem.short.assig');
@@ -225,7 +225,7 @@ this.parseObjElem = function(name, context) {
        this.st === ERR_NONE_YET) {
       this.st = ERR_SHORTHAND_UNASSIGNED; this.se = val;
     }
- 
+
     break;
 
   default:
@@ -237,7 +237,7 @@ this.parseObjElem = function(name, context) {
     val = name;
     break;
   }
-  
+
   return {
     type: 'Property', key: name,
     start: val.start, end: val.end,

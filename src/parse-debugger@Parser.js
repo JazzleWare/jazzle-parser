@@ -15,7 +15,7 @@ this . prseDbg = function () {
     li = this.li;
     col = this.col;
     this.next();
-  } 
+  }
   else if ( !this.nl &&
      this.err('no.semi') )
      return this.errorHandlerOutput;

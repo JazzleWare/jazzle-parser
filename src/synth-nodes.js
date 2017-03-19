@@ -18,12 +18,12 @@ function assig_node(left, right) {
    if (left.type === 'Identifier' && right.type === 'Identifier')
      if (left.synth && left.name === right.name )
        return left;
-  
+
    return { type: 'AssignmentExpression',  operator: '=', right: right, left: left, y: 0 };
 }
 
 function cond_node(e, c, a) {
-   return { type: 'ConditionalExpression', 
+   return { type: 'ConditionalExpression',
             test: e,
             consequent: c,
             alternate: a,
@@ -62,7 +62,7 @@ function synth_if_node(cond, body, alternate, yBody, yElse) {
 
   return { type: 'IfStatement',
            alternate: alternate ,
-           consequent: body, 
+           consequent: body,
            test: cond, y: yBody + yElse };
 }
 
@@ -73,7 +73,7 @@ function append_assig(b, left, right) {
 
   if ( assig ) b.push(assig);
 }
-   
+
 function append_non_synth(b, nexpr) {
   if (nexpr.type !== 'Identifier' || !nexpr.synth )
     b. push(nexpr);
@@ -84,7 +84,7 @@ function synth_mem_node(obj, prop, c) {
   return { type: 'MemberExpression',
            computed: c,
            object: obj,
-           property: (prop),  
+           property: (prop),
            y: 0 };
 
 }
@@ -102,17 +102,17 @@ function call_call(thisObj, callee, argList) {
       [synth_id_node(thisObj)].concat(argList)
    );
 }
- 
+
 function synth_literal_node(value) {
    return { type: 'Literal', value: value };
 }
 
 function synth_binexpr(left, o, right, yc) {
    var t = "";
-   if ( o === '||' || o === '&&' ) t = 'LogicalExpression'; 
+   if ( o === '||' || o === '&&' ) t = 'LogicalExpression';
    else if ( o.charAt(o.length-1) === '=' ) switch (o) {
       case '==':
-      case '>=': 
+      case '>=':
       case '<=':
       case '!=':
       case '!==':
@@ -124,12 +124,12 @@ function synth_binexpr(left, o, right, yc) {
         t = 'AssignmentExpression';
         break;
    }
-   else t = 'BinaryExpression';  
-    
+   else t = 'BinaryExpression';
+
    return {
      type: t,
      left: left,
-     y: yc, 
+     y: yc,
      right: right,
      operator: o
    };

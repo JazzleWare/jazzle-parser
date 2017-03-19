@@ -31,9 +31,9 @@ this.parseVariableDeclaration = function(context) {
     }
   }
 
-  this.declMode = kind === 'var' ? 
+  this.declMode = kind === 'var' ?
     DM_VAR : DM_LET;
-  
+
   if (kind === 'let' &&
       this.lttype === 'Identifier' &&
       this.ltval === 'in') {
@@ -42,10 +42,10 @@ this.parseVariableDeclaration = function(context) {
 
   elem = this.parseVariableDeclarator(context);
   if (elem === null) {
-    if (kind !== 'let') 
+    if (kind !== 'let')
       this.err('var.has.no.declarators',{extra:[startc,startLoc,context,elem,kind]});
 
-    return null; 
+    return null;
   }
 
   var isConst = kind === 'const';
@@ -70,10 +70,10 @@ this.parseVariableDeclaration = function(context) {
       elem = this.parseVariableDeclarator(context);
       if (!elem)
         this.err('var.has.an.empty.declarator',{extra:[startc,startLoc,context,list,kind]});
-   
+
       if (this.missingInit || (isConst && !elem.init))
         this.err('var.must.have.init',{extra:[startc,startLoc,context,list,kind],elem:elem});
-   
+
       list.push(elem);
     }
   }
@@ -86,8 +86,8 @@ this.parseVariableDeclaration = function(context) {
     endLoc = this.semiLoc_soft();
     if (!endLoc) {
       if (this.nl)
-        endLoc =  lastItem.loc.end; 
-      else  
+        endLoc =  lastItem.loc.end;
+      else
         this.err('no.semi');
     }
   }
@@ -118,7 +118,7 @@ this.parseVariableDeclarator = function(context) {
        this.next();
        init = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_TOP);
     }
-    else 
+    else
       this.err('var.decl.not.=',{extra:[context,head]});
   }
   else if (head.type !== 'Identifier') { // our pattern is an arr or an obj?
@@ -134,7 +134,7 @@ this.parseVariableDeclarator = function(context) {
     start: head.start, end: initOrHead.end,
     loc: {
       start: head.loc.start,
-      end: initOrHead.loc.end 
+      end: initOrHead.loc.end
     }, init: init && core(init)/* ,y:-1*/
   };
 };
