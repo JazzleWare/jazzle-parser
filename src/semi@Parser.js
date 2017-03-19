@@ -1,4 +1,4 @@
-this.semiLoc_soft = function () {
+Parser.prototype.semiLoc_soft = function () {
   switch (this.lttype) {
   case ';':
      var n = this.loc();
@@ -12,11 +12,11 @@ this.semiLoc_soft = function () {
      if ( !this.nl )
         return this.locOn(1);
   }
-  
+
   return null;
 };
 
-this.semiI = function() {
+Parser.prototype.semiI = function() {
   switch (this.lttype) {
   case ';':
     return this.c;

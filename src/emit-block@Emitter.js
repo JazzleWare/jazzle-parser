@@ -1,4 +1,4 @@
-this.emitDependentStmt = function(n, isElse) {
+Emitter.prototype.emitDependentStmt = function(n, isElse) {
   if (n.type === 'BlockStatement')
     this.s().emitBlock(n, PREC_NONE, EC_NONE);
   else if (isElse && n.type === 'IfStatement')
@@ -8,7 +8,7 @@ this.emitDependentStmt = function(n, isElse) {
 };
 
 Emitters['BlockStatement'] =
-this.emitBlock = function(n, prec, flags) {
+Emitter.prototype.emitBlock = function(n, prec, flags) {
   this.w('{');
   var list = n.body;
   if (list.length > 0) {

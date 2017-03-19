@@ -1,15 +1,15 @@
-this.resolve = function() {
+Ref.prototype.resolve = function() {
   ASSERT.call(this, !this.resolved,
     'this ref has already been resolved actually');
   this.resolved = true;
   return this;
 };
 
-this.total = function() {
+Ref.prototype.total = function() {
   return this.indirect.total() + this.direct.total();
 };
 
-this.absorb = function(anotherRef) {
+Ref.prototype.absorb = function(anotherRef) {
   ASSERT.call(this, !this.resolved,
     'a resolved reference must absorb through its decl');
   ASSERT.call(this, !anotherRef.resolved,

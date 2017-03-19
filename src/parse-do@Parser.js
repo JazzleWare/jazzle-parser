@@ -1,4 +1,4 @@
-this.parseDoWhileStatement = function () {
+Parser.prototype.parseDoWhileStatement = function () {
   if (!this.ensureStmt_soft())
     this.err('not.stmt');
 
@@ -34,7 +34,7 @@ this.parseDoWhileStatement = function () {
   }
 
  this.foundStatement = true;
- this.exitScope(); 
+ this.exitScope();
 
  return { type: 'DoWhileStatement', test: cond, start: startc, end: c,
           body: nbody, loc: { start: startLoc, end: { line: li, column: col } } /* ,y:-1*/} ;

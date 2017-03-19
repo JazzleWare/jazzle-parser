@@ -1,4 +1,4 @@
-this.parseSwitchCase = function () {
+Parser.prototype.parseSwitchCase = function () {
   var startc,
       startLoc;
 

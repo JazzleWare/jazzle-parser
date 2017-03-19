@@ -1,9 +1,9 @@
-this.err = function(errorType, errParams) {
+Parser.prototype.err = function(errorType, errParams) {
   errParams = this.normalize(errParams);
   return this.errorListener.onErr(errorType, errParams);
 };
 
-this.normalize = function(err) {
+Parser.prototype.normalize = function(err) {
   // normalized err
   var loc0 = { li: this.li0, col: this.col0 },
       loc = { li: this.li, col: this.col };
@@ -15,7 +15,7 @@ this.normalize = function(err) {
     parser: this,
     extra: null
   };
-  
+
   if (err) {
     if (err.tn) {
       var tn = err.tn;
@@ -47,11 +47,11 @@ this.normalize = function(err) {
 
     if (HAS.call(err,'c0'))
       e.cur0.c = err.c0;
-    
+
     if (HAS.call(err,'c'))
       e.cur.c = err.c;
 
-    if (HAS.call(err, 'extra')) 
+    if (HAS.call(err, 'extra'))
       e.extra = err.extra;
   }
 

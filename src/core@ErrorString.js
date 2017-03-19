@@ -1,4 +1,4 @@
-this.applyTo = function(obj) {
+ErrorString.prototype.applyTo = function(obj) {
   var errorMessage = "",
       isString = true,
       list = this.stringsAndTemplates,
@@ -9,7 +9,7 @@ this.applyTo = function(obj) {
     e++;
     isString = !isString;
   }
-  
+
   return errorMessage;
 };
 

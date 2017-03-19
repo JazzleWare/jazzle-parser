@@ -1,4 +1,4 @@
-this.parseCond = function(cond, context) {
+Parser.prototype.parseCond = function(cond, context) {
   this.next();
   var seq =
     this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE);

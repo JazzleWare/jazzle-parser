@@ -19,7 +19,7 @@ function isIDBody (c) {
     (c <= CH_9 && c >= CH_0) ||
     c === CH_UNDERLINE ||
     c === CH_$ ||
-    (IDC_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN))) 
+    (IDC_[c >> D_INTBITLEN] & (1 << (c & M_INTBITLEN)))
   );
 }
 

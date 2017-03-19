@@ -1,4 +1,4 @@
-this.addLabel = function(labelName) {
+LabelTracker.prototype.addLabel = function(labelName) {
   ASSERT.call(
     this,
     this.target === null,
@@ -10,12 +10,12 @@ this.addLabel = function(labelName) {
   this.activeLabels.push(labelName);
 };
 
-this.takeChildLabels = function(chlt) {
+LabelTracker.prototype.takeChildLabels = function(chlt) {
   this.containedLabels =
     this.containedLabels.concat(chlt.containedLabels);
 };
 
-this.setLabelTarget = function(target) {
+LabelTracker.prototype.setLabelTarget = function(target) {
   if (target.type !== 'YieldContainer')
     return;
   this.target = target;
@@ -24,7 +24,7 @@ this.setLabelTarget = function(target) {
   this.activeLabels = null;
 };
 
-this.exit = function() {
+LabelTracker.prototype.exit = function() {
   if (this.synthAtExit) {
     ASSERT.call(this, this.target !== null,
       'there must be a target to synthesize a label for.');
@@ -39,12 +39,12 @@ this.exit = function() {
     target.synthLabel = synthName;
     this.containedLabels[0].push([synthName]);
   }
- 
+
   this.parent && this.parent.takeChildLabels();
 };
 
-this.newSynthLabelName = function(baseLabelName) {
-  baseLabelName = baseLabelName || 
+LabelTracker.prototype.newSynthLabelName = function(baseLabelName) {
+  baseLabelName = baseLabelName ||
     (baseLabelName === "" ? 'label' : baseLabelName);
   var synthName = baseLabelName, num = 0;
 

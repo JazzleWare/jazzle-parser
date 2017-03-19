@@ -1,5 +1,5 @@
 // TODO: needs reconsideration,
-this.parseRestElement = function() {
+Parser.prototype.parseRestElement = function() {
    if (this.v <= 5)
      this.err('ver.spread.rest');
    var startc = this.c0,

@@ -1,6 +1,6 @@
-this.parseFuncBody = function(context) {
+Parser.prototype.parseFuncBody = function(context) {
   var elem = null;
-  
+
   if ( this.lttype !== '{' ) {
     elem = this.parseNonSeqExpr(PREC_WITH_NO_OP, context|CTX_NULLABLE|CTX_PAT);
     if ( elem === null )

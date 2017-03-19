@@ -1,31 +1,31 @@
-this.clsScope = function(t) {
+Scope.prototype.clsScope = function(t) {
   return new ClassScope(this, t);
 };
 
-this.fnHeadScope = function(t) {
+Scope.prototype.fnHeadScope = function(t) {
   return new FuncHeadScope(this, t);
 };
 
-this.fnBodyScope = function(t) {
+Scope.prototype.fnBodyScope = function(t) {
   return new FuncBodyScope(this, t);
 };
 
-this.blockScope = function() {
+Scope.prototype.blockScope = function() {
   return new LexicalScope(this, ST_BLOCK);
 };
 
-this.catchBodyScope = function() {
+Scope.prototype.catchBodyScope = function() {
   return new CatchBodyScope(this);
 };
 
-this.catchHeadScope = function() {
+Scope.prototype.catchHeadScope = function() {
   return new CatchHeadScope(this);
 };
 
-this.bodyScope = function() {
+Scope.prototype.bodyScope = function() {
   return new LexicalScope(this, ST_BODY);
 };
 
-this.parenScope = function() {
+Scope.prototype.parenScope = function() {
   return new ParenScope(this);
 };

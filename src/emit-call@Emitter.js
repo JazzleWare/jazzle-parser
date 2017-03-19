@@ -2,10 +2,10 @@ Emitters['ObjIterGet'] =
 Emitters['Unornull'] =
 Emitters['ArrIterGet'] =
 Emitters['CallExpression'] = function(n, prec, flags) {
-  var ri = spreadIdx(n.arguments, 0); 
+  var ri = spreadIdx(n.arguments, 0);
   if (ri !== -1)
     return this.emitCallWithSpread(n, flags, ri);
-  
+
   var paren = flags & EC_NEW_HEAD;
   if (paren) {
     prec = PREC_NONE;
@@ -21,7 +21,7 @@ Emitters['CallExpression'] = function(n, prec, flags) {
   if (paren) this.w(')');
 };
 
-this.emitCallWithSpread =
+Emitter.prototype.emitCallWithSpread =
 function(n, flags, ri) {
   var paren = flags & EC_NEW_HEAD;
   if (paren) {
@@ -37,7 +37,7 @@ function(n, flags, ri) {
         .wm(',',' ');
     if (c.computed)
       this.eN(c.property, PREC_NONE, EC_NONE);
-    else 
+    else
       this.emitStringLiteralWithRawValue("'"+c.property.name+"'");
     this.w(')');
   } else {
@@ -48,5 +48,5 @@ function(n, flags, ri) {
       .emitArrayWithSpread(n.arguments, EC_NONE, ri);
   this.w(')');
   if (paren) this.w(')');
-};  
+};
 

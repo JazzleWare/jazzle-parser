@@ -1,4 +1,4 @@
-this.parseArrayExpression = function(context) {
+Parser.prototype.parseArrayExpression = function(context) {
 
   var startc = this.c - 1,
       startLoc = this.locOn(1);
@@ -51,7 +51,7 @@ this.parseArrayExpression = function(context) {
     }
     if (this.lttype === ',') {
       if (hasRest)
-        hasNonTailRest = true; 
+        hasNonTailRest = true;
       if (elem === null) {
         if (this.v <= 5) this.err('ver.elision');
         list.push(null);
@@ -66,7 +66,7 @@ this.parseArrayExpression = function(context) {
       }
       else break;
     }
- 
+
     if (elemContext & CTX_PARAM)
       elem && this.scope.addPossibleArgument(elem);
 
@@ -79,7 +79,7 @@ this.parseArrayExpression = function(context) {
       else if (hasNonTailRest)
         t = ERR_NON_TAIL_REST;
 
-      if ((elemContext & CTX_PARAM) && 
+      if ((elemContext & CTX_PARAM) &&
          !(elemContext & CTX_HAS_A_PARAM_ERR)) {
         if (this.pt === ERR_NONE_YET && t !== ERR_NONE_YET) {
           this.pt = t; this.pe = elemCore;
@@ -89,7 +89,7 @@ this.parseArrayExpression = function(context) {
             pt = this.pt; pe = this.pe; po = core(elem);
             if (pt & ERR_P_SYN)
               elemContext |= CTX_HAS_A_PARAM_ERR;
-            if (pt & ERR_PIN) 
+            if (pt & ERR_PIN)
               pc0 = this.ploc.c0, pli0 = this.ploc.li0, pcol0 = this.ploc.col0;
           }
         }
@@ -129,7 +129,7 @@ this.parseArrayExpression = function(context) {
 
     hasRest = hasNonTailRest = false;
   }
-  
+
   var n = {
     type: 'ArrayExpression',
     loc: { start: startLoc, end: this.loc() },
@@ -156,6 +156,6 @@ this.parseArrayExpression = function(context) {
 
   if (!this.expectType_soft(']'))
     this.err('array.unfinished');
-  
+
   return n;
 };

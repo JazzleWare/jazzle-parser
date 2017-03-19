@@ -1,4 +1,4 @@
-this.receiveRef_m = function(mname, ref) {
+CatchBodyScope.prototype.receiveRef_m = function(mname, ref) {
   var decl = this.findDecl_m(mname) ||
     this.catchArgs.findDecl_m(mname);
   if (decl)

@@ -6,14 +6,14 @@ transform['LogicalExpression'] = function(n, list, isVal) {
   return n;
 };
 
-this.transformLogicalExpressionWithYield = function(n, list, isVal) {
+Transformer.prototype.transformLogicalExpressionWithYield = function(n, list, isVal) {
   var ifBody = [],
       t = null;
   if (isVal) {
     t = this.allocTemp();
     n.left = synth_assig(t, n.left);
     if (n.operator === '||')
-      n.left = synth_not(n.left); 
+      n.left = synth_not(n.left);
     this.rl(t);
   }
   var tr = this.tr(n.right, ifBody, isVal);

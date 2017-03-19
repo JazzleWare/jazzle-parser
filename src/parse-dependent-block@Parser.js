@@ -1,4 +1,4 @@
-this. parseBlockStatement_dependent = function(name) {
+Parser.prototype. parseBlockStatement_dependent = function(name) {
     var startc = this.c - 1,
         startLoc = this.locOn(1);
 

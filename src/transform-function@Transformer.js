@@ -10,7 +10,7 @@ transform['FunctionDeclaration'] = function(n, pushTarget, isVal) {
   return n;
 };
 
-this.addParamAssigPrologueToBody = function(fn) {
+Transformer.prototype.addParamAssigPrologueToBody = function(fn) {
   var prolog = {
     type: 'ArgsPrologue',
     left: fn.params,

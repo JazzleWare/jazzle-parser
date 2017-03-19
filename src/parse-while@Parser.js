@@ -1,4 +1,4 @@
-this.parseWhileStatement = function () {
+Parser.prototype.parseWhileStatement = function () {
    this.enterScope(this.scope.bodyScope());
    this.allow(SA_BREAK|SA_CONTINUE);
    if (!this.ensureStmt_soft())
@@ -12,7 +12,7 @@ this.parseWhileStatement = function () {
 
    !this.expectType_soft ('(') &&
    this.err('while.has.no.opening.paren');
- 
+
    var cond = core( this.parseExpr(CTX_NONE|CTX_TOP) );
 
    !this.expectType_soft (')') &&

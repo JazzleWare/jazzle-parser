@@ -1,4 +1,4 @@
-this.parseIfStatement = function () {
+Parser.prototype.parseIfStatement = function () {
   if ( !this.ensureStmt_soft () && this.err('not.stmt') )
     return this.errorHandlerOutput;
 
@@ -18,7 +18,7 @@ this.parseIfStatement = function () {
   this.err('if.has.no.closing.paren');
 
   var nbody = this. parseStatement (false);
-  var scope = this.exitScope(); 
+  var scope = this.exitScope();
 
   var alt = null;
   if ( this.lttype === 'Identifier' && this.ltval === 'else') {

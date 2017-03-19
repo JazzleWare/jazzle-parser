@@ -1,4 +1,4 @@
-this.parseParen = function(context) {
+Parser.prototype.parseParen = function(context) {
   var startc = this.c0,
       startLoc = this.locBegin(),
       elem = null,
@@ -43,9 +43,9 @@ this.parseParen = function(context) {
       else if (list) {
         if (this.v < 7)
           this.err('seq.non.tail.expr');
-        else 
+        else
           hasTailElem = true;
-      } 
+      }
       else break;
     }
 
@@ -129,7 +129,7 @@ this.parseParen = function(context) {
         loc: {
           start: list[0].loc.start,
           end: list[list.length-1].loc.end
-        } 
+        }
       } : elem && core(elem),
       start: startc,
       end: this.c,
@@ -179,7 +179,7 @@ this.parseParen = function(context) {
   return n;
 };
 
-this.dissolveParen = function() {
+Parser.prototype.dissolveParen = function() {
   if (this.parenScope) {
     this.parenScope.dissolve();
     this.parenScope = null;

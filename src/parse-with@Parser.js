@@ -1,4 +1,4 @@
-this . parseWithStatement = function() {
+Parser.prototype. parseWithStatement = function() {
    if ( !this.ensureStmt_soft () &&
          this.err('not.stmt') )
      return this.errorHandlerOutput ;

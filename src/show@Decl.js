@@ -1,9 +1,9 @@
-this.str = function() {
+Decl.prototype.str = function() {
   return this.i+':<decl type="'+
          this.typeString()+'">'+this.name+'</decl>';
 };
 
-this.typeString = function() {
+Decl.prototype.typeString = function() {
   var str = "";
 
   if (this.mode & DM_CLS) str += ":class";
@@ -13,12 +13,12 @@ this.typeString = function() {
   if (this.mode & DM_VAR) str += ":var";
   if (this.mode & DM_CONST) str += ":const";
   if (this.mode & DM_SCOPENAME) str += ":scopename";
-  if (this.mode & DM_CATCHARG) str += ":catcharg"; 
-  if (this.mode & DM_FNARG) str += ":fnarg";  
+  if (this.mode & DM_CATCHARG) str += ":catcharg";
+  if (this.mode & DM_FNARG) str += ":fnarg";
 
   return str;
 };
 
-this.writeTo = function(emitter) {
+Decl.prototype.writeTo = function(emitter) {
   emitter.w(this.str());
 };

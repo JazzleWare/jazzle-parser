@@ -1,10 +1,10 @@
-this.asArrowFuncArgList = function(argList) {
+Parser.prototype.asArrowFuncArgList = function(argList) {
   var i = 0, list = argList;
   while (i < list.length)
     this.asArrowFuncArg(list[i++]);
 };
 
-this.asArrowFuncArg = function(arg) {
+Parser.prototype.asArrowFuncArg = function(arg) {
   var i = 0, list = null;
   if (arg === this.po)
     this.throwTricky('p', this.pt);
@@ -14,7 +14,7 @@ this.asArrowFuncArg = function(arg) {
     if (this.scope.canAwait() &&
        arg.name === 'await')
       this.err('arrow.param.is.await.in.an.async',{tn:arg});
-     
+
     // TODO: this can also get checked in the scope manager rather than below
     if (this.scope.insideStrict() && arguments_or_eval(arg.name))
       this.err('binding.to.arguments.or.eval',{tn:arg});

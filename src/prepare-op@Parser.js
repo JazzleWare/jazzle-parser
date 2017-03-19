@@ -1,4 +1,4 @@
-this .parseO = function(context ) {
+Parser.prototype.parseO = function(context ) {
   switch ( this. lttype ) {
   case 'op': return true;
   case '--': return true;
@@ -8,10 +8,10 @@ this .parseO = function(context ) {
       this.c++ ;
       this.prec = PREC_OP_ASSIG;
       this.ltraw = '/=';
-      this.col++; 
+      this.col++;
     }
     else
-      this.prec = PREC_MUL ; 
+      this.prec = PREC_MUL ;
 
     return true;
 

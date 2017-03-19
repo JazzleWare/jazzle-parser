@@ -1,4 +1,4 @@
-this.parseObjectPattern  = function() {
+Parser.prototype.parseObjectPattern  = function() {
     if (this.v <= 5)
       this.err('ver.patobj');
 
@@ -52,7 +52,7 @@ this.parseObjectPattern  = function() {
       }
 
       // TODO: this is a subtle case that was only lately noticed;
-      // parsePattern must have a way to throw when the pattern is not supposed to be null 
+      // parsePattern must have a way to throw when the pattern is not supposed to be null
       if (val === null)
         this.err('obj.prop.is.null');
 

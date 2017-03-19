@@ -1,17 +1,17 @@
-this.isValidName = function(name) {
+Hitmap.prototype.isValidName = function(name) {
   return this.isValidName_m(name+'%');
 };
 
-this.isValidName_m = function(mname) {
-  return this.validNames === null ? true : 
+Hitmap.prototype.isValidName_m = function(mname) {
+  return this.validNames === null ? true :
     this.validNames.has(mname);
 };
 
-this.set = function(name, value) {
+Hitmap.prototype.set = function(name, value) {
   return this.set_m(name+'%', value);
 };
 
-this.set_m = function(mname, value) {
+Hitmap.prototype.set_m = function(mname, value) {
   ASSERT.call(this, this.isValidName_m(mname),
     'not among the valid names: <' + mname + '>');
   if (!this.names.has(mname))
@@ -24,11 +24,11 @@ this.set_m = function(mname, value) {
   return entry;
 };
 
-this.getOrCreate = this.getoc = function(name) {
+Hitmap.prototype.getOrCreate = this.getoc = function(name) {
   return this.getOrCreate_m(name+'%');
 };
 
-this.getOrCreate_m = this.getoc_m = function(mname) {
+Hitmap.prototype.getOrCreate_m = this.getoc_m = function(mname) {
   ASSERT.call(this, this.isValidName_m(mname),
     'not among the valid names: <' + mname + '>');
   if (!this.names.has(mname))

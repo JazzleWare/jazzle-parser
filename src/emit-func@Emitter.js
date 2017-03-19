@@ -17,7 +17,7 @@ Emitters['FunctionDeclaration'] = function(n, prec, flags) {
   if (paren) this.w(')');
 };
 
-this.emitParams = function(list) {
+Emitter.prototype.emitParams = function(list) {
   var i = 0;
   while (i < list.length) {
     if (i) this.wm(',',' ');

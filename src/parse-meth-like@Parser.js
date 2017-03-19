@@ -1,4 +1,4 @@
-this.parseMeth = function(name, context, st) {
+Parser.prototype.parseMeth = function(name, context, st) {
   if (this.lttype !== '(')
     this.err('meth.paren');
   var val = null;
@@ -34,7 +34,7 @@ this.parseMeth = function(name, context, st) {
       value: val, 'static': !!(st & ST_STATICMEM)/* ,y:-1*/
     }
   }
-   
+
   val = this.parseFunc(CTX_NONE, st);
 
   return {

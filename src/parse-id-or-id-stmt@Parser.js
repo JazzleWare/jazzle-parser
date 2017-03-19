@@ -1,5 +1,5 @@
-this . notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
-this. parseIdStatementOrId = function ( context ) {
+Parser.prototype. notId = function(id) { throw new Error ( 'not a valid id '   +   id )   ;  } ;
+Parser.prototype. parseIdStatementOrId = function ( context ) {
   var id = this.ltval ;
   var pendingExprHead = null;
 
@@ -21,7 +21,7 @@ this. parseIdStatementOrId = function ( context ) {
       // TODO: is it actually needed anymore?
       if ( context & CTX_FOR )
         return null;
- 
+
        this.notId() ;
     default: pendingExprHead = this.id(); break SWITCH ;
     }
@@ -73,7 +73,7 @@ this. parseIdStatementOrId = function ( context ) {
       this.resvchk(); this.kw();
       if ( this.canBeStatement )
          this.canBeStatement = false;
-      this.lttype = 'u'; 
+      this.lttype = 'u';
       this.isVDT = VDT_VOID;
       return null;
     case 'this':
@@ -131,7 +131,7 @@ this. parseIdStatementOrId = function ( context ) {
     case 'while':
       this.resvchk(); this.kw();
       return this.parseWhileStatement();
-    case 'yield': 
+    case 'yield':
       if (this.scope.canYield()) {
         this.resvchk();
         if (this.scope.isAnyFnHead())
@@ -147,7 +147,7 @@ this. parseIdStatementOrId = function ( context ) {
 
       pendingExprHead = this.id();
       break SWITCH;
-          
+
     case 'false':
       this.resvchk(); if (this.onToken_ !== null) this.lttype = 'Boolean';
       pendingExprHead = this.parseFalse();
@@ -193,11 +193,11 @@ this. parseIdStatementOrId = function ( context ) {
       this.resvchk(); this.kw();
       if ( this.canBeStatement )
         this.canBeStatement = false ;
-      this.lttype = 'u'; 
+      this.lttype = 'u';
       this.isVDT = id === 'delete' ? VDT_DELETE : VDT_VOID;
       return null;
 
-    case 'export': 
+    case 'export':
       this.resvchk(); this.kw();
       if ( this.isScript && this.err('export.not.in.module') )
         return this.errorHandlerOutput;
@@ -302,8 +302,8 @@ this. parseIdStatementOrId = function ( context ) {
 
   return pendingExprHead;
 };
- 
-this.resvchk = function() {
+
+Parser.prototype.resvchk = function() {
   if (this.esct !== ERR_NONE_YET) {
     ASSERT.call(this.esct === ERR_PIN_UNICODE_IN_RESV,
       'the error in this.esct is something other than ERR_PIN_UNICODE_IN_RESV: ' + this.esct);

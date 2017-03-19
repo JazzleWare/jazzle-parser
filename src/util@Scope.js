@@ -1,60 +1,60 @@
 // function component: function head or function body
-this.isGlobal = function() { return this.type & ST_GLOBAL; };
-this.isModule = function() { return this.type & ST_MODULE; };
-this.isScript = function() { return this.type & ST_SCRIPT; };
-this.isDecl = function() { return this.type & ST_DECL; };
-this.isClass = function() { return this.type & ST_CLS; };
-this.isAnyFnComp = function() { return this.type & ST_ANY_FN; };
-this.isAnyFnHead = function() {
+Scope.prototype.isGlobal = function() { return this.type & ST_GLOBAL; };
+Scope.prototype.isModule = function() { return this.type & ST_MODULE; };
+Scope.prototype.isScript = function() { return this.type & ST_SCRIPT; };
+Scope.prototype.isDecl = function() { return this.type & ST_DECL; };
+Scope.prototype.isClass = function() { return this.type & ST_CLS; };
+Scope.prototype.isAnyFnComp = function() { return this.type & ST_ANY_FN; };
+Scope.prototype.isAnyFnHead = function() {
   return this.isAnyFnComp() && this.isHead();
 };
-this.isAnyFnBody = function() {
+Scope.prototype.isAnyFnBody = function() {
   return this.isAnyFnComp() && this.isBody();
 };
-this.isClassMem = function() { return this.type & ST_CLSMEM; };
-this.isGetterComp = function() { return this.type & ST_GETTER; };
-this.isSetterComp = function() { return this.type & ST_SETTER; };
-this.isStaticMem = function() { return this.type & ST_STATICMEM; };
-this.isCtorComp = function() { return this.type & ST_CTOR; };
-this.isObjMem = function() { return this.type & ST_OBJMEM; };
-this.isArrowComp = function() { return this.type & ST_ARROW; };
-this.isBlock = function() { return this.type & ST_BLOCK; };
-this.isCatchComp = function() { return this.type & ST_CATCH; };
-this.isBody = function() { return this.type & ST_BODY; };
-this.isMethComp = function() { return this.type & ST_METH; };
-this.isExpr = function() { return this.type & ST_EXPR; };
-this.isMem = function() { return this.isStaticMem() || this.isClassMem() || this.isObjMem(); };
-this.isGenComp = function() { return this.type & ST_GEN; };
-this.isAsyncComp = function() { return this.type & ST_ASYNC; };
-this.isAccessorComp = function() { return this.isGetterComp() || this.isSetterComp(); };
-this.isSpecialComp = function() { return this.isAccessorComp() || this.isGenComp(); };
-this.isLexical = function() { return this.isCatchBody() || this.isBlock(); };
-this.isTopLevel = function() { return this.type & ST_TOP; };
-this.isHoistable = function() { return this.isSimpleFnComp() && this.isDecl(); };
-this.isIndirect = function() { return this.isAnyFnComp() || this.isClass(); };
-this.isConcrete = function() { return this.type & ST_CONCRETE; };
-this.isSimpleFnComp = function() { return this.type & ST_FN; };
-this.isBare = function() { return this.isBody() && !(this.isLexical() || this.isAnyFnComp()); };
-this.isCatchBody = function() { return this.isCatchComp() && this.isBody(); };
-this.isCatchHead = function() { return this.isCatchComp() && this.isHead(); };
-this.isHead = function() { return this.type & ST_HEAD; };
-this.isParen = function() { return this.type & ST_PAREN; };
+Scope.prototype.isClassMem = function() { return this.type & ST_CLSMEM; };
+Scope.prototype.isGetterComp = function() { return this.type & ST_GETTER; };
+Scope.prototype.isSetterComp = function() { return this.type & ST_SETTER; };
+Scope.prototype.isStaticMem = function() { return this.type & ST_STATICMEM; };
+Scope.prototype.isCtorComp = function() { return this.type & ST_CTOR; };
+Scope.prototype.isObjMem = function() { return this.type & ST_OBJMEM; };
+Scope.prototype.isArrowComp = function() { return this.type & ST_ARROW; };
+Scope.prototype.isBlock = function() { return this.type & ST_BLOCK; };
+Scope.prototype.isCatchComp = function() { return this.type & ST_CATCH; };
+Scope.prototype.isBody = function() { return this.type & ST_BODY; };
+Scope.prototype.isMethComp = function() { return this.type & ST_METH; };
+Scope.prototype.isExpr = function() { return this.type & ST_EXPR; };
+Scope.prototype.isMem = function() { return this.isStaticMem() || this.isClassMem() || this.isObjMem(); };
+Scope.prototype.isGenComp = function() { return this.type & ST_GEN; };
+Scope.prototype.isAsyncComp = function() { return this.type & ST_ASYNC; };
+Scope.prototype.isAccessorComp = function() { return this.isGetterComp() || this.isSetterComp(); };
+Scope.prototype.isSpecialComp = function() { return this.isAccessorComp() || this.isGenComp(); };
+Scope.prototype.isLexical = function() { return this.isCatchBody() || this.isBlock(); };
+Scope.prototype.isTopLevel = function() { return this.type & ST_TOP; };
+Scope.prototype.isHoistable = function() { return this.isSimpleFnComp() && this.isDecl(); };
+Scope.prototype.isIndirect = function() { return this.isAnyFnComp() || this.isClass(); };
+Scope.prototype.isConcrete = function() { return this.type & ST_CONCRETE; };
+Scope.prototype.isSimpleFnComp = function() { return this.type & ST_FN; };
+Scope.prototype.isBare = function() { return this.isBody() && !(this.isLexical() || this.isAnyFnComp()); };
+Scope.prototype.isCatchBody = function() { return this.isCatchComp() && this.isBody(); };
+Scope.prototype.isCatchHead = function() { return this.isCatchComp() && this.isHead(); };
+Scope.prototype.isHead = function() { return this.type & ST_HEAD; };
+Scope.prototype.isParen = function() { return this.type & ST_PAREN; };
 
-this.insideIf = function() { return this.mode & SM_INSIDE_IF; };
-this.insideLoop = function() { return this.mode & SM_LOOP; };
-this.insideStrict = function() { return this.mode & SM_STRICT; };
-this.insideBlock = function() { return this.mode & SM_BLOCK; };
-this.insideFuncArgs = function() { return this.mode & SM_INARGS; };
-this.insideForInit = function() { return this.mode & SM_FOR_INIT; };
-this.insideUniqueArgs = function() { return this.mode & SM_UNIQUE; };
+Scope.prototype.insideIf = function() { return this.mode & SM_INSIDE_IF; };
+Scope.prototype.insideLoop = function() { return this.mode & SM_LOOP; };
+Scope.prototype.insideStrict = function() { return this.mode & SM_STRICT; };
+Scope.prototype.insideBlock = function() { return this.mode & SM_BLOCK; };
+Scope.prototype.insideFuncArgs = function() { return this.mode & SM_INARGS; };
+Scope.prototype.insideForInit = function() { return this.mode & SM_FOR_INIT; };
+Scope.prototype.insideUniqueArgs = function() { return this.mode & SM_UNIQUE; };
 
-this.canReturn = function() { return this.allowed & SA_RETURN; };
-this.canContinue = function() { return this.allowed & SA_CONTINUE; };
-this.canBreak = function() { return this.allowed & SA_BREAK; };
-this.canDeclareLetOrClass = function() {
+Scope.prototype.canReturn = function() { return this.allowed & SA_RETURN; };
+Scope.prototype.canContinue = function() { return this.allowed & SA_CONTINUE; };
+Scope.prototype.canBreak = function() { return this.allowed & SA_BREAK; };
+Scope.prototype.canDeclareLetOrClass = function() {
   return this.isAnyFnBody() || this.isTopLevel() || this.isLexical() || this.insideForInit();
 };
-this.canDeclareFunc = function() {
+Scope.prototype.canDeclareFunc = function() {
   if (this.insideStrict())
     return false;
 
@@ -64,27 +64,27 @@ this.canDeclareFunc = function() {
          this.insideIf();
 };
 
-this.canYield = function() { return this.allowed & SA_YIELD; };
-this.canAwait = function() { return this.allowed & SA_AWAIT; };
-this.canSupCall = function() {
+Scope.prototype.canYield = function() { return this.allowed & SA_YIELD; };
+Scope.prototype.canAwait = function() { return this.allowed & SA_AWAIT; };
+Scope.prototype.canSupCall = function() {
   return this.isArrowComp() ?
     this.parent.canSupCall() :
-    this.allowed & SA_CALLSUP 
+    this.allowed & SA_CALLSUP
 };
 
-this.canSupMem = function() {
+Scope.prototype.canSupMem = function() {
   return this.isArrowComp() ?
     this.parent.canSupMem() :
     this.allowed & SA_MEMSUP;
 };
 
-this.canHaveNewTarget = function() {
+Scope.prototype.canHaveNewTarget = function() {
    return this.isArrowComp() ?
      this.parent.canHaveNewTarget() :
      this.isAnyFnComp();
 };
 
-this.canDup = function() {
+Scope.prototype.canDup = function() {
   ASSERT.call(this, this.insideFuncArgs(),
     'it has no meaning to call canDup when not ' +
     'in func-arguments');
@@ -92,34 +92,34 @@ this.canDup = function() {
          !this.insideUniqueArgs();
 };
 
-this.enterForInit = function() {
+Scope.prototype.enterForInit = function() {
   ASSERT.call(this, this.isBare(),
     'to enter for init mode, the scope has to be a bare one');
-  
+
   this.mode |= SM_FOR_INIT;
 };
 
-this.exitForInit = function() {
+Scope.prototype.exitForInit = function() {
   ASSERT.call(this, this.insideForInit(),
     'can not unset the for-init mode when it is not set');
 
   this.mode &= ~SM_FOR_INIT;
 };
 
-this.enterStrict = function() {
+Scope.prototype.enterStrict = function() {
   this.mode |= SM_STRICT;
 };
 
-this.exitStrict = function() {
+Scope.prototype.exitStrict = function() {
   ASSERT.call(this, this.insideStrict(),
     'can not unset strict when it is not set');
   this.mode &= ~SM_STRICT;
 };
 
-this.yieldIsKW = function() { return this.mode & SM_YIELD_KW; };
-this.awaitIsKW = function() { return this.mode & SM_AWAIT_KW; };
+Scope.prototype.yieldIsKW = function() { return this.mode & SM_YIELD_KW; };
+Scope.prototype.awaitIsKW = function() { return this.mode & SM_AWAIT_KW; };
 
-this.hasHeritage = function() {
+Scope.prototype.hasHeritage = function() {
   ASSERT.call(this, this.isClass(),
     'only classes are allowed to be tested for '+
     'heritage');

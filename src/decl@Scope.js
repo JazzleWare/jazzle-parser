@@ -1,8 +1,8 @@
-this.declare = function(name, mode) {
+Scope.prototype.declare = function(name, mode) {
   return this.declare_m(_m(name), mode);
 };
 
-this.declare_m = function(mname, mode) {
+Scope.prototype.declare_m = function(mname, mode) {
   if (mode & DM_LET)
     return this.let_m(mname, mode);
   if (mode & DM_FUNCTION)
@@ -21,36 +21,36 @@ this.declare_m = function(mname, mode) {
   ASSERT.call(this, false, 'declmode unknown');
 };
 
-this.findDecl = function(name) {
+Scope.prototype.findDecl = function(name) {
   return this.findDecl_m(_m(name));
 };
 
-this.let_m = function(mname, mode) {
+Scope.prototype.let_m = function(mname, mode) {
   return this.declareLexical_m(mname, mode);
 };
 
-this.function_m = function(mname, mode) {
+Scope.prototype.function_m = function(mname, mode) {
   return this.isLexical() ?
     this.declareLexical_m(mname, mode) :
     this.declareVarLike_m(mname, mode);
 };
 
-this.const_m = function(mname, mode) {
+Scope.prototype.const_m = function(mname, mode) {
   return this.declareLexical_m(mname, mode);
 };
 
-this.var_m = function(mname, mode) {
+Scope.prototype.var_m = function(mname, mode) {
   return this.declareVarLike_m(mname, mode);
 };
 
-this.class_m = function(mname, mode) {
+Scope.prototype.class_m = function(mname, mode) {
   return this.declareLexical_m(mname, mode);
 };
 
-this.catchArg_m = function(mname, mode) {
+Scope.prototype.catchArg_m = function(mname, mode) {
   ASSERT.call(this, this.isCatchHead(),
     'only catch heads are allowed to declare catch-args');
-  
+
   var existing = this.findDecl_m(mname);
   if (existing)
     this.parser.err('var.catch.is.dup');
@@ -64,7 +64,7 @@ this.catchArg_m = function(mname, mode) {
   return newDecl;
 };
 
-this.fnArg_m = function(mname, mode) {
+Scope.prototype.fnArg_m = function(mname, mode) {
   ASSERT.call(this, this.isAnyFnComp() && this.isHead(),
     'only fn heads are allowed to declare fn-args');
 
@@ -74,7 +74,7 @@ this.fnArg_m = function(mname, mode) {
   var existing = null;
   if (HAS.call(this.paramMap, mname))
     existing = this.paramMap[mname];
-  
+
   if (existing) {
     if (!this.canDup())
       this.parser.err('var.fn.is.dup.arg');
@@ -97,7 +97,7 @@ this.fnArg_m = function(mname, mode) {
   return newDecl;
 };
 
-this.declareLexical_m = function(mname, mode) {
+Scope.prototype.declareLexical_m = function(mname, mode) {
   var existing = this.findDecl_m(mname);
   if (!existing && this.isAnyFnBody())
     existing = this.funcHead.findDecl_m(mname);
@@ -105,7 +105,7 @@ this.declareLexical_m = function(mname, mode) {
   if (existing)
     this.err('lexical.can.not.override.existing');
 
-  
+
   var newDecl = null, ref = this.findRef_m(mname, true).resolve();
   newDecl = new Decl().m(mode).n(_u(mname)).r(ref);
 
@@ -113,7 +113,7 @@ this.declareLexical_m = function(mname, mode) {
   return newDecl;
 };
 
-this.declareVarLike_m = function(mname, mode) {
+Scope.prototype.declareVarLike_m = function(mname, mode) {
   var dest = null, varDecl = null;
   if (this.isLexical()) {
     var catchScope = this.surroundingCatchScope;
@@ -165,11 +165,11 @@ this.declareVarLike_m = function(mname, mode) {
   return newDecl;
 };
 
-this.findDecl_m = function(mname) {
+Scope.prototype.findDecl_m = function(mname) {
   return this.defs.has(mname) ?
     this.defs.get(mname) : null;
 };
 
-this.insertDecl_m = function(mname, decl) {
+Scope.prototype.insertDecl_m = function(mname, decl) {
   this.defs.set(mname, decl);
 };

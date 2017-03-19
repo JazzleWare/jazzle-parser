@@ -1,4 +1,4 @@
-this . prseDbg = function () {
+Parser.prototype. prseDbg = function () {
   if (! this.ensureStmt_soft () &&
         this.err('not.stmt') )
     return this.errorHandlerOutput ;
@@ -15,7 +15,7 @@ this . prseDbg = function () {
     li = this.li;
     col = this.col;
     this.next();
-  } 
+  }
   else if ( !this.nl &&
      this.err('no.semi') )
      return this.errorHandlerOutput;

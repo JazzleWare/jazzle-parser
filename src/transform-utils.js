@@ -1,5 +1,5 @@
 function sentVal() {
-  return specialId('sentVal'); 
+  return specialId('sentVal');
 }
 function isSentVal(id) {
   return isspecial(id, 'sentVal');
@@ -64,7 +64,7 @@ function push_checked(n, list) {
 }
 
 function push_if_assig(n, list) {
-  if (n && 
+  if (n &&
     ( n.type === 'AssignmentExpression' || n.type === 'SyntheticAssignment' ) )
     list.push(n);
 }
@@ -74,6 +74,6 @@ function functionHasNonSimpleParams(fn) {
   while (i < list.length)
     if (list[i++].type !== 'Identifier')
       return true;
-  
+
   return false;
 }

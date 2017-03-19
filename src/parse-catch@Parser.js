@@ -1,4 +1,4 @@
-this. parseCatchClause = function () {
+Parser.prototype. parseCatchClause = function () {
    var startc = this.c0,
        startLoc = this.locBegin();
 

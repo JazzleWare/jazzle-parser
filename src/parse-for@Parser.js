@@ -1,4 +1,4 @@
-this.parseFor = function() {
+Parser.prototype.parseFor = function() {
   if (!this.ensureStmt_soft())
     this.err('not.stmt');
 
@@ -45,7 +45,7 @@ this.parseFor = function() {
     headIsExpr = true;
     head = this.parseExpr( CTX_NULLABLE|CTX_PAT|CTX_FOR ) ;
   }
-  else 
+  else
     this.foundStatement = false;
 
   this.scope.exitForInit();
@@ -85,7 +85,7 @@ this.parseFor = function() {
       }
 
       this.next();
-      afterHead = kind === 'ForOfStatement' ? 
+      afterHead = kind === 'ForOfStatement' ?
         this.parseNonSeqExpr(PREC_WITH_NO_OP, CTX_NONE|CTX_PAT|CTX_NO_SIMPLE_ERR) :
         this.parseExpr(CTX_NONE|CTX_TOP);
 
@@ -135,7 +135,7 @@ this.parseFor = function() {
   this.exitScope();
 
   return {
-    type: 'ForStatement', init: head && core(head), 
+    type: 'ForStatement', init: head && core(head),
     start : startc, end: nbody.end,
     test: afterHead && core(afterHead),
     loc: { start: startLoc, end: nbody.loc.end },
@@ -144,7 +144,7 @@ this.parseFor = function() {
 };
 
 // TODO: exsureVarsAreNotResolvingToCatchParams_soft
-this.ensureVarsAreNotResolvingToCatchParams = function() {
+Parser.prototype.ensureVarsAreNotResolvingToCatchParams = function() {
   return;
 // #if V
   var list = this.scope.nameList, e = 0;

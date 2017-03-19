@@ -1,5 +1,5 @@
 
-this.parseLet = function(context) {
+Parser.prototype.parseLet = function(context) {
 
 // this function is only calld when we have a 'let' at the start of a statement,
 // or else when we have a 'let' at the start of a for's init; so, CTX_FOR means "at the start of a for's init ",
@@ -31,14 +31,14 @@ this.parseLet = function(context) {
   return null ;
 };
 
-this.hasDeclarator = function() {
+Parser.prototype.hasDeclarator = function() {
 
   switch (this.lttype) {
   case '[':
   case '{':
   case 'Identifier':
     return true;
-  
+
   default:
     return false;
 

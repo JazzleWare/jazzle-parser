@@ -1,4 +1,4 @@
-this.parseProgram = function () {
+Parser.prototype.parseProgram = function () {
   var startc = this.c, li = this.li, col = this.col;
   var endI = this.c , startLoc = null;
   var globalScope = null;
@@ -6,8 +6,8 @@ this.parseProgram = function () {
   // #if V
   globalScope = new GlobalScope();
   // #end
- 
-  this.directive = !this.isScipt ? DIR_SCRIPT : DIR_MODULE; 
+
+  this.directive = !this.isScipt ? DIR_SCRIPT : DIR_MODULE;
   this.clearAllStrictErrors();
 
   this.scope = new Scope(globalScope, ST_SCRIPT);
@@ -17,7 +17,7 @@ this.parseProgram = function () {
 
   this.next();
 
-  var list = this.blck(); 
+  var list = this.blck();
 
   this.scope.finish();
   globalScope.finish();

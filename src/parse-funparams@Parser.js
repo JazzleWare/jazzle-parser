@@ -1,4 +1,4 @@
-this.parseArgs = function (argLen) {
+Parser.prototype.parseArgs = function (argLen) {
   var c0 = -1, li0 = -1, col0 = -1, tail = true,
       list = [], elem = null;
 

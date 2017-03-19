@@ -1,9 +1,9 @@
-this . findLabel = function(name) {
+Parser.prototype. findLabel = function(name) {
     return HAS.call(this.labels, name) ?this.labels[name]:null;
 
 };
 
-this .ensureStmt_soft = function() {
+Parser.prototype.ensureStmt_soft = function() {
    if ( this.canBeStatement ) {
      this.canBeStatement = false;
      return true;
@@ -11,18 +11,18 @@ this .ensureStmt_soft = function() {
    return false;
 };
 
-this . fixupLabels = function(loop) {
+Parser.prototype. fixupLabels = function(loop) {
     if ( this.unsatisfiedLabel ) {
          this.unsatisfiedLabel.loop = loop;
          this.unsatisfiedLabel = null;
     }
 };
 
-this.enterCatchScope = function() {
+Parser.prototype.enterCatchScope = function() {
   this.scope = this.scope.spawnCatch();
 };
 
-this.blck = function () { // blck ([]stmt)
+Parser.prototype.blck = function () { // blck ([]stmt)
   var isFunc = false, stmt = null, stmts = [];
   if (this.directive !== DIR_NONE)
     this.parseDirectives(stmts);
@@ -33,12 +33,12 @@ this.blck = function () { // blck ([]stmt)
   return (stmts);
 };
 
-this.checkForStrictError = function(directive) {
+Parser.prototype.checkForStrictError = function(directive) {
   if (this.esct !== ERR_NONE_YET)
     this.err('strict.err.esc.not.valid');
 };
 
-this.parseDirectives = function(list) {
+Parser.prototype.parseDirectives = function(list) {
   if (this.v < 5)
     return;
 
@@ -69,7 +69,7 @@ this.parseDirectives = function(list) {
   this.directive = DIR_NONE;
 };
 
-this.gotDirective = function(dv, flags) {
+Parser.prototype.gotDirective = function(dv, flags) {
   if (dv.raw === 'use strict') {
     this.scope.enterStrict();
     if (flags & DIR_FUNC)
@@ -78,9 +78,9 @@ this.gotDirective = function(dv, flags) {
     this.checkForStrictError(flags);
   }
 };
- 
-this.clearAllStrictErrors = function() {
+
+Parser.prototype.clearAllStrictErrors = function() {
   this.esct = ERR_NONE_YET;
   this.se = null;
 };
- 
+

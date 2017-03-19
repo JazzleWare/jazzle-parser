@@ -1,6 +1,6 @@
-this.parseFunc = function(context, st) {
+Parser.prototype.parseFunc = function(context, st) {
   var prevLabels = this.labels,
-      prevDeclMode = this.declMode; 
+      prevDeclMode = this.declMode;
 
   var isStmt = false,
       startc = this.c0,
@@ -123,7 +123,7 @@ this.parseFunc = function(context, st) {
   return n;
 };
 
-this.parseFuncExprName = function() {
+Parser.prototype.parseFuncExprName = function() {
   var name = this.validateID("");
   if (this.scope.insideStrict() && arguments_or_eval(fnName.name))
     this.err('bind.eval.or.arguments');

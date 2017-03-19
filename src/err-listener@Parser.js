@@ -1,4 +1,4 @@
-this.onErr = function(errorType, errParams) {
+Parser.prototype.onErr = function(errorType, errParams) {
    var message = "";
    if (!HAS.call(ErrorBuilders, errorType))
      message = "Error: " + errorType + "\n" +
@@ -7,7 +7,7 @@ this.onErr = function(errorType, errParams) {
        this.src.substr(this.c, 120);
 
    else {
-     var errorBuilder = ErrorBuilders[errorType];  
+     var errorBuilder = ErrorBuilders[errorType];
      var errorInfo = this.buildErrorInfo(errorBuilder, errParams);
 
      var offset = errorInfo.c0,
@@ -23,9 +23,9 @@ this.onErr = function(errorType, errParams) {
 
    throw new Error(message);
 };
-  
+
 // TODO: find a way to squash it with normalize
-this.buildErrorInfo = function(builder, params) {
+Parser.prototype.buildErrorInfo = function(builder, params) {
   if (builder.preprocessor !== null)
     builder.preprocessor.call(params);
 
@@ -100,7 +100,7 @@ function a(errorType, builderOutline) {
     if (name === 'm')
       builder.messageTemplate = ErrorString.from(builderOutline[name]);
     else if (name === 'p')
-      builder.preprocessor = builderOutline.p; 
+      builder.preprocessor = builderOutline.p;
     else
       builder[name] = Template.from(builderOutline[name]);
   }
@@ -116,7 +116,7 @@ function set(newErrorType, existingErrorType) {
       newErrorType+'> with <'+existingErrorType);
   if (!HAS.call(ErrorBuilders, existingErrorType))
     throw new Error('error is not defined: <'+existingErrorType+'>');
-  
+
   var builder = ErrorBuilders[existingErrorType];
   ErrorBuilders[newErrorType] = builder;
 
@@ -352,7 +352,7 @@ set('incdec.pre.not.simple.assig', 'incdec.post.not.simple.assig');
 a('label.is.a.dup', {m:'{tn.name} has been actually declared at {extra.li0}:{extra:col0} (offset {extra.c0})'}, 'a: a: for (;false;) break;');
 
 // TODO:
-// a('let.dcl.not.in.block',{m: 
+// a('let.dcl.not.in.block',{m:
 
 a('lexical.decl.not.in.block',{m:'a {extra.kind}-binding can not be declared in this scope'}, 'if (false) const a = 12;');
 
@@ -387,7 +387,7 @@ a('nexpr.null.head',{m:'unexpected {parser.lttype} -- something that can start a
 a('non.tail.rest',{m:'a rest element can not be followed by a comma (a fact that also implies it must be the very last element)'}, '[...a,]=12');
 
 // TODO: this.noSemiAfter(nodeType)
-a('no.semi',{m:'a semicolon was expected (or a \'}\' if appropriate), but got a {parser.lttype}'},'a e'); 
+a('no.semi',{m:'a semicolon was expected (or a \'}\' if appropriate), but got a {parser.lttype}'},'a e');
 
 a('not.assignable',{m:'{tn.type} is not a valid assignment left hand side'},'a[0]-- = 12');
 

@@ -1,4 +1,4 @@
-this.parseAssignment = function(head, context) {
+Parser.prototype.parseAssignment = function(head, context) {
   var o = this.ltraw;
   if (o === '=>')
     return this.parseArrowFunctionExpression(head);
@@ -83,7 +83,7 @@ this.parseAssignment = function(head, context) {
       this.at = ERR_PIN_NOT_AN_EQ;
     }
   }
- 
+
   return {
     type: 'AssignmentExpression',
     operator: o,

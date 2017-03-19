@@ -1,5 +1,5 @@
 
-this.parseYield = function(context) {
+Parser.prototype.parseYield = function(context) {
   var arg = null,
       deleg = false;
 
@@ -23,11 +23,11 @@ this.parseYield = function(context) {
   var endI, endLoc;
 
   if ( arg ) { endI = arg.end; endLoc = arg.loc.end; }
-  else { endI = c; endLoc = { line: li, column: col }; }  
+  else { endI = c; endLoc = { line: li, column: col }; }
 
   var n = { type: 'YieldExpression', argument: arg && core(arg), start: startc, delegate: deleg,
            end: endI, loc: { start : startLoc, end: endLoc }/* ,y:-1*/ }
- 
+
   if (this.suspys === null)
     this.suspys = n;
 

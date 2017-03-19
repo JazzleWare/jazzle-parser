@@ -1,4 +1,4 @@
-this.parseExpr = function (context) {
+Parser.prototype.parseExpr = function (context) {
   var head = this.parseNonSeqExpr(PREC_WITH_NO_OP, context);
   var lastExpr = null;
 

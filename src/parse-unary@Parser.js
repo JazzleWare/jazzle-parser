@@ -1,6 +1,6 @@
-this.parseUnaryExpression = function(context) {
+Parser.prototype.parseUnaryExpression = function(context) {
   var u = null,
-      startLoc = null,  
+      startLoc = null,
       startc = 0,
       isVDT = this.isVDT;
 
@@ -34,7 +34,7 @@ this.parseUnaryExpression = function(context) {
     this.suspys = n;
     return n;
   }
-  
+
   return {
     type: 'UnaryExpression', operator: u,
     start: startc, end: arg.end,

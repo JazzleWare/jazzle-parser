@@ -1,4 +1,4 @@
-this.parseNewHead = function () {
+Parser.prototype.parseNewHead = function () {
   var startc = this.c0, end = this.c,
       startLoc = this.locBegin(), li = this.li,
       col = this.col, raw = this.ltraw ;
@@ -72,7 +72,7 @@ this.parseNewHead = function () {
       if ( !this.expectType_soft (']') ) {
         this.err('mem.unfinished')  ;
       }
- 
+
       continue;
 
     case '(':

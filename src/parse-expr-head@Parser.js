@@ -1,4 +1,4 @@
-this.parseExprHead = function (context) {
+Parser.prototype.parseExprHead = function (context) {
   var head = null, inner = null, elem = null;
 
   if (this.pendingExprHead) {
@@ -43,9 +43,9 @@ this.parseExprHead = function (context) {
 
     default:
       return null;
-   
+
     }
-    
+
   // #if V
   if (head.type === 'Identifier')
     this.scope.reference(head.name);
@@ -74,12 +74,12 @@ this.parseExprHead = function (context) {
       if (elem === null)
         this.err('mem.id.is.null');
 
-      head = { 
+      head = {
         type: 'MemberExpression', property: elem,
         start: head.start, end: elem.end,
         loc: {
           start: head.loc.start,
-          end: elem.loc.end 
+          end: elem.loc.end
         }, object: inner,
         computed: false /* ,y:-1*/
       };

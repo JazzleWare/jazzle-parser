@@ -1,4 +1,4 @@
-this .parseLabeledStatement = function(label, allowNull) {
+Parser.prototype.parseLabeledStatement = function(label, allowNull) {
    this.next();
    var l = label.name;
    l += '%';
